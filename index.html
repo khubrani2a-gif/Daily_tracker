@@ -28,6 +28,20 @@
     font-weight: 700 900;
     font-display: swap;
   }
+  /* خط ثمانية للعناوين (Serif Display) — للعناوين والحكمة فقط */
+  @font-face{
+    font-family:"Thmanyah Display";
+    src: url("fonts/ThmanyahDisplay-Medium.woff2") format("woff2");
+    font-weight: 400 600;
+    font-display: swap;
+  }
+  @font-face{
+    font-family:"Thmanyah Display";
+    src: url("fonts/ThmanyahDisplay-Bold.woff2") format("woff2");
+    font-weight: 700 900;
+    font-display: swap;
+  }
+  .display{font-family:"Thmanyah Display","Thmanyah Sans","IBM Plex Sans Arabic",serif}
   :root{
     --bg:#f3efe6;
     --paper:#fffefb;
@@ -86,7 +100,7 @@
     font-size:1.5rem;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
   }
-  .brand h1{font-size:1.4rem;color:#fff;font-weight:700}
+  .brand h1{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.5rem;color:#fff;font-weight:700}
   .brand small{display:block;color:rgba(255,255,255,.82);font-size:.78rem;font-weight:400;margin-top:.1rem}
   .date-nav{display:flex;align-items:center;gap:.5rem}
   .date-nav button{
@@ -104,7 +118,7 @@
     text-align:center;margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.2);
     position:relative;z-index:1;
   }
-  .motto .b1{font-size:1.08rem;font-weight:600;color:#fff}
+  .motto .b1{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.18rem;font-weight:600;color:#fff}
   .motto .b2{font-size:.85rem;color:rgba(255,255,255,.8);margin-top:.35rem}
 
   /* ===== Grid layout ===== */
@@ -123,7 +137,8 @@
   }
   .card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
   .card h2{
-    font-size:1.02rem;color:var(--accent);font-weight:700;
+    font-family:"Thmanyah Display","Thmanyah Sans",serif;
+    font-size:1.08rem;color:var(--accent);font-weight:700;
     display:flex;align-items:center;gap:.5rem;
     padding-bottom:.6rem;margin-bottom:.8rem;
     border-bottom:1px solid var(--line);
