@@ -205,6 +205,23 @@
     box-shadow:0 4px 12px -4px rgba(14,122,112,.5);
   }
   .prayer.done .pmark{color:#fff}
+  .ptime{display:block;font-size:.68rem;font-weight:400;margin-top:.2rem;opacity:.8}
+  .prayer.next{border-color:var(--gold);animation:glowpulse 2.2s infinite}
+  @keyframes glowpulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(195,154,43,.38)}
+    50%{box-shadow:0 0 0 6px rgba(195,154,43,.10)}
+  }
+  .next-strip{
+    background:var(--accent-soft);color:var(--accent);
+    border-radius:11px;padding:.45rem .7rem;margin-bottom:.65rem;
+    font-size:.82rem;font-weight:600;text-align:center;
+  }
+  .loc-btn{
+    margin-top:.7rem;width:100%;border:1px dashed var(--line);background:none;
+    color:var(--muted);border-radius:11px;padding:.45rem;cursor:pointer;
+    font-family:inherit;font-size:.78rem;transition:.15s;
+  }
+  .loc-btn:hover{border-color:var(--accent-2);color:var(--accent)}
   .verse{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.7rem;line-height:1.7}
 
   /* ===== Checklists ===== */
@@ -396,8 +413,10 @@
     <div class="col">
       <div class="card">
         <h2><span class="ico">🕌</span> الصلاة</h2>
+        <div class="next-strip" id="nextStrip" hidden></div>
         <div class="prayers" id="prayers"></div>
         <div class="verse">﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ ﴾</div>
+        <button class="loc-btn" id="locBtn">📍 فعّل مواقيت الصلاة حسب موقعك</button>
       </div>
 
       <div class="card">
@@ -692,13 +711,127 @@
   }
 
   /* ---------- Renderers ---------- */
+  /* ---------- مواقيت الصلاة (Aladhan API) ---------- */
+  const LOC_KEY = "h2do-loc";
+  const PRAYER_KEYS = ["Fajr","Duha","Dhuhr","Asr","Maghrib","Isha"];
+  let prayerTimes = null;   /* مواقيت اليوم المعروض */
+  let nextKey = null;       /* الصلاة القادمة (لليوم الحالي فقط) */
+
+  function fmt12(hm){
+    if(!hm) return "";
+    const parts = hm.split(":").map(Number);
+    const ap = parts[0] < 12 ? "ص" : "م";
+    const h12 = parts[0] % 12 || 12;
+    return h12 + ":" + String(parts[1]).padStart(2,"0") + " " + ap;
+  }
+  function getTime(key){
+    if(!prayerTimes) return null;
+    if(key === "Duha"){
+      /* وقت الضحى التقريبي: بعد الشروق بربع ساعة */
+      const s = prayerTimes.Sunrise;
+      if(!s) return null;
+      let h = +s.split(":")[0], m = +s.split(":")[1] + 15;
+      if(m >= 60){ m -= 60; h++; }
+      return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+    }
+    return prayerTimes[key] || null;
+  }
+
+  function locLabel(){
+    const loc = JSON.parse(localStorage.getItem(LOC_KEY) || "null");
+    const btn = document.getElementById("locBtn");
+    btn.textContent = loc ? "📍 تغيير موقع المواقيت" : "📍 فعّل مواقيت الصلاة حسب موقعك";
+  }
+
+  async function fetchTimes(dateStr){
+    prayerTimes = null; nextKey = null;
+    updateNext(); renderPrayers();
+    const loc = JSON.parse(localStorage.getItem(LOC_KEY) || "null");
+    locLabel();
+    if(!loc) return;
+    const p = dateStr.split("-");
+    const ds = p[2]+"-"+p[1]+"-"+p[0];
+    const locId = (loc.lat !== undefined) ? loc.lat.toFixed(2)+","+loc.lng.toFixed(2) : loc.city;
+    const cacheKey = "h2do-times:"+dateStr+":"+locId;
+    const cached = localStorage.getItem(cacheKey);
+    if(cached){
+      try{ prayerTimes = JSON.parse(cached); updateNext(); renderPrayers(); return; }catch(e){}
+    }
+    try{
+      const url = (loc.lat !== undefined)
+        ? "https://api.aladhan.com/v1/timings/"+ds+"?latitude="+loc.lat+"&longitude="+loc.lng
+        : "https://api.aladhan.com/v1/timingsByCity/"+ds+"?city="+encodeURIComponent(loc.city)+"&country="+encodeURIComponent(loc.country);
+      const r = await fetch(url);
+      const j = await r.json();
+      if(j.code === 200 && dateStr === currentDate){
+        const t = j.data.timings;
+        const clean = s => (s||"").split(" ")[0];
+        prayerTimes = {Fajr:clean(t.Fajr), Sunrise:clean(t.Sunrise), Dhuhr:clean(t.Dhuhr), Asr:clean(t.Asr), Maghrib:clean(t.Maghrib), Isha:clean(t.Isha)};
+        localStorage.setItem(cacheKey, JSON.stringify(prayerTimes));
+        updateNext(); renderPrayers();
+      }
+    }catch(e){ /* بدون اتصال — تبقى المواقيت مخفية */ }
+  }
+
+  function updateNext(){
+    const strip = document.getElementById("nextStrip");
+    nextKey = null;
+    if(!prayerTimes || currentDate !== todayStr()){ strip.hidden = true; return; }
+    const now = new Date();
+    const cur = now.getHours()*60 + now.getMinutes();
+    const fard = [["Fajr","الفجر"],["Dhuhr","الظهر"],["Asr","العصر"],["Maghrib","المغرب"],["Isha","العشاء"]];
+    let found = null;
+    for(const f of fard){
+      const t = getTime(f[0]);
+      if(!t) continue;
+      const mins = (+t.split(":")[0])*60 + (+t.split(":")[1]);
+      if(mins > cur){ found = {key:f[0], name:f[1], mins:mins}; break; }
+    }
+    if(found){
+      nextKey = found.key;
+      const diff = found.mins - cur;
+      const hh = Math.floor(diff/60), mm = diff%60;
+      strip.textContent = "الصلاة القادمة: "+found.name+" "+fmt12(getTime(found.key))+" — بعد "+(hh ? hh+" س و" : "")+mm+" د";
+    }else{
+      strip.textContent = "اكتملت صلوات اليوم 🌙 القادمة: فجر الغد "+fmt12(getTime("Fajr"));
+    }
+    strip.hidden = false;
+  }
+
+  document.getElementById("locBtn").onclick = ()=>{
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        pos => saveLoc({lat:pos.coords.latitude, lng:pos.coords.longitude}),
+        () => askCity(),
+        {timeout:8000}
+      );
+    }else askCity();
+  };
+  function askCity(){
+    const v = prompt("لم نستطع تحديد موقعك تلقائيًا.\nاكتب مدينتك ورمز دولتك بالإنجليزية هكذا:\nJeddah, SA");
+    if(!v) return;
+    const parts = v.split(",").map(s=>s.trim()).filter(Boolean);
+    if(parts.length < 2){ alert("اكتبها بالشكل: المدينة, رمز الدولة — مثال: Riyadh, SA"); return; }
+    saveLoc({city:parts[0], country:parts[1]});
+  }
+  function saveLoc(loc){
+    localStorage.setItem(LOC_KEY, JSON.stringify(loc));
+    fetchTimes(currentDate);
+  }
+
+  /* تحديث العدّاد التنازلي كل نصف دقيقة */
+  setInterval(()=>{ if(prayerTimes && currentDate === todayStr()){ updateNext(); renderPrayers(); } }, 30000);
+
   function renderPrayers(){
     const box = document.getElementById("prayers");
     box.innerHTML = "";
     PRAYERS.forEach((name,i)=>{
       const div = document.createElement("div");
       div.className = "prayer"+(state.prayers[i]?" done":"");
-      div.innerHTML = '<span class="pmark">'+(state.prayers[i]?"✔":"○")+'</span>'+name;
+      if(nextKey && PRAYER_KEYS[i] === nextKey && !state.prayers[i]) div.classList.add("next");
+      const t = getTime(PRAYER_KEYS[i]);
+      div.innerHTML = '<span class="pmark">'+(state.prayers[i]?"✔":"○")+'</span>'+name
+        + (t ? '<span class="ptime">'+fmt12(t)+'</span>' : '');
       div.onclick = ()=>{
         state.prayers[i] = !state.prayers[i];
         if(state.prayers[i] && fardComplete(state.prayers) && !state.celebrated){
@@ -917,6 +1050,7 @@
     if(!existed) carryOver(dateStr);
     renderQuote(dateStr);
     renderAll();
+    fetchTimes(dateStr);
     pullRemote(dateStr);
   }
 
