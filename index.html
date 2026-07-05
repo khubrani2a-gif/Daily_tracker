@@ -174,6 +174,12 @@
   }
   .reset-btn:hover{background:#fbeae4}
 
+  .tool-btn{
+    display:inline-block;margin-top:.4rem;border:1px solid var(--line);background:var(--paper);
+    color:var(--accent);border-radius:10px;padding:.35rem .9rem;cursor:pointer;font-family:inherit;font-size:.8rem;
+  }
+  .tool-btn:hover{background:var(--accent-soft)}
+
   /* ===== Sync ===== */
   .sync-box{text-align:left;margin-top:.45rem}
   .sync-btn{
@@ -289,7 +295,10 @@
   <footer>
     يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة
     <br>
+    <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
+    <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
     <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
   </footer>
 </div>
 
@@ -629,6 +638,53 @@
   picker.onchange = ()=>{ if(picker.value) goto(picker.value); };
   document.getElementById("prevDay").onclick = ()=> shiftDay(-1);
   document.getElementById("nextDay").onclick = ()=> shiftDay(1);
+
+  /* ---------- Backup export/import ---------- */
+  const PREFIX = storageKey("");
+
+  document.getElementById("exportBtn").onclick = ()=>{
+    const data = {};
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(PREFIX)){
+        try{ data[k.slice(PREFIX.length)] = JSON.parse(localStorage.getItem(k)); }catch(e){}
+      }
+    }
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "daily-tracker-backup-"+todayStr()+".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").onclick = ()=> importFile.click();
+  importFile.onchange = ()=>{
+    const f = importFile.files[0];
+    if(!f) return;
+    f.text().then(txt=>{
+      const data = JSON.parse(txt);
+      let n = 0;
+      for(const date in data){
+        const incoming = data[date];
+        if(!incoming || typeof incoming !== "object") continue;
+        let write = true;
+        const existingRaw = localStorage.getItem(storageKey(date));
+        if(existingRaw){
+          try{
+            const existing = JSON.parse(existingRaw);
+            if((existing.updatedAt||0) >= (incoming.updatedAt||0)) write = false;
+          }catch(e){}
+        }
+        if(write){ localStorage.setItem(storageKey(date), JSON.stringify(incoming)); n++; }
+      }
+      alert("تم استيراد بيانات "+n+" يوم (الأيام الأحدث على هذا الجهاز لم تُستبدل)");
+      load(currentDate);
+      renderAll();
+    }).catch(()=> alert("الملف غير صالح — اختر ملف نسخة احتياطية صحيحًا"));
+    importFile.value = "";
+  };
 
   document.getElementById("resetDay").onclick = ()=>{
     if(confirm("هل تريد مسح جميع بيانات هذا اليوم؟")){
