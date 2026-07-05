@@ -222,6 +222,16 @@
     font-family:inherit;font-size:.78rem;transition:.15s;
   }
   .loc-btn:hover{border-color:var(--accent-2);color:var(--accent)}
+  .loc-row{display:flex;gap:.45rem;margin-top:.7rem}
+  .loc-row input{
+    flex:1;border:1.5px solid var(--line);border-radius:11px;padding:.45rem .7rem;
+    background:var(--chk-bg);color:var(--ink);font-family:inherit;font-size:.85rem;outline:none;
+  }
+  .loc-row input:focus{border-color:var(--accent-2)}
+  .loc-row button{
+    border:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    border-radius:11px;padding:.45rem 1rem;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:600;
+  }
   .verse{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.7rem;line-height:1.7}
 
   /* ===== Checklists ===== */
@@ -416,7 +426,11 @@
         <div class="next-strip" id="nextStrip" hidden></div>
         <div class="prayers" id="prayers"></div>
         <div class="verse">﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ ﴾</div>
-        <button class="loc-btn" id="locBtn">📍 فعّل مواقيت الصلاة حسب موقعك</button>
+        <div class="loc-row" id="locRow" hidden>
+          <input type="text" id="cityInput" placeholder="اكتب مدينتك: جدة، Riyadh، Tampa...">
+          <button id="cityGo">حفظ</button>
+        </div>
+        <button class="loc-btn" id="locBtn">📍 اكتب مدينتك لعرض المواقيت</button>
       </div>
 
       <div class="card">
@@ -740,7 +754,9 @@
   function locLabel(){
     const loc = JSON.parse(localStorage.getItem(LOC_KEY) || "null");
     const btn = document.getElementById("locBtn");
-    btn.textContent = loc ? "📍 تغيير موقع المواقيت" : "📍 فعّل مواقيت الصلاة حسب موقعك";
+    if(loc && loc.address) btn.textContent = "📍 تغيير المدينة ("+loc.address+")";
+    else if(loc) btn.textContent = "📍 تغيير المدينة";
+    else btn.textContent = "📍 اكتب مدينتك لعرض المواقيت";
   }
 
   async function fetchTimes(dateStr){
@@ -751,16 +767,17 @@
     if(!loc) return;
     const p = dateStr.split("-");
     const ds = p[2]+"-"+p[1]+"-"+p[0];
-    const locId = (loc.lat !== undefined) ? loc.lat.toFixed(2)+","+loc.lng.toFixed(2) : loc.city;
+    const locId = loc.address || ((loc.lat !== undefined) ? loc.lat.toFixed(2)+","+loc.lng.toFixed(2) : loc.city);
     const cacheKey = "h2do-times:"+dateStr+":"+locId;
     const cached = localStorage.getItem(cacheKey);
     if(cached){
       try{ prayerTimes = JSON.parse(cached); updateNext(); renderPrayers(); return; }catch(e){}
     }
     try{
-      const url = (loc.lat !== undefined)
-        ? "https://api.aladhan.com/v1/timings/"+ds+"?latitude="+loc.lat+"&longitude="+loc.lng
-        : "https://api.aladhan.com/v1/timingsByCity/"+ds+"?city="+encodeURIComponent(loc.city)+"&country="+encodeURIComponent(loc.country);
+      let url;
+      if(loc.address)             url = "https://api.aladhan.com/v1/timingsByAddress/"+ds+"?address="+encodeURIComponent(loc.address);
+      else if(loc.lat !== undefined) url = "https://api.aladhan.com/v1/timings/"+ds+"?latitude="+loc.lat+"&longitude="+loc.lng;
+      else                        url = "https://api.aladhan.com/v1/timingsByCity/"+ds+"?city="+encodeURIComponent(loc.city)+"&country="+encodeURIComponent(loc.country);
       const r = await fetch(url);
       const j = await r.json();
       if(j.code === 200 && dateStr === currentDate){
@@ -769,8 +786,20 @@
         prayerTimes = {Fajr:clean(t.Fajr), Sunrise:clean(t.Sunrise), Dhuhr:clean(t.Dhuhr), Asr:clean(t.Asr), Maghrib:clean(t.Maghrib), Isha:clean(t.Isha)};
         localStorage.setItem(cacheKey, JSON.stringify(prayerTimes));
         updateNext(); renderPrayers();
+      }else if(dateStr === currentDate){
+        timesError("تعذّر التعرف على المدينة — جرّب اسمًا آخر مثل: Jeddah");
       }
-    }catch(e){ /* بدون اتصال — تبقى المواقيت مخفية */ }
+    }catch(e){
+      if(dateStr === currentDate && !prayerTimes){
+        timesError("تعذّر جلب المواقيت — تحقق من اتصالك بالإنترنت");
+      }
+    }
+  }
+
+  function timesError(msg){
+    const strip = document.getElementById("nextStrip");
+    strip.textContent = "⚠️ " + msg;
+    strip.hidden = false;
   }
 
   function updateNext(){
@@ -798,22 +827,26 @@
     strip.hidden = false;
   }
 
+  /* إدخال المدينة يدويًا — بدون أي إذن وصول للموقع */
+  const locRow = document.getElementById("locRow");
+  const cityInput = document.getElementById("cityInput");
   document.getElementById("locBtn").onclick = ()=>{
-    if(navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(
-        pos => saveLoc({lat:pos.coords.latitude, lng:pos.coords.longitude}),
-        () => askCity(),
-        {timeout:8000}
-      );
-    }else askCity();
+    locRow.hidden = !locRow.hidden;
+    if(!locRow.hidden){
+      const loc = JSON.parse(localStorage.getItem(LOC_KEY) || "null");
+      cityInput.value = (loc && loc.address) || "";
+      cityInput.focus();
+    }
   };
-  function askCity(){
-    const v = prompt("لم نستطع تحديد موقعك تلقائيًا.\nاكتب مدينتك ورمز دولتك بالإنجليزية هكذا:\nJeddah, SA");
+  function submitCity(){
+    const v = cityInput.value.trim();
     if(!v) return;
-    const parts = v.split(",").map(s=>s.trim()).filter(Boolean);
-    if(parts.length < 2){ alert("اكتبها بالشكل: المدينة, رمز الدولة — مثال: Riyadh, SA"); return; }
-    saveLoc({city:parts[0], country:parts[1]});
+    locRow.hidden = true;
+    saveLoc({address: v});
   }
+  document.getElementById("cityGo").onclick = submitCity;
+  cityInput.addEventListener("keydown", e=>{ if(e.key === "Enter") submitCity(); });
+
   function saveLoc(loc){
     localStorage.setItem(LOC_KEY, JSON.stringify(loc));
     fetchTimes(currentDate);
