@@ -382,6 +382,54 @@
   .pbar i.lt{background:var(--gold)}
   .pbar-pct{min-width:46px;text-align:left;color:var(--muted);font-size:.78rem;font-weight:600}
 
+  /* ===== شاشة الأذكار ===== */
+  .adhkar-overlay{
+    position:fixed;inset:0;z-index:120;background:var(--bg);
+    overflow-y:auto;overscroll-behavior:contain;
+  }
+  .adhkar-overlay[hidden]{display:none}
+  .adhkar-sheet{max-width:720px;margin:0 auto;padding:1rem 1rem 3rem}
+  .adhkar-head{
+    display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    padding:.4rem 0 .7rem;
+  }
+  .adhkar-head h2{
+    font-family:"Thmanyah Display","Thmanyah Sans",serif;
+    color:var(--accent);font-size:1.25rem;
+  }
+  .ad-btn{
+    width:38px;height:38px;border-radius:11px;border:1px solid var(--line);
+    background:var(--paper);color:var(--muted);cursor:pointer;font-size:1rem;transition:.15s;
+  }
+  .ad-btn:hover{background:var(--accent-soft);color:var(--accent)}
+  .adhkar-progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+  .adhkar-progress div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .3s}
+  .adhkar-count{font-size:.78rem;color:var(--muted);text-align:center;margin:.4rem 0 .9rem}
+  .dhikr{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:16px;
+    padding:1rem 1.1rem;margin-bottom:.8rem;cursor:pointer;user-select:none;
+    transition:border-color .2s, background .2s;
+  }
+  .dhikr:active{transform:scale(.995)}
+  .dhikr .dtext{font-size:1.02rem;line-height:2;color:var(--ink)}
+  .dhikr .dfoot{
+    display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--line);
+  }
+  .dhikr .dsrc{font-size:.7rem;color:var(--muted);flex:1}
+  .dhikr .dchip{
+    background:var(--accent-soft);color:var(--accent);border-radius:99px;
+    padding:.2rem .8rem;font-size:.85rem;font-weight:700;min-width:70px;text-align:center;
+    transition:.2s;flex-shrink:0;
+  }
+  .dhikr.done{border-color:var(--accent-2);background:var(--accent-soft)}
+  .dhikr.done .dchip{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+  html.dark .dhikr.done{background:#16302b}
+  .read-chip{
+    background:var(--accent-soft);color:var(--accent);border-radius:99px;
+    padding:.1rem .6rem;font-size:.72rem;font-weight:600;flex-shrink:0;
+  }
+
   /* ===== الاحتفال ===== */
   .confetti{
     position:fixed;top:-14px;width:9px;height:14px;border-radius:3px;
@@ -553,6 +601,20 @@
     <div id="prayerBars"></div>
   </section>
 
+  <!-- ===== شاشة الأذكار ===== -->
+  <div class="adhkar-overlay" id="adhkarOverlay" hidden>
+    <div class="adhkar-sheet">
+      <div class="adhkar-head">
+        <button class="ad-btn" id="adhkarClose" title="إغلاق">✕</button>
+        <h2 id="adhkarTitle">أذكار الصباح</h2>
+        <button class="ad-btn" id="adhkarReset" title="تصفير عدادات اليوم">↺</button>
+      </div>
+      <div class="adhkar-progress"><div id="adhkarFill"></div></div>
+      <div class="adhkar-count" id="adhkarCount"></div>
+      <div class="adhkar-list" id="adhkarList"></div>
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
     <div class="footer-actions">
@@ -629,6 +691,113 @@
     {t:"« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »", s:"الحسن البصري"},
   ];
 
+  /* ================= أذكار الصباح والمساء (حصن المسلم) ================= */
+  const ADHKAR_COMMON_START = [
+    {t:"اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ، لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ، لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ، مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ، يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ، وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ، وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ، وَلَا يَئُودُهُ حِفْظُهُمَا، وَهُوَ الْعَلِيُّ الْعَظِيمُ", s:"آية الكرسي — من قالها حين يصبح أُجير من الجنّ حتى يمسي، ومن قالها حين يمسي أُجير حتى يصبح", n:1},
+    {t:"قُلْ هُوَ اللَّهُ أَحَدٌ ٭ اللَّهُ الصَّمَدُ ٭ لَمْ يَلِدْ وَلَمْ يُولَدْ ٭ وَلَمْ يَكُنْ لَهُ كُفُوًا أَحَدٌ", s:"سورة الإخلاص", n:3},
+    {t:"قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ٭ مِنْ شَرِّ مَا خَلَقَ ٭ وَمِنْ شَرِّ غَاسِقٍ إِذَا وَقَبَ ٭ وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ٭ وَمِنْ شَرِّ حَاسِدٍ إِذَا حَسَدَ", s:"سورة الفلق", n:3},
+    {t:"قُلْ أَعُوذُ بِرَبِّ النَّاسِ ٭ مَلِكِ النَّاسِ ٭ إِلَٰهِ النَّاسِ ٭ مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ٭ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ٭ مِنَ الْجِنَّةِ وَالنَّاسِ", s:"سورة الناس — من قال المعوّذات ثلاثًا حين يصبح وحين يمسي كفته من كل شيء", n:3},
+  ];
+  const ADHKAR_COMMON_END = [
+    {t:"اللهم أنت ربي لا إله إلا أنت، خلقتني وأنا عبدك، وأنا على عهدك ووعدك ما استطعت، أعوذ بك من شر ما صنعت، أبوء لك بنعمتك عليّ وأبوء بذنبي، فاغفر لي فإنه لا يغفر الذنوب إلا أنت", s:"سيد الاستغفار — من قاله موقنًا به فمات من يومه أو ليلته دخل الجنة (البخاري)", n:1},
+    {t:"اللهم عافني في بدني، اللهم عافني في سمعي، اللهم عافني في بصري، لا إله إلا أنت. اللهم إني أعوذ بك من الكفر والفقر، وأعوذ بك من عذاب القبر، لا إله إلا أنت", s:"أبو داود", n:3},
+    {t:"حسبي الله لا إله إلا هو، عليه توكلت وهو رب العرش العظيم", s:"من قالها سبعًا كفاه الله ما أهمّه", n:7},
+    {t:"اللهم إني أسألك العفو والعافية في الدنيا والآخرة، اللهم إني أسألك العفو والعافية في ديني ودنياي وأهلي ومالي، اللهم استر عوراتي وآمن روعاتي، اللهم احفظني من بين يديّ ومن خلفي وعن يميني وعن شمالي ومن فوقي، وأعوذ بعظمتك أن أُغتال من تحتي", s:"أبو داود وابن ماجه", n:1},
+    {t:"اللهم عالم الغيب والشهادة، فاطر السماوات والأرض، ربَّ كل شيء ومليكه، أشهد أن لا إله إلا أنت، أعوذ بك من شر نفسي ومن شر الشيطان وشِركه، وأن أقترف على نفسي سوءًا أو أجرّه إلى مسلم", s:"الترمذي وأبو داود", n:1},
+    {t:"بسم الله الذي لا يضر مع اسمه شيء في الأرض ولا في السماء وهو السميع العليم", s:"من قالها ثلاثًا لم يضره شيء (أبو داود والترمذي)", n:3},
+    {t:"رضيتُ بالله ربًا، وبالإسلام دينًا، وبمحمدٍ صلى الله عليه وسلم نبيًا", s:"من قالها ثلاثًا كان حقًا على الله أن يرضيه يوم القيامة", n:3},
+    {t:"يا حي يا قيوم برحمتك أستغيث، أصلح لي شأني كله، ولا تكلني إلى نفسي طرفة عين", s:"الحاكم", n:1},
+    {t:"سبحان الله وبحمده", s:"من قالها مئة مرة حُطَّت خطاياه وإن كانت مثل زبد البحر (متفق عليه)", n:100},
+    {t:"لا إله إلا الله وحده لا شريك له، له الملك وله الحمد، وهو على كل شيء قدير", s:"عشر مرات — كأجر عتق رقاب من ولد إسماعيل", n:10},
+    {t:"اللهم صلِّ وسلِّم على نبينا محمد", s:"من صلى عليّ حين يصبح وحين يمسي عشرًا أدركته شفاعتي يوم القيامة", n:10},
+  ];
+  const ADHKAR_AM = [].concat(ADHKAR_COMMON_START, [
+    {t:"أصبحنا وأصبح الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير. ربِّ أسألك خير ما في هذا اليوم وخير ما بعده، وأعوذ بك من شر ما في هذا اليوم وشر ما بعده. ربِّ أعوذ بك من الكسل وسوء الكِبَر، ربِّ أعوذ بك من عذاب في النار وعذاب في القبر", s:"مسلم", n:1},
+    {t:"اللهم بك أصبحنا، وبك أمسينا، وبك نحيا، وبك نموت، وإليك النشور", s:"الترمذي", n:1},
+    {t:"اللهم إني أصبحتُ أُشهدك، وأُشهد حملة عرشك، وملائكتك، وجميع خلقك: أنك أنت الله لا إله إلا أنت وحدك لا شريك لك، وأن محمدًا عبدك ورسولك", s:"من قالها أعتقه الله من النار (أبو داود)", n:4},
+    {t:"اللهم ما أصبح بي من نعمة أو بأحد من خلقك فمنك وحدك لا شريك لك، فلك الحمد ولك الشكر", s:"من قالها حين يصبح أدّى شكر يومه", n:1},
+  ], ADHKAR_COMMON_END);
+  const ADHKAR_PM = [].concat(ADHKAR_COMMON_START, [
+    {t:"أمسينا وأمسى الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير. ربِّ أسألك خير ما في هذه الليلة وخير ما بعدها، وأعوذ بك من شر ما في هذه الليلة وشر ما بعدها. ربِّ أعوذ بك من الكسل وسوء الكِبَر، ربِّ أعوذ بك من عذاب في النار وعذاب في القبر", s:"مسلم", n:1},
+    {t:"اللهم بك أمسينا، وبك أصبحنا، وبك نحيا، وبك نموت، وإليك المصير", s:"الترمذي", n:1},
+    {t:"اللهم إني أمسيتُ أُشهدك، وأُشهد حملة عرشك، وملائكتك، وجميع خلقك: أنك أنت الله لا إله إلا أنت وحدك لا شريك لك، وأن محمدًا عبدك ورسولك", s:"من قالها أعتقه الله من النار (أبو داود)", n:4},
+    {t:"اللهم ما أمسى بي من نعمة أو بأحد من خلقك فمنك وحدك لا شريك لك، فلك الحمد ولك الشكر", s:"من قالها حين يمسي أدّى شكر ليلته", n:1},
+    {t:"أعوذ بكلمات الله التامّات من شر ما خلق", s:"من قالها ثلاثًا حين يمسي لم تضره حُمَةٌ تلك الليلة (الترمذي)", n:3},
+  ], ADHKAR_COMMON_END);
+
+  let adhkarMode = null;
+
+  function adhkarData(){ return adhkarMode === "am" ? ADHKAR_AM : ADHKAR_PM; }
+  function adhkarCounts(){
+    if(!state.adhkar) state.adhkar = {am:[], pm:[]};
+    if(!state.adhkar[adhkarMode]) state.adhkar[adhkarMode] = [];
+    return state.adhkar[adhkarMode];
+  }
+
+  function openAdhkar(mode){
+    adhkarMode = mode;
+    document.getElementById("adhkarTitle").textContent = mode === "am" ? "أذكار الصباح ☀️" : "أذكار المساء 🌙";
+    document.getElementById("adhkarOverlay").hidden = false;
+    document.body.style.overflow = "hidden";
+    renderAdhkarList();
+  }
+  function closeAdhkar(){
+    document.getElementById("adhkarOverlay").hidden = true;
+    document.body.style.overflow = "";
+    renderWorship(); renderProgress();
+  }
+  document.getElementById("adhkarClose").onclick = closeAdhkar;
+  document.getElementById("adhkarReset").onclick = ()=>{
+    if(!confirm("تصفير عدادات هذه الأذكار لهذا اليوم؟")) return;
+    state.adhkar[adhkarMode] = [];
+    state.worship[adhkarMode === "am" ? "athkar_am" : "athkar_pm"] = false;
+    save(); renderAdhkarList();
+  };
+
+  function adhkarProgressUpdate(){
+    const data = adhkarData(), counts = adhkarCounts();
+    const arn = n => n.toLocaleString("ar-EG");
+    let done = 0;
+    data.forEach((d,i)=>{ if((counts[i]||0) >= d.n) done++; });
+    document.getElementById("adhkarFill").style.width = Math.round(done/data.length*100)+"%";
+    document.getElementById("adhkarCount").textContent =
+      done === data.length ? "اكتملت أذكارك — تقبّل الله منك ✨" : arn(done)+" من "+arn(data.length)+" — اضغط على الذكر للعدّ";
+    /* عند اكتمال الكل: علّم بند العبادات تلقائيًا */
+    const key = adhkarMode === "am" ? "athkar_am" : "athkar_pm";
+    const was = !!state.worship[key];
+    state.worship[key] = (done === data.length);
+    if(state.worship.athkar_am && state.worship.athkar_pm) state.worship.athkar = true;
+    if(!was && state.worship[key] && navigator.vibrate) navigator.vibrate([30,60,30]);
+  }
+
+  function renderAdhkarList(){
+    const list = document.getElementById("adhkarList");
+    const data = adhkarData(), counts = adhkarCounts();
+    const arn = n => n.toLocaleString("ar-EG");
+    list.innerHTML = "";
+    data.forEach((d,i)=>{
+      const card = document.createElement("div");
+      const cnt = counts[i]||0, isDone = cnt >= d.n;
+      card.className = "dhikr"+(isDone?" done":"");
+      card.innerHTML = '<div class="dtext">'+d.t+'</div>'
+        + '<div class="dfoot"><span class="dsrc">'+d.s+'</span>'
+        + '<span class="dchip">'+(isDone ? "تم ✓" : arn(cnt)+" / "+arn(d.n))+'</span></div>';
+      card.onclick = ()=>{
+        let c = counts[i]||0;
+        if(c >= d.n) return;
+        counts[i] = ++c;
+        if(navigator.vibrate) navigator.vibrate(8);
+        const chip = card.querySelector(".dchip");
+        if(c >= d.n){ card.classList.add("done"); chip.textContent = "تم ✓"; }
+        else chip.textContent = arn(c)+" / "+arn(d.n);
+        adhkarProgressUpdate();
+        save();
+      };
+      list.appendChild(card);
+    });
+    adhkarProgressUpdate();
+  }
+
   function renderQuote(dateStr){
     const days = Math.floor(new Date(dateStr+"T12:00:00").getTime()/86400000);
     const q = QUOTES[((days % QUOTES.length) + QUOTES.length) % QUOTES.length];
@@ -659,6 +828,7 @@
       notes: "",
       rating: 0,
       istighfar: 0,
+      adhkar: {am:[], pm:[]},
       celebrated: false,
       updatedAt: 0
     };
@@ -1013,6 +1183,20 @@
       const lbl = document.createElement("span");
       lbl.className = "lbl"+(on?" done-line":"");
       lbl.textContent = w.label;
+
+      /* أذكار الصباح/المساء: الضغط على الاسم يفتح صفحة الأذكار الكاملة */
+      if(w.id === "athkar_am" || w.id === "athkar_pm"){
+        const mode = w.id === "athkar_am" ? "am" : "pm";
+        lbl.onclick = ()=> openAdhkar(mode);
+        const read = document.createElement("span");
+        read.className = "read-chip";
+        read.textContent = "📖 اقرأ";
+        read.onclick = ()=> openAdhkar(mode);
+        li.appendChild(chk); li.appendChild(lbl); li.appendChild(read);
+        ul.appendChild(li);
+        return;
+      }
+
       lbl.onclick = chk.onclick;
       li.appendChild(chk); li.appendChild(lbl);
       ul.appendChild(li);
