@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مفكرتي اليومية | H2DO</title>
+<style>
+  :root{
+    --bg:#f6f1e7;
+    --paper:#fffdf7;
+    --ink:#3b3228;
+    --accent:#0f766e;
+    --accent-soft:#d7ebe8;
+    --gold:#c9a227;
+    --rose:#f4d8cc;
+    --sky:#dbe7f4;
+    --sage:#e3ecd9;
+    --sand:#f3e7cf;
+    --line:#e4dccb;
+    --danger:#b3563e;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI", Tahoma, "Noto Naskh Arabic", "Amiri", serif;
+    background:var(--bg);
+    background-image:radial-gradient(circle at 15% 20%, rgba(201,162,39,.06) 0 120px, transparent 120px),
+                     radial-gradient(circle at 85% 80%, rgba(15,118,110,.05) 0 160px, transparent 160px);
+    color:var(--ink);
+    min-height:100vh;
+    padding:1.2rem;
+  }
+  .page{max-width:1100px;margin:0 auto}
+
+  /* ===== Header ===== */
+  header{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:1.1rem 1.4rem;
+    margin-bottom:1rem;
+    box-shadow:0 2px 10px rgba(59,50,40,.06);
+  }
+  .header-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.8rem}
+  .brand{display:flex;align-items:center;gap:.6rem}
+  .brand .logo{
+    width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),#14b8a6);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:bold;font-size:1.05rem;letter-spacing:.5px;
+    box-shadow:0 3px 8px rgba(15,118,110,.3);
+  }
+  .brand h1{font-size:1.35rem;color:var(--accent)}
+  .brand small{display:block;color:#8a7d6a;font-size:.75rem;font-weight:normal}
+  .date-nav{display:flex;align-items:center;gap:.5rem}
+  .date-nav button{
+    border:1px solid var(--line);background:var(--paper);border-radius:10px;
+    width:34px;height:34px;cursor:pointer;font-size:1rem;color:var(--accent);
+    transition:.15s;
+  }
+  .date-nav button:hover{background:var(--accent-soft)}
+  .date-nav input[type=date]{
+    border:1px solid var(--line);border-radius:10px;padding:.4rem .6rem;
+    background:var(--paper);color:var(--ink);font-family:inherit;font-size:.95rem;
+  }
+  .hijri{color:var(--gold);font-size:.9rem;font-weight:600;margin-top:.15rem}
+  .motto{
+    text-align:center;margin-top:.9rem;padding-top:.9rem;border-top:1px dashed var(--line);
+  }
+  .motto .b1{font-size:1.05rem;font-weight:700;color:var(--accent)}
+  .motto .b2{font-size:.85rem;color:#8a7d6a;margin-top:.3rem;font-style:italic}
+
+  /* ===== Grid layout ===== */
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+  @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:620px){.grid{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:1rem}
+
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:1rem 1.1rem;
+    box-shadow:0 2px 8px rgba(59,50,40,.05);
+  }
+  .card h2{
+    font-size:1rem;color:var(--accent);
+    display:flex;align-items:center;gap:.45rem;
+    padding-bottom:.55rem;margin-bottom:.7rem;
+    border-bottom:2px solid var(--accent-soft);
+  }
+  .card h2 .ico{font-size:1.1rem}
+  .hint{font-size:.72rem;color:#9a8d7a;margin-top:-.4rem;margin-bottom:.6rem}
+
+  /* ===== Prayers ===== */
+  .prayers{display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem}
+  .prayer{
+    text-align:center;padding:.6rem .2rem;border-radius:10px;
+    border:1.5px solid var(--line);cursor:pointer;user-select:none;
+    transition:.18s;font-size:.85rem;background:#fbf8f0;
+  }
+  .prayer .pmark{font-size:1.15rem;display:block;margin-bottom:.2rem;color:#c9bfae}
+  .prayer.done{background:var(--accent);border-color:var(--accent);color:#fff}
+  .prayer.done .pmark{color:#fff}
+  .verse{font-size:.75rem;color:#8a7d6a;text-align:center;margin-top:.6rem;font-style:italic}
+
+  /* ===== Checklists ===== */
+  ul.checklist{list-style:none}
+  ul.checklist li{
+    display:flex;align-items:center;gap:.55rem;
+    padding:.42rem .3rem;border-bottom:1px dashed var(--line);
+    font-size:.92rem;
+  }
+  ul.checklist li:last-child{border-bottom:none}
+  .chk{
+    min-width:21px;height:21px;border-radius:6px;border:2px solid #c9bfae;
+    background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    transition:.15s;flex-shrink:0;font-size:.8rem;color:transparent;
+  }
+  .chk.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  li .lbl{flex:1}
+  li.sub{padding-right:1.6rem;font-size:.85rem;color:#6d6152}
+  li .done-line{text-decoration:line-through;color:#b0a48f}
+
+  /* ===== Water ===== */
+  .water{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
+  .cup{
+    width:34px;height:44px;cursor:pointer;position:relative;
+    border:2px solid #9db8d4;border-top:none;border-radius:0 0 10px 10px;
+    background:linear-gradient(to top,#cfe3f7 0%,#cfe3f7 var(--fill,0%),transparent var(--fill,0%));
+    transition:.2s;
+  }
+  .cup::before{content:"";position:absolute;top:-4px;right:-2px;left:-2px;height:4px;border-radius:4px;background:#9db8d4}
+  .cup.full{background:linear-gradient(to top,#7fb3e8,#b9d7f5);box-shadow:0 2px 6px rgba(127,179,232,.4)}
+  .water-note{text-align:center;font-size:.75rem;color:#8a7d6a;margin-top:.5rem}
+
+  /* ===== Tasks ===== */
+  .task-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
+  .task-row input[type=text]{
+    flex:1;border:none;border-bottom:1.5px solid var(--line);
+    background:transparent;padding:.35rem .2rem;font-family:inherit;font-size:.92rem;color:var(--ink);
+    outline:none;transition:.15s;
+  }
+  .task-row input[type=text]:focus{border-bottom-color:var(--accent)}
+  .task-row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .task-row input.crossed{text-decoration:line-through;color:#b0a48f}
+
+  /* ===== Textareas ===== */
+  textarea{
+    width:100%;border:none;background:repeating-linear-gradient(transparent,transparent 27px,var(--line) 27px,var(--line) 28px);
+    line-height:28px;font-family:inherit;font-size:.92rem;color:var(--ink);
+    resize:vertical;outline:none;min-height:84px;
+  }
+  textarea.plain{background:none;border:1px dashed var(--line);border-radius:10px;padding:.6rem;line-height:1.6;min-height:70px}
+
+  /* ===== Stars ===== */
+  .stars{display:flex;justify-content:center;gap:.35rem;font-size:1.9rem;cursor:pointer}
+  .star{color:#ddd3bd;transition:.15s;user-select:none}
+  .star.lit{color:var(--gold);text-shadow:0 1px 4px rgba(201,162,39,.45)}
+  .rate-label{text-align:center;font-size:.8rem;color:#8a7d6a;margin-top:.3rem;min-height:1.2em}
+
+  /* ===== Progress ===== */
+  .progress-wrap{margin-top:.2rem}
+  .progress-bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#14b8a6);width:0%;transition:width .4s;border-radius:99px}
+  .progress-text{text-align:center;font-size:.78rem;color:#8a7d6a;margin-top:.35rem}
+
+  footer{
+    text-align:center;color:#a3967f;font-size:.78rem;margin-top:1.4rem;padding:1rem;
+  }
+  .reset-btn{
+    display:inline-block;margin-top:.4rem;border:1px solid var(--line);background:var(--paper);
+    color:var(--danger);border-radius:10px;padding:.35rem .9rem;cursor:pointer;font-family:inherit;font-size:.8rem;
+  }
+  .reset-btn:hover{background:#fbeae4}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== Header ===== -->
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <div class="logo">H2DO</div>
+        <div>
+          <h1>مفكرتي اليومية <small>استعن بالله ولا تعجز</small></h1>
+        </div>
+      </div>
+      <div>
+        <div class="date-nav">
+          <button id="prevDay" title="اليوم السابق">›</button>
+          <input type="date" id="datePicker">
+          <button id="nextDay" title="اليوم التالي">‹</button>
+        </div>
+        <div class="hijri" id="hijriDate"></div>
+      </div>
+    </div>
+    <div class="motto">
+      <div class="b1">« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »</div>
+      <div class="b2">اجعل يومك عامرًا بالخير</div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===== Column 1: prayers + worship ===== -->
+    <div class="col">
+      <div class="card">
+        <h2><span class="ico">🕌</span> الصلاة</h2>
+        <div class="prayers" id="prayers"></div>
+        <div class="verse">﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ ﴾</div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">📿</span> العبادات</h2>
+        <ul class="checklist" id="worship"></ul>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">💧</span> شرب الماء</h2>
+        <div class="water" id="water"></div>
+        <div class="water-note">« ثلثٌ لطعامك وثلثٌ لشرابك وثلثٌ لنفَسك » — <span id="waterCount">0</span>/8 أكواب</div>
+      </div>
+    </div>
+
+    <!-- ===== Column 2: intention + tasks + priorities ===== -->
+    <div class="col">
+      <div class="card">
+        <h2><span class="ico">🤍</span> النية / أفعال حسنة</h2>
+        <div class="hint">«إنما الأعمال بالنيات» — اكتب نيتك الصالحة لهذا اليوم</div>
+        <textarea class="plain" id="intention" rows="3" placeholder="نويتُ اليوم أن..."></textarea>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">📝</span> مهام اليوم</h2>
+        <div id="tasks"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">⭐</span> الأولويات</h2>
+        <div id="priorities"></div>
+      </div>
+    </div>
+
+    <!-- ===== Column 3: memory + notes + rating ===== -->
+    <div class="col">
+      <div class="card">
+        <h2><span class="ico">📌</span> ذكرى اليوم</h2>
+        <textarea class="plain" id="memory" rows="3" placeholder="لحظة جميلة، فائدة، موقف لا تريد نسيانه..."></textarea>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">🗒️</span> ملاحظات</h2>
+        <textarea id="notes" rows="5" placeholder=""></textarea>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">🌟</span> قيّم يومك</h2>
+        <div class="stars" id="stars"></div>
+        <div class="rate-label" id="rateLabel"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico">📈</span> إنجاز اليوم</h2>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة
+    <br>
+    <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Static data ---------- */
+  const PRAYERS = ["الفجر","الظهر","العصر","المغرب","العشاء"];
+
+  const WORSHIP = [
+    {id:"athkar",     label:"الأذكار", sub:false},
+    {id:"athkar_am",  label:"أذكار الصباح", sub:true},
+    {id:"athkar_pm",  label:"أذكار المساء", sub:true},
+    {id:"sunan",      label:"السنن والنوافل (الرواتب)", sub:false},
+    {id:"duha",       label:"صلاة الضحى", sub:true},
+    {id:"witr",       label:"الوتر وقيام الليل", sub:true},
+    {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", sub:false},
+    {id:"istighfar",  label:"الاستغفار (١٠٠ مرة)", sub:false},
+    {id:"werd",       label:"الورد اليومي من القرآن", sub:false},
+    {id:"sport",      label:"رياضة", sub:false},
+    {id:"knowledge",  label:"طلب علم", sub:false},
+    {id:"reading",    label:"صفحة قراءة", sub:false},
+  ];
+
+  const TASK_COLORS = ["#0f766e","#c9a227","#b3563e","#5b7fa6","#7c6aa6","#4e8d5b"];
+  const N_TASKS = 6, N_PRIORITIES = 3, N_CUPS = 8;
+
+  const RATE_LABELS = ["","يوم صعب.. غدًا أفضل بإذن الله","لا بأس، حاول أكثر","يوم جيد والحمد لله","يوم مميز ما شاء الله","يوم رائع! تقبّل الله منك 🌙"];
+
+  /* ---------- State ---------- */
+  let currentDate = todayStr();
+  let state = null;
+  let saveTimer = null;
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function storageKey(date){ return "h2do-tracker:"+date; }
+
+  function blankState(){
+    return {
+      prayers: PRAYERS.map(()=>false),
+      worship: Object.fromEntries(WORSHIP.map(w=>[w.id,false])),
+      water: 0,
+      intention: "",
+      tasks: Array.from({length:N_TASKS},()=>({text:"",done:false})),
+      priorities: Array.from({length:N_PRIORITIES},()=>({text:"",done:false})),
+      memory: "",
+      notes: "",
+      rating: 0
+    };
+  }
+
+  function load(date){
+    try{
+      const raw = localStorage.getItem(storageKey(date));
+      if(raw){
+        const parsed = JSON.parse(raw);
+        state = Object.assign(blankState(), parsed);
+        return;
+      }
+    }catch(e){}
+    state = blankState();
+  }
+
+  function save(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{
+      localStorage.setItem(storageKey(currentDate), JSON.stringify(state));
+    }, 250);
+  }
+
+  /* ---------- Hijri date ---------- */
+  function renderHijri(dateStr){
+    const el = document.getElementById("hijriDate");
+    try{
+      const d = new Date(dateStr+"T12:00:00");
+      const hijri = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura",{
+        weekday:"long", day:"numeric", month:"long", year:"numeric"
+      }).format(d);
+      el.textContent = hijri;
+    }catch(e){ el.textContent = ""; }
+  }
+
+  /* ---------- Renderers ---------- */
+  function renderPrayers(){
+    const box = document.getElementById("prayers");
+    box.innerHTML = "";
+    PRAYERS.forEach((name,i)=>{
+      const div = document.createElement("div");
+      div.className = "prayer"+(state.prayers[i]?" done":"");
+      div.innerHTML = '<span class="pmark">'+(state.prayers[i]?"✔":"○")+'</span>'+name;
+      div.onclick = ()=>{ state.prayers[i]=!state.prayers[i]; save(); renderPrayers(); renderProgress(); };
+      box.appendChild(div);
+    });
+  }
+
+  function renderWorship(){
+    const ul = document.getElementById("worship");
+    ul.innerHTML = "";
+    WORSHIP.forEach(w=>{
+      const li = document.createElement("li");
+      if(w.sub) li.className = "sub";
+      const chk = document.createElement("span");
+      const on = !!state.worship[w.id];
+      chk.className = "chk"+(on?" on":"");
+      chk.textContent = "✔";
+      chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); renderWorship(); renderProgress(); };
+      const lbl = document.createElement("span");
+      lbl.className = "lbl"+(on?" done-line":"");
+      lbl.textContent = w.label;
+      lbl.onclick = chk.onclick;
+      li.appendChild(chk); li.appendChild(lbl);
+      ul.appendChild(li);
+    });
+  }
+
+  function renderWater(){
+    const box = document.getElementById("water");
+    box.innerHTML = "";
+    for(let i=0;i<N_CUPS;i++){
+      const cup = document.createElement("div");
+      cup.className = "cup"+(i<state.water?" full":"");
+      cup.title = "كوب "+(i+1);
+      cup.onclick = ()=>{
+        state.water = (i+1===state.water) ? i : i+1;
+        save(); renderWater(); renderProgress();
+      };
+      box.appendChild(cup);
+    }
+    document.getElementById("waterCount").textContent = state.water;
+  }
+
+  function renderRows(containerId, items, colors){
+    const box = document.getElementById(containerId);
+    box.innerHTML = "";
+    items.forEach((item,i)=>{
+      const row = document.createElement("div");
+      row.className = "task-row";
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colors[i%colors.length];
+      const chk = document.createElement("span");
+      chk.className = "chk"+(item.done?" on":"");
+      chk.textContent = "✔";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = item.text;
+      input.placeholder = "................";
+      if(item.done) input.classList.add("crossed");
+      chk.onclick = ()=>{ item.done=!item.done; save(); renderRows(containerId,items,colors); renderProgress(); };
+      input.oninput = ()=>{ item.text = input.value; save(); };
+      row.appendChild(dot); row.appendChild(chk); row.appendChild(input);
+      box.appendChild(row);
+    });
+  }
+
+  function renderStars(){
+    const box = document.getElementById("stars");
+    box.innerHTML = "";
+    for(let i=1;i<=5;i++){
+      const s = document.createElement("span");
+      s.className = "star"+(i<=state.rating?" lit":"");
+      s.textContent = "★";
+      s.onclick = ()=>{ state.rating = (state.rating===i)?0:i; save(); renderStars(); };
+      box.appendChild(s);
+    }
+    document.getElementById("rateLabel").textContent = RATE_LABELS[state.rating]||"";
+  }
+
+  function renderProgress(){
+    let total = 0, done = 0;
+    total += PRAYERS.length; done += state.prayers.filter(Boolean).length;
+    total += WORSHIP.length; done += Object.values(state.worship).filter(Boolean).length;
+    total += 1; if(state.water >= N_CUPS) done += 1;
+    const filledTasks = state.tasks.filter(t=>t.text.trim());
+    total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
+    const filledPr = state.priorities.filter(t=>t.text.trim());
+    total += filledPr.length; done += filledPr.filter(t=>t.done).length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    document.getElementById("progressFill").style.width = pct+"%";
+    document.getElementById("progressText").textContent = pct+"% ("+done+" من "+total+")";
+  }
+
+  function bindTextarea(id, key){
+    const el = document.getElementById(id);
+    el.value = state[key] || "";
+    el.oninput = ()=>{ state[key] = el.value; save(); };
+  }
+
+  function renderAll(){
+    renderHijri(currentDate);
+    renderPrayers();
+    renderWorship();
+    renderWater();
+    renderRows("tasks", state.tasks, TASK_COLORS);
+    renderRows("priorities", state.priorities, ["#c9a227"]);
+    bindTextarea("intention","intention");
+    bindTextarea("memory","memory");
+    bindTextarea("notes","notes");
+    renderStars();
+    renderProgress();
+  }
+
+  /* ---------- Date navigation ---------- */
+  const picker = document.getElementById("datePicker");
+
+  function goto(dateStr){
+    currentDate = dateStr;
+    picker.value = dateStr;
+    load(dateStr);
+    renderAll();
+  }
+
+  function shiftDay(delta){
+    const d = new Date(currentDate+"T12:00:00");
+    d.setDate(d.getDate()+delta);
+    goto(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));
+  }
+
+  picker.onchange = ()=>{ if(picker.value) goto(picker.value); };
+  document.getElementById("prevDay").onclick = ()=> shiftDay(-1);
+  document.getElementById("nextDay").onclick = ()=> shiftDay(1);
+
+  document.getElementById("resetDay").onclick = ()=>{
+    if(confirm("هل تريد مسح جميع بيانات هذا اليوم؟")){
+      localStorage.removeItem(storageKey(currentDate));
+      load(currentDate);
+      renderAll();
+    }
+  };
+
+  /* ---------- Init ---------- */
+  goto(todayStr());
+})();
+</script>
+</body>
+</html>
