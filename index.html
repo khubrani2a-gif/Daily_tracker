@@ -205,6 +205,17 @@
     box-shadow:0 4px 12px -4px rgba(14,122,112,.5);
   }
   .prayer.done .pmark{color:#fff}
+  .prayer.late{
+    background:linear-gradient(135deg,#b8912a,#d9b34a);
+    border-color:transparent;color:#fff;
+    box-shadow:0 4px 12px -4px rgba(195,154,43,.5);
+  }
+  .prayer.late .pmark{color:#fff}
+  .prayer.missed{border-color:var(--danger);color:var(--danger);background:var(--chip-bg)}
+  .prayer.missed .pmark{color:var(--danger)}
+  .pstate-legend{font-size:.68rem;color:var(--muted);text-align:center;margin-top:.55rem}
+  .pstate-legend b{font-weight:600}
+  .lg-on{color:var(--accent)} .lg-late{color:var(--gold)} .lg-miss{color:var(--danger)}
   .ptime{display:block;font-size:.68rem;font-weight:400;margin-top:.2rem;opacity:.8}
   .prayer.next{border-color:var(--gold);animation:glowpulse 2.2s infinite}
   @keyframes glowpulse{
@@ -223,6 +234,7 @@
   }
   .loc-btn:hover{border-color:var(--accent-2);color:var(--accent)}
   .loc-row{display:flex;gap:.45rem;margin-top:.7rem}
+  .loc-row[hidden]{display:none}
   .loc-row input{
     flex:1;border:1.5px solid var(--line);border-radius:11px;padding:.45rem .7rem;
     background:var(--chk-bg);color:var(--ink);font-family:inherit;font-size:.85rem;outline:none;
@@ -364,8 +376,10 @@
   .hl.l3{background:var(--hm3)} .hl.l4{background:var(--hm4)}
   .pbar-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;font-size:.86rem}
   .pbar-name{min-width:52px}
-  .pbar{flex:1;height:11px;background:var(--line);border-radius:99px;overflow:hidden}
-  .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .5s}
+  .pbar{flex:1;height:11px;background:var(--line);border-radius:99px;overflow:hidden;display:flex}
+  .pbar i{display:block;height:100%;transition:width .5s}
+  .pbar i.on{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+  .pbar i.lt{background:var(--gold)}
   .pbar-pct{min-width:46px;text-align:left;color:var(--muted);font-size:.78rem;font-weight:600}
 
   /* ===== الاحتفال ===== */
@@ -463,6 +477,7 @@
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
         <div class="prayers" id="prayers"></div>
+        <div class="pstate-legend">اضغط البطاقة بالتتابع: <b class="lg-on">✔ في وقتها</b> · <b class="lg-late">🕐 متأخرة</b> · <b class="lg-miss">✕ فاتت</b></div>
         <div class="verse">﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ ﴾</div>
         <div class="loc-row" id="locRow" hidden>
           <input type="text" id="cityInput" placeholder="اكتب مدينتك: جدة، Riyadh، Tampa...">
@@ -907,19 +922,34 @@
   /* تحديث العدّاد التنازلي كل نصف دقيقة */
   setInterval(()=>{ if(prayerTimes && currentDate === todayStr()){ updateNext(); renderPrayers(); } }, 30000);
 
+  /* حالات الصلاة: "" لم تُسجل | ontime في وقتها | late متأخرة | missed فاتت
+     (القيمة true في البيانات القديمة تعني "في وقتها") */
+  function pval(v){ return v === true ? "ontime" : (v || ""); }
+  function isPrayed(v){ const s = pval(v); return s === "ontime" || s === "late"; }
+  const PSTATE = {
+    "":      {mark:"○", cls:""},
+    ontime:  {mark:"✔", cls:" done"},
+    late:    {mark:"🕐", cls:" late"},
+    missed:  {mark:"✕", cls:" missed"}
+  };
+  const PCYCLE = ["", "ontime", "late", "missed"];
+
   function renderPrayers(){
     const box = document.getElementById("prayers");
     box.innerHTML = "";
     PRAYERS.forEach((name,i)=>{
+      const v = pval(state.prayers[i]);
       const div = document.createElement("div");
-      div.className = "prayer"+(state.prayers[i]?" done":"");
-      if(nextKey && PRAYER_KEYS[i] === nextKey && !state.prayers[i]) div.classList.add("next");
+      div.className = "prayer" + PSTATE[v].cls;
+      if(nextKey && PRAYER_KEYS[i] === nextKey && !v) div.classList.add("next");
       const t = getTime(PRAYER_KEYS[i]);
-      div.innerHTML = '<span class="pmark">'+(state.prayers[i]?"✔":"○")+'</span>'+name
+      div.innerHTML = '<span class="pmark">'+PSTATE[v].mark+'</span>'+name
         + (t ? '<span class="ptime">'+fmt12(t)+'</span>' : '');
+      div.title = v==="ontime" ? "في وقتها" : v==="late" ? "متأخرة" : v==="missed" ? "فاتت" : "اضغط للتسجيل";
       div.onclick = ()=>{
-        state.prayers[i] = !state.prayers[i];
-        if(state.prayers[i] && fardComplete(state.prayers) && !state.celebrated){
+        const next = PCYCLE[(PCYCLE.indexOf(v)+1) % PCYCLE.length];
+        state.prayers[i] = next === "" ? false : next;
+        if(isPrayed(state.prayers[i]) && fardComplete(state.prayers) && !state.celebrated){
           state.celebrated = true;
           celebrate();
         }
@@ -1044,7 +1074,7 @@
 
   function renderProgress(){
     let total = 0, done = 0;
-    total += PRAYERS.length; done += state.prayers.filter(Boolean).length;
+    total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
     total += WORSHIP.length; done += Object.values(state.worship).filter(Boolean).length;
     total += 1; if(state.water >= N_CUPS) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
@@ -1062,8 +1092,8 @@
   const FARD_IDX = [0,2,3,4,5]; /* بدون الضحى */
   function fardComplete(p){
     if(!Array.isArray(p) || !p.length) return false;
-    if(p.length <= 5) return p.length === 5 && p.every(Boolean); /* أيام قديمة قبل إضافة الضحى */
-    return FARD_IDX.every(i=>p[i]);
+    if(p.length <= 5) return p.length === 5 && p.every(isPrayed); /* أيام قديمة قبل إضافة الضحى */
+    return FARD_IDX.every(i=>isPrayed(p[i]));
   }
   function computeStreak(){
     let streak = 0;
@@ -1093,7 +1123,7 @@
   function dayPct(s){
     let total = 0, done = 0;
     const pr = s.prayers || [];
-    total += (pr.length || PRAYERS.length); done += pr.filter(Boolean).length;
+    total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
     total += WORSHIP.length; done += Object.values(s.worship || {}).filter(Boolean).length;
     total += 1; if((s.water || 0) >= N_CUPS) done += 1;
     const ft = (s.tasks || []).filter(t=>t.text && t.text.trim());
@@ -1118,11 +1148,11 @@
   }
 
   /* توافق الأيام القديمة (٥ صلوات قبل إضافة الضحى) مع الترتيب الجديد */
-  function prayerAt(pr, idx){
-    if(!Array.isArray(pr)) return false;
-    if(pr.length > 5) return !!pr[idx];
+  function prayerVal(pr, idx){
+    if(!Array.isArray(pr)) return "";
+    if(pr.length > 5) return pval(pr[idx]);
     const map = {0:0, 2:1, 3:2, 4:3, 5:4};
-    return idx === 1 ? false : !!pr[map[idx]];
+    return idx === 1 ? "" : pval(pr[map[idx]]);
   }
 
   function renderStats(){
@@ -1207,18 +1237,34 @@
       d.setDate(d.getDate()+1);
     }
 
-    /* --- نسبة الالتزام بكل صلاة --- */
+    /* --- نسبة الالتزام بكل صلاة (في وقتها / متأخرة) --- */
     const bars = document.getElementById("prayerBars");
     bars.innerHTML = "";
+    let fardOn = 0, fardPrayed = 0;
     PRAYERS.forEach((name, idx)=>{
-      let hit = 0;
-      for(const dd of dates){ if(prayerAt(days[dd].prayers, idx)) hit++; }
-      const pct = dates.length ? Math.round(hit/dates.length*100) : 0;
+      let on = 0, late = 0;
+      for(const dd of dates){
+        const v = prayerVal(days[dd].prayers, idx);
+        if(v === "ontime") on++;
+        else if(v === "late") late++;
+      }
+      if(FARD_IDX.indexOf(idx) !== -1){ fardOn += on; fardPrayed += on + late; }
+      const n = dates.length || 1;
+      const onPct = Math.round(on/n*100), latePct = Math.round(late/n*100);
       const row = document.createElement("div");
       row.className = "pbar-row";
-      row.innerHTML = '<span class="pbar-name">'+name+'</span><span class="pbar"><i style="width:'+pct+'%"></i></span><span class="pbar-pct">'+arn(pct)+'٪</span>';
+      row.title = "في وقتها "+arn(onPct)+"٪ — متأخرة "+arn(latePct)+"٪";
+      row.innerHTML = '<span class="pbar-name">'+name+'</span>'
+        + '<span class="pbar"><i class="on" style="width:'+onPct+'%"></i><i class="lt" style="width:'+latePct+'%"></i></span>'
+        + '<span class="pbar-pct">'+arn(onPct+latePct)+'٪</span>';
       bars.appendChild(row);
     });
+    /* بطاقة إضافية: من الصلوات المؤداة، كم كانت في وقتها */
+    if(fardPrayed){
+      const onRatio = Math.round(fardOn/fardPrayed*100);
+      document.getElementById("statTiles").insertAdjacentHTML("beforeend",
+        '<div class="stat-tile"><div class="v">⏱ '+arn(onRatio)+'٪</div><div class="l">من صلواتك المؤداة كانت في وقتها</div></div>');
+    }
   }
 
   document.getElementById("statsBtn").onclick = ()=>{
