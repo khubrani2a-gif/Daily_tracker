@@ -4,105 +4,145 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مفكرتي اليومية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* خط ثمانية — يُستخدم تلقائيًا بمجرد رفع ملفه للمستودع.
+     يقبل عدة أسماء/صيغ ليعمل أيًا كان اسم الملف الذي ترفعه.
+     قبل الرفع يظهر الخط الاحتياطي IBM Plex Sans Arabic. */
+  @font-face{
+    font-family:"Thmanyah";
+    src: url("Thmanyah.woff2") format("woff2"),
+         url("Thmanyah.ttf") format("truetype"),
+         url("Thmanyah-Regular.ttf") format("truetype"),
+         url("Thmanyah.otf") format("opentype");
+    font-weight: 100 900;
+    font-display: swap;
+  }
   :root{
-    --bg:#f6f1e7;
-    --paper:#fffdf7;
-    --ink:#3b3228;
-    --accent:#0f766e;
-    --accent-soft:#d7ebe8;
-    --gold:#c9a227;
+    --bg:#f3efe6;
+    --paper:#fffefb;
+    --ink:#37302a;
+    --muted:#8f8373;
+    --accent:#0e7a70;
+    --accent-2:#14b8a6;
+    --accent-soft:#dcefec;
+    --gold:#c39a2b;
     --rose:#f4d8cc;
     --sky:#dbe7f4;
     --sage:#e3ecd9;
     --sand:#f3e7cf;
-    --line:#e4dccb;
+    --line:#ece4d6;
     --danger:#b3563e;
-    --radius:14px;
+    --radius:18px;
+    --shadow:0 6px 22px -8px rgba(55,48,42,.16);
+    --shadow-sm:0 2px 10px -4px rgba(55,48,42,.12);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    font-family:"Segoe UI", Tahoma, "Noto Naskh Arabic", "Amiri", serif;
+    font-family:"Thmanyah", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, "Noto Naskh Arabic", sans-serif;
     background:var(--bg);
-    background-image:radial-gradient(circle at 15% 20%, rgba(201,162,39,.06) 0 120px, transparent 120px),
-                     radial-gradient(circle at 85% 80%, rgba(15,118,110,.05) 0 160px, transparent 160px);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(20,184,166,.10), transparent 38%),
+      radial-gradient(circle at 88% 92%, rgba(195,154,43,.10), transparent 40%);
+    background-attachment:fixed;
     color:var(--ink);
     min-height:100vh;
-    padding:1.2rem;
+    padding:1.4rem 1.2rem 2rem;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
   }
-  .page{max-width:1100px;margin:0 auto}
+  .page{max-width:1120px;margin:0 auto}
 
   /* ===== Header ===== */
   header{
-    background:var(--paper);
-    border:1px solid var(--line);
+    position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#0e7a70,#12988c 60%,#14b8a6);
+    color:#fff;
     border-radius:var(--radius);
-    padding:1.1rem 1.4rem;
-    margin-bottom:1rem;
-    box-shadow:0 2px 10px rgba(59,50,40,.06);
+    padding:1.3rem 1.5rem;
+    margin-bottom:1.2rem;
+    box-shadow:var(--shadow);
   }
-  .header-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.8rem}
-  .brand{display:flex;align-items:center;gap:.6rem}
+  header::after{
+    content:"";position:absolute;left:-40px;bottom:-60px;width:200px;height:200px;
+    background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);pointer-events:none;
+  }
+  .header-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.9rem;position:relative;z-index:1}
+  .brand{display:flex;align-items:center;gap:.7rem}
   .brand .logo{
-    width:44px;height:44px;border-radius:12px;
-    background:linear-gradient(135deg,var(--accent),#14b8a6);
+    width:48px;height:48px;border-radius:14px;
+    background:rgba(255,255,255,.18);backdrop-filter:blur(4px);
     color:#fff;display:flex;align-items:center;justify-content:center;
-    font-weight:bold;font-size:1.05rem;letter-spacing:.5px;
-    box-shadow:0 3px 8px rgba(15,118,110,.3);
+    font-size:1.5rem;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
   }
-  .brand h1{font-size:1.35rem;color:var(--accent)}
-  .brand small{display:block;color:#8a7d6a;font-size:.75rem;font-weight:normal}
+  .brand h1{font-size:1.4rem;color:#fff;font-weight:700}
+  .brand small{display:block;color:rgba(255,255,255,.82);font-size:.78rem;font-weight:400;margin-top:.1rem}
   .date-nav{display:flex;align-items:center;gap:.5rem}
   .date-nav button{
-    border:1px solid var(--line);background:var(--paper);border-radius:10px;
-    width:34px;height:34px;cursor:pointer;font-size:1rem;color:var(--accent);
+    border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);border-radius:10px;
+    width:36px;height:36px;cursor:pointer;font-size:1.1rem;color:#fff;
     transition:.15s;
   }
-  .date-nav button:hover{background:var(--accent-soft)}
+  .date-nav button:hover{background:rgba(255,255,255,.28)}
   .date-nav input[type=date]{
-    border:1px solid var(--line);border-radius:10px;padding:.4rem .6rem;
-    background:var(--paper);color:var(--ink);font-family:inherit;font-size:.95rem;
+    border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:.45rem .65rem;
+    background:rgba(255,255,255,.92);color:var(--ink);font-family:inherit;font-size:.95rem;
   }
-  .hijri{color:var(--gold);font-size:.9rem;font-weight:600;margin-top:.15rem}
+  .hijri{color:#fdf3d6;font-size:.92rem;font-weight:600;margin-top:.35rem;text-align:left}
   .motto{
-    text-align:center;margin-top:.9rem;padding-top:.9rem;border-top:1px dashed var(--line);
+    text-align:center;margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.2);
+    position:relative;z-index:1;
   }
-  .motto .b1{font-size:1.05rem;font-weight:700;color:var(--accent)}
-  .motto .b2{font-size:.85rem;color:#8a7d6a;margin-top:.3rem;font-style:italic}
+  .motto .b1{font-size:1.08rem;font-weight:600;color:#fff}
+  .motto .b2{font-size:.85rem;color:rgba(255,255,255,.8);margin-top:.35rem}
 
   /* ===== Grid layout ===== */
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
   @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
   @media(max-width:620px){.grid{grid-template-columns:1fr}}
-  .col{display:flex;flex-direction:column;gap:1rem}
+  .col{display:flex;flex-direction:column;gap:1.2rem}
 
   .card{
     background:var(--paper);
     border:1px solid var(--line);
     border-radius:var(--radius);
-    padding:1rem 1.1rem;
-    box-shadow:0 2px 8px rgba(59,50,40,.05);
+    padding:1.1rem 1.2rem;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .2s, transform .2s;
   }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
   .card h2{
-    font-size:1rem;color:var(--accent);
-    display:flex;align-items:center;gap:.45rem;
-    padding-bottom:.55rem;margin-bottom:.7rem;
-    border-bottom:2px solid var(--accent-soft);
+    font-size:1.02rem;color:var(--accent);font-weight:700;
+    display:flex;align-items:center;gap:.5rem;
+    padding-bottom:.6rem;margin-bottom:.8rem;
+    border-bottom:1px solid var(--line);
   }
-  .card h2 .ico{font-size:1.1rem}
-  .hint{font-size:.72rem;color:#9a8d7a;margin-top:-.4rem;margin-bottom:.6rem}
+  .card h2 .ico{
+    font-size:1rem;width:30px;height:30px;flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);border-radius:9px;
+  }
+  .hint{font-size:.73rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.7rem;line-height:1.5}
 
   /* ===== Prayers ===== */
-  .prayers{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+  .prayers{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
   .prayer{
-    text-align:center;padding:.6rem .2rem;border-radius:10px;
+    text-align:center;padding:.7rem .2rem;border-radius:13px;
     border:1.5px solid var(--line);cursor:pointer;user-select:none;
-    transition:.18s;font-size:.85rem;background:#fbf8f0;
+    transition:.18s;font-size:.86rem;font-weight:500;background:#faf7ef;
   }
-  .prayer .pmark{font-size:1.15rem;display:block;margin-bottom:.2rem;color:#c9bfae}
-  .prayer.done{background:var(--accent);border-color:var(--accent);color:#fff}
+  .prayer:hover{border-color:var(--accent-2)}
+  .prayer .pmark{font-size:1.2rem;display:block;margin-bottom:.25rem;color:#cabfad;transition:.18s}
+  .prayer.done{
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    border-color:transparent;color:#fff;
+    box-shadow:0 4px 12px -4px rgba(14,122,112,.5);
+  }
   .prayer.done .pmark{color:#fff}
-  .verse{font-size:.75rem;color:#8a7d6a;text-align:center;margin-top:.6rem;font-style:italic}
+  .verse{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.7rem;line-height:1.7}
 
   /* ===== Checklists ===== */
   ul.checklist{list-style:none}
@@ -113,11 +153,12 @@
   }
   ul.checklist li:last-child{border-bottom:none}
   .chk{
-    min-width:21px;height:21px;border-radius:6px;border:2px solid #c9bfae;
+    min-width:22px;height:22px;border-radius:7px;border:2px solid #cbc0ad;
     background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
     transition:.15s;flex-shrink:0;font-size:.8rem;color:transparent;
   }
-  .chk.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chk:hover{border-color:var(--accent-2)}
+  .chk.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}
   li .lbl{flex:1}
   li.sub{padding-right:1.6rem;font-size:.85rem;color:#6d6152}
   li .done-line{text-decoration:line-through;color:#b0a48f}
@@ -154,41 +195,46 @@
   textarea.plain{background:none;border:1px dashed var(--line);border-radius:10px;padding:.6rem;line-height:1.6;min-height:70px}
 
   /* ===== Stars ===== */
-  .stars{display:flex;justify-content:center;gap:.35rem;font-size:1.9rem;cursor:pointer}
-  .star{color:#ddd3bd;transition:.15s;user-select:none}
-  .star.lit{color:var(--gold);text-shadow:0 1px 4px rgba(201,162,39,.45)}
-  .rate-label{text-align:center;font-size:.8rem;color:#8a7d6a;margin-top:.3rem;min-height:1.2em}
+  .stars{display:flex;justify-content:center;gap:.4rem;font-size:2rem;cursor:pointer}
+  .star{color:#e0d6c0;transition:transform .15s, color .15s;user-select:none}
+  .star:hover{transform:scale(1.15)}
+  .star.lit{color:var(--gold);text-shadow:0 2px 6px rgba(195,154,43,.5)}
+  .rate-label{text-align:center;font-size:.82rem;color:var(--muted);margin-top:.45rem;min-height:1.2em;font-weight:500}
 
   /* ===== Progress ===== */
   .progress-wrap{margin-top:.2rem}
-  .progress-bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#14b8a6);width:0%;transition:width .4s;border-radius:99px}
-  .progress-text{text-align:center;font-size:.78rem;color:#8a7d6a;margin-top:.35rem}
+  .progress-bar{height:12px;background:var(--line);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%;transition:width .5s cubic-bezier(.4,0,.2,1);border-radius:99px}
+  .progress-text{text-align:center;font-size:.82rem;color:var(--muted);margin-top:.45rem;font-weight:500}
 
   footer{
-    text-align:center;color:#a3967f;font-size:.78rem;margin-top:1.4rem;padding:1rem;
+    text-align:center;color:var(--muted);font-size:.8rem;margin-top:1.6rem;padding:1rem;
+    display:flex;flex-direction:column;align-items:center;gap:.5rem;
   }
+  .footer-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
   .reset-btn{
-    display:inline-block;margin-top:.4rem;border:1px solid var(--line);background:var(--paper);
-    color:var(--danger);border-radius:10px;padding:.35rem .9rem;cursor:pointer;font-family:inherit;font-size:.8rem;
-  }
-  .reset-btn:hover{background:#fbeae4}
-
-  .tool-btn{
-    display:inline-block;margin-top:.4rem;border:1px solid var(--line);background:var(--paper);
-    color:var(--accent);border-radius:10px;padding:.35rem .9rem;cursor:pointer;font-family:inherit;font-size:.8rem;
-  }
-  .tool-btn:hover{background:var(--accent-soft)}
-
-  /* ===== Sync ===== */
-  .sync-box{text-align:left;margin-top:.45rem}
-  .sync-btn{
-    border:1px solid var(--line);background:var(--paper);color:var(--accent);
-    border-radius:10px;padding:.3rem .8rem;cursor:pointer;font-family:inherit;font-size:.78rem;
+    border:1px solid var(--line);background:var(--paper);
+    color:var(--danger);border-radius:11px;padding:.45rem 1rem;cursor:pointer;font-family:inherit;font-size:.82rem;
     transition:.15s;
   }
-  .sync-btn:hover{background:var(--accent-soft)}
-  .sync-status{font-size:.72rem;color:#8a7d6a;margin-top:.25rem}
+  .reset-btn:hover{background:#fbeae4;border-color:var(--danger)}
+
+  .tool-btn{
+    border:1px solid var(--line);background:var(--paper);
+    color:var(--accent);border-radius:11px;padding:.45rem 1rem;cursor:pointer;font-family:inherit;font-size:.82rem;
+    transition:.15s;
+  }
+  .tool-btn:hover{background:var(--accent-soft);border-color:var(--accent-2)}
+
+  /* ===== Sync ===== */
+  .sync-box{text-align:left;margin-top:.55rem}
+  .sync-btn{
+    border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.16);color:#fff;
+    border-radius:11px;padding:.4rem .9rem;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:500;
+    transition:.15s;
+  }
+  .sync-btn:hover{background:rgba(255,255,255,.3)}
+  .sync-status{font-size:.74rem;color:rgba(255,255,255,.9);margin-top:.3rem}
 </style>
 </head>
 <body>
@@ -293,11 +339,12 @@
   </div>
 
   <footer>
-    يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة
-    <br>
-    <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
-    <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
-    <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
+    <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
+    <div class="footer-actions">
+      <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
+      <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
+      <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
+    </div>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
   </footer>
 </div>
