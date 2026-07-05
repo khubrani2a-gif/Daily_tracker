@@ -336,10 +336,40 @@
       if(raw){
         const parsed = JSON.parse(raw);
         state = Object.assign(blankState(), parsed);
-        return;
+        return true;
       }
     }catch(e){}
     state = blankState();
+    return false;
+  }
+
+  function fmtDate(d){
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+
+  /* نقل المهام غير المنجزة من آخر يوم محفوظ (حتى 7 أيام للخلف) */
+  function carryOver(dateStr){
+    let prev = null, prevDate = "";
+    const d = new Date(dateStr+"T12:00:00");
+    for(let i=0;i<7;i++){
+      d.setDate(d.getDate()-1);
+      const key = fmtDate(d);
+      const raw = localStorage.getItem(storageKey(key));
+      if(raw){
+        try{ prev = JSON.parse(raw); prevDate = key; }catch(e){}
+        break;
+      }
+    }
+    if(!prev) return;
+    const pendingTasks = (prev.tasks||[]).filter(t=>t.text.trim() && !t.done);
+    const pendingPr   = (prev.priorities||[]).filter(t=>t.text.trim() && !t.done);
+    const n = pendingTasks.length + pendingPr.length;
+    if(!n) return;
+    if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
+      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {text:t.text, done:false}; });
+      pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {text:t.text, done:false}; });
+    }
+    localStorage.setItem(storageKey(dateStr), JSON.stringify(state));
   }
 
   function save(){
@@ -487,14 +517,15 @@
   function goto(dateStr){
     currentDate = dateStr;
     picker.value = dateStr;
-    load(dateStr);
+    const existed = load(dateStr);
+    if(!existed) carryOver(dateStr);
     renderAll();
   }
 
   function shiftDay(delta){
     const d = new Date(currentDate+"T12:00:00");
     d.setDate(d.getDate()+delta);
-    goto(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));
+    goto(fmtDate(d));
   }
 
   picker.onchange = ()=>{ if(picker.value) goto(picker.value); };
