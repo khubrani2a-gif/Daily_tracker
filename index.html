@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مفكرتي اليومية</title>
+<meta name="theme-color" content="#0e7a70">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مفكرتي">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -257,11 +264,55 @@
   .star.lit{color:var(--gold);text-shadow:0 2px 6px rgba(195,154,43,.5)}
   .rate-label{text-align:center;font-size:.82rem;color:var(--muted);margin-top:.45rem;min-height:1.2em;font-weight:500}
 
-  /* ===== Progress ===== */
-  .progress-wrap{margin-top:.2rem}
-  .progress-bar{height:12px;background:var(--line);border-radius:99px;overflow:hidden}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%;transition:width .5s cubic-bezier(.4,0,.2,1);border-radius:99px}
-  .progress-text{text-align:center;font-size:.82rem;color:var(--muted);margin-top:.45rem;font-weight:500}
+  /* ===== Day stats: progress ring + streak ===== */
+  .day-stats{display:flex;align-items:center;gap:1rem}
+  .ring-wrap{position:relative;width:72px;height:72px}
+  .ring{width:72px;height:72px;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+  .ring-bg{stroke:rgba(255,255,255,.22)}
+  .ring-fg{
+    stroke:#fdf3d6;
+    stroke-dasharray:163.36;
+    stroke-dashoffset:163.36;
+    transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1);
+  }
+  .ring-text{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:.92rem;font-weight:700;
+  }
+  .streak{
+    display:flex;flex-direction:column;align-items:center;line-height:1.15;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    border-radius:14px;padding:.45rem .8rem;color:#fff;min-width:64px;
+  }
+  .streak .fire{font-size:1.1rem}
+  .streak span:not(.fire){font-size:1.15rem;font-weight:700}
+  .streak small{font-size:.6rem;color:rgba(255,255,255,.85)}
+
+  /* ===== عدّاد الاستغفار ===== */
+  li.tally-row{cursor:pointer;user-select:none}
+  .tally{
+    background:var(--accent-soft);color:var(--accent);
+    border-radius:99px;padding:.12rem .65rem;font-size:.8rem;font-weight:700;
+    flex-shrink:0;min-width:64px;text-align:center;transition:.15s;
+  }
+  .tally.done{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+  html.dark .tally.done{color:#08211d}
+  .tally-reset{
+    border:none;background:none;color:var(--muted);cursor:pointer;
+    font-size:.95rem;padding:.1rem .25rem;border-radius:7px;flex-shrink:0;
+  }
+  .tally-reset:hover{background:var(--accent-soft);color:var(--accent)}
+
+  /* ===== الاحتفال ===== */
+  .confetti{
+    position:fixed;top:-14px;width:9px;height:14px;border-radius:3px;
+    z-index:999;pointer-events:none;opacity:.95;
+    animation:confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall{
+    to{transform:translateY(105vh) rotate(720deg);opacity:.85}
+  }
 
   footer{
     text-align:center;color:var(--muted);font-size:.8rem;margin-top:1.6rem;padding:1rem;
@@ -305,6 +356,20 @@
           <h1>مفكرتي اليومية <small>استعن بالله ولا تعجز</small></h1>
         </div>
       </div>
+      <div class="day-stats">
+        <div class="ring-wrap" title="نسبة إنجاز يومك">
+          <svg class="ring" viewBox="0 0 64 64">
+            <circle class="ring-bg" cx="32" cy="32" r="26"/>
+            <circle class="ring-fg" id="ringFg" cx="32" cy="32" r="26"/>
+          </svg>
+          <div class="ring-text" id="ringText">0%</div>
+        </div>
+        <div class="streak" id="streakBadge" title="أيام متتالية أكملت فيها الصلوات الخمس">
+          <span class="fire">🔥</span>
+          <span id="streakCount">0</span>
+          <small>أيام متتالية</small>
+        </div>
+      </div>
       <div>
         <div class="date-nav">
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
@@ -320,8 +385,8 @@
       </div>
     </div>
     <div class="motto">
-      <div class="b1">« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »</div>
-      <div class="b2">اجعل يومك عامرًا بالخير</div>
+      <div class="b1" id="quoteText">« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »</div>
+      <div class="b2" id="quoteSrc">اجعل يومك عامرًا بالخير</div>
     </div>
   </header>
 
@@ -384,13 +449,6 @@
         <div class="rate-label" id="rateLabel"></div>
       </div>
 
-      <div class="card">
-        <h2><span class="ico">📈</span> إنجاز اليوم</h2>
-        <div class="progress-wrap">
-          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-          <div class="progress-text" id="progressText">0%</div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -450,6 +508,34 @@
 
   const RATE_LABELS = ["","يوم صعب.. غدًا أفضل بإذن الله","لا بأس، حاول أكثر","يوم جيد والحمد لله","يوم مميز ما شاء الله","يوم رائع! تقبّل الله منك 🌙"];
 
+  /* آية/حكمة اليوم — تتغير تلقائيًا كل يوم */
+  const QUOTES = [
+    {t:"﴿ وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ﴾", s:"البقرة ٤٥"},
+    {t:"﴿ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ ﴾", s:"الرعد ٢٨"},
+    {t:"﴿ وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا ﴾", s:"الطلاق ٢"},
+    {t:"﴿ إِنَّ مَعَ الْعُسْرِ يُسْرًا ﴾", s:"الشرح ٦"},
+    {t:"﴿ وَقُل رَّبِّ زِدْنِي عِلْمًا ﴾", s:"طه ١١٤"},
+    {t:"﴿ فَاذْكُرُونِي أَذْكُرْكُمْ ﴾", s:"البقرة ١٥٢"},
+    {t:"﴿ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ ﴾", s:"البقرة ١٥٣"},
+    {t:"« أحبُّ الأعمالِ إلى الله أدومُها وإن قلّ »", s:"متفق عليه"},
+    {t:"« الكلمةُ الطيبةُ صدقة »", s:"متفق عليه"},
+    {t:"« تبسُّمُك في وجه أخيك صدقة »", s:"رواه الترمذي"},
+    {t:"« من سلك طريقًا يلتمس فيه علمًا سهّل الله له به طريقًا إلى الجنة »", s:"رواه مسلم"},
+    {t:"« أقربُ ما يكون العبدُ من ربِّه وهو ساجد »", s:"رواه مسلم"},
+    {t:"« خيرُكم من تعلَّم القرآن وعلَّمه »", s:"رواه البخاري"},
+    {t:"« الدعاءُ هو العبادة »", s:"رواه الترمذي"},
+    {t:"« إذا صلَّيتَ صلاةً فصلِّ صلاةَ مُودِّع »", s:"رواه ابن ماجه"},
+    {t:"« كلمتان خفيفتان على اللسان، ثقيلتان في الميزان: سبحان الله وبحمده، سبحان الله العظيم »", s:"متفق عليه"},
+    {t:"« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »", s:"الحسن البصري"},
+  ];
+
+  function renderQuote(dateStr){
+    const days = Math.floor(new Date(dateStr+"T12:00:00").getTime()/86400000);
+    const q = QUOTES[((days % QUOTES.length) + QUOTES.length) % QUOTES.length];
+    document.getElementById("quoteText").textContent = q.t;
+    document.getElementById("quoteSrc").textContent = q.s;
+  }
+
   /* ---------- State ---------- */
   let currentDate = todayStr();
   let state = null;
@@ -472,6 +558,8 @@
       memory: "",
       notes: "",
       rating: 0,
+      istighfar: 0,
+      celebrated: false,
       updatedAt: 0
     };
   }
@@ -482,6 +570,8 @@
       if(raw){
         const parsed = JSON.parse(raw);
         state = Object.assign(blankState(), parsed);
+        /* توافق مع الأيام القديمة: علامة استغفار بدون عدّاد */
+        if(state.worship && state.worship.istighfar && !(state.istighfar >= 100)) state.istighfar = 100;
         return true;
       }
     }catch(e){}
@@ -609,7 +699,14 @@
       const div = document.createElement("div");
       div.className = "prayer"+(state.prayers[i]?" done":"");
       div.innerHTML = '<span class="pmark">'+(state.prayers[i]?"✔":"○")+'</span>'+name;
-      div.onclick = ()=>{ state.prayers[i]=!state.prayers[i]; save(); renderPrayers(); renderProgress(); };
+      div.onclick = ()=>{
+        state.prayers[i] = !state.prayers[i];
+        if(state.prayers[i] && fardComplete(state.prayers) && !state.celebrated){
+          state.celebrated = true;
+          celebrate();
+        }
+        save(); renderPrayers(); renderProgress();
+      };
       box.appendChild(div);
     });
   }
@@ -620,6 +717,46 @@
     WORSHIP.forEach(w=>{
       const li = document.createElement("li");
       if(w.sub) li.className = "sub";
+
+      /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
+      if(w.id === "istighfar"){
+        li.classList.add("tally-row");
+        const count = state.istighfar || 0;
+        const done = count >= 100;
+        state.worship.istighfar = done;
+        const chk = document.createElement("span");
+        chk.className = "chk"+(done?" on":"");
+        chk.textContent = "✔";
+        const lbl = document.createElement("span");
+        lbl.className = "lbl"+(done?" done-line":"");
+        lbl.textContent = w.label;
+        const tally = document.createElement("span");
+        tally.className = "tally"+(done?" done":"");
+        tally.textContent = done ? "تم ✓ ١٠٠" : count.toLocaleString("ar-EG")+" / ١٠٠";
+        const rst = document.createElement("button");
+        rst.className = "tally-reset";
+        rst.textContent = "↺";
+        rst.title = "تصفير العداد";
+        rst.onclick = (ev)=>{
+          ev.stopPropagation();
+          state.istighfar = 0; state.worship.istighfar = false;
+          save(); renderWorship(); renderProgress();
+        };
+        li.onclick = ()=>{
+          if((state.istighfar||0) >= 100) return;
+          state.istighfar = (state.istighfar||0) + 1;
+          if(navigator.vibrate) navigator.vibrate(8);
+          if(state.istighfar === 100){
+            state.worship.istighfar = true;
+            if(navigator.vibrate) navigator.vibrate([30,60,30]);
+          }
+          save(); renderWorship(); renderProgress();
+        };
+        li.append(chk, lbl, tally, rst);
+        ul.appendChild(li);
+        return;
+      }
+
       const chk = document.createElement("span");
       const on = !!state.worship[w.id];
       chk.className = "chk"+(on?" on":"");
@@ -697,8 +834,57 @@
     const filledPr = state.priorities.filter(t=>t.text.trim());
     total += filledPr.length; done += filledPr.filter(t=>t.done).length;
     const pct = total ? Math.round(done/total*100) : 0;
-    document.getElementById("progressFill").style.width = pct+"%";
-    document.getElementById("progressText").textContent = pct+"% ("+done+" من "+total+")";
+    const C = 163.36;
+    document.getElementById("ringFg").style.strokeDashoffset = C * (1 - pct/100);
+    document.getElementById("ringText").textContent = pct+"%";
+    updateStreak();
+  }
+
+  /* ---------- سلسلة أيام الصلوات الخمس ---------- */
+  const FARD_IDX = [0,2,3,4,5]; /* بدون الضحى */
+  function fardComplete(p){
+    if(!Array.isArray(p) || !p.length) return false;
+    if(p.length <= 5) return p.length === 5 && p.every(Boolean); /* أيام قديمة قبل إضافة الضحى */
+    return FARD_IDX.every(i=>p[i]);
+  }
+  function computeStreak(){
+    let streak = 0;
+    const d = new Date(todayStr()+"T12:00:00");
+    for(let i=0;i<400;i++){
+      const key = fmtDate(d);
+      let prayers = null;
+      if(key === currentDate && state){ prayers = state.prayers; }
+      else{
+        try{
+          const raw = localStorage.getItem(storageKey(key));
+          if(raw) prayers = JSON.parse(raw).prayers;
+        }catch(e){}
+      }
+      const done = fardComplete(prayers || []);
+      if(i === 0 && !done){ d.setDate(d.getDate()-1); continue; } /* اليوم لم يكتمل بعد — لا يكسر السلسلة */
+      if(done){ streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+    return streak;
+  }
+  function updateStreak(){
+    document.getElementById("streakCount").textContent = computeStreak().toLocaleString("ar-EG");
+  }
+
+  /* ---------- الاحتفال عند إكمال الصلوات ---------- */
+  function celebrate(){
+    if(navigator.vibrate) navigator.vibrate([40,60,40]);
+    const colors = ["#14b8a6","#c39a2b","#fdf3d6","#ffffff","#0e7a70","#f4d8cc"];
+    for(let i=0;i<40;i++){
+      const s = document.createElement("span");
+      s.className = "confetti";
+      s.style.right = (Math.random()*100)+"vw";
+      s.style.background = colors[i % colors.length];
+      s.style.animationDelay = (Math.random()*0.5)+"s";
+      s.style.animationDuration = (1.3 + Math.random()*1.4)+"s";
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(), 3500);
+    }
   }
 
   function bindTextarea(id, key){
@@ -729,6 +915,7 @@
     picker.value = dateStr;
     const existed = load(dateStr);
     if(!existed) carryOver(dateStr);
+    renderQuote(dateStr);
     renderAll();
     pullRemote(dateStr);
   }
@@ -813,6 +1000,11 @@
     localStorage.setItem(THEME_KEY, theme);
     applyTheme(theme);
   };
+
+  /* ---------- PWA: تسجيل عامل الخدمة ---------- */
+  if("serviceWorker" in navigator && location.protocol === "https:"){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
 
   /* ---------- Init ---------- */
   initFirebase();
