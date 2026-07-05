@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مفكرتي اليومية | H2DO</title>
+<title>مفكرتي اليومية</title>
 <style>
   :root{
     --bg:#f6f1e7;
@@ -93,7 +93,7 @@
   .hint{font-size:.72rem;color:#9a8d7a;margin-top:-.4rem;margin-bottom:.6rem}
 
   /* ===== Prayers ===== */
-  .prayers{display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem}
+  .prayers{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
   .prayer{
     text-align:center;padding:.6rem .2rem;border-radius:10px;
     border:1.5px solid var(--line);cursor:pointer;user-select:none;
@@ -182,7 +182,7 @@
   <header>
     <div class="header-top">
       <div class="brand">
-        <div class="logo">H2DO</div>
+        <div class="logo">🌙</div>
         <div>
           <h1>مفكرتي اليومية <small>استعن بالله ولا تعجز</small></h1>
         </div>
@@ -284,14 +284,13 @@
   "use strict";
 
   /* ---------- Static data ---------- */
-  const PRAYERS = ["الفجر","الظهر","العصر","المغرب","العشاء"];
+  const PRAYERS = ["الفجر","الضحى","الظهر","العصر","المغرب","العشاء"];
 
   const WORSHIP = [
     {id:"athkar",     label:"الأذكار", sub:false},
     {id:"athkar_am",  label:"أذكار الصباح", sub:true},
     {id:"athkar_pm",  label:"أذكار المساء", sub:true},
     {id:"sunan",      label:"السنن والنوافل (الرواتب)", sub:false},
-    {id:"duha",       label:"صلاة الضحى", sub:true},
     {id:"witr",       label:"الوتر وقيام الليل", sub:true},
     {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", sub:false},
     {id:"istighfar",  label:"الاستغفار (١٠٠ مرة)", sub:false},
