@@ -8,16 +8,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* خط ثمانية — يُستخدم تلقائيًا بمجرد رفع ملفه للمستودع.
-     يقبل عدة أسماء/صيغ ليعمل أيًا كان اسم الملف الذي ترفعه.
-     قبل الرفع يظهر الخط الاحتياطي IBM Plex Sans Arabic. */
+  /* خط ثمانية (Thmanyah Serif Text) — مستضاف محليًا في مجلد fonts.
+     الخط الاحتياطي IBM Plex Sans Arabic يظهر لحظة التحميل فقط. */
   @font-face{
     font-family:"Thmanyah";
-    src: url("Thmanyah.woff2") format("woff2"),
-         url("Thmanyah.ttf") format("truetype"),
-         url("Thmanyah-Regular.ttf") format("truetype"),
-         url("Thmanyah.otf") format("opentype");
-    font-weight: 100 900;
+    src: url("fonts/Thmanyah-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+  }
+  @font-face{
+    font-family:"Thmanyah";
+    src: url("fonts/Thmanyah-Medium.woff2") format("woff2");
+    font-weight: 500 600;
+    font-display: swap;
+  }
+  @font-face{
+    font-family:"Thmanyah";
+    src: url("fonts/Thmanyah-Bold.woff2") format("woff2");
+    font-weight: 700 900;
     font-display: swap;
   }
   :root{
