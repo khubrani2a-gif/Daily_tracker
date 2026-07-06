@@ -390,6 +390,26 @@
   }
   .adhkar-overlay[hidden]{display:none}
   .adhkar-sheet{max-width:720px;margin:0 auto;padding:1rem 1rem 3rem}
+  .adhkar-top{
+    position:sticky;top:0;z-index:10;
+    background:var(--bg);
+    padding:.4rem 0 .6rem;
+    box-shadow:0 8px 14px -12px rgba(0,0,0,.35);
+  }
+  .ad-close{
+    width:auto;padding:0 .9rem;font-size:.85rem;font-weight:600;
+    color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    border:none;white-space:nowrap;flex-shrink:0;
+  }
+  .ad-close:hover{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;opacity:.9}
+  .adhkar-done-btn{
+    display:block;width:100%;margin-top:.4rem;
+    border:none;border-radius:14px;padding:.9rem;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;font-family:inherit;font-size:1rem;font-weight:700;cursor:pointer;
+    box-shadow:0 6px 16px -6px rgba(14,122,112,.5);
+  }
+  .adhkar-done-btn:active{transform:scale(.99)}
   .adhkar-head{
     display:flex;align-items:center;justify-content:space-between;gap:.6rem;
     padding:.4rem 0 .7rem;
@@ -606,20 +626,23 @@
   <!-- ===== شاشة الأذكار ===== -->
   <div class="adhkar-overlay" id="adhkarOverlay" hidden>
     <div class="adhkar-sheet">
-      <div class="adhkar-head">
-        <button class="ad-btn" id="adhkarClose" title="إغلاق">✕</button>
-        <h2 id="adhkarTitle">أذكار الصباح</h2>
-        <button class="ad-btn" id="adhkarReset" title="تصفير عدادات اليوم">↺</button>
+      <div class="adhkar-top">
+        <div class="adhkar-head">
+          <button class="ad-btn ad-close" id="adhkarClose" title="إغلاق">✕ إغلاق</button>
+          <h2 id="adhkarTitle">أذكار الصباح</h2>
+          <button class="ad-btn" id="adhkarReset" title="تصفير عدادات اليوم">↺</button>
+        </div>
+        <div class="adhkar-progress"><div id="adhkarFill"></div></div>
+        <div class="adhkar-count" id="adhkarCount"></div>
       </div>
-      <div class="adhkar-progress"><div id="adhkarFill"></div></div>
-      <div class="adhkar-count" id="adhkarCount"></div>
       <div class="adhkar-list" id="adhkarList"></div>
+      <button class="adhkar-done-btn" id="adhkarDone">تم ✓ — العودة للمفكرة</button>
     </div>
   </div>
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٦</div>
+    <div class="app-version">النسخة ١٧</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -655,12 +678,11 @@
   const PRAYERS = ["الفجر","الضحى","الظهر","العصر","المغرب","العشاء"];
 
   const WORSHIP = [
-    {id:"athkar",     label:"الأذكار", sub:false},
-    {id:"athkar_am",  label:"أذكار الصباح", sub:true},
-    {id:"athkar_pm",  label:"أذكار المساء", sub:true},
-    {id:"athkar_salah", label:"أذكار بعد الصلاة", sub:true},
-    {id:"athkar_sleep", label:"أذكار النوم", sub:true},
-    {id:"athkar_wake",  label:"أذكار الاستيقاظ", sub:true},
+    {id:"athkar_am",  label:"أذكار الصباح", sub:false},
+    {id:"athkar_pm",  label:"أذكار المساء", sub:false},
+    {id:"athkar_salah", label:"أذكار بعد الصلاة", sub:false},
+    {id:"athkar_sleep", label:"أذكار النوم", sub:false},
+    {id:"athkar_wake",  label:"أذكار الاستيقاظ", sub:false},
     {id:"sunan",      label:"السنن والنوافل (الرواتب)", sub:false},
     {id:"witr",       label:"الوتر وقيام الليل", sub:true},
     {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", sub:false},
@@ -809,16 +831,28 @@
   function openAdhkar(mode){
     adhkarMode = mode;
     document.getElementById("adhkarTitle").textContent = ADHKAR_TITLES[mode];
-    document.getElementById("adhkarOverlay").hidden = false;
+    const ov = document.getElementById("adhkarOverlay");
+    ov.hidden = false;
+    ov.scrollTop = 0;
     document.body.style.overflow = "hidden";
     renderAdhkarList();
+    /* زر الرجوع في الجوال يغلق صفحة الأذكار */
+    try{ history.pushState({adhkar:true}, ""); }catch(e){}
   }
-  function closeAdhkar(){
+  function closeAdhkarUI(){
     document.getElementById("adhkarOverlay").hidden = true;
     document.body.style.overflow = "";
     renderWorship(); renderProgress();
   }
+  function closeAdhkar(){
+    if(history.state && history.state.adhkar){ history.back(); }
+    else closeAdhkarUI();
+  }
+  window.addEventListener("popstate", ()=>{
+    if(!document.getElementById("adhkarOverlay").hidden) closeAdhkarUI();
+  });
   document.getElementById("adhkarClose").onclick = closeAdhkar;
+  document.getElementById("adhkarDone").onclick = closeAdhkar;
   document.getElementById("adhkarReset").onclick = ()=>{
     if(!confirm("تصفير عدادات هذه الأذكار لهذا اليوم؟")) return;
     state.adhkar[adhkarMode] = [];
@@ -838,7 +872,6 @@
     const key = ADHKAR_WKEY[adhkarMode];
     const was = !!state.worship[key];
     state.worship[key] = (done === data.length);
-    if(state.worship.athkar_am && state.worship.athkar_pm) state.worship.athkar = true;
     if(!was && state.worship[key] && navigator.vibrate) navigator.vibrate([30,60,30]);
   }
 
@@ -1332,7 +1365,7 @@
   function renderProgress(){
     let total = 0, done = 0;
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
-    total += WORSHIP.length; done += Object.values(state.worship).filter(Boolean).length;
+    total += WORSHIP.length; done += WORSHIP.filter(w=>!!state.worship[w.id]).length;
     total += 1; if(state.water >= N_CUPS) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
     total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
@@ -1381,7 +1414,8 @@
     let total = 0, done = 0;
     const pr = s.prayers || [];
     total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
-    total += WORSHIP.length; done += Object.values(s.worship || {}).filter(Boolean).length;
+    const wsh = s.worship || {};
+    total += WORSHIP.length; done += WORSHIP.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= N_CUPS) done += 1;
     const ft = (s.tasks || []).filter(t=>t.text && t.text.trim());
     total += ft.length; done += ft.filter(t=>t.done).length;
