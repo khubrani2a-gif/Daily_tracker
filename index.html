@@ -847,7 +847,10 @@
           <div class="adhkar-head">
             <button class="ad-btn ad-close" id="wkClose">✕ إغلاق</button>
             <h2>تمارين</h2>
-            <button class="ad-btn" id="wkAdd" title="تمرين جديد">＋</button>
+            <span>
+              <button class="ad-btn" id="wkVoice" title="التحفيز الصوتي">🔊</button>
+              <button class="ad-btn" id="wkAdd" title="تمرين جديد">＋</button>
+            </span>
           </div>
         </div>
         <div id="wkCards"></div>
@@ -889,7 +892,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٣</div>
+    <div class="app-version">النسخة ٢٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2254,6 +2257,49 @@
     return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
   }
 
+  /* ===== التحفيز الصوتي (Voice Coach) ===== */
+  const WK_VOICE_KEY = "h2do-wk-voice";
+  function wkVoiceOn(){ return localStorage.getItem(WK_VOICE_KEY) !== "0"; }
+  function wkPick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  const VP = {
+    start:  ["يلا نبدأ! أنت قدّها","بسم الله، انطلق بقوة","خطوة بخطوة، ابدأ الآن","وقت التركيز، انطلق"],
+    during: ["ركّز، كل ثانية تُحسب","استمر، أداؤك رائع","حافظ على الإيقاع","لا تتوقف الآن","التقدم يحدث الآن"],
+    last5:  ["بقي القليل، اثبت","أنهِها بقوة","ثوانٍ أخيرة","اصمد، أوشكت"],
+    toRest: ["أحسنت! خذ راحة قصيرة","عمل رائع، التقط أنفاسك","وقت الاستشفاء، استعد للقادم"],
+    toWork: ["عدنا للعمل!","جاهز للجولة القادمة؟","نكمل بقوة","ركّز، الجولة بدأت"],
+    cycle:  ["اكتملت جولة، ممتاز","خطوة أخرى نحو هدفك","استمر، الأبطال يواصلون"],
+    cool:   ["وقت التهدئة، تنفّس بعمق واسترخِ"],
+    finish: ["اكتملت الجلسة، عمل مذهل","مبروك! أنهيتها بقوة","أحسنت، الاستمرارية تصنع النجاح","مهمة منجزة، وفّيت بوعدك لنفسك"]
+  };
+  function wkSpeak(txt){
+    if(!wkVoiceOn() || !("speechSynthesis" in window)) return;
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = "ar-SA"; u.rate = 1.05;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  /* المدرب الذكي: عبارة الختام حسب أدائك */
+  function wkCoachFinishLine(){
+    try{
+      const streakBefore = computeSportStreak();
+      /* رقم قياسي؟ قارن دقائق اليوم بأعلى يوم سابق */
+      let best = 0;
+      const t = new Date(todayStr()+"T12:00:00");
+      for(let i=1;i<=400;i++){
+        const d = new Date(t); d.setDate(d.getDate()-i);
+        const m = dayMinsFor(fmtDate(d));
+        if(m > best) best = m;
+      }
+      const todayM = (state.sport && state.sport.mins) || 0;
+      if(todayM > best && best > 0) return "رقم قياسي جديد لك اليوم، مذهل!";
+      if(streakBefore >= 7) return "ما شاء الله، سلسلة "+streakBefore.toLocaleString("ar-EG")+" أيام، استمر يا بطل";
+      if(streakBefore <= 1 && best > 0) return "عودة موفقة، نبدأ من جديد معًا";
+    }catch(e){}
+    return wkPick(VP.finish);
+  }
+
   /* صوت التنبيه (WebAudio — بدون ملفات) */
   let wkAudio = null;
   function wkBeep(freq, dur){
@@ -2285,6 +2331,7 @@
     wkOverlay.scrollTop = 0;
     document.body.style.overflow = "hidden";
     wkShow("wkList"); renderWkList();
+    wkVoiceIcon();
     try{ history.pushState({wk:true}, ""); }catch(e){}
   }
   function closeWkUI(){
@@ -2297,6 +2344,15 @@
     else closeWkUI();
   }
   window.addEventListener("popstate", ()=>{ if(!wkOverlay.hidden) closeWkUI(); });
+  function wkVoiceIcon(){
+    document.getElementById("wkVoice").textContent = wkVoiceOn() ? "🔊" : "🔇";
+  }
+  document.getElementById("wkVoice").onclick = ()=>{
+    localStorage.setItem(WK_VOICE_KEY, wkVoiceOn() ? "0" : "1");
+    wkVoiceIcon();
+    if(wkVoiceOn()) wkSpeak("التحفيز الصوتي مفعّل");
+    else{ try{ speechSynthesis.cancel(); }catch(e){} }
+  };
   document.getElementById("wkOpen").onclick = openWk;
   document.getElementById("wkClose").onclick = closeWk;
 
@@ -2383,7 +2439,7 @@
   };
 
   /* ----- المشغل ----- */
-  let wkPhases = [], wkIdx = 0, wkEndAt = 0, wkPauseLeft = 0, wkTick = null, wkCur = null, wkLastBeepSec = -1;
+  let wkPhases = [], wkIdx = 0, wkEndAt = 0, wkPauseLeft = 0, wkTick = null, wkCur = null, wkLastBeepSec = -1, wkLastVoiceSec = -1;
   function wkBuildPhases(w){
     const ph = [];
     if(w.warm) ph.push({n:"إحماء 🔥", s:w.warm, c:"warm"});
@@ -2405,12 +2461,24 @@
     wkOverlay.scrollTop = 0;
     wkWake(true);
     wkBeep(880, .15);
+    wkSpeak(wkPick(VP.start));
+    wkPrevPhase = null;
     wkEnterPhase();
   }
+  let wkPrevPhase = null;
   function wkEnterPhase(){
     const p = wkPhases[wkIdx];
+    /* عبارة الانتقال المناسبة */
+    if(wkPrevPhase){
+      if(p.c === "cool") wkSpeak(wkPick(VP.cool));
+      else if(p.c === "hi" && wkPrevPhase.cyc && p.cyc && p.cyc > wkPrevPhase.cyc) wkSpeak(wkPick(VP.cycle));
+      else if(p.c === "hi") wkSpeak(wkPick(VP.toWork));
+      else if(p.c === "lo" || p.c === "rest") wkSpeak(wkPick(VP.toRest));
+    }
+    wkPrevPhase = p;
     wkEndAt = Date.now() + p.s*1000;
     wkLastBeepSec = -1;
+    wkLastVoiceSec = -1;
     const ph = document.getElementById("wkPhase");
     ph.textContent = p.n;
     ph.className = "wk-phase "+p.c;
@@ -2433,6 +2501,11 @@
     for(let i=wkIdx+1;i<wkPhases.length;i++) remain += wkPhases[i].s;
     document.getElementById("wkRemain").textContent = "المتبقي من التمرين: "+wkFmt(remain);
     if(left <= 3 && left >= 1 && left !== wkLastBeepSec){ wkLastBeepSec = left; wkBeep(880, .12); }
+    /* تحفيز صوتي: قبل النهاية بـ٥ ثوانٍ للمراحل الطويلة، وكل دقيقة في المراحل الممتدة */
+    if(left === 5 && p.s >= 20 && wkLastVoiceSec !== 5){ wkLastVoiceSec = 5; wkSpeak(wkPick(VP.last5)); }
+    if(p.s >= 120 && left !== p.s && left > 10 && left % 60 === 0 && wkLastVoiceSec !== left){
+      wkLastVoiceSec = left; wkSpeak(wkPick(VP.during));
+    }
     if(leftMs <= 0){
       if(wkIdx + 1 < wkPhases.length){ wkBeep(1318, .35); wkIdx++; wkEnterPhase(); }
       else wkFinish();
@@ -2453,6 +2526,7 @@
     if(currentDate !== todayStr()) goto(todayStr());
     addSportMins(mins);
     celebrate();
+    setTimeout(()=> wkSpeak(wkCoachFinishLine()), 900);
     wkShow("wkList"); renderWkList();
     document.getElementById("wkCards").insertAdjacentHTML("afterbegin",
       '<div class="wk-total">أحسنت! 💪 اكتمل «'+wkCur.name+'» وأُضيفت '+mins.toLocaleString("ar-EG")+' دقيقة لرياضة اليوم</div>');
