@@ -336,6 +336,46 @@
   .sw-dot.today{box-shadow:0 0 0 2px var(--paper), 0 0 0 3.5px var(--accent-2)}
   .sw-label{font-size:.74rem;color:var(--muted)}
   .sport-streak{font-size:.8rem;color:var(--gold);font-weight:700}
+  .sp-top{display:flex;gap:.5rem;margin-bottom:.8rem}
+  .sp-stat{
+    flex:1;text-align:center;background:var(--chip-bg);border:1px solid var(--line);
+    border-radius:13px;padding:.55rem .2rem;
+  }
+  .sp-stat b{display:block;font-size:1.25rem;color:var(--accent);line-height:1.3}
+  .sp-stat small{font-size:.64rem;color:var(--muted)}
+  .sp-challenge{
+    background:var(--accent-soft);border-radius:14px;padding:.8rem .9rem;margin-bottom:.7rem;
+  }
+  .sp-challenge.done{background:rgba(195,154,43,.16)}
+  .sp-ch-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;color:var(--accent);font-size:.9rem}
+  .sp-mood button{
+    background:none;border:1.5px solid transparent;border-radius:9px;font-size:1.05rem;
+    cursor:pointer;padding:.05rem .25rem;opacity:.45;transition:.15s;
+  }
+  .sp-mood button.on{opacity:1;border-color:var(--accent-2);background:var(--paper)}
+  .sp-ch-text{font-size:1rem;font-weight:600;margin:.45rem 0 .55rem}
+  .sp-ch-state{font-size:.76rem;color:var(--muted);margin-top:.4rem;font-weight:600}
+  .sp-quick{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.7rem 0}
+  .sp-quick button{
+    border:1.5px solid var(--line);background:var(--chip-bg);color:var(--ink);
+    border-radius:12px;padding:.55rem .4rem;font-size:.8rem;font-weight:600;cursor:pointer;
+    transition:.15s;text-align:center;
+  }
+  .sp-quick button:hover{border-color:var(--accent-2);background:var(--accent-soft)}
+  .sp-quick button small{display:block;color:var(--muted);font-weight:400;font-size:.68rem;margin-top:.1rem}
+  .sp-month{margin-top:.6rem;text-align:center}
+  .sp-month .sport-bar{margin-top:0;height:8px}
+  .sp-story{
+    font-size:.78rem;color:var(--muted);line-height:1.8;text-align:center;
+    margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--line);
+  }
+  .sp-story b{color:var(--accent)}
+  .sp-details{margin-top:.8rem}
+  .sp-details summary{
+    font-size:.78rem;color:var(--muted);cursor:pointer;text-align:center;
+    padding:.4rem;border:1px dashed var(--line);border-radius:10px;
+  }
+  .sp-details[open] summary{margin-bottom:.7rem;color:var(--accent);border-color:var(--accent-2)}
 
   /* ===== تمارين الفترات ===== */
   .wk-open{
@@ -722,29 +762,57 @@
 
       <div class="card" id="sportCard">
         <h2><span class="ico">🏃</span> الرياضة</h2>
-        <div class="sport-chips" id="sportTypes"></div>
-        <div class="sport-km" id="sportKmRow" hidden>
-          <label for="sportKm">المسافة:</label>
-          <input id="sportKm" type="number" min="0" step="0.1" placeholder="٠"> كم
+
+        <div class="sp-top">
+          <div class="sp-stat"><b id="spStreakBig">٠</b><small>🔥 أيام متتالية</small></div>
+          <div class="sp-stat"><b id="spVital">🟢</b><small id="spVitalTxt">النشاط</small></div>
+          <div class="sp-stat"><b id="spLevelStars">⭐</b><small id="spLevelTxt">المستوى</small></div>
         </div>
-        <div class="sport-mins">
-          <button class="sm-btn" id="spMinus">−٥</button>
-          <div class="sport-count"><b id="sportMins">٠</b><small>دقيقة</small></div>
-          <button class="sm-btn" id="spPlus5">+٥</button>
-          <button class="sm-btn strong" id="spPlus10">+١٠</button>
+
+        <div class="sp-challenge">
+          <div class="sp-ch-head">
+            <span>🎯 تحدي اليوم</span>
+            <span class="sp-mood" id="spMood"></span>
+          </div>
+          <div class="sp-ch-text" id="spChText"></div>
+          <div class="sport-bar"><i id="sportFill"></i></div>
+          <div class="sp-ch-state" id="spChState"></div>
         </div>
-        <button class="sport-timer" id="sportTimer">▶ ابدأ التمرين الآن</button>
-        <button class="wk-open" id="wkOpen">⏱ تمارين الفترات — HIIT وتاباتا</button>
-        <div class="sport-bar"><i id="sportFill"></i></div>
+
+        <button class="sport-timer" id="sportTimer">▶ ابدأ النشاط الآن</button>
+
+        <div class="sp-quick" id="spQuick"></div>
+
         <div class="sport-week">
           <div class="sw-dots" id="swDots"></div>
           <div class="sw-label" id="swLabel" title="توصية منظمة الصحة العالمية: ١٥٠ دقيقة أسبوعيًا"></div>
         </div>
-        <div class="sport-foot">
-          <button class="sport-goal" id="sportGoalBtn"></button>
-          <span class="sport-streak" id="sportStreak"></span>
-          <span class="sport-status" id="sportStatus"></span>
+        <div class="sp-month">
+          <div class="sport-bar"><i id="spMonthFill"></i></div>
+          <div class="sw-label" id="spMonthLabel"></div>
         </div>
+        <div class="sp-story" id="spStory"></div>
+
+        <details class="sp-details">
+          <summary>التفاصيل والتسجيل اليدوي</summary>
+          <div class="sport-chips" id="sportTypes"></div>
+          <div class="sport-km" id="sportKmRow" hidden>
+            <label for="sportKm">المسافة:</label>
+            <input id="sportKm" type="number" min="0" step="0.1" placeholder="٠"> كم
+          </div>
+          <div class="sport-mins">
+            <button class="sm-btn" id="spMinus">−٥</button>
+            <div class="sport-count"><b id="sportMins">٠</b><small>دقيقة</small></div>
+            <button class="sm-btn" id="spPlus5">+٥</button>
+            <button class="sm-btn strong" id="spPlus10">+١٠</button>
+          </div>
+          <button class="wk-open" id="wkOpen">⏱ كل التمارين والقوالب</button>
+          <div class="sport-foot">
+            <button class="sport-goal" id="sportGoalBtn"></button>
+            <span class="sport-streak" id="sportStreak" hidden></span>
+            <span class="sport-status" id="sportStatus"></span>
+          </div>
+        </details>
       </div>
 
       <div class="card">
@@ -892,7 +960,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٥</div>
+    <div class="app-version">النسخة ٢٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1183,6 +1251,7 @@
       rating: 0,
       istighfar: 0,
       sport: {types:[], mins:0, km:0},
+      mood: "ok",
       weight: "",
       sleep: "",
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
@@ -1601,6 +1670,46 @@
     }
     save(); renderSport(); renderProgress();
   }
+  /* إجماليات النشاط (الأسبوع الحالي/الماضي/الشهر/متوسط ٤ أسابيع) */
+  function sportTotals(){
+    const t = new Date(todayStr()+"T12:00:00");
+    const ws = new Date(t); ws.setDate(ws.getDate()-ws.getDay());
+    const pws = new Date(ws); pws.setDate(pws.getDate()-7);
+    let week=0, prevWeek=0, month=0, sessionsWeek=0, kmWeek=0, sum28=0;
+    for(let i=0;i<31;i++){
+      const d = new Date(t); d.setDate(d.getDate()-i);
+      const key = fmtDate(d);
+      const m = dayMinsFor(key);
+      if(i < 28) sum28 += m;
+      if(d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear()) month += m;
+      if(d >= ws){
+        week += m; if(m > 0) sessionsWeek++;
+        let s = null;
+        if(key === currentDate) s = state;
+        else{ try{ const r = localStorage.getItem(storageKey(key)); if(r) s = JSON.parse(r); }catch(e){} }
+        if(s && s.sport && s.sport.km) kmWeek += +s.sport.km || 0;
+      }else if(d >= pws && d < ws) prevWeek += m;
+    }
+    return {week:week, prevWeek:prevWeek, month:month, sessionsWeek:sessionsWeek, kmWeek:kmWeek, avg4:sum28/4};
+  }
+
+  /* تحدي اليوم: الهدف مُكيَّف حسب حالتك */
+  const MOODS = [["tired","😴"],["ok","🙂"],["strong","💪"]];
+  function challengeTarget(){
+    const g = sportGoal();
+    const mood = state.mood || "ok";
+    if(mood === "tired") return Math.max(10, Math.round(g*0.5/5)*5);
+    if(mood === "strong") return Math.round(g*1.5/5)*5;
+    return g;
+  }
+  const SP_MONTH_TARGET = 600;
+  const WK_QUICK = [
+    {label:"⚡ حرق سريع", mins:"٨ د", w:{id:"q8", name:"حرق سريع", warm:30, hi:30, lo:15, cycles:9, rest:0, cool:45}},
+    {label:"🔥 تاباتا", mins:"٤ د", w:{id:"q4", name:"تاباتا", warm:0, hi:20, lo:10, cycles:8, rest:0, cool:0}},
+    {label:"🏃 HIIT مبتدئ", mins:"١٢ د", w:{id:"q12", name:"HIIT مبتدئ", warm:60, hi:30, lo:15, cycles:13, rest:0, cool:75}},
+    {label:"💪 HIIT متقدم", mins:"٢٠ د", w:{id:"q20", name:"HIIT متقدم", warm:90, hi:40, lo:20, cycles:17, rest:0, cool:90}},
+  ];
+
   function renderSport(){
     if(!state.sport) state.sport = {types:[], mins:0, km:0};
     if(!state.sport.types) state.sport.types = state.sport.type ? [state.sport.type] : [];
@@ -1625,11 +1734,77 @@
     if(showKm) document.getElementById("sportKm").value = state.sport.km || "";
     const goal = sportGoal(), mins = state.sport.mins||0;
     document.getElementById("sportMins").textContent = arn(mins);
-    document.getElementById("sportGoalBtn").textContent = "الهدف: "+arn(goal)+" دقيقة";
-    document.getElementById("sportFill").style.width = Math.min(100, Math.round(mins/goal*100))+"%";
+    document.getElementById("sportGoalBtn").textContent = "الهدف الأساسي: "+arn(goal)+" دقيقة";
     document.getElementById("sportCard").classList.toggle("done", mins >= goal);
+
+    /* حالتي اليوم 😴🙂💪 */
+    const moodBox = document.getElementById("spMood");
+    moodBox.innerHTML = "";
+    MOODS.forEach(m=>{
+      const b = document.createElement("button");
+      b.textContent = m[1];
+      b.title = m[0]==="tired" ? "متعب" : m[0]==="strong" ? "نشيط" : "طبيعي";
+      if((state.mood||"ok") === m[0]) b.classList.add("on");
+      b.onclick = ()=>{ state.mood = m[0]; save(); renderSport(); };
+      moodBox.appendChild(b);
+    });
+
+    /* 🎯 تحدي اليوم */
+    const target = challengeTarget();
+    const CH_TXT = ["تحرّك {ن} دقيقة اليوم","امشِ أو تدرّب {ن} دقيقة","اجمع {ن} دقيقة من النشاط"];
+    const dayN = Math.floor(new Date(currentDate+"T12:00:00").getTime()/86400000);
+    let chTxt = CH_TXT[dayN % CH_TXT.length].replace("{ن}", arn(target));
+    if(state.mood === "tired") chTxt += " — يوم خفيف يحفظ سلسلتك 🌱";
+    if(state.mood === "strong") chTxt += " — يوم قوي 💪";
+    document.getElementById("spChText").textContent = chTxt;
+    document.getElementById("sportFill").style.width = Math.min(100, Math.round(mins/target*100))+"%";
+    const chDone = mins >= target;
+    document.querySelector(".sp-challenge").classList.toggle("done", chDone);
+    document.getElementById("spChState").textContent = chDone
+      ? "✔ اكتمل تحدي اليوم — "+arn(mins)+" دقيقة، أحسنت!"
+      : (mins > 0 ? arn(mins)+" / "+arn(target)+" — متبقي "+arn(Math.max(0,target-mins))+" د"
+                  : "اضغط ▶ أو اختر تمرينًا سريعًا بالأسفل");
+
+    /* ⚡ التمارين السريعة */
+    const qbox = document.getElementById("spQuick");
+    if(!qbox.childElementCount){
+      WK_QUICK.forEach(q=>{
+        const b = document.createElement("button");
+        b.innerHTML = q.label+"<small>"+q.mins+"</small>";
+        b.onclick = ()=>{ openWk(); wkStart(q.w); };
+        qbox.appendChild(b);
+      });
+    }
+
+    /* المؤشرات العلوية + الشهر + القصة */
+    const tot = sportTotals();
+    const streak = computeSportStreak();
+    document.getElementById("spStreakBig").textContent = arn(streak);
+    const score = Math.min(1, mins/goal)*50 + Math.min(streak,7)/7*30 + Math.min(tot.week/WEEK_TARGET,1)*20;
+    const vit = score >= 65 ? ["🟢","ممتاز"] : score >= 30 ? ["🟡","جيد"] : ["🔴","منخفض"];
+    document.getElementById("spVital").textContent = vit[0];
+    document.getElementById("spVitalTxt").textContent = "النشاط: "+vit[1];
+    const lv = tot.avg4 < 60 ? ["مبتدئ","⭐"] : tot.avg4 < 150 ? ["نشيط","⭐⭐"] : tot.avg4 < 300 ? ["رياضي","⭐⭐⭐"] : ["محترف","⭐⭐⭐⭐"];
+    document.getElementById("spLevelStars").textContent = lv[1];
+    document.getElementById("spLevelTxt").textContent = "المستوى: "+lv[0];
+    const mpct = Math.min(100, Math.round(tot.month/SP_MONTH_TARGET*100));
+    document.getElementById("spMonthFill").style.width = mpct+"%";
+    document.getElementById("spMonthLabel").textContent = "رحلة الشهر: "+arn(tot.month)+" / "+arn(SP_MONTH_TARGET)+" د ("+arn(mpct)+"٪)";
+    const story = document.getElementById("spStory");
+    if(tot.week > 0){
+      let s = "هذا الأسبوع: تدرّبت <b>"+arn(tot.sessionsWeek)+"</b> مرات · <b>"+arn(tot.week)+"</b> دقيقة · ≈<b>"+arn(tot.week*7)+"</b> سعرة";
+      if(tot.kmWeek > 0) s += " · <b>"+(Math.round(tot.kmWeek*10)/10).toLocaleString("ar-EG")+"</b> كم";
+      if(tot.prevWeek > 0){
+        const diff = Math.round((tot.week - tot.prevWeek)/tot.prevWeek*100);
+        if(diff > 0) s += "<br>أفضل من الأسبوع الماضي بـ"+arn(diff)+"٪ 📈";
+        else if(diff < 0) s += "<br>أقل من الأسبوع الماضي بـ"+arn(-diff)+"٪ — تقدر تعوّض!";
+        else s += "<br>نفس مستوى الأسبوع الماضي — حافظ عليه";
+      }
+      story.innerHTML = s;
+    }else story.innerHTML = "ابدأ أول نشاط لهذا الأسبوع وستُكتب قصتك هنا ✨";
+
     let statusTxt = "";
-    if(mins >= goal) statusTxt = "أنجزت هدف اليوم 💪";
+    if(mins >= goal) statusTxt = "أنجزت هدفك الأساسي 💪";
     else if(currentDate === todayStr() && mins === 0 && new Date().getHours() >= 15) statusTxt = "ما زال أمامك وقت للمشي 🚶";
     document.getElementById("sportStatus").textContent = statusTxt;
     renderSportWeek();
@@ -1694,7 +1869,7 @@
     const btn = document.getElementById("sportTimer");
     const st = +(localStorage.getItem(SPORT_TIMER_KEY) || 0);
     if(st){ btn.classList.add("running"); btn.textContent = "⏹ إيقاف وتسجيل — "+fmtElapsed(Date.now()-st); }
-    else{ btn.classList.remove("running"); btn.textContent = "▶ ابدأ التمرين الآن"; clearInterval(sportTimerInt); }
+    else{ btn.classList.remove("running"); btn.textContent = "▶ ابدأ النشاط الآن"; clearInterval(sportTimerInt); }
   }
   document.getElementById("sportTimer").onclick = ()=>{
     const st = +(localStorage.getItem(SPORT_TIMER_KEY) || 0);
@@ -2288,6 +2463,7 @@
     on: "Voice coach on"
   };
   function VP(){ return wkVoiceMode() === "ar" ? VP_AR : VP_EN; }
+  function wkT(ar, en){ return wkVoiceMode() === "ar" ? ar : en; }
 
   /* انتقاء أفضل صوت متاح في الجهاز */
   function wkBestVoice(lang){
@@ -2481,7 +2657,7 @@
   };
 
   /* ----- المشغل ----- */
-  let wkPhases = [], wkIdx = 0, wkEndAt = 0, wkPauseLeft = 0, wkTick = null, wkCur = null, wkLastBeepSec = -1, wkLastVoiceSec = -1;
+  let wkPhases = [], wkIdx = 0, wkEndAt = 0, wkPauseLeft = 0, wkTick = null, wkCur = null, wkLastBeepSec = -1, wkLastVoiceSec = -1, wkAllSecs = 0, wkSaidHalf = false, wkSaidMin = false;
   function wkBuildPhases(w){
     const ph = [];
     if(w.warm) ph.push({n:"إحماء 🔥", s:w.warm, c:"warm"});
@@ -2505,6 +2681,8 @@
     wkBeep(880, .15);
     wkSpeak(wkPick(VP().start));
     wkPrevPhase = null;
+    wkAllSecs = wkPhases.reduce((a,p)=>a+p.s, 0);
+    wkSaidHalf = false; wkSaidMin = false;
     wkEnterPhase();
   }
   let wkPrevPhase = null;
@@ -2542,6 +2720,12 @@
     let remain = left;
     for(let i=wkIdx+1;i<wkPhases.length;i++) remain += wkPhases[i].s;
     document.getElementById("wkRemain").textContent = "المتبقي من التمرين: "+wkFmt(remain);
+    if(!wkSaidHalf && wkAllSecs >= 120 && remain <= wkAllSecs/2 && remain > 65){
+      wkSaidHalf = true; wkSpeak(wkT("وصلت لنصف التمرين، استمر","Halfway there. Keep it up."));
+    }
+    if(!wkSaidMin && remain === 60 && wkAllSecs >= 180){
+      wkSaidMin = true; wkSpeak(wkT("بقيت دقيقة واحدة","One minute left. Finish strong."));
+    }
     if(left <= 3 && left >= 1 && left !== wkLastBeepSec){ wkLastBeepSec = left; wkBeep(880, .12); }
     /* تحفيز صوتي: قبل النهاية بـ٥ ثوانٍ للمراحل الطويلة، وكل دقيقة في المراحل الممتدة */
     if(left === 5 && p.s >= 20 && wkLastVoiceSec !== 5){ wkLastVoiceSec = 5; wkSpeak(wkPick(VP().last5)); }
