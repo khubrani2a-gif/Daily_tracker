@@ -655,6 +655,15 @@
       </div>
 
       <div class="card">
+        <h2><span class="ico">⚖️</span> صحتك اليوم</h2>
+        <div class="health-row">
+          <label>الوزن (كجم)<input id="weightIn" type="number" min="0" step="0.1" placeholder="—"></label>
+          <label>النوم (ساعات)<input id="sleepIn" type="number" min="0" max="24" step="0.5" placeholder="—"></label>
+        </div>
+        <div class="health-note" id="healthNote"></div>
+      </div>
+
+      <div class="card">
         <h2><span class="ico">💧</span> شرب الماء</h2>
         <div class="water" id="water"></div>
         <div class="water-note">« ثلثٌ لطعامك وثلثٌ لشرابك وثلثٌ لنفَسك » — <span id="waterCount">0</span>/8 أكواب</div>
@@ -677,15 +686,6 @@
       <div class="card">
         <h2><span class="ico">⭐</span> الأولويات</h2>
         <div id="priorities"></div>
-      </div>
-
-      <div class="card">
-        <h2><span class="ico">⚖️</span> صحتك اليوم</h2>
-        <div class="health-row">
-          <label>الوزن (كجم)<input id="weightIn" type="number" min="0" step="0.1" placeholder="—"></label>
-          <label>النوم (ساعات)<input id="sleepIn" type="number" min="0" max="24" step="0.5" placeholder="—"></label>
-        </div>
-        <div class="health-note" id="healthNote"></div>
       </div>
     </div>
 
@@ -747,7 +747,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٠</div>
+    <div class="app-version">النسخة ٢١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
