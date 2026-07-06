@@ -278,6 +278,39 @@
   .cup.full{background:linear-gradient(to top,#7fb3e8,#b9d7f5);box-shadow:0 2px 6px rgba(127,179,232,.4)}
   .water-note{text-align:center;font-size:.75rem;color:#8a7d6a;margin-top:.5rem}
 
+  /* ===== الرياضة ===== */
+  #sportCard.done{border-color:var(--accent-2);background:var(--accent-soft)}
+  html.dark #sportCard.done{background:#16302b}
+  .sport-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.8rem}
+  .sport-chip{
+    border:1.5px solid var(--line);background:var(--chip-bg);color:var(--ink);
+    border-radius:99px;padding:.35rem .7rem;font-size:.8rem;cursor:pointer;transition:.15s;
+  }
+  .sport-chip:hover{border-color:var(--accent-2)}
+  .sport-chip.on{
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;border-color:transparent;font-weight:600;
+  }
+  .sport-mins{display:flex;align-items:center;justify-content:center;gap:.5rem}
+  .sm-btn{
+    border:1.5px solid var(--line);background:var(--chk-bg);color:var(--accent);
+    border-radius:11px;min-width:52px;padding:.5rem .4rem;font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s;
+  }
+  .sm-btn:hover{border-color:var(--accent-2);background:var(--accent-soft)}
+  .sm-btn.strong{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .sport-count{text-align:center;min-width:86px}
+  .sport-count b{font-size:1.7rem;color:var(--accent);line-height:1.1;display:block}
+  .sport-count small{font-size:.68rem;color:var(--muted)}
+  .sport-bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:.8rem}
+  .sport-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .4s}
+  .sport-foot{display:flex;align-items:center;justify-content:space-between;margin-top:.55rem}
+  .sport-goal{
+    border:1px dashed var(--line);background:none;color:var(--muted);
+    border-radius:99px;padding:.2rem .7rem;font-size:.72rem;cursor:pointer;
+  }
+  .sport-goal:hover{color:var(--accent);border-color:var(--accent-2)}
+  .sport-status{font-size:.78rem;color:var(--accent);font-weight:600}
+
   /* ===== Tasks ===== */
   .task-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
   .task-row input[type=text]{
@@ -561,6 +594,22 @@
         <ul class="checklist" id="worship"></ul>
       </div>
 
+      <div class="card" id="sportCard">
+        <h2><span class="ico">🏃</span> الرياضة</h2>
+        <div class="sport-chips" id="sportTypes"></div>
+        <div class="sport-mins">
+          <button class="sm-btn" id="spMinus">−٥</button>
+          <div class="sport-count"><b id="sportMins">٠</b><small>دقيقة</small></div>
+          <button class="sm-btn" id="spPlus5">+٥</button>
+          <button class="sm-btn strong" id="spPlus10">+١٠</button>
+        </div>
+        <div class="sport-bar"><i id="sportFill"></i></div>
+        <div class="sport-foot">
+          <button class="sport-goal" id="sportGoalBtn"></button>
+          <span class="sport-status" id="sportStatus"></span>
+        </div>
+      </div>
+
       <div class="card">
         <h2><span class="ico">💧</span> شرب الماء</h2>
         <div class="water" id="water"></div>
@@ -642,7 +691,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٧</div>
+    <div class="app-version">النسخة ١٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -688,7 +737,6 @@
     {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", sub:false},
     {id:"istighfar",  label:"الاستغفار (١٠٠ مرة)", sub:false},
     {id:"werd",       label:"الورد اليومي من القرآن", sub:false},
-    {id:"sport",      label:"رياضة", sub:false},
     {id:"knowledge",  label:"طلب علم", sub:false},
     {id:"reading",    label:"صفحة قراءة", sub:false},
   ];
@@ -933,6 +981,7 @@
       notes: "",
       rating: 0,
       istighfar: 0,
+      sport: {type:"", mins:0},
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
       celebrated: false,
       updatedAt: 0
@@ -1309,6 +1358,50 @@
     });
   }
 
+  /* ---------- الرياضة ---------- */
+  const SPORT_TYPES = [["walk","🚶 مشي"],["run","🏃 جري"],["gym","🏋️ قوة"],["stretch","🧘 مرونة"],["other","💪 أخرى"]];
+  const SPORT_GOAL_KEY = "h2do-sport-goal";
+  function sportGoal(){ return Math.max(5, +(localStorage.getItem(SPORT_GOAL_KEY) || 30)); }
+  function sportDone(s){
+    const mins = (s.sport && s.sport.mins) || 0;
+    return mins >= sportGoal() || !!(s.worship && s.worship.sport); /* توافق الأيام القديمة */
+  }
+  function addSportMins(n){
+    if(!state.sport) state.sport = {type:"", mins:0};
+    const before = sportDone(state);
+    state.sport.mins = Math.max(0, (state.sport.mins||0) + n);
+    if(!before && sportDone(state) && navigator.vibrate) navigator.vibrate([30,60,30]);
+    save(); renderSport(); renderProgress();
+  }
+  function renderSport(){
+    if(!state.sport) state.sport = {type:"", mins:0};
+    const arn = x => x.toLocaleString("ar-EG");
+    const box = document.getElementById("sportTypes");
+    box.innerHTML = "";
+    SPORT_TYPES.forEach(t=>{
+      const c = document.createElement("button");
+      c.className = "sport-chip"+(state.sport.type === t[0] ? " on":"");
+      c.textContent = t[1];
+      c.onclick = ()=>{ state.sport.type = (state.sport.type === t[0]) ? "" : t[0]; save(); renderSport(); };
+      box.appendChild(c);
+    });
+    const goal = sportGoal(), mins = state.sport.mins||0;
+    document.getElementById("sportMins").textContent = arn(mins);
+    document.getElementById("sportGoalBtn").textContent = "الهدف: "+arn(goal)+" دقيقة";
+    document.getElementById("sportFill").style.width = Math.min(100, Math.round(mins/goal*100))+"%";
+    document.getElementById("sportCard").classList.toggle("done", mins >= goal);
+    document.getElementById("sportStatus").textContent = mins >= goal ? "أنجزت هدف اليوم 💪" : "";
+  }
+  document.getElementById("spMinus").onclick = ()=> addSportMins(-5);
+  document.getElementById("spPlus5").onclick = ()=> addSportMins(5);
+  document.getElementById("spPlus10").onclick = ()=> addSportMins(10);
+  document.getElementById("sportGoalBtn").onclick = ()=>{
+    const v = prompt("هدفك اليومي للرياضة بالدقائق:", sportGoal());
+    if(!v) return;
+    const n = parseInt(v, 10);
+    if(n > 0){ localStorage.setItem(SPORT_GOAL_KEY, n); renderSport(); renderProgress(); }
+  };
+
   function renderWater(){
     const box = document.getElementById("water");
     box.innerHTML = "";
@@ -1367,6 +1460,7 @@
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
     total += WORSHIP.length; done += WORSHIP.filter(w=>!!state.worship[w.id]).length;
     total += 1; if(state.water >= N_CUPS) done += 1;
+    total += 1; if(sportDone(state)) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
     total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
     const filledPr = state.priorities.filter(t=>t.text.trim());
@@ -1417,6 +1511,7 @@
     const wsh = s.worship || {};
     total += WORSHIP.length; done += WORSHIP.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= N_CUPS) done += 1;
+    total += 1; if(sportDone(s)) done += 1;
     const ft = (s.tasks || []).filter(t=>t.text && t.text.trim());
     total += ft.length; done += ft.filter(t=>t.done).length;
     const fp = (s.priorities || []).filter(t=>t.text && t.text.trim());
@@ -1594,6 +1689,7 @@
     renderPrayers();
     renderWorship();
     renderWater();
+    renderSport();
     renderRows("tasks", state.tasks, TASK_COLORS);
     renderRows("priorities", state.priorities, ["#c9a227"]);
     bindTextarea("intention","intention");
