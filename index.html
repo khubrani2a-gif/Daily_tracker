@@ -328,6 +328,22 @@
   .sw-dot.today{box-shadow:0 0 0 2px var(--paper), 0 0 0 3.5px var(--accent-2)}
   .sw-label{font-size:.74rem;color:var(--muted)}
   .sport-streak{font-size:.8rem;color:var(--gold);font-weight:700}
+  .sport-km{display:flex;align-items:center;gap:.45rem;font-size:.8rem;color:var(--muted);margin-bottom:.7rem}
+  .sport-km input{
+    width:80px;border:1.5px solid var(--line);border-radius:9px;padding:.3rem .5rem;
+    background:var(--chk-bg);color:var(--ink);font-size:.85rem;outline:none;text-align:center;
+  }
+  .sport-km input:focus{border-color:var(--accent-2)}
+  .health-row{display:flex;gap:.7rem}
+  .health-row label{flex:1;font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
+  .health-row input{
+    border:1.5px solid var(--line);border-radius:11px;padding:.5rem .6rem;
+    background:var(--chk-bg);color:var(--ink);font-size:1rem;font-weight:600;outline:none;text-align:center;
+  }
+  .health-row input:focus{border-color:var(--accent-2)}
+  .health-note{font-size:.75rem;color:var(--muted);margin-top:.6rem;text-align:center;min-height:1.1em}
+  #weightSpark{margin-top:.6rem;text-align:center}
+  #weightSpark svg{max-width:100%}
 
   /* ===== Tasks ===== */
   .task-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
@@ -615,6 +631,10 @@
       <div class="card" id="sportCard">
         <h2><span class="ico">🏃</span> الرياضة</h2>
         <div class="sport-chips" id="sportTypes"></div>
+        <div class="sport-km" id="sportKmRow" hidden>
+          <label for="sportKm">المسافة:</label>
+          <input id="sportKm" type="number" min="0" step="0.1" placeholder="٠"> كم
+        </div>
         <div class="sport-mins">
           <button class="sm-btn" id="spMinus">−٥</button>
           <div class="sport-count"><b id="sportMins">٠</b><small>دقيقة</small></div>
@@ -658,6 +678,15 @@
         <h2><span class="ico">⭐</span> الأولويات</h2>
         <div id="priorities"></div>
       </div>
+
+      <div class="card">
+        <h2><span class="ico">⚖️</span> صحتك اليوم</h2>
+        <div class="health-row">
+          <label>الوزن (كجم)<input id="weightIn" type="number" min="0" step="0.1" placeholder="—"></label>
+          <label>النوم (ساعات)<input id="sleepIn" type="number" min="0" max="24" step="0.5" placeholder="—"></label>
+        </div>
+        <div class="health-note" id="healthNote"></div>
+      </div>
     </div>
 
     <!-- ===== Column 3: memory + notes + rating ===== -->
@@ -694,6 +723,9 @@
     <div class="heat-legend">أقل <span class="hl l0"></span><span class="hl l1"></span><span class="hl l2"></span><span class="hl l3"></span><span class="hl l4"></span> أكثر</div>
     <h3 class="stats-sub">نسبة الالتزام بكل صلاة</h3>
     <div id="prayerBars"></div>
+    <h3 class="stats-sub">الرياضة والصحة</h3>
+    <div class="stat-tiles" id="sportTiles"></div>
+    <div id="weightSpark"></div>
   </section>
 
   <!-- ===== شاشة الأذكار ===== -->
@@ -715,7 +747,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٩</div>
+    <div class="app-version">النسخة ٢٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1005,7 +1037,9 @@
       notes: "",
       rating: 0,
       istighfar: 0,
-      sport: {type:"", mins:0},
+      sport: {types:[], mins:0, km:0},
+      weight: "",
+      sleep: "",
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
       celebrated: false,
       updatedAt: 0
@@ -1383,7 +1417,8 @@
   }
 
   /* ---------- الرياضة ---------- */
-  const SPORT_TYPES = [["walk","🚶 مشي"],["run","🏃 جري"],["gym","🏋️ قوة"],["stretch","🧘 مرونة"],["other","💪 أخرى"]];
+  const SPORT_TYPES = [["walk","🚶 مشي"],["run","🏃 جري"],["gym","🏋️ قوة"],["swim","🏊 سباحة"],["bike","🚴 دراجة"],["ball","⚽ كرة"],["stretch","🧘 مرونة"],["other","💪 أخرى"]];
+  const KM_TYPES = ["walk","run","bike"];
   const SPORT_GOAL_KEY = "h2do-sport-goal";
   function sportGoal(){ return Math.max(5, +(localStorage.getItem(SPORT_GOAL_KEY) || 30)); }
   function sportDone(s){
@@ -1394,27 +1429,43 @@
     if(!state.sport) state.sport = {type:"", mins:0};
     const before = sportDone(state);
     state.sport.mins = Math.max(0, (state.sport.mins||0) + n);
-    if(!before && sportDone(state) && navigator.vibrate) navigator.vibrate([30,60,30]);
+    if(!before && sportDone(state)){
+      if(navigator.vibrate) navigator.vibrate([30,60,30]);
+      celebrate();
+    }
     save(); renderSport(); renderProgress();
   }
   function renderSport(){
-    if(!state.sport) state.sport = {type:"", mins:0};
+    if(!state.sport) state.sport = {types:[], mins:0, km:0};
+    if(!state.sport.types) state.sport.types = state.sport.type ? [state.sport.type] : [];
     const arn = x => x.toLocaleString("ar-EG");
     const box = document.getElementById("sportTypes");
     box.innerHTML = "";
     SPORT_TYPES.forEach(t=>{
       const c = document.createElement("button");
-      c.className = "sport-chip"+(state.sport.type === t[0] ? " on":"");
+      const on = state.sport.types.indexOf(t[0]) !== -1;
+      c.className = "sport-chip"+(on ? " on":"");
       c.textContent = t[1];
-      c.onclick = ()=>{ state.sport.type = (state.sport.type === t[0]) ? "" : t[0]; save(); renderSport(); };
+      c.onclick = ()=>{
+        const i = state.sport.types.indexOf(t[0]);
+        if(i === -1) state.sport.types.push(t[0]); else state.sport.types.splice(i,1);
+        save(); renderSport();
+      };
       box.appendChild(c);
     });
+    /* حقل المسافة يظهر لأنشطة المشي/الجري/الدراجة */
+    const showKm = state.sport.types.some(t=>KM_TYPES.indexOf(t) !== -1);
+    document.getElementById("sportKmRow").hidden = !showKm;
+    if(showKm) document.getElementById("sportKm").value = state.sport.km || "";
     const goal = sportGoal(), mins = state.sport.mins||0;
     document.getElementById("sportMins").textContent = arn(mins);
     document.getElementById("sportGoalBtn").textContent = "الهدف: "+arn(goal)+" دقيقة";
     document.getElementById("sportFill").style.width = Math.min(100, Math.round(mins/goal*100))+"%";
     document.getElementById("sportCard").classList.toggle("done", mins >= goal);
-    document.getElementById("sportStatus").textContent = mins >= goal ? "أنجزت هدف اليوم 💪" : "";
+    let statusTxt = "";
+    if(mins >= goal) statusTxt = "أنجزت هدف اليوم 💪";
+    else if(currentDate === todayStr() && mins === 0 && new Date().getHours() >= 15) statusTxt = "ما زال أمامك وقت للمشي 🚶";
+    document.getElementById("sportStatus").textContent = statusTxt;
     renderSportWeek();
     updateTimerBtn();
   }
@@ -1500,6 +1551,58 @@
     }
   };
   if(localStorage.getItem(SPORT_TIMER_KEY)){ sportTimerInt = setInterval(updateTimerBtn, 1000); }
+
+  document.getElementById("sportKm").oninput = function(){
+    if(!state.sport) return;
+    state.sport.km = parseFloat(this.value) || 0;
+    save();
+  };
+
+  /* ---------- صحتك اليوم: الوزن والنوم ---------- */
+  function lastWeightBefore(dateStr){
+    const d = new Date(dateStr+"T12:00:00");
+    for(let i=1;i<=90;i++){
+      d.setDate(d.getDate()-1);
+      try{
+        const raw = localStorage.getItem(storageKey(fmtDate(d)));
+        if(raw){
+          const s = JSON.parse(raw);
+          if(+s.weight > 0) return {v:+s.weight, date:fmtDate(d)};
+        }
+      }catch(e){}
+    }
+    return null;
+  }
+  function updateHealthNote(){
+    const note = document.getElementById("healthNote");
+    const parts = [];
+    const w = +state.weight || 0;
+    if(w > 0){
+      const prev = lastWeightBefore(currentDate);
+      if(prev){
+        const diff = Math.round((w - prev.v)*10)/10;
+        if(diff < 0) parts.push("▼ أقل بـ"+Math.abs(diff).toLocaleString("ar-EG")+" كجم من آخر تسجيل");
+        else if(diff > 0) parts.push("▲ أعلى بـ"+diff.toLocaleString("ar-EG")+" كجم من آخر تسجيل");
+        else parts.push("ثابت منذ آخر تسجيل");
+      }
+    }
+    const sl = +state.sleep || 0;
+    if(sl > 0) parts.push(sl >= 7 ? "نوم صحي ✓" : "حاول أن تنام ٧ ساعات فأكثر");
+    note.textContent = parts.join(" · ");
+  }
+  function renderHealth(){
+    document.getElementById("weightIn").value = state.weight || "";
+    document.getElementById("sleepIn").value = state.sleep || "";
+    updateHealthNote();
+  }
+  document.getElementById("weightIn").oninput = function(){
+    state.weight = parseFloat(this.value) || "";
+    save(); updateHealthNote();
+  };
+  document.getElementById("sleepIn").oninput = function(){
+    state.sleep = parseFloat(this.value) || "";
+    save(); updateHealthNote();
+  };
 
   document.getElementById("spMinus").onclick = ()=> addSportMins(-5);
   document.getElementById("spPlus5").onclick = ()=> addSportMins(5);
@@ -1760,6 +1863,75 @@
       document.getElementById("statTiles").insertAdjacentHTML("beforeend",
         '<div class="stat-tile"><div class="v">⏱ '+arn(onRatio)+'٪</div><div class="l">من صلواتك المؤداة كانت في وقتها</div></div>');
     }
+
+    /* --- الرياضة والصحة --- */
+    const sg = sportGoal();
+    const dmins = s => {
+      const m = (s.sport && s.sport.mins) || 0;
+      return m > 0 ? m : ((s.worship && s.worship.sport) ? sg : 0);
+    };
+    let active30 = 0, sum30 = 0;
+    const t0 = new Date(todayStr()+"T12:00:00");
+    for(let i=0;i<30;i++){
+      const dd = new Date(t0); dd.setDate(dd.getDate()-i);
+      const s = days[fmtDate(dd)];
+      if(s){ const m = dmins(s); if(m > 0){ active30++; sum30 += m; } }
+    }
+    const wkTotals = {};
+    for(const dd of dates){
+      const dt = new Date(dd+"T12:00:00");
+      const ws2 = new Date(dt); ws2.setDate(ws2.getDate()-ws2.getDay());
+      const k = fmtDate(ws2);
+      wkTotals[k] = (wkTotals[k]||0) + dmins(days[dd]);
+    }
+    let bestWkMins = 0;
+    for(const k in wkTotals) if(wkTotals[k] > bestWkMins) bestWkMins = wkTotals[k];
+    let bestSpStreak = 0, curSp = 0, prevSp = null;
+    for(const dd of dates){
+      if(dmins(days[dd]) >= sg){
+        curSp = (prevSp && (new Date(dd+"T12:00:00") - new Date(prevSp+"T12:00:00")) === 86400000) ? curSp+1 : 1;
+        if(curSp > bestSpStreak) bestSpStreak = curSp;
+        prevSp = dd;
+      }else prevSp = null;
+    }
+    const slDays = dates.filter(d=>+days[d].sleep > 0);
+    const avgSleep = slDays.length ? slDays.reduce((a,d)=>a + +days[d].sleep, 0)/slDays.length : 0;
+    const wEntries = dates.filter(d=>+days[d].weight > 0).map(d=>({d:d, v:+days[d].weight}));
+
+    let tiles =
+      '<div class="stat-tile"><div class="v">'+arn(active30)+'</div><div class="l">يوم نشاط في آخر ٣٠ يومًا</div></div>'+
+      '<div class="stat-tile"><div class="v">'+arn(active30 ? Math.round(sum30/active30) : 0)+' د</div><div class="l">متوسط دقائق يوم النشاط</div></div>'+
+      '<div class="stat-tile"><div class="v">'+arn(bestWkMins)+' د</div><div class="l">أفضل أسبوع رياضي</div></div>'+
+      '<div class="stat-tile"><div class="v">🔥 '+arn(bestSpStreak)+'</div><div class="l">أطول سلسلة رياضة</div></div>';
+    if(avgSleep) tiles += '<div class="stat-tile"><div class="v">😴 '+avgSleep.toFixed(1)+'</div><div class="l">متوسط ساعات نومك</div></div>';
+    if(wEntries.length){
+      const last = wEntries[wEntries.length-1];
+      let wl = last.v.toLocaleString("ar-EG")+" كجم";
+      if(wEntries.length > 1){
+        const diff = Math.round((last.v - wEntries[wEntries.length-2].v)*10)/10;
+        if(diff) wl += (diff < 0 ? " ▼" : " ▲");
+      }
+      tiles += '<div class="stat-tile"><div class="v">⚖️ '+wl+'</div><div class="l">وزنك الأخير</div></div>';
+    }
+    document.getElementById("sportTiles").innerHTML = tiles;
+
+    /* منحنى الوزن (آخر ١٢ تسجيلًا) */
+    const spark = document.getElementById("weightSpark");
+    const pts = wEntries.slice(-12);
+    if(pts.length >= 2){
+      const W = 260, H = 56, pad = 6;
+      const vs = pts.map(p=>p.v);
+      const mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+      const span = (mx - mn) || 1;
+      const coords = pts.map((p,i)=>{
+        const x = pad + (W-2*pad) * i/(pts.length-1);
+        const y = pad + (H-2*pad) * (1 - (p.v - mn)/span);
+        return x.toFixed(1)+","+y.toFixed(1);
+      }).join(" ");
+      spark.innerHTML = '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+
+        '<polyline points="'+coords+'" fill="none" stroke="var(--accent-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+        '</svg><div class="sw-label">منحنى وزنك (آخر '+arn(pts.length)+' تسجيلًا)</div>';
+    }else spark.innerHTML = "";
   }
 
   document.getElementById("statsBtn").onclick = ()=>{
@@ -1799,6 +1971,7 @@
     renderWorship();
     renderWater();
     renderSport();
+    renderHealth();
     renderRows("tasks", state.tasks, TASK_COLORS);
     renderRows("priorities", state.priorities, ["#c9a227"]);
     bindTextarea("intention","intention");
