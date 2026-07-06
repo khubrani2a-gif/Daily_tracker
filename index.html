@@ -336,6 +336,90 @@
   .sw-dot.today{box-shadow:0 0 0 2px var(--paper), 0 0 0 3.5px var(--accent-2)}
   .sw-label{font-size:.74rem;color:var(--muted)}
   .sport-streak{font-size:.8rem;color:var(--gold);font-weight:700}
+
+  /* ===== تمارين الفترات ===== */
+  .wk-open{
+    display:block;width:100%;margin-top:.5rem;
+    border:1.5px dashed var(--gold);background:none;color:var(--gold);
+    border-radius:12px;padding:.55rem;font-size:.9rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .wk-open:hover{background:rgba(195,154,43,.1)}
+  .wk-card{
+    display:flex;align-items:center;gap:.7rem;
+    background:var(--paper);border:1.5px solid var(--line);border-radius:16px;
+    padding:.9rem 1rem;margin-bottom:.7rem;
+  }
+  .wk-dot{width:12px;height:36px;border-radius:6px;flex-shrink:0}
+  .wk-info{flex:1;min-width:0}
+  .wk-info b{display:block;font-size:1rem}
+  .wk-info small{color:var(--muted);font-size:.75rem}
+  .wk-act{
+    border:none;border-radius:11px;width:42px;height:42px;cursor:pointer;font-size:1rem;flex-shrink:0;
+    background:var(--chip-bg);color:var(--muted);transition:.15s;
+  }
+  .wk-act:hover{color:var(--accent)}
+  .wk-act.play{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:1.1rem}
+  .wk-name{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;padding:.7rem .9rem;
+    background:var(--chk-bg);color:var(--ink);font-size:1rem;outline:none;margin-bottom:.8rem;
+  }
+  .wk-name:focus{border-color:var(--accent-2)}
+  .wk-field{
+    display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    background:var(--paper);border:1px solid var(--line);border-radius:13px;
+    padding:.65rem .9rem;margin-bottom:.55rem;
+  }
+  .wk-field .fl{font-size:.9rem}
+  .wk-step{display:flex;align-items:center;gap:.45rem}
+  .wk-step button{
+    width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--chk-bg);color:var(--accent);font-size:1rem;font-weight:700;cursor:pointer;
+  }
+  .wk-step button:hover{border-color:var(--accent-2)}
+  .wk-pill{
+    min-width:70px;text-align:center;border-radius:99px;padding:.3rem .6rem;
+    color:#fff;font-weight:700;font-size:.92rem;
+  }
+  .wk-pill.warm,.wk-pill.rest{background:#c39a2b}
+  .wk-pill.hi{background:#c0504a}
+  .wk-pill.lo{background:#4e8d5b}
+  .wk-pill.cool{background:#5b7fa6}
+  .wk-pill.cyc{background:var(--accent)}
+  .wk-total{
+    text-align:center;font-size:1rem;font-weight:700;color:var(--accent);
+    margin-top:.9rem;padding:.7rem;background:var(--accent-soft);border-radius:13px;
+  }
+  /* المشغل */
+  #wkRun{display:flex;flex-direction:column;min-height:82vh;text-align:center}
+  #wkRun[hidden]{display:none}
+  .wk-run-head{display:flex;align-items:center;justify-content:space-between;padding:.4rem 0 .8rem}
+  .wk-run-head span{font-weight:700;color:var(--muted)}
+  .wk-phase{
+    font-family:"Thmanyah Display","Thmanyah Sans",serif;
+    font-size:1.7rem;font-weight:700;margin-top:1.2rem;transition:color .3s;
+  }
+  .wk-phase.warm,.wk-phase.rest{color:#c39a2b}
+  .wk-phase.hi{color:#c0504a}
+  .wk-phase.lo{color:#4e8d5b}
+  .wk-phase.cool{color:#5b7fa6}
+  .wk-clock{
+    font-size:5.2rem;font-weight:700;line-height:1.15;letter-spacing:2px;
+    font-variant-numeric:tabular-nums;color:var(--ink);
+  }
+  .wk-cycle{font-size:1rem;color:var(--muted);font-weight:600}
+  .wk-runbar{height:12px;background:var(--line);border-radius:99px;overflow:hidden;margin:1.3rem 0 .7rem}
+  .wk-runbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .25s linear}
+  .wk-nextp{font-size:.85rem;color:var(--muted);min-height:1.2em}
+  .wk-controls{display:flex;gap:.7rem;justify-content:center;margin-top:1.6rem}
+  .wk-ctl{
+    border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+    border-radius:14px;padding:.85rem 1.4rem;font-size:1rem;font-weight:600;cursor:pointer;
+  }
+  .wk-ctl.main{
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;border-color:transparent;min-width:150px;
+  }
+  .wk-remain{font-size:.8rem;color:var(--muted);margin-top:1rem}
   .sport-km{display:flex;align-items:center;gap:.45rem;font-size:.8rem;color:var(--muted);margin-bottom:.7rem}
   .sport-km input{
     width:80px;border:1.5px solid var(--line);border-radius:9px;padding:.3rem .5rem;
@@ -650,6 +734,7 @@
           <button class="sm-btn strong" id="spPlus10">+١٠</button>
         </div>
         <button class="sport-timer" id="sportTimer">▶ ابدأ التمرين الآن</button>
+        <button class="wk-open" id="wkOpen">⏱ تمارين الفترات — HIIT وتاباتا</button>
         <div class="sport-bar"><i id="sportFill"></i></div>
         <div class="sport-week">
           <div class="sw-dots" id="swDots"></div>
@@ -753,9 +838,58 @@
     </div>
   </div>
 
+  <!-- ===== تمارين الفترات ===== -->
+  <div class="adhkar-overlay" id="wkOverlay" hidden>
+    <div class="adhkar-sheet">
+
+      <div id="wkList">
+        <div class="adhkar-top">
+          <div class="adhkar-head">
+            <button class="ad-btn ad-close" id="wkClose">✕ إغلاق</button>
+            <h2>تمارين</h2>
+            <button class="ad-btn" id="wkAdd" title="تمرين جديد">＋</button>
+          </div>
+        </div>
+        <div id="wkCards"></div>
+        <button class="adhkar-done-btn" id="wkAdd2">＋ تمرين جديد</button>
+      </div>
+
+      <div id="wkEdit" hidden>
+        <div class="adhkar-top">
+          <div class="adhkar-head">
+            <button class="ad-btn" id="wkEditCancel">✕</button>
+            <h2 id="wkEditTitle">تمرين جديد</h2>
+            <button class="ad-btn ad-close" id="wkEditSave">حفظ</button>
+          </div>
+        </div>
+        <input type="text" id="wkName" class="wk-name" placeholder="اسم التمرين (مثال: HIIT الصباح)">
+        <div id="wkFields"></div>
+        <div class="wk-total" id="wkTotal"></div>
+      </div>
+
+      <div id="wkRun" hidden>
+        <div class="wk-run-head">
+          <span id="wkRunName"></span>
+          <button class="ad-btn" id="wkRunEnd" title="إنهاء">✕</button>
+        </div>
+        <div class="wk-phase" id="wkPhase"></div>
+        <div class="wk-clock" id="wkClock">00:00</div>
+        <div class="wk-cycle" id="wkCycle"></div>
+        <div class="wk-runbar"><i id="wkRunFill"></i></div>
+        <div class="wk-nextp" id="wkNext"></div>
+        <div class="wk-controls">
+          <button class="wk-ctl" id="wkSkip">تخطي ⏭</button>
+          <button class="wk-ctl main" id="wkPause">⏸ إيقاف مؤقت</button>
+        </div>
+        <div class="wk-remain" id="wkRemain"></div>
+      </div>
+
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٢</div>
+    <div class="app-version">النسخة ٢٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2086,6 +2220,260 @@
       localStorage.removeItem(storageKey(currentDate));
       load(currentDate);
       renderAll();
+    }
+  };
+
+  /* ================= تمارين الفترات (Interval Workouts) ================= */
+  const WK_KEY = "h2do-workouts";
+  const WK_FIELDS = [
+    ["warm","الإحماء","warm",true],
+    ["hi","شدة عالية","hi",true],
+    ["lo","شدة منخفضة","lo",true],
+    ["cycles","عدد الجولات","cyc",false],
+    ["rest","راحة بين الجولات","rest",true],
+    ["cool","التهدئة","cool",true],
+  ];
+  function wkAll(){
+    let r = [];
+    try{ r = JSON.parse(localStorage.getItem(WK_KEY) || "[]"); }catch(e){}
+    if(!r.length){
+      r = [
+        {id:1, name:"تاباتا", warm:0, hi:20, lo:10, cycles:8, rest:0, cool:0},
+        {id:2, name:"HIIT مبتدئ", warm:60, hi:30, lo:15, cycles:10, rest:0, cool:60},
+        {id:3, name:"مشي متقطع", warm:120, hi:180, lo:60, cycles:5, rest:0, cool:120},
+      ];
+      wkStore(r);
+    }
+    return r;
+  }
+  function wkStore(r){ localStorage.setItem(WK_KEY, JSON.stringify(r)); }
+  function wkSecs(w){
+    return (w.warm||0) + (w.cool||0) + w.cycles*((w.hi||0)+(w.lo||0)) + Math.max(0, w.cycles-1)*(w.rest||0);
+  }
+  function wkFmt(s){
+    return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  }
+
+  /* صوت التنبيه (WebAudio — بدون ملفات) */
+  let wkAudio = null;
+  function wkBeep(freq, dur){
+    try{
+      wkAudio = wkAudio || new (window.AudioContext || window.webkitAudioContext)();
+      const o = wkAudio.createOscillator(), g = wkAudio.createGain();
+      o.frequency.value = freq; o.connect(g); g.connect(wkAudio.destination);
+      g.gain.setValueAtTime(0.22, wkAudio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, wkAudio.currentTime + dur);
+      o.start(); o.stop(wkAudio.currentTime + dur);
+    }catch(e){}
+  }
+
+  /* إبقاء الشاشة مضيئة أثناء التمرين */
+  let wkLock = null;
+  async function wkWake(on){
+    try{
+      if(on && "wakeLock" in navigator) wkLock = await navigator.wakeLock.request("screen");
+      else if(wkLock){ wkLock.release(); wkLock = null; }
+    }catch(e){}
+  }
+
+  const wkOverlay = document.getElementById("wkOverlay");
+  function wkShow(screen){
+    ["wkList","wkEdit","wkRun"].forEach(id=>{ document.getElementById(id).hidden = (id !== screen); });
+  }
+  function openWk(){
+    wkOverlay.hidden = false;
+    wkOverlay.scrollTop = 0;
+    document.body.style.overflow = "hidden";
+    wkShow("wkList"); renderWkList();
+    try{ history.pushState({wk:true}, ""); }catch(e){}
+  }
+  function closeWkUI(){
+    wkStopTimer(true);
+    wkOverlay.hidden = true;
+    document.body.style.overflow = "";
+  }
+  function closeWk(){
+    if(history.state && history.state.wk) history.back();
+    else closeWkUI();
+  }
+  window.addEventListener("popstate", ()=>{ if(!wkOverlay.hidden) closeWkUI(); });
+  document.getElementById("wkOpen").onclick = openWk;
+  document.getElementById("wkClose").onclick = closeWk;
+
+  /* ----- القائمة ----- */
+  const WK_COLORS = ["#0e7a70","#c39a2b","#c0504a","#5b7fa6","#7c6aa6"];
+  function renderWkList(){
+    const arn = x => x.toLocaleString("ar-EG");
+    const box = document.getElementById("wkCards");
+    box.innerHTML = "";
+    wkAll().forEach((w,i)=>{
+      const card = document.createElement("div");
+      card.className = "wk-card";
+      card.innerHTML = '<span class="wk-dot" style="background:'+WK_COLORS[i%WK_COLORS.length]+'"></span>'
+        + '<span class="wk-info"><b>'+w.name+'</b><small>'+wkFmt(wkSecs(w))+' — '+arn(w.cycles)+' جولات</small></span>';
+      const play = document.createElement("button");
+      play.className = "wk-act play"; play.textContent = "▶"; play.title = "ابدأ";
+      play.onclick = ()=> wkStart(w);
+      const edit = document.createElement("button");
+      edit.className = "wk-act"; edit.textContent = "✎"; edit.title = "تعديل";
+      edit.onclick = ()=> wkOpenEditor(w);
+      const del = document.createElement("button");
+      del.className = "wk-act"; del.textContent = "🗑"; del.title = "حذف";
+      del.onclick = ()=>{
+        if(!confirm("حذف تمرين «"+w.name+"»؟")) return;
+        wkStore(wkAll().filter(x=>x.id !== w.id));
+        renderWkList();
+      };
+      card.append(play, edit, del);
+      box.appendChild(card);
+    });
+  }
+
+  /* ----- المحرر ----- */
+  let wkEditing = null;
+  function wkOpenEditor(w){
+    wkEditing = w ? JSON.parse(JSON.stringify(w)) : {id:Date.now(), name:"", warm:30, hi:30, lo:15, cycles:8, rest:0, cool:30};
+    document.getElementById("wkEditTitle").textContent = w ? "تعديل التمرين" : "تمرين جديد";
+    document.getElementById("wkName").value = wkEditing.name;
+    renderWkFields();
+    wkShow("wkEdit");
+    wkOverlay.scrollTop = 0;
+  }
+  function renderWkFields(){
+    const arn = x => x.toLocaleString("ar-EG");
+    const box = document.getElementById("wkFields");
+    box.innerHTML = "";
+    WK_FIELDS.forEach(f=>{
+      const key = f[0], isTime = f[3];
+      const row = document.createElement("div");
+      row.className = "wk-field";
+      const lbl = document.createElement("span");
+      lbl.className = "fl"; lbl.textContent = f[1];
+      const step = document.createElement("span");
+      step.className = "wk-step";
+      const minus = document.createElement("button"); minus.textContent = "−";
+      const pill = document.createElement("span"); pill.className = "wk-pill "+f[2];
+      const plus = document.createElement("button"); plus.textContent = "+";
+      const refresh = ()=>{
+        pill.textContent = isTime ? wkFmt(wkEditing[key]) : "×"+arn(wkEditing[key]);
+        document.getElementById("wkTotal").textContent = "المدة الكلية: "+wkFmt(wkSecs(wkEditing));
+      };
+      const bump = d => ()=>{
+        const st = isTime ? 5 : 1, mn = isTime ? 0 : 1;
+        wkEditing[key] = Math.max(mn, (wkEditing[key]||0) + d*st);
+        refresh();
+      };
+      minus.onclick = bump(-1); plus.onclick = bump(1);
+      step.append(minus, pill, plus);
+      row.append(lbl, step);
+      box.appendChild(row);
+      refresh();
+    });
+  }
+  document.getElementById("wkAdd").onclick = ()=> wkOpenEditor(null);
+  document.getElementById("wkAdd2").onclick = ()=> wkOpenEditor(null);
+  document.getElementById("wkEditCancel").onclick = ()=>{ wkShow("wkList"); renderWkList(); };
+  document.getElementById("wkEditSave").onclick = ()=>{
+    wkEditing.name = document.getElementById("wkName").value.trim() || "تمرين بدون اسم";
+    const all = wkAll();
+    const i = all.findIndex(x=>x.id === wkEditing.id);
+    if(i === -1) all.push(wkEditing); else all[i] = wkEditing;
+    wkStore(all);
+    wkShow("wkList"); renderWkList();
+  };
+
+  /* ----- المشغل ----- */
+  let wkPhases = [], wkIdx = 0, wkEndAt = 0, wkPauseLeft = 0, wkTick = null, wkCur = null, wkLastBeepSec = -1;
+  function wkBuildPhases(w){
+    const ph = [];
+    if(w.warm) ph.push({n:"إحماء 🔥", s:w.warm, c:"warm"});
+    for(let i=1;i<=w.cycles;i++){
+      if(w.hi) ph.push({n:"شدة عالية 💥", s:w.hi, c:"hi", cyc:i});
+      if(w.lo) ph.push({n:"شدة منخفضة 🌿", s:w.lo, c:"lo", cyc:i});
+      if(w.rest && i < w.cycles) ph.push({n:"راحة 😮‍💨", s:w.rest, c:"rest", cyc:i});
+    }
+    if(w.cool) ph.push({n:"تهدئة 🧘", s:w.cool, c:"cool"});
+    return ph;
+  }
+  function wkStart(w){
+    wkCur = w;
+    wkPhases = wkBuildPhases(w);
+    if(!wkPhases.length) return;
+    wkIdx = 0;
+    document.getElementById("wkRunName").textContent = w.name;
+    wkShow("wkRun");
+    wkOverlay.scrollTop = 0;
+    wkWake(true);
+    wkBeep(880, .15);
+    wkEnterPhase();
+  }
+  function wkEnterPhase(){
+    const p = wkPhases[wkIdx];
+    wkEndAt = Date.now() + p.s*1000;
+    wkLastBeepSec = -1;
+    const ph = document.getElementById("wkPhase");
+    ph.textContent = p.n;
+    ph.className = "wk-phase "+p.c;
+    if(navigator.vibrate) navigator.vibrate([60,40,60]);
+    clearInterval(wkTick);
+    wkTick = setInterval(wkOnTick, 200);
+    wkOnTick();
+  }
+  function wkOnTick(){
+    const arn = x => x.toLocaleString("ar-EG");
+    const p = wkPhases[wkIdx];
+    const leftMs = wkEndAt - Date.now();
+    const left = Math.max(0, Math.ceil(leftMs/1000));
+    document.getElementById("wkClock").textContent = wkFmt(left);
+    document.getElementById("wkCycle").textContent = p.cyc ? "الجولة "+arn(p.cyc)+" من "+arn(wkCur.cycles) : "";
+    document.getElementById("wkRunFill").style.width = (100*(1 - leftMs/(p.s*1000)))+"%";
+    const nxt = wkPhases[wkIdx+1];
+    document.getElementById("wkNext").textContent = nxt ? "التالي: "+nxt.n+" ("+wkFmt(nxt.s)+")" : "المرحلة الأخيرة";
+    let remain = left;
+    for(let i=wkIdx+1;i<wkPhases.length;i++) remain += wkPhases[i].s;
+    document.getElementById("wkRemain").textContent = "المتبقي من التمرين: "+wkFmt(remain);
+    if(left <= 3 && left >= 1 && left !== wkLastBeepSec){ wkLastBeepSec = left; wkBeep(880, .12); }
+    if(leftMs <= 0){
+      if(wkIdx + 1 < wkPhases.length){ wkBeep(1318, .35); wkIdx++; wkEnterPhase(); }
+      else wkFinish();
+    }
+  }
+  function wkStopTimer(silent){
+    clearInterval(wkTick); wkTick = null;
+    wkWake(false);
+    if(!silent){ wkShow("wkList"); renderWkList(); }
+  }
+  function wkFinish(){
+    if(!wkPhases.length) return; /* حارس ضد الاستدعاء المزدوج */
+    wkPhases = [];
+    wkStopTimer(true);
+    wkBeep(1046, .25); setTimeout(()=>wkBeep(1318, .25), 260); setTimeout(()=>wkBeep(1568, .5), 520);
+    if(navigator.vibrate) navigator.vibrate([80,60,80,60,160]);
+    const mins = Math.max(1, Math.round(wkSecs(wkCur)/60));
+    if(currentDate !== todayStr()) goto(todayStr());
+    addSportMins(mins);
+    celebrate();
+    wkShow("wkList"); renderWkList();
+    document.getElementById("wkCards").insertAdjacentHTML("afterbegin",
+      '<div class="wk-total">أحسنت! 💪 اكتمل «'+wkCur.name+'» وأُضيفت '+mins.toLocaleString("ar-EG")+' دقيقة لرياضة اليوم</div>');
+  }
+  document.getElementById("wkRunEnd").onclick = ()=>{
+    if(confirm("إنهاء التمرين الحالي؟")) wkStopTimer(false);
+  };
+  document.getElementById("wkSkip").onclick = ()=>{
+    if(!wkPhases.length) return;
+    if(wkIdx + 1 < wkPhases.length){ wkBeep(1318, .2); wkIdx++; wkEnterPhase(); }
+    else wkFinish();
+  };
+  document.getElementById("wkPause").onclick = function(){
+    if(wkTick){
+      wkPauseLeft = wkEndAt - Date.now();
+      clearInterval(wkTick); wkTick = null;
+      this.textContent = "▶ استئناف";
+    }else if(wkCur){
+      wkEndAt = Date.now() + wkPauseLeft;
+      wkTick = setInterval(wkOnTick, 200);
+      this.textContent = "⏸ إيقاف مؤقت";
     }
   };
 
