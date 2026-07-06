@@ -228,6 +228,14 @@
     border-radius:11px;padding:.45rem .7rem;margin-bottom:.65rem;
     font-size:.82rem;font-weight:600;text-align:center;
   }
+  .next-strip.iqamah{
+    background:rgba(195,154,43,.16);color:var(--gold);
+    animation:iqpulse 1.6s infinite;
+  }
+  @keyframes iqpulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(195,154,43,.30)}
+    50%{box-shadow:0 0 0 5px rgba(195,154,43,.08)}
+  }
   .loc-btn{
     margin-top:.7rem;width:100%;border:1px dashed var(--line);background:none;
     color:var(--muted);border-radius:11px;padding:.45rem;cursor:pointer;
@@ -747,7 +755,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢١</div>
+    <div class="app-version">النسخة ٢٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1251,6 +1259,9 @@
     strip.hidden = false;
   }
 
+  /* مدة الإقامة بعد الأذان (بالدقائق) */
+  const IQAMAH = {Fajr:25, Dhuhr:20, Asr:20, Maghrib:10, Isha:20};
+
   function updateNext(){
     const strip = document.getElementById("nextStrip");
     nextKey = null;
@@ -1258,6 +1269,24 @@
     const now = new Date();
     const cur = now.getHours()*60 + now.getMinutes();
     const fard = [["Fajr","الفجر"],["Dhuhr","الظهر"],["Asr","العصر"],["Maghrib","المغرب"],["Isha","العشاء"]];
+
+    /* هل نحن بين الأذان والإقامة؟ */
+    for(const f of fard){
+      const t = getTime(f[0]);
+      if(!t) continue;
+      const mins = (+t.split(":")[0])*60 + (+t.split(":")[1]);
+      const iq = IQAMAH[f[0]];
+      if(cur >= mins && cur < mins + iq){
+        nextKey = f[0];
+        const remain = (mins + iq) - cur;
+        strip.textContent = "🕌 أذّن "+f[1]+" — الإقامة بعد "+remain.toLocaleString("ar-EG")+" د";
+        strip.classList.add("iqamah");
+        strip.hidden = false;
+        return;
+      }
+    }
+    strip.classList.remove("iqamah");
+
     let found = null;
     for(const f of fard){
       const t = getTime(f[0]);
@@ -1302,7 +1331,7 @@
   }
 
   /* تحديث العدّاد التنازلي كل نصف دقيقة */
-  setInterval(()=>{ if(prayerTimes && currentDate === todayStr()){ updateNext(); renderPrayers(); } }, 30000);
+  setInterval(()=>{ if(prayerTimes && currentDate === todayStr()){ updateNext(); renderPrayers(); } }, 15000);
 
   /* حالات الصلاة: "" لم تُسجل | ontime في وقتها | late متأخرة | missed فاتت
      (القيمة true في البيانات القديمة تعني "في وقتها") */
