@@ -152,7 +152,8 @@
   .date-nav button:hover{background:rgba(255,255,255,.28)}
   .date-nav input[type=date]{
     border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:.45rem .65rem;
-    background:rgba(255,255,255,.92);color:var(--ink);font-family:inherit;font-size:.95rem;
+    background:var(--paper);color:var(--ink);font-family:inherit;font-size:.95rem;
+    color-scheme:light dark;
   }
   .hijri{color:#fdf3d6;font-size:.92rem;font-weight:600;margin-top:.35rem;text-align:left}
   .motto{
@@ -614,9 +615,11 @@
   }
   .tally.done{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
   html.dark .tally.done{color:#08211d}
+  .tally-ctrl{display:inline-flex;align-items:center;gap:.2rem;flex-shrink:0}
   .tally-reset{
     border:none;background:none;color:var(--muted);cursor:pointer;
-    font-size:.95rem;padding:.1rem .25rem;border-radius:7px;flex-shrink:0;
+    font-size:.85rem;padding:.1rem .2rem;border-radius:7px;flex-shrink:0;
+    line-height:1;display:inline-flex;
   }
   .tally-reset:hover{background:var(--accent-soft);color:var(--accent)}
 
@@ -1086,7 +1089,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٨</div>
+    <div class="app-version">النسخة ٢٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1753,7 +1756,7 @@
       tally.textContent = done ? "تم ✓ ١٠٠" : count.toLocaleString("ar-EG")+" / ١٠٠";
       const rst = document.createElement("button");
       rst.className = "tally-reset";
-      rst.textContent = "↺";
+      rst.textContent = "🔄";
       rst.title = "تصفير العداد";
       rst.onclick = (ev)=>{
         ev.stopPropagation();
@@ -1770,7 +1773,10 @@
         }
         save(); renderWorship(); renderProgress();
       };
-      li.append(chk, lbl, tally, rst);
+      const ctrl = document.createElement("span");
+      ctrl.className = "tally-ctrl";
+      ctrl.append(tally, rst);
+      li.append(chk, lbl, ctrl);
       ul.appendChild(li);
       return;
     }
@@ -1794,7 +1800,7 @@
       tally.textContent = done ? "تم ✓ "+arn(w.target) : arn(count)+" / "+arn(w.target);
       const rst = document.createElement("button");
       rst.className = "tally-reset";
-      rst.textContent = "↺";
+      rst.textContent = "🔄";
       rst.title = "تصفير العداد";
       rst.onclick = (ev)=>{
         ev.stopPropagation();
@@ -1811,7 +1817,9 @@
         }
         save(); renderWorship(); renderProgress();
       };
-      li.append(chk, lbl, tally, rst);
+      const ctrl = document.createElement("span");
+      ctrl.className = "tally-ctrl";
+      ctrl.append(tally, rst);
       if(w.custom){
         const del = document.createElement("button");
         del.className = "ib-custom-del";
@@ -1823,8 +1831,9 @@
           wCustomSave(wCustom().filter(x=>x.id !== w.id));
           renderWorship(); renderProgress();
         };
-        li.appendChild(del);
+        ctrl.appendChild(del);
       }
+      li.append(chk, lbl, ctrl);
       ul.appendChild(li);
       return;
     }
