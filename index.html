@@ -892,7 +892,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٤</div>
+    <div class="app-version">النسخة ٢٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2257,11 +2257,15 @@
     return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
   }
 
-  /* ===== التحفيز الصوتي (Voice Coach) ===== */
+  /* ===== التحفيز الصوتي (Voice Coach) — عربي / إنجليزي / صامت ===== */
   const WK_VOICE_KEY = "h2do-wk-voice";
-  function wkVoiceOn(){ return localStorage.getItem(WK_VOICE_KEY) !== "0"; }
+  function wkVoiceMode(){
+    const v = localStorage.getItem(WK_VOICE_KEY);
+    if(v === "ar" || v === "en" || v === "0") return v;
+    return "en"; /* الافتراضي: الإنجليزية (أصوات الأجهزة فيها أوضح بكثير) */
+  }
   function wkPick(a){ return a[Math.floor(Math.random()*a.length)]; }
-  const VP = {
+  const VP_AR = {
     start:  ["يلا نبدأ! أنت قدّها","بسم الله، انطلق بقوة","خطوة بخطوة، ابدأ الآن","وقت التركيز، انطلق"],
     during: ["ركّز، كل ثانية تُحسب","استمر، أداؤك رائع","حافظ على الإيقاع","لا تتوقف الآن","التقدم يحدث الآن"],
     last5:  ["بقي القليل، اثبت","أنهِها بقوة","ثوانٍ أخيرة","اصمد، أوشكت"],
@@ -2269,22 +2273,58 @@
     toWork: ["عدنا للعمل!","جاهز للجولة القادمة؟","نكمل بقوة","ركّز، الجولة بدأت"],
     cycle:  ["اكتملت جولة، ممتاز","خطوة أخرى نحو هدفك","استمر، الأبطال يواصلون"],
     cool:   ["وقت التهدئة، تنفّس بعمق واسترخِ"],
-    finish: ["اكتملت الجلسة، عمل مذهل","مبروك! أنهيتها بقوة","أحسنت، الاستمرارية تصنع النجاح","مهمة منجزة، وفّيت بوعدك لنفسك"]
+    finish: ["اكتملت الجلسة، عمل مذهل","مبروك! أنهيتها بقوة","أحسنت، الاستمرارية تصنع النجاح","مهمة منجزة، وفّيت بوعدك لنفسك"],
+    on: "التحفيز الصوتي بالعربية"
   };
+  const VP_EN = {
+    start:  ["Let's go!","Time to focus.","You got this.","Start strong."],
+    during: ["Stay focused.","Keep moving.","You're doing great.","Don't stop now.","Keep the momentum."],
+    last5:  ["Almost there.","Finish strong.","Push through.","Last few seconds."],
+    toRest: ["Great job. Take a short break.","Well done. Recover and prepare.","Time to recharge."],
+    toWork: ["Back to work.","Let's continue.","Ready for the next round?","Focus mode on."],
+    cycle:  ["One round completed.","Excellent progress.","Keep it going.","Another step forward."],
+    cool:   ["Cool down. Breathe and relax."],
+    finish: ["Session complete. Outstanding work.","Congratulations. You finished strong.","Well done. Great effort today.","Mission accomplished."],
+    on: "Voice coach on"
+  };
+  function VP(){ return wkVoiceMode() === "ar" ? VP_AR : VP_EN; }
+
+  /* انتقاء أفضل صوت متاح في الجهاز */
+  function wkBestVoice(lang){
+    try{
+      const vs = speechSynthesis.getVoices();
+      if(!vs.length) return null;
+      const pref = lang === "ar"
+        ? ["Majed","Laila","Tarik","Hoda","Google العربية","Arabic"]
+        : ["Samantha","Daniel","Karen","Aaron","Google US English","Google UK English Female","English (United States)"];
+      for(const n of pref){
+        const v = vs.find(v=>v.name && v.name.indexOf(n) !== -1);
+        if(v) return v;
+      }
+      return vs.find(v=>v.lang && v.lang.toLowerCase().indexOf(lang) === 0) || null;
+    }catch(e){ return null; }
+  }
+  if("speechSynthesis" in window){
+    try{ speechSynthesis.onvoiceschanged = ()=>{}; speechSynthesis.getVoices(); }catch(e){}
+  }
   function wkSpeak(txt){
-    if(!wkVoiceOn() || !("speechSynthesis" in window)) return;
+    const mode = wkVoiceMode();
+    if(mode === "0" || !("speechSynthesis" in window)) return;
     try{
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(txt);
-      u.lang = "ar-SA"; u.rate = 1.05;
+      u.lang = mode === "ar" ? "ar-SA" : "en-US";
+      u.rate = mode === "ar" ? 1.05 : 1.0;
+      const v = wkBestVoice(mode);
+      if(v) u.voice = v;
       speechSynthesis.speak(u);
     }catch(e){}
   }
   /* المدرب الذكي: عبارة الختام حسب أدائك */
   function wkCoachFinishLine(){
+    const en = wkVoiceMode() === "en";
     try{
       const streakBefore = computeSportStreak();
-      /* رقم قياسي؟ قارن دقائق اليوم بأعلى يوم سابق */
       let best = 0;
       const t = new Date(todayStr()+"T12:00:00");
       for(let i=1;i<=400;i++){
@@ -2293,11 +2333,11 @@
         if(m > best) best = m;
       }
       const todayM = (state.sport && state.sport.mins) || 0;
-      if(todayM > best && best > 0) return "رقم قياسي جديد لك اليوم، مذهل!";
-      if(streakBefore >= 7) return "ما شاء الله، سلسلة "+streakBefore.toLocaleString("ar-EG")+" أيام، استمر يا بطل";
-      if(streakBefore <= 1 && best > 0) return "عودة موفقة، نبدأ من جديد معًا";
+      if(todayM > best && best > 0) return en ? "New personal record. Outstanding!" : "رقم قياسي جديد لك اليوم، مذهل!";
+      if(streakBefore >= 7) return en ? "Amazing. "+streakBefore+" days in a row. Keep going, champion." : "ما شاء الله، سلسلة "+streakBefore.toLocaleString("ar-EG")+" أيام، استمر يا بطل";
+      if(streakBefore <= 1 && best > 0) return en ? "Welcome back. Let's restart together." : "عودة موفقة، نبدأ من جديد معًا";
     }catch(e){}
-    return wkPick(VP.finish);
+    return wkPick(VP().finish);
   }
 
   /* صوت التنبيه (WebAudio — بدون ملفات) */
@@ -2345,13 +2385,15 @@
   }
   window.addEventListener("popstate", ()=>{ if(!wkOverlay.hidden) closeWkUI(); });
   function wkVoiceIcon(){
-    document.getElementById("wkVoice").textContent = wkVoiceOn() ? "🔊" : "🔇";
+    const m = wkVoiceMode();
+    document.getElementById("wkVoice").textContent = m === "0" ? "🔇" : (m === "ar" ? "🔊ع" : "🔊EN");
   }
   document.getElementById("wkVoice").onclick = ()=>{
-    localStorage.setItem(WK_VOICE_KEY, wkVoiceOn() ? "0" : "1");
+    const next = {en:"ar", ar:"0", "0":"en"}[wkVoiceMode()];
+    localStorage.setItem(WK_VOICE_KEY, next);
     wkVoiceIcon();
-    if(wkVoiceOn()) wkSpeak("التحفيز الصوتي مفعّل");
-    else{ try{ speechSynthesis.cancel(); }catch(e){} }
+    if(next === "0"){ try{ speechSynthesis.cancel(); }catch(e){} }
+    else wkSpeak(VP().on);
   };
   document.getElementById("wkOpen").onclick = openWk;
   document.getElementById("wkClose").onclick = closeWk;
@@ -2461,7 +2503,7 @@
     wkOverlay.scrollTop = 0;
     wkWake(true);
     wkBeep(880, .15);
-    wkSpeak(wkPick(VP.start));
+    wkSpeak(wkPick(VP().start));
     wkPrevPhase = null;
     wkEnterPhase();
   }
@@ -2470,10 +2512,10 @@
     const p = wkPhases[wkIdx];
     /* عبارة الانتقال المناسبة */
     if(wkPrevPhase){
-      if(p.c === "cool") wkSpeak(wkPick(VP.cool));
-      else if(p.c === "hi" && wkPrevPhase.cyc && p.cyc && p.cyc > wkPrevPhase.cyc) wkSpeak(wkPick(VP.cycle));
-      else if(p.c === "hi") wkSpeak(wkPick(VP.toWork));
-      else if(p.c === "lo" || p.c === "rest") wkSpeak(wkPick(VP.toRest));
+      if(p.c === "cool") wkSpeak(wkPick(VP().cool));
+      else if(p.c === "hi" && wkPrevPhase.cyc && p.cyc && p.cyc > wkPrevPhase.cyc) wkSpeak(wkPick(VP().cycle));
+      else if(p.c === "hi") wkSpeak(wkPick(VP().toWork));
+      else if(p.c === "lo" || p.c === "rest") wkSpeak(wkPick(VP().toRest));
     }
     wkPrevPhase = p;
     wkEndAt = Date.now() + p.s*1000;
@@ -2502,9 +2544,9 @@
     document.getElementById("wkRemain").textContent = "المتبقي من التمرين: "+wkFmt(remain);
     if(left <= 3 && left >= 1 && left !== wkLastBeepSec){ wkLastBeepSec = left; wkBeep(880, .12); }
     /* تحفيز صوتي: قبل النهاية بـ٥ ثوانٍ للمراحل الطويلة، وكل دقيقة في المراحل الممتدة */
-    if(left === 5 && p.s >= 20 && wkLastVoiceSec !== 5){ wkLastVoiceSec = 5; wkSpeak(wkPick(VP.last5)); }
+    if(left === 5 && p.s >= 20 && wkLastVoiceSec !== 5){ wkLastVoiceSec = 5; wkSpeak(wkPick(VP().last5)); }
     if(p.s >= 120 && left !== p.s && left > 10 && left % 60 === 0 && wkLastVoiceSec !== left){
-      wkLastVoiceSec = left; wkSpeak(wkPick(VP.during));
+      wkLastVoiceSec = left; wkSpeak(wkPick(VP().during));
     }
     if(leftMs <= 0){
       if(wkIdx + 1 < wkPhases.length){ wkBeep(1318, .35); wkIdx++; wkEnterPhase(); }
