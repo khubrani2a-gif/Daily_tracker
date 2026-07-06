@@ -274,6 +274,81 @@
   li.sub{padding-right:1.6rem;font-size:.85rem;color:var(--muted)}
   li .done-line{text-decoration:line-through;color:var(--muted)}
 
+  /* ===== العبادات (مُعاد تصميمها) ===== */
+  .ib-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;margin-bottom:.9rem}
+  .ib-title{padding-bottom:0;margin-bottom:0;border-bottom:none}
+  .ib-sub{font-size:.74rem;color:var(--muted);margin-top:.2rem}
+  .ib-cal-btn{
+    flex-shrink:0;border:1px solid var(--line);background:var(--chip-bg);color:var(--accent);
+    border-radius:11px;padding:.4rem .7rem;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
+    white-space:nowrap;
+  }
+  .ib-cal-btn:hover{border-color:var(--accent-2);background:var(--accent-soft)}
+  .ib-stats{
+    display:grid;grid-template-columns:auto 1fr;gap:.6rem .9rem;
+    background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;
+    padding:.8rem;margin-bottom:1rem;
+  }
+  .ib-ring-wrap{position:relative;width:64px;height:64px;grid-row:span 1}
+  .ib-ring{width:64px;height:64px;transform:rotate(-90deg)}
+  .ib-ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+  .ib-ring-bg{stroke:var(--line)}
+  .ib-ring-fg{
+    stroke:var(--accent-2);
+    stroke-dasharray:163.36;stroke-dashoffset:163.36;
+    transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1);
+  }
+  .ib-ring-text{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .ib-ring-text b{font-size:.95rem;color:var(--accent);line-height:1.2}
+  .ib-ring-text small{font-size:.56rem;color:var(--muted)}
+  .ib-count{display:flex;flex-direction:column;justify-content:center}
+  .ib-count-lbl{font-size:.76rem;color:var(--muted)}
+  .ib-count b{font-size:1.35rem;color:var(--accent);line-height:1.4}
+  .ib-count small{font-size:.68rem;color:var(--muted)}
+  .ib-remain{
+    grid-column:1 / -1;background:var(--paper);border:1px dashed var(--line);border-radius:11px;
+    padding:.55rem .7rem;
+  }
+  .ib-remain-title{font-size:.76rem;font-weight:700;color:var(--gold);margin-bottom:.3rem}
+  .ib-remain ul{list-style:none;padding-right:.2rem}
+  .ib-remain li{font-size:.78rem;color:var(--muted);padding:.12rem 0;position:relative;padding-right:.9rem}
+  .ib-remain li::before{content:"•";position:absolute;right:0;color:var(--gold)}
+  .ib-remain.all-done{color:var(--accent);font-weight:600;text-align:center;font-size:.82rem}
+  .ib-group{margin-bottom:.5rem}
+  .ib-group-head{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:.86rem;font-weight:700;color:var(--accent);
+    padding:.3rem 0;margin-top:.5rem;
+  }
+  .ib-add{
+    width:26px;height:26px;border-radius:8px;border:1.5px dashed var(--accent-2);
+    background:none;color:var(--accent);font-size:1rem;line-height:1;cursor:pointer;transition:.15s;
+  }
+  .ib-add:hover{background:var(--accent-soft)}
+  .ib-custom-del{
+    border:none;background:none;color:var(--muted);cursor:pointer;font-size:.85rem;
+    flex-shrink:0;padding:.1rem .3rem;border-radius:7px;
+  }
+  .ib-custom-del:hover{color:var(--danger);background:var(--danger-soft)}
+  .ib-sunnah{
+    margin-top:1rem;background:var(--accent-soft);
+    border-radius:14px;padding:.9rem 1rem;text-align:center;
+  }
+  .ib-sunnah-head{font-size:.86rem;font-weight:700;color:var(--accent);margin-bottom:.4rem}
+  .ib-sunnah-text{font-size:.88rem;color:var(--ink);line-height:1.7}
+  .ib-sunnah-note{font-size:.76rem;color:var(--muted);margin-top:.5rem;line-height:1.7;text-align:right}
+  .ib-sunnah-actions{display:flex;gap:.5rem;justify-content:center;margin-top:.7rem}
+  .ib-sunnah-actions button{
+    border:1px solid var(--line);background:var(--paper);color:var(--muted);
+    border-radius:10px;padding:.35rem .8rem;font-size:.76rem;cursor:pointer;transition:.15s;font-family:inherit;
+  }
+  .ib-sunnah-actions button:hover{border-color:var(--accent-2);color:var(--accent)}
+  .ib-sunnah-actions #ibSunnahDone.done{
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;
+  }
+
   /* ===== Water ===== */
   .water{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
   .cup{
@@ -755,9 +830,58 @@
         <button class="loc-btn" id="locBtn">📍 اكتب مدينتك لعرض المواقيت</button>
       </div>
 
-      <div class="card">
-        <h2><span class="ico">📿</span> العبادات</h2>
-        <ul class="checklist" id="worship"></ul>
+      <div class="card" id="ibadahCard">
+        <div class="ib-head">
+          <div>
+            <h2 class="ib-title"><span class="ico">🕌</span> العبادات</h2>
+            <div class="ib-sub">قربك من الله .. سرّ طمأنينتك 🤍</div>
+          </div>
+          <button class="ib-cal-btn" id="ibCalBtn" title="تقويم عباداتك">📊 تقويمك</button>
+        </div>
+
+        <div class="ib-stats">
+          <div class="ib-ring-wrap">
+            <svg class="ib-ring" viewBox="0 0 64 64">
+              <circle class="ib-ring-bg" cx="32" cy="32" r="26"/>
+              <circle class="ib-ring-fg" id="ibRingFg" cx="32" cy="32" r="26"/>
+            </svg>
+            <div class="ib-ring-text"><b id="ibRingPct">0%</b><small>مكتمل</small></div>
+          </div>
+          <div class="ib-count">
+            <span class="ib-count-lbl">🌿 إنجازك اليوم</span>
+            <b id="ibCountNum">٠ / ٠</b>
+            <small>مكتملة اليوم</small>
+          </div>
+          <div class="ib-remain" id="ibRemainBox">
+            <div class="ib-remain-title">📋 بقي عليك</div>
+            <ul id="ibRemainList"></ul>
+          </div>
+        </div>
+
+        <div class="ib-group">
+          <div class="ib-group-head"><span>📿 أذكار</span><button class="ib-add" data-group="adhkar" title="إضافة ذكر">＋</button></div>
+          <ul class="checklist" id="ibList-adhkar"></ul>
+        </div>
+
+        <div class="ib-group">
+          <div class="ib-group-head"><span>🕌 الصلاة والنوافل</span><button class="ib-add" data-group="salah" title="إضافة صلاة أو نافلة">＋</button></div>
+          <ul class="checklist" id="ibList-salah"></ul>
+        </div>
+
+        <div class="ib-group">
+          <div class="ib-group-head"><span>📗 الأوراد اليومية</span><button class="ib-add" data-group="awrad" title="إضافة ورد">＋</button></div>
+          <ul class="checklist" id="ibList-awrad"></ul>
+        </div>
+
+        <div class="ib-sunnah">
+          <div class="ib-sunnah-head">🌱 سنة اليوم</div>
+          <div class="ib-sunnah-text" id="ibSunnahText"></div>
+          <div class="ib-sunnah-note" id="ibSunnahNote" hidden></div>
+          <div class="ib-sunnah-actions">
+            <button id="ibSunnahMore">تعلّم أكثر 📖</button>
+            <button id="ibSunnahDone">تم التطبيق</button>
+          </div>
+        </div>
       </div>
 
       <div class="card" id="sportCard">
@@ -960,7 +1084,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٦</div>
+    <div class="app-version">النسخة ٢٧</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -996,19 +1120,46 @@
   const PRAYERS = ["الفجر","الضحى","الظهر","العصر","المغرب","العشاء"];
 
   const WORSHIP = [
-    {id:"athkar_am",  label:"أذكار الصباح", sub:false},
-    {id:"athkar_pm",  label:"أذكار المساء", sub:false},
-    {id:"athkar_salah", label:"أذكار بعد الصلاة", sub:false},
-    {id:"athkar_sleep", label:"أذكار النوم", sub:false},
-    {id:"athkar_wake",  label:"أذكار الاستيقاظ", sub:false},
-    {id:"sunan",      label:"السنن والنوافل (الرواتب)", sub:false},
-    {id:"witr",       label:"الوتر وقيام الليل", sub:true},
-    {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", sub:false},
-    {id:"istighfar",  label:"الاستغفار (١٠٠ مرة)", sub:false},
-    {id:"werd",       label:"الورد اليومي من القرآن", sub:false},
-    {id:"knowledge",  label:"طلب علم", sub:false},
-    {id:"reading",    label:"صفحة قراءة", sub:false},
+    {id:"athkar_am",  label:"أذكار الصباح", group:"adhkar"},
+    {id:"athkar_pm",  label:"أذكار المساء", group:"adhkar"},
+    {id:"athkar_salah", label:"أذكار بعد الصلاة", group:"adhkar"},
+    {id:"athkar_sleep", label:"أذكار النوم", group:"adhkar"},
+    {id:"athkar_wake",  label:"أذكار الاستيقاظ", group:"adhkar"},
+    {id:"sunan",      label:"السنن والنوافل (الرواتب)", group:"salah"},
+    {id:"witr",       label:"الوتر وقيام الليل", group:"salah"},
+    {id:"forgotten",  label:"سنّة منسيّة أحييتها اليوم", group:"salah"},
+    {id:"istighfar",  label:"الاستغفار (١٠٠ مرة)", group:"awrad"},
+    {id:"werd",       label:"الورد اليومي من القرآن", group:"awrad"},
+    {id:"knowledge",  label:"طلب علم", group:"awrad"},
+    {id:"reading",    label:"صفحة قراءة", group:"awrad"},
   ];
+  const IB_GROUPS = ["adhkar","salah","awrad"];
+  const CUSTOM_WORSHIP_KEY = "h2do-custom-worship";
+  function wCustom(){
+    try{ return JSON.parse(localStorage.getItem(CUSTOM_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
+  }
+  function wCustomSave(list){ localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(list)); }
+  function wAllItems(){ return WORSHIP.concat(wCustom()); }
+
+  /* سنة اليوم — تدوير يومي */
+  const SUNAN_TIPS = [
+    {t:"البدء باليمين عند لبس الثياب والنعال، وباليسار عند الخلع", n:"«كان النبي ﷺ يعجبه التيمّن في تنعّله وترجّله وطهوره وفي شأنه كلّه» (متفق عليه)"},
+    {t:"الدعاء عند دخول المنزل: «اللهم إني أسألك خير المولج وخير المخرج»", n:"أبو داود"},
+    {t:"تسمية الله قبل الطعام والأكل باليمين ومما يليك", n:"متفق عليه"},
+    {t:"إفشاء السلام على من عرفت ومن لم تعرف", n:"«لا تدخلون الجنة حتى تؤمنوا، ولا تؤمنوا حتى تحابّوا، أفلا أدلّكم على شيء إذا فعلتموه تحاببتم؟ أفشوا السلام بينكم» (مسلم)"},
+    {t:"صلاة ركعتين تحية المسجد قبل الجلوس", n:"متفق عليه"},
+    {t:"الدعاء عند لبس ثوب جديد ورؤية من لبسه: «تُبلي ويُخلف الله»", n:"أبو داود والترمذي"},
+    {t:"النوم على طهارة وعلى الشق الأيمن", n:"متفق عليه"},
+    {t:"تشميت العاطس إذا حمد الله", n:"البخاري"},
+    {t:"الدعاء عند الخروج من المنزل: «بسم الله، توكلت على الله، ولا حول ولا قوة إلا بالله»", n:"أبو داود والترمذي"},
+    {t:"صيام الاثنين والخميس", n:"«تُعرض الأعمال يوم الاثنين والخميس فأحبّ أن يُعرض عملي وأنا صائم» (الترمذي)"},
+    {t:"إماطة الأذى عن الطريق", n:"«لقد رأيت رجلًا يتقلّب في الجنة في شجرة قطعها من ظهر الطريق كانت تؤذي الناس» (مسلم)"},
+    {t:"الدعاء لمن عطس بـ«يرحمك الله» والرد عليه بـ«يهديكم الله ويصلح بالكم»", n:"البخاري"},
+  ];
+  function sunahOfDay(dateStr){
+    const days = Math.floor(new Date(dateStr+"T12:00:00").getTime()/86400000);
+    return SUNAN_TIPS[((days % SUNAN_TIPS.length) + SUNAN_TIPS.length) % SUNAN_TIPS.length];
+  }
 
   const TASK_COLORS = ["#0f766e","#c9a227","#b3563e","#5b7fa6","#7c6aa6","#4e8d5b"];
   const N_TASKS = 6, N_PRIORITIES = 3, N_CUPS = 8;
@@ -1256,6 +1407,7 @@
       sleep: "",
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
       celebrated: false,
+      sunnahDone: false,
       updatedAt: 0
     };
   }
@@ -1576,80 +1728,169 @@
     });
   }
 
-  function renderWorship(){
-    const ul = document.getElementById("worship");
-    ul.innerHTML = "";
-    WORSHIP.forEach(w=>{
-      const li = document.createElement("li");
-      if(w.sub) li.className = "sub";
+  const ADHKAR_MODE_OF = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
 
-      /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
-      if(w.id === "istighfar"){
-        li.classList.add("tally-row");
-        const count = state.istighfar || 0;
-        const done = count >= 100;
-        state.worship.istighfar = done;
-        const chk = document.createElement("span");
-        chk.className = "chk"+(done?" on":"");
-        chk.textContent = "✔";
-        const lbl = document.createElement("span");
-        lbl.className = "lbl"+(done?" done-line":"");
-        lbl.textContent = w.label;
-        const tally = document.createElement("span");
-        tally.className = "tally"+(done?" done":"");
-        tally.textContent = done ? "تم ✓ ١٠٠" : count.toLocaleString("ar-EG")+" / ١٠٠";
-        const rst = document.createElement("button");
-        rst.className = "tally-reset";
-        rst.textContent = "↺";
-        rst.title = "تصفير العداد";
-        rst.onclick = (ev)=>{
-          ev.stopPropagation();
-          state.istighfar = 0; state.worship.istighfar = false;
-          save(); renderWorship(); renderProgress();
-        };
-        li.onclick = ()=>{
-          if((state.istighfar||0) >= 100) return;
-          state.istighfar = (state.istighfar||0) + 1;
-          if(navigator.vibrate) navigator.vibrate(8);
-          if(state.istighfar === 100){
-            state.worship.istighfar = true;
-            if(navigator.vibrate) navigator.vibrate([30,60,30]);
-          }
-          save(); renderWorship(); renderProgress();
-        };
-        li.append(chk, lbl, tally, rst);
-        ul.appendChild(li);
-        return;
-      }
+  function ibRenderItem(w, ul){
+    const li = document.createElement("li");
 
+    /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
+    if(w.id === "istighfar"){
+      li.classList.add("tally-row");
+      const count = state.istighfar || 0;
+      const done = count >= 100;
+      state.worship.istighfar = done;
       const chk = document.createElement("span");
-      const on = !!state.worship[w.id];
-      chk.className = "chk"+(on?" on":"");
+      chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
-      chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); renderWorship(); renderProgress(); };
       const lbl = document.createElement("span");
-      lbl.className = "lbl"+(on?" done-line":"");
+      lbl.className = "lbl"+(done?" done-line":"");
       lbl.textContent = w.label;
-
-      /* بنود الأذكار: الضغط على الاسم يفتح صفحة الأذكار الكاملة */
-      const adhkarModeOf = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
-      if(adhkarModeOf[w.id]){
-        const mode = adhkarModeOf[w.id];
-        lbl.onclick = ()=> openAdhkar(mode);
-        const read = document.createElement("span");
-        read.className = "read-chip";
-        read.textContent = "📖 اقرأ";
-        read.onclick = ()=> openAdhkar(mode);
-        li.appendChild(chk); li.appendChild(lbl); li.appendChild(read);
-        ul.appendChild(li);
-        return;
-      }
-
-      lbl.onclick = chk.onclick;
-      li.appendChild(chk); li.appendChild(lbl);
+      const tally = document.createElement("span");
+      tally.className = "tally"+(done?" done":"");
+      tally.textContent = done ? "تم ✓ ١٠٠" : count.toLocaleString("ar-EG")+" / ١٠٠";
+      const rst = document.createElement("button");
+      rst.className = "tally-reset";
+      rst.textContent = "↺";
+      rst.title = "تصفير العداد";
+      rst.onclick = (ev)=>{
+        ev.stopPropagation();
+        state.istighfar = 0; state.worship.istighfar = false;
+        save(); renderWorship(); renderProgress();
+      };
+      li.onclick = ()=>{
+        if((state.istighfar||0) >= 100) return;
+        state.istighfar = (state.istighfar||0) + 1;
+        if(navigator.vibrate) navigator.vibrate(8);
+        if(state.istighfar === 100){
+          state.worship.istighfar = true;
+          if(navigator.vibrate) navigator.vibrate([30,60,30]);
+        }
+        save(); renderWorship(); renderProgress();
+      };
+      li.append(chk, lbl, tally, rst);
       ul.appendChild(li);
-    });
+      return;
+    }
+
+    const chk = document.createElement("span");
+    const on = !!state.worship[w.id];
+    chk.className = "chk"+(on?" on":"");
+    chk.textContent = "✔";
+    chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); renderWorship(); renderProgress(); };
+    const lbl = document.createElement("span");
+    lbl.className = "lbl"+(on?" done-line":"");
+    lbl.textContent = w.label;
+
+    /* بنود الأذكار: الضغط على الاسم يفتح صفحة الأذكار الكاملة */
+    if(ADHKAR_MODE_OF[w.id]){
+      const mode = ADHKAR_MODE_OF[w.id];
+      lbl.onclick = ()=> openAdhkar(mode);
+      const read = document.createElement("span");
+      read.className = "read-chip";
+      read.textContent = "📖 اقرأ";
+      read.onclick = ()=> openAdhkar(mode);
+      li.appendChild(chk); li.appendChild(lbl); li.appendChild(read);
+      ul.appendChild(li);
+      return;
+    }
+
+    lbl.onclick = chk.onclick;
+    li.appendChild(chk); li.appendChild(lbl);
+    /* عناصر مخصّصة يضيفها المستخدم: زر حذف صغير */
+    if(w.custom){
+      const del = document.createElement("button");
+      del.className = "ib-custom-del";
+      del.textContent = "✕";
+      del.title = "حذف";
+      del.onclick = (ev)=>{
+        ev.stopPropagation();
+        if(!confirm("حذف «"+w.label+"»؟")) return;
+        wCustomSave(wCustom().filter(x=>x.id !== w.id));
+        renderWorship(); renderProgress();
+      };
+      li.appendChild(del);
+    }
+    ul.appendChild(li);
   }
+
+  function ibRemainLabel(w){
+    if(w.id === "istighfar"){
+      const left = Math.max(0, 100 - (state.istighfar||0));
+      return left ? w.label+" (متبقي "+left.toLocaleString("ar-EG")+")" : null;
+    }
+    return w.label;
+  }
+
+  function renderWorship(){
+    const custom = wCustom();
+    IB_GROUPS.forEach(g=>{
+      const ul = document.getElementById("ibList-"+g);
+      ul.innerHTML = "";
+      WORSHIP.filter(w=>w.group === g).forEach(w=> ibRenderItem(w, ul));
+      custom.filter(w=>w.group === g).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+    });
+
+    /* إحصائيات البطاقة: الحلقة + العدّاد + المتبقي */
+    const all = wAllItems();
+    const done = all.filter(w=>!!state.worship[w.id]);
+    const total = all.length;
+    const pct = total ? Math.round(done.length/total*100) : 0;
+    const C = 163.36;
+    document.getElementById("ibRingFg").style.strokeDashoffset = C * (1 - pct/100);
+    document.getElementById("ibRingPct").textContent = pct+"٪";
+    document.getElementById("ibCountNum").textContent = done.length.toLocaleString("ar-EG")+" / "+total.toLocaleString("ar-EG");
+
+    const remainBox = document.getElementById("ibRemainBox");
+    const remainList = document.getElementById("ibRemainList");
+    const remaining = all.filter(w=>!state.worship[w.id]).map(ibRemainLabel).filter(Boolean);
+    if(!remaining.length){
+      remainBox.classList.add("all-done");
+      remainBox.innerHTML = '<div class="ib-remain-title">✨ أتممت كل عباداتك اليوم، تقبّل الله منك</div>';
+    }else{
+      remainBox.classList.remove("all-done");
+      remainBox.innerHTML = '<div class="ib-remain-title">📋 بقي عليك</div><ul id="ibRemainList"></ul>';
+      const ul2 = document.getElementById("ibRemainList");
+      remaining.slice(0,4).forEach(t=>{
+        const li = document.createElement("li"); li.textContent = t; ul2.appendChild(li);
+      });
+      if(remaining.length > 4){
+        const li = document.createElement("li"); li.textContent = "و"+(remaining.length-4).toLocaleString("ar-EG")+" أخرى"; ul2.appendChild(li);
+      }
+    }
+
+    /* سنة اليوم */
+    const s = sunahOfDay(currentDate);
+    document.getElementById("ibSunnahText").textContent = s.t;
+    const note = document.getElementById("ibSunnahNote");
+    note.textContent = s.n;
+    const doneBtn = document.getElementById("ibSunnahDone");
+    const applied = !!state.sunnahDone;
+    doneBtn.textContent = applied ? "✔ تم التطبيق" : "تم التطبيق";
+    doneBtn.classList.toggle("done", applied);
+  }
+
+  document.getElementById("ibSunnahMore").onclick = function(){
+    const note = document.getElementById("ibSunnahNote");
+    note.hidden = !note.hidden;
+    this.textContent = note.hidden ? "تعلّم أكثر 📖" : "إخفاء ▲";
+  };
+  document.getElementById("ibSunnahDone").onclick = function(){
+    state.sunnahDone = !state.sunnahDone;
+    save(); renderWorship();
+  };
+  document.querySelectorAll(".ib-add").forEach(btn=>{
+    btn.onclick = ()=>{
+      const group = btn.dataset.group;
+      const gname = group === "adhkar" ? "الأذكار" : group === "salah" ? "الصلاة والنوافل" : "الأوراد اليومية";
+      const label = prompt("أضف بندًا جديدًا إلى «"+gname+"»:");
+      if(!label || !label.trim()) return;
+      const list = wCustom();
+      list.push({id:"custom_"+Date.now(), label:label.trim(), group:group});
+      wCustomSave(list);
+      renderWorship(); renderProgress();
+    };
+  });
+  document.getElementById("ibCalBtn").onclick = ()=> document.getElementById("statsBtn").click();
 
   /* ---------- الرياضة ---------- */
   const SPORT_TYPES = [["walk","🚶 مشي"],["run","🏃 جري"],["gym","🏋️ قوة"],["swim","🏊 سباحة"],["bike","🚴 دراجة"],["ball","⚽ كرة"],["stretch","🧘 مرونة"],["other","💪 أخرى"]];
@@ -2011,7 +2252,8 @@
   function renderProgress(){
     let total = 0, done = 0;
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
-    total += WORSHIP.length; done += WORSHIP.filter(w=>!!state.worship[w.id]).length;
+    const ibItems = wAllItems();
+    total += ibItems.length; done += ibItems.filter(w=>!!state.worship[w.id]).length;
     total += 1; if(state.water >= N_CUPS) done += 1;
     total += 1; if(sportDone(state)) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
@@ -2062,7 +2304,8 @@
     const pr = s.prayers || [];
     total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
     const wsh = s.worship || {};
-    total += WORSHIP.length; done += WORSHIP.filter(w=>!!wsh[w.id]).length;
+    const ibAll = wAllItems();
+    total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= N_CUPS) done += 1;
     total += 1; if(sportDone(s)) done += 1;
     const ft = (s.tasks || []).filter(t=>t.text && t.text.trim());
