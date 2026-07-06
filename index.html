@@ -310,6 +310,24 @@
   }
   .sport-goal:hover{color:var(--accent);border-color:var(--accent-2)}
   .sport-status{font-size:.78rem;color:var(--accent);font-weight:600}
+  .sport-timer{
+    display:block;width:100%;margin-top:.7rem;
+    border:1.5px dashed var(--accent-2);background:none;color:var(--accent);
+    border-radius:12px;padding:.55rem;font-size:.9rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .sport-timer:hover{background:var(--accent-soft)}
+  .sport-timer.running{
+    border-style:solid;background:linear-gradient(135deg,#b8912a,#d9b34a);
+    border-color:transparent;color:#fff;
+  }
+  .sport-week{margin-top:.7rem;text-align:center}
+  .sw-dots{display:flex;justify-content:center;gap:.45rem;margin-bottom:.35rem}
+  .sw-dot{width:13px;height:13px;border-radius:50%;background:var(--line)}
+  .sw-dot.some{background:var(--gold)}
+  .sw-dot.full{background:var(--accent-2)}
+  .sw-dot.today{box-shadow:0 0 0 2px var(--paper), 0 0 0 3.5px var(--accent-2)}
+  .sw-label{font-size:.74rem;color:var(--muted)}
+  .sport-streak{font-size:.8rem;color:var(--gold);font-weight:700}
 
   /* ===== Tasks ===== */
   .task-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
@@ -603,9 +621,15 @@
           <button class="sm-btn" id="spPlus5">+٥</button>
           <button class="sm-btn strong" id="spPlus10">+١٠</button>
         </div>
+        <button class="sport-timer" id="sportTimer">▶ ابدأ التمرين الآن</button>
         <div class="sport-bar"><i id="sportFill"></i></div>
+        <div class="sport-week">
+          <div class="sw-dots" id="swDots"></div>
+          <div class="sw-label" id="swLabel" title="توصية منظمة الصحة العالمية: ١٥٠ دقيقة أسبوعيًا"></div>
+        </div>
         <div class="sport-foot">
           <button class="sport-goal" id="sportGoalBtn"></button>
+          <span class="sport-streak" id="sportStreak"></span>
           <span class="sport-status" id="sportStatus"></span>
         </div>
       </div>
@@ -691,7 +715,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٨</div>
+    <div class="app-version">النسخة ١٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1391,7 +1415,92 @@
     document.getElementById("sportFill").style.width = Math.min(100, Math.round(mins/goal*100))+"%";
     document.getElementById("sportCard").classList.toggle("done", mins >= goal);
     document.getElementById("sportStatus").textContent = mins >= goal ? "أنجزت هدف اليوم 💪" : "";
+    renderSportWeek();
+    updateTimerBtn();
   }
+  function dayMinsFor(key){
+    let s = null;
+    if(key === currentDate && state) s = state;
+    else{
+      try{ const raw = localStorage.getItem(storageKey(key)); if(raw) s = JSON.parse(raw); }catch(e){}
+    }
+    if(!s) return 0;
+    const m = (s.sport && s.sport.mins) || 0;
+    if(m > 0) return m;
+    return (s.worship && s.worship.sport) ? sportGoal() : 0; /* أيام قديمة معلّمة بصح */
+  }
+  function computeSportStreak(){
+    let streak = 0;
+    const d = new Date(todayStr()+"T12:00:00");
+    for(let i=0;i<400;i++){
+      const done = dayMinsFor(fmtDate(d)) >= sportGoal();
+      if(i === 0 && !done){ d.setDate(d.getDate()-1); continue; }
+      if(done){ streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+    return streak;
+  }
+  const WEEK_TARGET = 150; /* توصية منظمة الصحة العالمية */
+  function renderSportWeek(){
+    const arn = x => x.toLocaleString("ar-EG");
+    const today = new Date(todayStr()+"T12:00:00");
+    const ws = new Date(today); ws.setDate(ws.getDate() - ws.getDay());
+    const dots = document.getElementById("swDots");
+    dots.innerHTML = "";
+    const names = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+    let weekTotal = 0;
+    for(let i=0;i<7;i++){
+      const d = new Date(ws); d.setDate(d.getDate()+i);
+      const key = fmtDate(d);
+      const m = (d <= today) ? dayMinsFor(key) : 0;
+      weekTotal += m;
+      const dot = document.createElement("span");
+      dot.className = "sw-dot"+(m >= sportGoal() ? " full" : m > 0 ? " some" : "");
+      if(key === todayStr()) dot.classList.add("today");
+      dot.title = names[i]+" — "+arn(m)+" د";
+      dots.appendChild(dot);
+    }
+    document.getElementById("swLabel").textContent =
+      "هذا الأسبوع: "+arn(weekTotal)+" / "+arn(WEEK_TARGET)+" دقيقة"+(weekTotal >= WEEK_TARGET ? " ✓ أتممت التوصية الصحية" : "");
+    const st = computeSportStreak();
+    document.getElementById("sportStreak").textContent = st > 0 ? "🔥 "+arn(st)+(st === 1 ? " يوم" : " أيام") : "";
+  }
+
+  /* مؤقت التمرين المباشر */
+  const SPORT_TIMER_KEY = "h2do-sport-timer-start";
+  let sportTimerInt = null;
+  function fmtElapsed(ms){
+    const s = Math.floor(ms/1000);
+    return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  }
+  function updateTimerBtn(){
+    const btn = document.getElementById("sportTimer");
+    const st = +(localStorage.getItem(SPORT_TIMER_KEY) || 0);
+    if(st){ btn.classList.add("running"); btn.textContent = "⏹ إيقاف وتسجيل — "+fmtElapsed(Date.now()-st); }
+    else{ btn.classList.remove("running"); btn.textContent = "▶ ابدأ التمرين الآن"; clearInterval(sportTimerInt); }
+  }
+  document.getElementById("sportTimer").onclick = ()=>{
+    const st = +(localStorage.getItem(SPORT_TIMER_KEY) || 0);
+    if(!st){
+      localStorage.setItem(SPORT_TIMER_KEY, Date.now());
+      if(navigator.vibrate) navigator.vibrate(15);
+      clearInterval(sportTimerInt);
+      sportTimerInt = setInterval(updateTimerBtn, 1000);
+      updateTimerBtn();
+    }else{
+      localStorage.removeItem(SPORT_TIMER_KEY);
+      const elapsed = Date.now() - st;
+      if(currentDate !== todayStr()) goto(todayStr()); /* يُسجل دائمًا على يومك الحالي */
+      if(elapsed >= 30000){
+        addSportMins(Math.max(1, Math.round(elapsed/60000)));
+      }else{
+        document.getElementById("sportStatus").textContent = "أقل من دقيقة — لم تُحسب";
+      }
+      updateTimerBtn();
+    }
+  };
+  if(localStorage.getItem(SPORT_TIMER_KEY)){ sportTimerInt = setInterval(updateTimerBtn, 1000); }
+
   document.getElementById("spMinus").onclick = ()=> addSportMins(-5);
   document.getElementById("spPlus5").onclick = ()=> addSportMins(5);
   document.getElementById("spPlus10").onclick = ()=> addSportMins(10);
