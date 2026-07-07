@@ -850,6 +850,14 @@
     transition:.15s;
   }
   .witr-actions button:hover{border-color:var(--accent-2);background:var(--accent-soft);color:var(--accent)}
+  /* زر إلغاء ثانوي وخفيف عمدًا — لا يُغري بالإلغاء العرَضي */
+  .witr-undo-btn{
+    display:block;width:100%;text-align:center;margin-top:.9rem;
+    background:none;border:none;color:var(--muted);font-family:inherit;font-size:.72rem;
+    cursor:pointer;opacity:.7;
+  }
+  .witr-undo-btn:hover{opacity:1;color:var(--danger)}
+  .witr-particle-canvas{position:fixed;inset:0;z-index:999;pointer-events:none}
   .witr-history{margin-top:.8rem}
   .witr-history-head{font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.6rem;text-align:center}
   .witr-history ul{list-style:none;margin:0 0 .6rem;padding:0;max-height:320px;overflow-y:auto}
@@ -1388,6 +1396,7 @@
           <ul id="witrHistoryList"></ul>
           <button class="witr-change-btn" id="witrHistoryClose">إغلاق السجل</button>
         </div>
+        <button class="witr-undo-btn" id="witrUndoBtn">↩ إلغاء آخر جلسة</button>
       </div>
 
       <div id="witrPickView">
@@ -1452,7 +1461,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٨</div>
+    <div class="app-version">النسخة ٣٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2759,10 +2768,69 @@
     witrRenderReaderPage();
   };
 
+  /* تأثير جسيمات هادئ (Canvas) يتصاعد من زر "تمت" — يُشغَّل فقط عند أول إنجاز في الليلة
+     (وليس كل جلسة) حتى تبقى التجربة هادئة ولا تتحوّل إلى مبالغة بصرية متكررة */
+  function witrParticleBurst(originEl){
+    const canvas = document.createElement("canvas");
+    canvas.className = "witr-particle-canvas";
+    document.body.appendChild(canvas);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth+"px";
+    canvas.style.height = window.innerHeight+"px";
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    const rect = originEl.getBoundingClientRect();
+    const originX = rect.left + rect.width/2;
+    const originY = rect.top + rect.height/2;
+    const COLORS = ["#d4af37","#c9a227","#8fd9a8","#a7e8bd"]; /* ذهبي / أخضر فاتح */
+    const particles = [];
+    for(let i=0;i<28;i++){
+      const angle = (-Math.PI/2) + (Math.random()-0.5)*1.1; /* نحو الأعلى مع انتشار طفيف */
+      const speed = 1.4 + Math.random()*1.6;
+      particles.push({
+        x: originX + (Math.random()-0.5)*30,
+        y: originY,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed, /* سالبة = صعود للأعلى */
+        ay: 0.045, /* تسارع موجب صغير يعاكس الصعود فيبطئه تدريجيًا (تباطؤ انسيابي بلا سقوط) */
+        life: 0,
+        maxLife: 70 + Math.random()*40,
+        size: 2.5 + Math.random()*2.5,
+        color: COLORS[i % COLORS.length]
+      });
+    }
+    function step(){
+      ctx.clearRect(0,0,canvas.width/dpr, canvas.height/dpr);
+      particles.forEach(p=>{
+        p.vy += p.ay;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+        const opacity = Math.max(0, 1 - (p.life/p.maxLife));
+        ctx.beginPath();
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      for(let i=particles.length-1;i>=0;i--){
+        if(particles[i].life >= particles[i].maxLife) particles.splice(i,1);
+      }
+      if(particles.length) requestAnimationFrame(step);
+      else canvas.remove();
+    }
+    step();
+  }
+
   document.getElementById("witrFinishBtn").onclick = ()=>{
     if(!state.witr) return;
     const w = state.witr;
     if(!state.witrSessions) state.witrSessions = [];
+    const isFirstTonight = state.witrSessions.length === 0;
     state.witrSessions.push({target:w.target, parts:w.parts, key:w.key, ayat:w.target, completedAt:Date.now()});
     state.worship.witr = true;
     witrPushToHistory(w.key);
@@ -2772,19 +2840,20 @@
     document.getElementById("witrReader").hidden = true;
     witrRenderAll();
     renderWorship(); renderProgress();
-    celebrate();
-    if(navigator.vibrate) navigator.vibrate([25,50,25]);
+    if(navigator.vibrate) navigator.vibrate(isFirstTonight ? [15] : [25,50,25]);
+    if(isFirstTonight) witrParticleBurst(document.getElementById("witrDoneMsg"));
+    else celebrate();
     /* احتفاء بصري خفيف — إعادة تشغيل الأنيميشن حتى لو تكررت بنفس الليلة */
     const msg = document.getElementById("witrDoneMsg");
     msg.classList.remove("pop"); void msg.offsetWidth; msg.classList.add("pop");
   };
 
-  /* أزرار بطاقة الإنجاز: متابعة العبادة بدل إغلاق الميزة */
-  document.getElementById("witrActNew").onclick = ()=>{
+  /* أزرار بطاقة الإنجاز: متابعة العبادة بدل إغلاق الميزة (لا تُقفل شيئًا) */
+  function handleNewQiyam(){
     witrForceNew = true;
     witrRenderAll();
-  };
-  document.getElementById("witrActRepeat").onclick = ()=>{
+  }
+  function handleRepeatWird(){
     const sessions = state.witrSessions || [];
     if(!sessions.length) return;
     const last = sessions[sessions.length-1];
@@ -2792,17 +2861,34 @@
     witrForceNew = false;
     save();
     witrRenderAll();
-  };
-  document.getElementById("witrActAnother").onclick = ()=>{
+  }
+  function handleNewSuggestion(){
     const sessions = state.witrSessions || [];
     const target = sessions.length ? sessions[sessions.length-1].target : 10;
     witrPickTarget(target);
-  };
-  document.getElementById("witrActHistory").onclick = ()=>{
+  }
+  function handlePreviousNightsLog(){
     document.getElementById("witrActions").hidden = true;
     document.getElementById("witrHistoryView").hidden = false;
     witrRenderHistory();
-  };
+  }
+  /* إلغاء حقيقي لآخر جلسة إنجاز — متاح فقط كزر ثانوي داخل شاشة الملخص، لا كضغطة عرَضية على "تمت" */
+  function handleUndoAchievement(){
+    const sessions = state.witrSessions || [];
+    if(!sessions.length) return;
+    if(!confirm("إلغاء آخر جلسة قيام سُجّلت الليلة؟")) return;
+    sessions.pop();
+    state.witrSessions = sessions;
+    state.worship.witr = sessions.length > 0;
+    save();
+    witrRenderAll();
+    renderWorship(); renderProgress();
+  }
+  document.getElementById("witrActNew").onclick = handleNewQiyam;
+  document.getElementById("witrActRepeat").onclick = handleRepeatWird;
+  document.getElementById("witrActAnother").onclick = handleNewSuggestion;
+  document.getElementById("witrActHistory").onclick = handlePreviousNightsLog;
+  document.getElementById("witrUndoBtn").onclick = handleUndoAchievement;
   document.getElementById("witrHistoryClose").onclick = ()=>{
     document.getElementById("witrHistoryView").hidden = true;
     document.getElementById("witrActions").hidden = false;
@@ -3053,6 +3139,8 @@
       const chk = document.createElement("span");
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
+      /* الضغط على "تمت" بعد إنجازها لا يُلغيها أبدًا؛ يفتح شاشة ملخص الإنجاز بدلًا من ذلك */
+      chk.onclick = openWitr;
       const lbl = document.createElement("span");
       lbl.className = "lbl"+(done?" done-line":"");
       lbl.textContent = w.label;
