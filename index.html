@@ -830,6 +830,51 @@
   }
   .witr-history li b{color:var(--accent)}
   .witr-hist-empty{text-align:center;color:var(--muted);border-bottom:none!important}
+  .witr-rakah-plan{font-size:.76rem;color:var(--muted);margin:-.3rem 0 .9rem;line-height:1.6}
+
+  /* احتفاء بصري خفيف عند إنجاز جلسة قيام */
+  @keyframes witrPopIn{
+    0%{transform:scale(.86);opacity:0}
+    60%{transform:scale(1.03);opacity:1}
+    100%{transform:scale(1);opacity:1}
+  }
+  .q-done-msg.pop{animation:witrPopIn .5s ease-out}
+
+  /* قارئ الوتر: نص أصلي (API) بدل iframe، بتقسيم على شكل ركعات */
+  .witr-font-ctrl{
+    display:flex;align-items:center;justify-content:center;gap:.9rem;
+    margin:.3rem 0 .9rem;font-size:.78rem;color:var(--muted);font-weight:600;
+  }
+  .witr-font-ctrl button{
+    width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--paper);
+    color:var(--accent);cursor:pointer;font-family:inherit;font-weight:700;
+  }
+  .witr-text-box{min-height:160px}
+  .witr-loading, .witr-fallback{text-align:center;color:var(--muted);padding:2.2rem 0;font-size:.85rem}
+  .witr-fallback a{color:var(--accent)}
+  .witr-ayat-wrap{
+    font-family:"Thmanyah Sans", serif;
+    font-size:var(--witr-font-size, 1.25rem);
+    line-height:2.3;color:var(--ink);text-align:right;padding-bottom:.5rem;
+  }
+  .witr-surah-tag{
+    font-family:"Thmanyah Display","Thmanyah Sans",serif;
+    color:var(--accent);font-size:.85rem;font-weight:700;
+    margin:.9rem 0 .5rem;text-align:center;
+  }
+  .witr-ayah-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1.7em;height:1.7em;border:1px solid var(--accent-2);border-radius:50%;
+    font-size:.5em;color:var(--accent);margin:0 .15em;vertical-align:middle;
+  }
+  /* وضع ليلي حقيقي (أقرب لل true-black) خاص بشاشة قيام الليل، مناسب للقراءة في غرفة مظلمة */
+  html.dark #witrOverlay{background:#000}
+  html.dark #witrOverlay .adhkar-top{background:#000}
+  html.dark #witrOverlay .witr-suggestion,
+  html.dark #witrOverlay .witr-targets button,
+  html.dark #witrOverlay .witr-actions button,
+  html.dark #witrOverlay .stat-tile{background:#0a0a0a;border-color:#1e1e1e}
+  html.dark #witrOverlay .witr-ayat-wrap{color:#f0ede4}
 
   /* ===== الاحتفال ===== */
   .confetti{
@@ -1336,15 +1381,31 @@
           <div class="witr-sug-surah" id="witrSugSurah"></div>
           <div class="witr-sug-range" id="witrSugRange"></div>
           <div class="witr-sug-meta" id="witrSugMeta"></div>
+          <div class="witr-rakah-plan" id="witrRakahPlan"></div>
           <button class="adhkar-done-btn" id="witrStartBtn">▶ ابدأ القراءة</button>
           <button class="witr-change-btn" id="witrChangeBtn">🔄 تغيير الاقتراح</button>
         </div>
       </div>
 
       <div class="q-reader" id="witrReader" hidden>
-        <div class="q-nav"><span id="witrReaderTitle"></span></div>
-        <a class="q-external" id="witrExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
-        <iframe class="q-iframe" id="witrIframe" loading="lazy" title="القرآن الكريم"></iframe>
+        <div class="q-nav">
+          <button id="witrRakahPrev">◀ السابقة</button>
+          <span id="witrReaderTitle"></span>
+          <button id="witrRakahNext">التالية ▶</button>
+        </div>
+        <div class="witr-font-ctrl">
+          <button id="witrFontMinus" title="تصغير الخط">A-</button>
+          <span id="witrRakahLabel"></span>
+          <button id="witrFontPlus" title="تكبير الخط">A+</button>
+        </div>
+        <div class="witr-text-box" id="witrTextBox">
+          <div class="witr-loading" id="witrLoading">جارٍ تحميل الآيات…</div>
+          <div class="witr-ayat-wrap" id="witrAyatBox" hidden></div>
+          <div class="witr-fallback" id="witrFallback" hidden>
+            تعذّر تحميل النص (تحقق من الاتصال).
+            <a id="witrExternal" target="_blank" rel="noopener noreferrer">↗ افتح في نافذة جديدة</a>
+          </div>
+        </div>
         <button class="adhkar-done-btn" id="witrFinishBtn">✓ أنهيت القراءة الليلة</button>
       </div>
     </div>
@@ -1352,7 +1413,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٦</div>
+    <div class="app-version">النسخة ٣٧</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2251,6 +2312,46 @@
   const WITR_TARGET_LABEL = {10:"الذاكرين", 100:"القانتين", 1000:"المقنطرين"};
   function witrMinutes(n){ return Math.max(1, Math.round(n*0.3)); }
 
+  /* توزيع الجهد على ركعات: يقلّل الرهبة النفسية من رقم كبير كـ ١٠٠٠ آية */
+  const WITR_RAKAH_PLAN = {10:2, 100:4, 1000:8};
+  function witrRakahCount(target){ return WITR_RAKAH_PLAN[target] || 2; }
+
+  /* جلب نص الآيات (رسم عثماني) عبر AlQuran.cloud، مع تخزين مؤقت محلي للقراءة بلا إنترنت لاحقًا */
+  const WITR_TEXT_CACHE_KEY = "h2do-witr-text-cache";
+  function witrTextCache(){
+    try{ return JSON.parse(localStorage.getItem(WITR_TEXT_CACHE_KEY)) || {}; }catch(e){ return {}; }
+  }
+  function witrTextCacheSave(cache){
+    try{ localStorage.setItem(WITR_TEXT_CACHE_KEY, JSON.stringify(cache)); }catch(e){}
+  }
+  async function witrFetchSurah(n){
+    const cache = witrTextCache();
+    if(cache[n] && Array.isArray(cache[n].ayahs)) return cache[n].ayahs;
+    const res = await fetch("https://api.alquran.cloud/v1/surah/"+n+"/quran-uthmani");
+    const json = await res.json();
+    const ayahs = json.data.ayahs.map(a=>({n:a.numberInSurah, text:a.text}));
+    cache[n] = {ayahs, ts:Date.now()};
+    witrTextCacheSave(cache);
+    return ayahs;
+  }
+  async function witrBuildAyahList(parts){
+    const out = [];
+    for(const p of parts){
+      const ayahs = await witrFetchSurah(p.n);
+      for(let i=p.from;i<=p.to;i++){
+        const a = ayahs.find(x=>x.n===i);
+        if(a) out.push({surahName:p.name, n:i, text:a.text});
+      }
+    }
+    return out;
+  }
+  function witrChunkByRakah(ayahList, rakahs){
+    const perRakah = Math.max(1, Math.ceil(ayahList.length / rakahs));
+    const chunks = [];
+    for(let i=0;i<ayahList.length;i+=perRakah) chunks.push(ayahList.slice(i, i+perRakah));
+    return chunks;
+  }
+
   const WITR_META_KEY = "h2do-witr-meta";
   function witrMeta(){
     try{ return Object.assign({favorites:[], history:[], updatedAt:0}, JSON.parse(localStorage.getItem(WITR_META_KEY)) || {}); }
@@ -2421,13 +2522,22 @@
       document.getElementById("witrSugRange").textContent = txt.range;
       const arn = n=>n.toLocaleString("ar-EG");
       document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية · تقريبًا "+arn(witrMinutes(w.target))+" دقائق";
+      const rakahs = witrRakahCount(w.target);
+      const perRakah = Math.ceil(w.target/rakahs);
+      document.getElementById("witrRakahPlan").textContent =
+        "🕌 لو صليت "+arn(rakahs)+" ركعات، ستقرأ تقريبًا "+arn(perRakah)+" آية في كل ركعة (~"+arn(witrMinutes(perRakah))+" دقائق)";
+      const startBtn = document.getElementById("witrStartBtn");
+      const resuming = w.readPage > 0;
+      startBtn.textContent = resuming
+        ? "▶ استكمال القراءة (الركعة "+arn(w.readPage+1)+")"
+        : "▶ ابدأ القراءة";
     }else{
       sugBox.hidden = true;
     }
   }
   function witrPickTarget(target){
     const sugg = witrGenerate(target, witrPool);
-    state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null};
+    state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, readPage:0};
     witrForceNew = false;
     save();
     witrRenderAll();
@@ -2451,22 +2561,96 @@
   };
   document.getElementById("witrStartBtn").onclick = ()=>{
     if(!state.witr) return;
-    state.witr.startedAt = Date.now();
+    state.witr.startedAt = state.witr.startedAt || Date.now();
     save();
     witrOpenReader();
   };
-  function witrOpenReader(){
+
+  /* عرض الآيات: نص أصلي عبر AlQuran.cloud بدل iframe — تحكم كامل بالخط والألوان وتخزين مؤقت للقراءة بلا إنترنت */
+  let witrAyahChunks = null;
+  let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.25");
+  function witrApplyFontSize(){
+    document.documentElement.style.setProperty("--witr-font-size", witrFontSize+"rem");
+  }
+  document.getElementById("witrFontMinus").onclick = ()=>{
+    witrFontSize = Math.max(0.9, +(witrFontSize - 0.1).toFixed(2));
+    localStorage.setItem("h2do-witr-font", witrFontSize);
+    witrApplyFontSize();
+  };
+  document.getElementById("witrFontPlus").onclick = ()=>{
+    witrFontSize = Math.min(2.2, +(witrFontSize + 0.1).toFixed(2));
+    localStorage.setItem("h2do-witr-font", witrFontSize);
+    witrApplyFontSize();
+  };
+
+  async function witrOpenReader(){
     const w = state.witr;
-    const p0 = w.parts[0];
-    const endAyah = w.parts.length === 1 ? p0.to : WITR_SURAHS[p0.n-1].ayat;
-    const url = "https://quran.com/"+p0.n+"/"+p0.from+"-"+endAyah;
-    document.getElementById("witrIframe").src = url;
-    document.getElementById("witrExternal").href = url;
-    document.getElementById("witrReaderTitle").textContent = witrPartsText(w.parts).surah;
     document.getElementById("witrPickView").hidden = true;
     document.getElementById("witrDoneView").hidden = true;
     document.getElementById("witrReader").hidden = false;
+    witrApplyFontSize();
+    document.getElementById("witrLoading").hidden = false;
+    document.getElementById("witrAyatBox").hidden = true;
+    document.getElementById("witrFallback").hidden = true;
+    document.getElementById("witrReaderTitle").textContent = witrPartsText(w.parts).surah;
+
+    try{
+      const ayahList = await witrBuildAyahList(w.parts);
+      const rakahs = witrRakahCount(w.target);
+      witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
+      if(typeof w.readPage !== "number") w.readPage = 0;
+      if(w.readPage >= witrAyahChunks.length) w.readPage = witrAyahChunks.length - 1;
+      witrRenderReaderPage();
+      document.getElementById("witrLoading").hidden = true;
+      document.getElementById("witrAyatBox").hidden = false;
+    }catch(e){
+      document.getElementById("witrLoading").hidden = true;
+      document.getElementById("witrFallback").hidden = false;
+      const p0 = w.parts[0];
+      const endAyah = w.parts.length === 1 ? p0.to : WITR_SURAHS[p0.n-1].ayat;
+      document.getElementById("witrExternal").href = "https://quran.com/"+p0.n+"/"+p0.from+"-"+endAyah;
+    }
   }
+  function witrRenderReaderPage(){
+    const w = state.witr;
+    const arn = n=>n.toLocaleString("ar-EG");
+    const chunk = witrAyahChunks[w.readPage];
+    const box = document.getElementById("witrAyatBox");
+    box.innerHTML = "";
+    let lastSurah = null;
+    chunk.forEach(a=>{
+      if(a.surahName !== lastSurah){
+        const h = document.createElement("div");
+        h.className = "witr-surah-tag";
+        h.textContent = "سورة "+a.surahName;
+        box.appendChild(h);
+        lastSurah = a.surahName;
+      }
+      const span = document.createElement("span");
+      span.textContent = a.text + " ";
+      const num = document.createElement("span");
+      num.className = "witr-ayah-num";
+      num.textContent = arn(a.n);
+      span.appendChild(num);
+      box.appendChild(span);
+    });
+    document.getElementById("witrRakahLabel").textContent = "الركعة "+arn(w.readPage+1)+" من "+arn(witrAyahChunks.length);
+    document.getElementById("witrRakahPrev").disabled = w.readPage <= 0;
+    document.getElementById("witrRakahNext").disabled = w.readPage >= witrAyahChunks.length-1;
+  }
+  document.getElementById("witrRakahPrev").onclick = ()=>{
+    if(!state.witr || !witrAyahChunks || state.witr.readPage <= 0) return;
+    state.witr.readPage--;
+    save();
+    witrRenderReaderPage();
+  };
+  document.getElementById("witrRakahNext").onclick = ()=>{
+    if(!state.witr || !witrAyahChunks || state.witr.readPage >= witrAyahChunks.length-1) return;
+    state.witr.readPage++;
+    save();
+    witrRenderReaderPage();
+  };
+
   document.getElementById("witrFinishBtn").onclick = ()=>{
     if(!state.witr) return;
     const w = state.witr;
@@ -2481,6 +2665,10 @@
     witrRenderAll();
     renderWorship(); renderProgress();
     celebrate();
+    if(navigator.vibrate) navigator.vibrate([25,50,25]);
+    /* احتفاء بصري خفيف — إعادة تشغيل الأنيميشن حتى لو تكررت بنفس الليلة */
+    const msg = document.getElementById("witrDoneMsg");
+    msg.classList.remove("pop"); void msg.offsetWidth; msg.classList.add("pop");
   };
 
   /* أزرار بطاقة الإنجاز: متابعة العبادة بدل إغلاق الميزة */
@@ -2492,7 +2680,7 @@
     const sessions = state.witrSessions || [];
     if(!sessions.length) return;
     const last = sessions[sessions.length-1];
-    state.witr = {target:last.target, pool:witrPool, parts:last.parts, key:last.key, startedAt:null};
+    state.witr = {target:last.target, pool:witrPool, parts:last.parts, key:last.key, startedAt:null, readPage:0};
     witrForceNew = false;
     save();
     witrRenderAll();
