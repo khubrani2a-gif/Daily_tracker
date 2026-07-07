@@ -1084,6 +1084,32 @@
   .hifz-reciter-opt small{color:var(--muted);font-size:.72rem}
   .hifz-reciter-empty{text-align:center;color:var(--muted);font-size:.82rem;padding:1rem}
 
+  /* إعدادات التكرار */
+  .hifz-rep-body{overflow-y:auto}
+  .hifz-rep-group{margin-bottom:1.2rem}
+  .hifz-rep-label{font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .hifz-rep-presets{display:flex;gap:.4rem;margin-bottom:.5rem}
+  .hifz-rep-presets button{
+    flex:1;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+    border-radius:10px;padding:.55rem;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .hifz-rep-presets button.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .hifz-rep-input{
+    width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;
+    padding:.55rem .8rem;font-family:inherit;font-size:.88rem;background:var(--paper);color:var(--ink);
+  }
+  .hifz-rep-input:focus{outline:none;border-color:var(--accent-2)}
+  .hifz-rep-range{display:flex;gap:.7rem;margin-bottom:.6rem}
+  .hifz-rep-range label{flex:1;font-size:.76rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
+  .hifz-rep-range select{
+    border:1.5px solid var(--line);border-radius:10px;padding:.5rem;font-family:inherit;font-size:.85rem;
+    background:var(--paper);color:var(--ink);
+  }
+  .hifz-rep-range select.invalid{border-color:var(--danger)}
+  html.dark #hifzRepSheet .hifz-rep-presets button,
+  html.dark #hifzRepSheet .hifz-rep-input,
+  html.dark #hifzRepSheet .hifz-rep-range select{background:#0a0a0a;border-color:#1e1e1e}
+
   .hifz-rate-row{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem}
   .hifz-rate-row button{
     display:flex;align-items:center;justify-content:center;gap:.5rem;
@@ -1792,9 +1818,41 @@
     </div>
   </div>
 
+  <!-- ورقة إعدادات التكرار -->
+  <div class="hifz-sheet-overlay" id="hifzRepSheet" hidden>
+    <div class="hifz-sheet">
+      <div class="hifz-sheet-head">
+        <span>🔁 إعدادات التكرار</span>
+        <button id="hifzRepClose" title="إغلاق">✕</button>
+      </div>
+      <div class="hifz-rep-body">
+        <div class="hifz-rep-group">
+          <div class="hifz-rep-label">تكرار الآية الواحدة</div>
+          <div class="hifz-rep-presets" id="hifzVersePresets">
+            <button data-v="1">١×</button><button data-v="3">٣×</button><button data-v="5">٥×</button><button data-v="Infinity">∞</button>
+          </div>
+          <input type="number" min="1" inputmode="numeric" id="hifzVerseCustom" class="hifz-rep-input" placeholder="عدد مخصّص…">
+        </div>
+
+        <div class="hifz-rep-group">
+          <div class="hifz-rep-label">تكرار مقطع محدّد (من آية إلى آية)</div>
+          <div class="hifz-rep-range">
+            <label>من آية <select id="hifzLoopStart"></select></label>
+            <label>إلى آية <select id="hifzLoopEnd"></select></label>
+          </div>
+          <div class="hifz-rep-presets" id="hifzSegPresets">
+            <button data-s="1">١×</button><button data-s="3">٣×</button><button data-s="5">٥×</button><button data-s="Infinity">∞</button>
+          </div>
+          <input type="number" min="1" inputmode="numeric" id="hifzSegCustom" class="hifz-rep-input" placeholder="عدد مخصّص…">
+        </div>
+      </div>
+      <button class="adhkar-done-btn" id="hifzRepApply">✔ تطبيق</button>
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٤٥</div>
+    <div class="app-version">النسخة ٤٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3848,11 +3906,12 @@
   let hifzReviewAyat = [];
   let hifzPlIndex = 0;
   let hifzPlPlaying = false;
-  const HIFZ_REP_CYCLE = [1, 3, 5, Infinity];
   let hifzVerseTarget = 1;        /* تكرار الآية الواحدة */
-  let hifzSegTarget = 1;          /* تكرار المقطع كاملًا */
+  let hifzSegTarget = 1;          /* تكرار مقطع A–B */
   let hifzVersePlayCount = 0;     /* كم مرة شُغّلت الآية الحالية */
-  let hifzSegPlayCount = 0;       /* كم مرة اكتمل المقطع كاملًا */
+  let hifzSegPlayCount = 0;       /* كم مرة اكتمل مقطع A–B */
+  let hifzLoopStart = 0;          /* مؤشر بداية حلقة A–B (افتراضيًا أول المقطع) */
+  let hifzLoopEnd = 0;            /* مؤشر نهاية حلقة A–B (افتراضيًا آخر المقطع) */
   const hifzAudio = new Audio();
   hifzAudio.preload = "none";
   let hifzAudioTriedLo = false;   /* هل جرّبنا جودة ٦٤ عند فشل ١٢٨؟ */
@@ -3861,13 +3920,23 @@
   const hifzPlCounterEl = document.getElementById("hifzPlCounter");
 
   function hifzRepLabel(t){ return t === Infinity ? "∞" : t.toLocaleString("ar-EG")+"×"; }
+  function hifzIsSubLoop(){
+    return hifzLoopStart > 0 || hifzLoopEnd < hifzReviewAyat.length - 1;
+  }
   function hifzPlSyncChips(){
     const vb = document.getElementById("hifzPlVerseRep");
     const sb = document.getElementById("hifzPlSegRep");
+    const arn = n=>n.toLocaleString("ar-EG");
     vb.textContent = "🔁 آية: "+hifzRepLabel(hifzVerseTarget);
-    sb.textContent = "🔁 المقطع: "+hifzRepLabel(hifzSegTarget);
+    /* إن كانت حلقة A–B مقطعًا فرعيًا نعرض نطاق أرقام الآيات */
+    let segTxt = "🔁 المقطع: "+hifzRepLabel(hifzSegTarget);
+    if(hifzIsSubLoop() && hifzReviewAyat.length){
+      const a = hifzReviewAyat[hifzLoopStart], b = hifzReviewAyat[hifzLoopEnd];
+      if(a && b) segTxt = "🔁 "+arn(a.n)+"-"+arn(b.n)+": "+hifzRepLabel(hifzSegTarget);
+    }
+    sb.textContent = segTxt;
     vb.classList.toggle("on", hifzVerseTarget !== 1);
-    sb.classList.toggle("on", hifzSegTarget !== 1);
+    sb.classList.toggle("on", hifzSegTarget !== 1 || hifzIsSubLoop());
   }
   function hifzPlReset(){
     try{ hifzAudio.pause(); }catch(e){}
@@ -3879,12 +3948,16 @@
     hifzSegPlayCount = 0;
     hifzPlayerEl.hidden = true;
     hifzPlPlayBtn.textContent = "▶";
+    const rep = document.getElementById("hifzRepSheet"); if(rep) rep.hidden = true;
+    const rec = document.getElementById("hifzReciterSheet"); if(rec) rec.hidden = true;
   }
   function hifzPlSetup(){
     hifzPlIndex = 0;
     hifzPlPlaying = false;
     hifzVersePlayCount = 0;
     hifzSegPlayCount = 0;
+    hifzLoopStart = 0;
+    hifzLoopEnd = Math.max(0, hifzReviewAyat.length - 1); /* الحلقة الافتراضية = كامل المقطع */
     hifzPlayerEl.hidden = false;
     hifzPlPlayBtn.textContent = "▶";
     hifzPlSyncChips();
@@ -3934,6 +4007,8 @@
     if(!hifzReviewAyat.length) return;
     hifzVersePlayCount = 0;
     hifzSegPlayCount = 0;
+    /* التشغيل الجديد يبدأ من بداية حلقة A–B إن كانت مقطعًا فرعيًا محدّدًا */
+    if(hifzIsSubLoop()) hifzPlIndex = hifzLoopStart;
     hifzPlayCurrent();
   }
   function hifzPlNext(){
@@ -3952,25 +4027,35 @@
       else { hifzPlHighlight(); hifzPlUpdateCounter(); }
     }
   }
-  /* منطق النهاية: تكرار الآية ثم الانتقال، وعند نهاية المقطع تكرار المقطع أو التوقّف وإظهار التقييم */
+  /* منطق النهاية: تكرار الآية، ثم حلقة A–B (تعود لبداية الحلقة حتى تبلغ هدفها)،
+     ثم إكمال بقية المقطع أو التوقّف وإظهار التقييم */
   hifzAudio.addEventListener("ended", ()=>{
     hifzVersePlayCount++;
     if(hifzVersePlayCount < hifzVerseTarget){ hifzPlayCurrent(); return; } /* أعد الآية نفسها */
     hifzVersePlayCount = 0;
-    if(hifzPlIndex < hifzReviewAyat.length - 1){
-      hifzPlIndex++;
-      hifzPlayCurrent();               /* الآية التالية */
-    }else{
-      /* انتهت آخر آية في المقطع */
+
+    const lastMain = hifzReviewAyat.length - 1;
+    if(hifzPlIndex >= hifzLoopEnd){
+      /* بلغنا نهاية حلقة A–B */
       hifzSegPlayCount++;
       if(hifzSegPlayCount < hifzSegTarget){
-        hifzPlIndex = 0;
-        hifzPlayCurrent();             /* أعد المقطع من أوله */
-      }else{
-        hifzSegPlayCount = 0;
-        hifzPlPause();                 /* توقّف كامل */
-        hifzRevealAll();               /* اكشف الكل وأظهر أزرار التقييم (المطلوب #4) */
+        hifzPlIndex = hifzLoopStart;   /* عُد لبداية الحلقة وواصل */
+        hifzPlayCurrent();
+        return;
       }
+      /* اكتملت تكرارات الحلقة → أكمل عاديًا بعد نهاية الحلقة أو توقّف عند نهاية المقطع الأصلي */
+      hifzSegPlayCount = 0;
+      if(hifzPlIndex < lastMain){
+        hifzPlIndex++;
+        hifzPlayCurrent();
+      }else{
+        hifzPlPause();
+        hifzRevealAll();               /* اكشف الكل وأظهر أزرار التقييم */
+      }
+    }else{
+      /* داخل الحلقة (أو المقطع): انتقل للآية التالية */
+      hifzPlIndex++;
+      hifzPlayCurrent();
     }
   });
   /* عند فشل تحميل صوت القارئ بجودة ١٢٨، جرّب ٦٤ مرة واحدة */
@@ -3984,13 +4069,97 @@
   hifzPlPlayBtn.onclick = hifzPlToggle;
   document.getElementById("hifzPlNext").onclick = hifzPlNext;
   document.getElementById("hifzPlPrev").onclick = hifzPlPrev;
-  document.getElementById("hifzPlVerseRep").onclick = ()=>{
-    hifzVerseTarget = HIFZ_REP_CYCLE[(HIFZ_REP_CYCLE.indexOf(hifzVerseTarget)+1) % HIFZ_REP_CYCLE.length];
-    hifzPlSyncChips();
+  /* ---------- ورقة إعدادات التكرار: أعداد مخصّصة + حلقة A–B ---------- */
+  const hifzRepSheet = document.getElementById("hifzRepSheet");
+  let hifzRepVerseSel = 1;   /* القيمة المختارة مؤقتًا داخل الورقة قبل التطبيق */
+  let hifzRepSegSel = 1;
+  function hifzRepSyncPresets(){
+    document.querySelectorAll("#hifzVersePresets button").forEach(b=>{
+      const v = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10);
+      b.classList.toggle("on", hifzRepVerseSel === v && !document.getElementById("hifzVerseCustom").value);
+    });
+    document.querySelectorAll("#hifzSegPresets button").forEach(b=>{
+      const v = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10);
+      b.classList.toggle("on", hifzRepSegSel === v && !document.getElementById("hifzSegCustom").value);
+    });
+  }
+  function hifzRepFillLoopSelects(){
+    const startSel = document.getElementById("hifzLoopStart");
+    const endSel = document.getElementById("hifzLoopEnd");
+    const arn = n=>n.toLocaleString("ar-EG");
+    startSel.innerHTML = ""; endSel.innerHTML = "";
+    hifzReviewAyat.forEach((a,idx)=>{
+      const o1 = document.createElement("option"); o1.value = idx; o1.textContent = arn(a.n); startSel.appendChild(o1);
+      const o2 = document.createElement("option"); o2.value = idx; o2.textContent = arn(a.n); endSel.appendChild(o2);
+    });
+    startSel.value = hifzLoopStart;
+    endSel.value = hifzLoopEnd;
+  }
+  /* التحقق: بداية الحلقة لا يمكن أن تتجاوز نهايتها */
+  function hifzRepValidateLoop(){
+    const startSel = document.getElementById("hifzLoopStart");
+    const endSel = document.getElementById("hifzLoopEnd");
+    const bad = parseInt(startSel.value,10) > parseInt(endSel.value,10);
+    startSel.classList.toggle("invalid", bad);
+    endSel.classList.toggle("invalid", bad);
+    document.getElementById("hifzRepApply").disabled = bad;
+    return !bad;
+  }
+  function hifzOpenRepSheet(){
+    if(!hifzReviewAyat.length) return;
+    hifzRepVerseSel = hifzVerseTarget;
+    hifzRepSegSel = hifzSegTarget;
+    document.getElementById("hifzVerseCustom").value = "";
+    document.getElementById("hifzSegCustom").value = "";
+    hifzRepFillLoopSelects();
+    hifzRepSyncPresets();
+    hifzRepValidateLoop();
+    hifzRepSheet.hidden = false;
+  }
+  function hifzCloseRepSheet(){ hifzRepSheet.hidden = true; }
+  document.getElementById("hifzPlVerseRep").onclick = hifzOpenRepSheet;
+  document.getElementById("hifzPlSegRep").onclick = hifzOpenRepSheet;
+  document.getElementById("hifzRepClose").onclick = hifzCloseRepSheet;
+  hifzRepSheet.onclick = (ev)=>{ if(ev.target === hifzRepSheet) hifzCloseRepSheet(); };
+  document.querySelectorAll("#hifzVersePresets button").forEach(b=>{
+    b.onclick = ()=>{
+      hifzRepVerseSel = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10);
+      document.getElementById("hifzVerseCustom").value = "";
+      hifzRepSyncPresets();
+    };
+  });
+  document.querySelectorAll("#hifzSegPresets button").forEach(b=>{
+    b.onclick = ()=>{
+      hifzRepSegSel = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10);
+      document.getElementById("hifzSegCustom").value = "";
+      hifzRepSyncPresets();
+    };
+  });
+  document.getElementById("hifzVerseCustom").oninput = hifzRepSyncPresets;
+  document.getElementById("hifzSegCustom").oninput = hifzRepSyncPresets;
+  document.getElementById("hifzLoopStart").onchange = ()=>{
+    /* حافظ على صحّة النطاق تلقائيًا: إن تجاوزت البداية النهاية ارفع النهاية */
+    const startSel = document.getElementById("hifzLoopStart"), endSel = document.getElementById("hifzLoopEnd");
+    if(parseInt(startSel.value,10) > parseInt(endSel.value,10)) endSel.value = startSel.value;
+    hifzRepValidateLoop();
   };
-  document.getElementById("hifzPlSegRep").onclick = ()=>{
-    hifzSegTarget = HIFZ_REP_CYCLE[(HIFZ_REP_CYCLE.indexOf(hifzSegTarget)+1) % HIFZ_REP_CYCLE.length];
+  document.getElementById("hifzLoopEnd").onchange = ()=>{
+    const startSel = document.getElementById("hifzLoopStart"), endSel = document.getElementById("hifzLoopEnd");
+    if(parseInt(endSel.value,10) < parseInt(startSel.value,10)) startSel.value = endSel.value;
+    hifzRepValidateLoop();
+  };
+  document.getElementById("hifzRepApply").onclick = ()=>{
+    if(!hifzRepValidateLoop()) return;
+    const vCustom = parseInt(document.getElementById("hifzVerseCustom").value, 10);
+    const sCustom = parseInt(document.getElementById("hifzSegCustom").value, 10);
+    hifzVerseTarget = (vCustom >= 1) ? vCustom : hifzRepVerseSel;
+    hifzSegTarget = (sCustom >= 1) ? sCustom : hifzRepSegSel;
+    hifzLoopStart = parseInt(document.getElementById("hifzLoopStart").value, 10) || 0;
+    hifzLoopEnd = parseInt(document.getElementById("hifzLoopEnd").value, 10);
+    if(isNaN(hifzLoopEnd)) hifzLoopEnd = hifzReviewAyat.length - 1;
     hifzPlSyncChips();
+    hifzCloseRepSheet();
+    hifzShowToast("تم ضبط التكرار ✅");
   };
 
   /* ---------- ورقة اختيار القارئ (قائمة قرّاء ديناميكية من AlQuran.cloud + بحث) ---------- */
