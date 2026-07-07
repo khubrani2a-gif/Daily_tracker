@@ -928,6 +928,8 @@
     background:var(--danger-soft);color:var(--danger);border-radius:12px;padding:.7rem 1rem;
     font-size:.82rem;font-weight:600;text-align:center;margin-bottom:.8rem;
   }
+  .hifz-alert-clickable{cursor:pointer;transition:.15s}
+  .hifz-alert-clickable:hover{filter:brightness(.97)}
   .hifz-actions-row{display:flex;flex-direction:column;gap:.5rem}
   .hifz-actions-row .tool-btn{width:100%}
 
@@ -995,6 +997,13 @@
     font-family:"Thmanyah Display","Thmanyah Sans",serif;
     font-size:.98rem;color:var(--accent);line-height:1.9;margin:.25rem 0 .15rem;
   }
+  .hifz-review-cta{margin-bottom:.7rem}
+  .hifz-bulk-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.9rem}
+  .hifz-bulk-row button{
+    flex:1;min-width:100px;border:1px solid var(--accent-2);background:var(--accent-soft);color:var(--accent);
+    border-radius:11px;padding:.5rem .4rem;font-family:inherit;font-size:.76rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .hifz-bulk-row button:hover{background:var(--accent);color:#fff}
 
   /* ===== شاشة المراجعة (وضع التركيز / Zen + الاستدعاء النشط) ===== */
   .hifz-zen{text-align:center;padding:.5rem 0 1rem}
@@ -1636,6 +1645,8 @@
           <span><b id="hifzOvStatSurahs">٠</b> سورة بدأت</span>
           <span><b id="hifzOvStatDue">٠</b> تحتاج مراجعة اليوم</span>
         </div>
+        <button class="adhkar-done-btn hifz-review-cta" id="hifzStartReviewBtn" hidden>▶ ابدأ مراجعة اليوم</button>
+
         <div class="hifz-actions-row">
           <button class="witr-change-btn" id="hifzMvOnboardBtn">🎯 حدّد ما تحفظه مسبقًا</button>
           <button class="witr-change-btn" id="hifzMvAddBtn">➕ أضف حفظًا جديدًا</button>
@@ -1657,6 +1668,11 @@
 
       <div id="hifzOnboardView" hidden>
         <div class="witr-q">اختر السور التي تحفظها بالكامل مسبقًا</div>
+        <div class="hifz-bulk-row">
+          <button data-bulk="juzamma">➕ جزء عمّ كامل</button>
+          <button data-bulk="tabarak">➕ جزء تبارك</button>
+          <button data-bulk="mufassal">➕ المفصّل (من ق)</button>
+        </div>
         <div class="hifz-onboard-grid" id="hifzOnboardGrid"></div>
         <button class="adhkar-done-btn" id="hifzOnboardDone">✔ تم</button>
       </div>
@@ -1704,7 +1720,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٤٢</div>
+    <div class="app-version">النسخة ٤٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3409,10 +3425,19 @@
     if(banner){
       if(stats.dueToday){
         banner.hidden = false;
-        banner.textContent = "⚠️ لديك "+arn(stats.dueToday)+" مقطعًا يحتاج مراجعة اليوم";
+        banner.textContent = "⚠️ لديك "+arn(stats.dueToday)+" مقطعًا يحتاج مراجعة اليوم — اضغط للبدء";
+        banner.classList.add("hifz-alert-clickable");
+        banner.onclick = hifzStartDailyReview;
       }else{
         banner.hidden = true;
+        banner.onclick = null;
       }
+    }
+    /* زر "ابدأ مراجعة اليوم" البارز في الشاشة التفصيلية */
+    const cta = document.getElementById("hifzStartReviewBtn");
+    if(cta){
+      cta.hidden = stats.dueToday === 0;
+      cta.textContent = "▶ ابدأ مراجعة اليوم ("+arn(stats.dueToday)+")";
     }
     renderHifzDetails(stats);
   }
@@ -3541,6 +3566,26 @@
     hifzShowSub("hifzMainView");
     renderHifzCard();
   };
+  /* إدخال تأسيسي جماعي بضغطة واحدة: يضيف كل سور المجموعة المحفوظة دفعة واحدة */
+  const HIFZ_BULK_RANGES = { juzamma:[78,114], tabarak:[67,77], mufassal:[50,114] };
+  function hifzBulkAdd(groupKey){
+    const range = HIFZ_BULK_RANGES[groupKey];
+    if(!range) return;
+    const data = hifzData();
+    let added = 0;
+    for(let n=range[0]; n<=range[1]; n++){
+      const s = WITR_SURAHS[n-1];
+      const exists = data.segments.some(e=> e.surahN===n && e.from===1 && e.to===s.ayat);
+      if(!exists){ hifzToggleFullSurah(n); added++; }
+    }
+    hifzRenderOnboardGrid();
+    renderHifzCard();
+    if(navigator.vibrate) navigator.vibrate(15);
+    hifzShowToast(added ? "أُضيفت "+added.toLocaleString("ar-EG")+" سورة ✅" : "كل سور المجموعة مضافة مسبقًا");
+  }
+  document.querySelectorAll(".hifz-bulk-row button").forEach(b=>{
+    b.onclick = ()=> hifzBulkAdd(b.dataset.bulk);
+  });
 
   /* الإدخال اليومي الدقيق: سورة + من آية X إلى آية Y */
   /* التحقق يمنع الإرسال إن كانت آية البداية أكبر من النهاية، بدل تنبيه بعد الضغط */
@@ -3605,6 +3650,35 @@
   const hifzRecallBox = document.getElementById("hifzRecallBox");
   const hifzRateRow = document.getElementById("hifzRateRow");
 
+  /* طابور مراجعة اليوم: يمرّ على كل المقاطع المستحقّة (next_review_date <= اليوم) واحدًا تلو الآخر */
+  let hifzQueue = [];        /* معرّفات المقاطع المتبقية للمراجعة */
+  let hifzQueueTotal = 0;    /* العدد الكلي لجلسة اليوم (لعرض التقدّم) */
+  function hifzDueSegmentIds(){
+    const today = todayStr();
+    return hifzData().segments
+      .filter(s=> s.nextReviewDate <= today && s.lastReviewDate !== today)
+      .sort((a,b)=> a.nextReviewDate < b.nextReviewDate ? -1 : 1)
+      .map(s=> s.id);
+  }
+  function hifzStartDailyReview(){
+    hifzQueue = hifzDueSegmentIds();
+    hifzQueueTotal = hifzQueue.length;
+    if(!hifzQueueTotal){ hifzShowToast("لا مراجعات مستحقّة اليوم — أحسنت 🌿"); return; }
+    if(hifzOverlay.hidden) openHifz(); /* قد يُستدعى من بانر البطاقة الرئيسية والشاشة مغلقة */
+    hifzAdvanceQueue();
+  }
+  function hifzAdvanceQueue(){
+    if(!hifzQueue.length){
+      hifzQueueTotal = 0;
+      renderHifzCard();
+      hifzShowSub("hifzMainView");
+      hifzShowToast("تمّت مراجعة اليوم كاملة ✅ تقبّل الله");
+      return;
+    }
+    const nextId = hifzQueue.shift();
+    hifzOpenReview(nextId);
+  }
+
   async function hifzOpenReview(segmentId){
     hifzReviewingId = segmentId;
     hifzRecallRevealed = false;
@@ -3614,7 +3688,13 @@
     const s = WITR_SURAHS[seg.surahN-1];
     const arn = n=>n.toLocaleString("ar-EG");
     document.getElementById("hifzReviewTitle").textContent = s.name;
-    document.getElementById("hifzReviewMeta").textContent = "الآيات "+arn(seg.from)+" — "+arn(seg.to)+" ("+arn(hifzAyatCount(seg))+" آية)";
+    let meta = "الآيات "+arn(seg.from)+" — "+arn(seg.to)+" ("+arn(hifzAyatCount(seg))+" آية)";
+    /* عرض التقدّم في طابور مراجعة اليوم إن كنّا داخله */
+    if(hifzQueueTotal){
+      const done = hifzQueueTotal - hifzQueue.length;
+      meta = "مراجعة اليوم "+arn(done)+" / "+arn(hifzQueueTotal)+" · "+meta;
+    }
+    document.getElementById("hifzReviewMeta").textContent = meta;
     hifzShowSub("hifzReviewView");
 
     /* حالة أولية: نص مموّه + أزرار التقييم مقفلة حتى الكشف */
@@ -3668,15 +3748,21 @@
       /* تغذية لمسية خفيفة (بلا احتفال بصري صاخب — وحدة الحفظ هادئة عمدًا) */
       if(navigator.vibrate) navigator.vibrate(type === "escaped" ? 10 : [12,30,12]);
       renderHifzCard();
-      hifzShowToast(type === "escaped" ? "أُضيف لمراجعة الغد 🌙" : "تم الحفظ.. بارك الله فيك 🌱");
-      /* إغلاق شاشة المراجعة تلقائيًا والعودة للوحة التحكم */
-      hifzShowSub("hifzMainView");
+      if(hifzQueueTotal){
+        /* داخل طابور مراجعة اليوم: انتقل للمقطع التالي تلقائيًا حتى ينتهي الطابور */
+        hifzAdvanceQueue();
+      }else{
+        hifzShowToast(type === "escaped" ? "أُضيف لمراجعة الغد 🌙" : "تم الحفظ.. بارك الله فيك 🌱");
+        hifzShowSub("hifzMainView"); /* إغلاق تلقائي والعودة للوحة */
+      }
     };
   });
   document.getElementById("hifzReviewCancel").onclick = ()=>{
     hifzReviewingId = null;
+    hifzQueue = []; hifzQueueTotal = 0; /* الخروج من الطابور */
     hifzShowSub("hifzMainView");
   };
+  document.getElementById("hifzStartReviewBtn").onclick = hifzStartDailyReview;
 
   /* ---------- Hijri date ---------- */
   function renderHijri(dateStr){
