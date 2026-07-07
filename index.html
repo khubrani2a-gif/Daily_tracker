@@ -814,6 +814,22 @@
     color:var(--muted);border-radius:12px;padding:.6rem;font-family:inherit;font-size:.82rem;cursor:pointer;
   }
   .witr-change-btn:hover{border-color:var(--accent-2);color:var(--accent)}
+  .witr-tonight-stats{text-align:center;font-size:.78rem;color:var(--muted);margin:.6rem 0 1rem}
+  .witr-actions{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  .witr-actions button{
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);
+    border-radius:12px;padding:.75rem .5rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;
+    transition:.15s;
+  }
+  .witr-actions button:hover{border-color:var(--accent-2);background:var(--accent-soft);color:var(--accent)}
+  .witr-history{margin-top:.8rem}
+  .witr-history-head{font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.6rem;text-align:center}
+  .witr-history ul{list-style:none;margin:0 0 .6rem;padding:0;max-height:320px;overflow-y:auto}
+  .witr-history li{
+    border-bottom:1px dashed var(--line);padding:.55rem 0;font-size:.78rem;color:var(--ink);line-height:1.6;
+  }
+  .witr-history li b{color:var(--accent)}
+  .witr-hist-empty{text-align:center;color:var(--muted);border-bottom:none!important}
 
   /* ===== الاحتفال ===== */
   .confetti{
@@ -1285,6 +1301,18 @@
 
       <div id="witrDoneView" hidden>
         <div class="q-done-msg" id="witrDoneMsg"></div>
+        <div class="witr-tonight-stats" id="witrTonightStats"></div>
+        <div class="witr-actions" id="witrActions">
+          <button id="witrActNew">➕ قيام جديد</button>
+          <button id="witrActRepeat">🔄 إعادة نفس الورد</button>
+          <button id="witrActAnother">🎲 اقتراح جديد</button>
+          <button id="witrActHistory">📜 سجل الليالي السابقة</button>
+        </div>
+        <div class="witr-history" id="witrHistoryView" hidden>
+          <div class="witr-history-head">📜 سجل الليالي السابقة</div>
+          <ul id="witrHistoryList"></ul>
+          <button class="witr-change-btn" id="witrHistoryClose">إغلاق السجل</button>
+        </div>
       </div>
 
       <div id="witrPickView">
@@ -1324,7 +1352,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٥</div>
+    <div class="app-version">النسخة ٣٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1711,6 +1739,7 @@
       sleep: "",
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
       witr: null,
+      witrSessions: [],
       celebrated: false,
       sunnahDone: false,
       updatedAt: 0
@@ -2331,13 +2360,14 @@
   }
 
   let witrPool = "all";
+  let witrForceNew = false; /* يفرض عرض شاشة اختيار هدف جديد حتى لو أُنجزت جلسة الليلة */
   const witrOverlay = document.getElementById("witrOverlay");
   function openWitr(){
     witrOverlay.hidden = false;
     witrOverlay.scrollTop = 0;
     document.body.style.overflow = "hidden";
     document.getElementById("witrReader").hidden = true;
-    document.getElementById("witrPickView").hidden = false;
+    witrForceNew = false;
     witrRenderAll();
     try{ history.pushState({witr:true}, ""); }catch(e){}
   }
@@ -2353,19 +2383,27 @@
   window.addEventListener("popstate", ()=>{ if(!witrOverlay.hidden) closeWitrUI(); });
   document.getElementById("witrClose").onclick = closeWitr;
 
+  /* قيام الليل نشاط متكرر: إنجاز جلسة لا يقفل الميزة، بل يعرض بطاقة إنجاز مع خيارات للمتابعة */
   function witrRenderAll(){
-    const done = !!(state.witr && state.witr.completed);
-    document.getElementById("witrDoneView").hidden = !done;
-    document.getElementById("witrPickView").hidden = done;
-    if(done) witrRenderDone(); else witrRenderPickView();
+    document.getElementById("witrHistoryView").hidden = true;
+    document.getElementById("witrActions").hidden = false;
+    const sessions = state.witrSessions || [];
+    const showDone = !state.witr && !witrForceNew && sessions.length > 0;
+    document.getElementById("witrDoneView").hidden = !showDone;
+    document.getElementById("witrPickView").hidden = showDone;
+    if(showDone) witrRenderDone(); else witrRenderPickView();
   }
   function witrRenderDone(){
-    const w = state.witr;
+    const sessions = state.witrSessions || [];
+    const last = sessions[sessions.length-1];
     const arn = n => n.toLocaleString("ar-EG");
-    const txt = witrPartsText(w.parts);
+    const txt = witrPartsText(last.parts);
     document.getElementById("witrDoneMsg").innerHTML =
       "✅ تم الإنجاز<br><b>"+txt.surah+"</b><br>"+txt.range+"<br>"+
-      arn(w.target)+" آية · تُكتب من "+WITR_TARGET_LABEL[w.target];
+      arn(last.ayat)+" آية · تُكتب من "+WITR_TARGET_LABEL[last.target];
+    const totalAyat = sessions.reduce((a,s)=>a+s.ayat,0);
+    document.getElementById("witrTonightStats").textContent =
+      "عدد جلسات الليلة: "+arn(sessions.length)+" · إجمالي الآيات المقروءة: "+arn(totalAyat);
   }
   function witrRenderPickView(){
     const w = state.witr;
@@ -2389,9 +2427,10 @@
   }
   function witrPickTarget(target){
     const sugg = witrGenerate(target, witrPool);
-    state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, completed:false};
+    state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null};
+    witrForceNew = false;
     save();
-    witrRenderPickView();
+    witrRenderAll();
   }
   document.querySelectorAll("#witrTargets button").forEach(b=>{
     b.onclick = ()=> witrPickTarget(parseInt(b.dataset.t,10));
@@ -2425,20 +2464,85 @@
     document.getElementById("witrExternal").href = url;
     document.getElementById("witrReaderTitle").textContent = witrPartsText(w.parts).surah;
     document.getElementById("witrPickView").hidden = true;
+    document.getElementById("witrDoneView").hidden = true;
     document.getElementById("witrReader").hidden = false;
   }
   document.getElementById("witrFinishBtn").onclick = ()=>{
     if(!state.witr) return;
-    state.witr.completed = true;
+    const w = state.witr;
+    if(!state.witrSessions) state.witrSessions = [];
+    state.witrSessions.push({target:w.target, parts:w.parts, key:w.key, ayat:w.target, completedAt:Date.now()});
     state.worship.witr = true;
-    witrPushToHistory(state.witr.key);
+    witrPushToHistory(w.key);
+    state.witr = null;
+    witrForceNew = false;
     save();
     document.getElementById("witrReader").hidden = true;
-    document.getElementById("witrPickView").hidden = false;
     witrRenderAll();
     renderWorship(); renderProgress();
     celebrate();
   };
+
+  /* أزرار بطاقة الإنجاز: متابعة العبادة بدل إغلاق الميزة */
+  document.getElementById("witrActNew").onclick = ()=>{
+    witrForceNew = true;
+    witrRenderAll();
+  };
+  document.getElementById("witrActRepeat").onclick = ()=>{
+    const sessions = state.witrSessions || [];
+    if(!sessions.length) return;
+    const last = sessions[sessions.length-1];
+    state.witr = {target:last.target, pool:witrPool, parts:last.parts, key:last.key, startedAt:null};
+    witrForceNew = false;
+    save();
+    witrRenderAll();
+  };
+  document.getElementById("witrActAnother").onclick = ()=>{
+    const sessions = state.witrSessions || [];
+    const target = sessions.length ? sessions[sessions.length-1].target : 10;
+    witrPickTarget(target);
+  };
+  document.getElementById("witrActHistory").onclick = ()=>{
+    document.getElementById("witrActions").hidden = true;
+    document.getElementById("witrHistoryView").hidden = false;
+    witrRenderHistory();
+  };
+  document.getElementById("witrHistoryClose").onclick = ()=>{
+    document.getElementById("witrHistoryView").hidden = true;
+    document.getElementById("witrActions").hidden = false;
+  };
+  /* سجل جلسات الوتر وقيام الليل عبر كل الأيام المحفوظة محليًا */
+  function witrAllSessions(){
+    const out = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(!k || !k.startsWith(PREFIX)) continue;
+      const date = k.slice(PREFIX.length);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      try{
+        const s = JSON.parse(localStorage.getItem(k));
+        (s.witrSessions||[]).forEach(sess=> out.push(Object.assign({date}, sess)));
+      }catch(e){}
+    }
+    out.sort((a,b)=> (b.completedAt||0) - (a.completedAt||0));
+    return out;
+  }
+  function witrRenderHistory(){
+    const list = witrAllSessions().slice(0,20);
+    const ul = document.getElementById("witrHistoryList");
+    ul.innerHTML = "";
+    if(!list.length){
+      ul.innerHTML = '<li class="witr-hist-empty">لا يوجد سجل بعد — ابدأ أول جلسة الليلة 🌙</li>';
+      return;
+    }
+    const arn = n=>n.toLocaleString("ar-EG");
+    list.forEach(sess=>{
+      const txt = witrPartsText(sess.parts);
+      const li = document.createElement("li");
+      li.innerHTML = "<b>"+sess.date+"</b> — "+txt.surah+" ("+txt.range+") — "+arn(sess.ayat)+" آية";
+      ul.appendChild(li);
+    });
+  }
 
   /* ---------- Hijri date ---------- */
   function renderHijri(dateStr){
@@ -2648,7 +2752,7 @@
 
     /* الوتر وقيام الليل: الضغط يفتح شاشة اقتراح آيات الليلة، بدل مربع صح عادي */
     if(w.id === "witr"){
-      const done = !!(state.witr && state.witr.completed);
+      const done = !!(state.witrSessions && state.witrSessions.length > 0);
       state.worship.witr = done;
       const chk = document.createElement("span");
       chk.className = "chk"+(done?" on":"");
