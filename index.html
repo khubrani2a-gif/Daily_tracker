@@ -918,8 +918,12 @@
   .hifz-global-bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;display:flex;margin-bottom:.5rem}
   .hifz-global-bar i{display:block;height:100%}
   #hifzGlobalMemFill, #hifzOvMemFill{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-  #hifzGlobalLearnFill, #hifzOvLearnFill{background:var(--gold)}
-  .hifz-global-stats{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:.8rem;line-height:1.7}
+  .hifz-global-stats{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:.6rem;line-height:1.7}
+  .hifz-mini-stats{
+    display:flex;justify-content:center;gap:1rem;font-size:.72rem;color:var(--muted);
+    margin-bottom:.8rem;flex-wrap:wrap;
+  }
+  .hifz-mini-stats b{color:var(--accent);font-size:.85rem}
   .hifz-alert{
     background:var(--danger-soft);color:var(--danger);border-radius:12px;padding:.7rem 1rem;
     font-size:.82rem;font-weight:600;text-align:center;margin-bottom:.8rem;
@@ -947,15 +951,22 @@
   .hifz-mini-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;display:flex}
   .hifz-mini-bar i{display:block;height:100%}
   .hifz-mini-bar .mem{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-  .hifz-mini-bar .learn{background:var(--gold)}
 
   .hifz-skeleton-head{font-size:.82rem;font-weight:700;color:var(--accent);margin:.6rem 0 .6rem;text-align:center}
   .hifz-skeleton{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:.7rem}
-  .hifz-box{width:16px;height:16px;border-radius:4px;background:var(--line);flex-shrink:0}
+  .hifz-box{width:16px;height:16px;border-radius:4px;background:var(--line);flex-shrink:0;cursor:pointer;transition:.1s}
+  .hifz-box:active{transform:scale(.85)}
   .hifz-box-full{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
   .hifz-box-partial{background:var(--gold)}
-  .hifz-box-learning{background:var(--gold);opacity:.55}
   .hifz-box-alert{background:var(--danger)}
+  .hifz-toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:.6rem 1.1rem;border-radius:99px;
+    font-size:.8rem;font-weight:600;z-index:1000;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);
+    opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;
+  }
+  .hifz-toast.show{opacity:1}
+  html.dark .hifz-toast{background:#f0ede4;color:#15130f}
   .hifz-legend{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;font-size:.68rem;color:var(--muted);margin-bottom:.5rem}
   .hifz-legend span{display:flex;align-items:center;gap:.3rem}
   .hifz-legend .hifz-box{width:11px;height:11px}
@@ -991,7 +1002,7 @@
   }
   .hifz-rate-row button[data-r="excellent"]:hover{border-color:var(--accent-2);background:var(--accent-soft);color:var(--accent)}
   .hifz-rate-row button[data-r="good"]:hover{border-color:var(--gold);background:rgba(195,154,43,.12)}
-  .hifz-rate-row button[data-r="weak"]:hover{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+  .hifz-rate-row button[data-r="hard"]:hover{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
 
   /* ===== الاحتفال ===== */
   .confetti{
@@ -1191,8 +1202,13 @@
           </div>
         </div>
 
-        <div class="hifz-global-bar"><i id="hifzGlobalMemFill"></i><i id="hifzGlobalLearnFill"></i></div>
+        <div class="hifz-global-bar"><i id="hifzGlobalMemFill"></i></div>
         <div class="hifz-global-stats" id="hifzGlobalStats"></div>
+        <div class="hifz-mini-stats">
+          <span><b id="hifzStatSegments">٠</b> مقطع</span>
+          <span><b id="hifzStatSurahs">٠</b> سورة بدأت</span>
+          <span><b id="hifzStatDue">٠</b> تحتاج مراجعة اليوم</span>
+        </div>
 
         <div class="hifz-alert" id="hifzAlertBanner" hidden></div>
 
@@ -1570,8 +1586,17 @@
       </div>
 
       <div id="hifzMainView">
-        <div class="hifz-global-bar"><i id="hifzOvMemFill"></i><i id="hifzOvLearnFill"></i></div>
+        <div class="hifz-global-bar"><i id="hifzOvMemFill"></i></div>
         <div class="hifz-global-stats" id="hifzOvGlobalStats"></div>
+        <div class="hifz-mini-stats">
+          <span><b id="hifzOvStatSegments">٠</b> مقطع</span>
+          <span><b id="hifzOvStatSurahs">٠</b> سورة بدأت</span>
+          <span><b id="hifzOvStatDue">٠</b> تحتاج مراجعة اليوم</span>
+        </div>
+        <div class="hifz-actions-row">
+          <button class="witr-change-btn" id="hifzMvOnboardBtn">🎯 حدّد ما تحفظه مسبقًا</button>
+          <button class="witr-change-btn" id="hifzMvAddBtn">➕ أضف حفظًا جديدًا</button>
+        </div>
 
         <div class="hifz-review-list" id="hifzReviewList"></div>
 
@@ -1614,16 +1639,17 @@
         <div class="hifz-rate-row">
           <button data-r="excellent">✅ ممتاز</button>
           <button data-r="good">👍 جيد</button>
-          <button data-r="weak">🔁 أعد المراجعة</button>
+          <button data-r="hard">🔄 يحتاج مراجعة</button>
         </div>
         <button class="witr-change-btn" id="hifzReviewCancel">رجوع</button>
       </div>
     </div>
+    <div class="hifz-toast" id="hifzToast" hidden></div>
   </div>
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٤٠</div>
+    <div class="app-version">النسخة ٤١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2080,6 +2106,8 @@
     if(!FIREBASE_CONFIG.apiKey || typeof firebase === "undefined") return;
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    /* تخزين محلي دائم لـ Firestore نفسه (IndexedDB) — يتيح القراءة/الكتابة بلا إنترنت مع مزامنة صامتة عند عودة الاتصال */
+    try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
     syncBtn.hidden = false;
     syncBtn.onclick = ()=>{
       if(user){
@@ -3094,161 +3122,246 @@
   const HIFZ_TOTAL_AYAT = 6236;
   const HIFZ_TOTAL_PAGES = 604;
 
+  /* ---------- تخزين محلي أولاً (Offline-First) — يعمل بلا إنترنت دائمًا، والمزامنة طبقة إضافية فوقه ---------- */
   function hifzData(){
-    try{ return Object.assign({entries:[], updatedAt:0}, JSON.parse(localStorage.getItem(HIFZ_KEY)) || {}); }
-    catch(e){ return {entries:[], updatedAt:0}; }
+    let raw;
+    try{ raw = JSON.parse(localStorage.getItem(HIFZ_KEY)) || {}; }catch(e){ raw = {}; }
+    /* ترحيل من النسخة القديمة (streak/entries) إلى نظام التكرار المتباعد (SRS/segments) دون فقدان بيانات المستخدم */
+    if(Array.isArray(raw.entries) && !Array.isArray(raw.segments)){
+      raw.segments = raw.entries.map(e=>{
+        const interval = Math.max(1, e.streak||1);
+        const next = new Date((e.lastReviewDate||todayStr())+"T12:00:00");
+        next.setDate(next.getDate()+interval);
+        return {
+          id: e.id, surahN: e.surahN, from: e.from, to: e.to,
+          easeFactor: 2.5, intervalDays: interval, reviewCount: Math.max(1, e.streak||1),
+          lastReviewDate: e.lastReviewDate || null,
+          nextReviewDate: fmtDate(next),
+          status: "memorized", addedAt: e.addedAt, updatedAt: Date.now()
+        };
+      });
+      delete raw.entries;
+      localStorage.setItem(HIFZ_KEY, JSON.stringify(raw));
+    }
+    return Object.assign({segments:[], updatedAt:0}, raw);
   }
-  function hifzSave(data){
+  function hifzSaveLocal(data){
     data.updatedAt = Date.now();
     localStorage.setItem(HIFZ_KEY, JSON.stringify(data));
-    hifzPushRemote(data);
   }
-  /* مزامنة سجل الحفظ عبر الأجهزة */
-  function hifzDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("hifz"); }
-  function hifzPushRemote(data){
+  /* كل مقطع مستند مستقل في Firestore (hifzSegments) — يتيح استعلام ".where(nextReviewDate <= اليوم)" حقيقيًا،
+     ومزامنة تفاضلية (مقطع واحد فقط عند كل تعديل) بدل رفع كل السجل في كل مرة */
+  function hifzSegmentRef(segmentId){
+    return db.collection("users").doc(user.uid).collection("hifzSegments").doc(segmentId);
+  }
+  function hifzPushSegment(seg){
     if(!db || !user) return;
-    hifzDocRef().set(JSON.parse(JSON.stringify(data))).catch(()=>{});
+    hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).catch(()=>{});
   }
+  function hifzDeleteSegmentRemote(segmentId){
+    if(!db || !user) return;
+    hifzSegmentRef(segmentId).delete().catch(()=>{});
+  }
+  function hifzUpsertSegment(seg){
+    seg.updatedAt = Date.now();
+    const data = hifzData();
+    const idx = data.segments.findIndex(s=>s.id===seg.id);
+    if(idx === -1) data.segments.push(seg); else data.segments[idx] = seg;
+    hifzSaveLocal(data);
+    hifzPushSegment(seg);
+  }
+  function hifzRemoveSegment(segmentId){
+    const data = hifzData();
+    data.segments = data.segments.filter(s=>s.id!==segmentId);
+    hifzSaveLocal(data);
+    hifzDeleteSegmentRemote(segmentId);
+  }
+  /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
   function hifzPullRemote(){
     if(!db || !user) return;
-    hifzDocRef().get().then(snap=>{
-      if(!snap.exists) return;
-      const remote = snap.data();
-      const local = hifzData();
-      if((remote.updatedAt||0) > (local.updatedAt||0)){
-        localStorage.setItem(HIFZ_KEY, JSON.stringify(remote));
-        renderHifzCard();
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-        hifzPushRemote(local);
-      }
+    db.collection("users").doc(user.uid).collection("hifzSegments").get().then(snap=>{
+      const remoteSegs = [];
+      snap.forEach(d=> remoteSegs.push(d.data()));
+      if(!remoteSegs.length) return;
+      const data = hifzData();
+      const byId = {};
+      data.segments.forEach(s=> byId[s.id] = s);
+      remoteSegs.forEach(rs=>{
+        const ls = byId[rs.id];
+        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
+      });
+      data.segments = Object.values(byId);
+      hifzSaveLocal(data);
+      renderHifzCard();
     }).catch(()=>{});
   }
+  /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
+     تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
+  function hifzFetchDueTodayFromFirestore(){
+    if(!db || !user) return Promise.resolve([]);
+    return db.collection("users").doc(user.uid).collection("hifzSegments")
+      .where("nextReviewDate", "<=", todayStr())
+      .get()
+      .then(snap=>{ const out=[]; snap.forEach(d=> out.push(d.data())); return out; })
+      .catch(()=> []);
+  }
 
-  function hifzDaysBetween(dateStrA, dateStrB){
-    return Math.round((new Date(dateStrB+"T12:00:00") - new Date(dateStrA+"T12:00:00")) / 86400000);
+  function hifzAyatCount(seg){ return seg.to - seg.from + 1; }
+  /* محرّك تكرار متباعد مبسّط (SM-2 lite): ممتاز يرفع معامل السهولة ويدفع الموعد أبعد،
+     جيد يحافظ على تصاعد ثابت، وأعد المراجعة يصفّر الفاصل الزمني إلى الغد ويخفّض السهولة قليلًا */
+  function hifzScheduleNext(seg, rating){
+    const today = todayStr();
+    let ef = seg.easeFactor || 2.5;
+    let interval = seg.intervalDays || 1;
+    const firstReview = (seg.reviewCount||0) === 0;
+    if(rating === "hard"){
+      ef = Math.max(1.3, +(ef - 0.2).toFixed(2));
+      interval = 1;
+    }else if(rating === "good"){
+      interval = firstReview ? 3 : Math.max(1, Math.round(interval * ef));
+    }else{ /* excellent */
+      ef = Math.min(3.0, +(ef + 0.15).toFixed(2));
+      interval = firstReview ? 4 : Math.max(1, Math.round(interval * ef * 1.3));
+    }
+    seg.easeFactor = ef;
+    seg.intervalDays = interval;
+    seg.reviewCount = (seg.reviewCount||0) + 1;
+    seg.lastReviewDate = today;
+    seg.status = "memorized";
+    const next = new Date(today+"T12:00:00");
+    next.setDate(next.getDate() + interval);
+    seg.nextReviewDate = fmtDate(next);
   }
-  /* الحالة محسوبة دائمًا (وليست مخزَّنة يدويًا): تحتاج مراجعة تتغلّب على أي حالة أخرى بعد أسبوعين بلا مراجعة */
-  function hifzStatus(entry){
-    const lastDate = entry.lastReviewDate || fmtDate(new Date(entry.addedAt));
-    const gap = hifzDaysBetween(lastDate, todayStr());
-    if(gap >= 14) return "needs_review";
-    if((entry.streak||0) >= 3) return "memorized";
-    return "learning";
-  }
-  function hifzAyatCount(e){ return e.to - e.from + 1; }
 
   function hifzStats(){
     const data = hifzData();
-    let memorized=0, learning=0, needsReview=0;
+    const today = todayStr();
+    let totalAyat = 0, dueToday = 0;
     const perSurah = {};
-    data.entries.forEach(e=>{
-      const st = hifzStatus(e);
-      const n = hifzAyatCount(e);
-      if(!perSurah[e.surahN]) perSurah[e.surahN] = {memorized:0, learning:0, needsReview:0};
-      if(st === "memorized"){ memorized += n; perSurah[e.surahN].memorized += n; }
-      else if(st === "learning"){ learning += n; perSurah[e.surahN].learning += n; }
-      else{ needsReview += n; perSurah[e.surahN].needsReview += n; }
+    data.segments.forEach(seg=>{
+      const n = hifzAyatCount(seg);
+      totalAyat += n;
+      perSurah[seg.surahN] = (perSurah[seg.surahN]||0) + n;
+      if(seg.nextReviewDate <= today) dueToday++;
     });
-    return {memorized, learning, needsReview, perSurah, entries:data.entries};
+    return {
+      totalAyat, perSurah, segments: data.segments,
+      segmentCount: data.segments.length,
+      surahsStarted: Object.keys(perSurah).length,
+      dueToday
+    };
   }
 
+  /* الإدخال اليومي الدقيق: مقطع جديد يُعتبر محفوظًا فور إضافته؛ محرّك المراجعة يتكفّل بتثبيته */
   function hifzAddEntry(surahN, from, to){
-    const data = hifzData();
-    data.entries.push({
+    hifzUpsertSegment({
       id: "hz_"+Date.now(),
       surahN, from, to,
-      streak: 0,
-      lastReviewDate: todayStr(),
+      easeFactor: 2.5, intervalDays: 1, reviewCount: 0,
+      lastReviewDate: null,
+      nextReviewDate: todayStr(),
+      status: "memorized",
       addedAt: Date.now()
     });
-    hifzSave(data);
   }
   /* الإدخال التأسيسي: تبديل سورة كاملة بين "محفوظة مسبقًا" و"غير محفوظة" بضغطة واحدة */
   function hifzToggleFullSurah(surahN){
     const data = hifzData();
     const s = WITR_SURAHS[surahN-1];
-    const idx = data.entries.findIndex(e=> e.surahN===surahN && e.from===1 && e.to===s.ayat);
-    if(idx !== -1) data.entries.splice(idx,1);
-    else data.entries.push({
-      id:"hz_full_"+surahN, surahN, from:1, to:s.ayat,
-      streak:3, lastReviewDate:todayStr(), addedAt:Date.now()
-    });
-    hifzSave(data);
+    const existing = data.segments.find(e=> e.surahN===surahN && e.from===1 && e.to===s.ayat);
+    if(existing){
+      hifzRemoveSegment(existing.id);
+    }else{
+      const next = new Date(todayStr()+"T12:00:00"); next.setDate(next.getDate()+3);
+      hifzUpsertSegment({
+        id:"hz_full_"+surahN, surahN, from:1, to:s.ayat,
+        easeFactor:2.5, intervalDays:3, reviewCount:1,
+        lastReviewDate: todayStr(), nextReviewDate: fmtDate(next),
+        status:"memorized", addedAt: Date.now()
+      });
+    }
   }
-  /* مراجعة: تُحتسب مرة واحدة فقط يوميًا؛ ٣ أيام متتالية ناجحة = محفوظ، وأي انقطاع عن التتابع يعيد العدّ من واحد */
+  /* مراجعة: تُحتسب مرة واحدة فقط يوميًا لكل مقطع */
   function hifzRateEntry(entryId, rating){
     const data = hifzData();
-    const entry = data.entries.find(e=>e.id===entryId);
-    if(!entry) return;
-    const today = todayStr();
-    if(entry.lastReviewDate === today) return;
-    const gap = hifzDaysBetween(entry.lastReviewDate, today);
-    if(rating === "weak") entry.streak = 0;
-    else entry.streak = (gap === 1) ? (entry.streak||0)+1 : 1;
-    entry.lastReviewDate = today;
-    hifzSave(data);
+    const seg = data.segments.find(e=>e.id===entryId);
+    if(!seg) return;
+    if(seg.lastReviewDate === todayStr()) return;
+    hifzScheduleNext(seg, rating);
+    hifzUpsertSegment(seg);
+  }
+
+  /* ---------- التوست: يكشف اسم السورة عند الضغط/التمرير على مربع الخريطة (يعمل باللمس أيضًا) ---------- */
+  let hifzToastTimer = null;
+  function hifzShowToast(text){
+    const toast = document.getElementById("hifzToast");
+    if(!toast) return;
+    toast.textContent = text;
+    toast.hidden = false;
+    toast.classList.remove("show"); void toast.offsetWidth; toast.classList.add("show");
+    clearTimeout(hifzToastTimer);
+    hifzToastTimer = setTimeout(()=>{ toast.hidden = true; }, 1600);
   }
 
   /* ---------- عرض بطاقة حفظ القرآن (في الصفحة الرئيسية والشاشة التفصيلية معًا) ---------- */
   function renderHifzCard(){
     const stats = hifzStats();
-    const pct = HIFZ_TOTAL_AYAT ? Math.round(stats.memorized / HIFZ_TOTAL_AYAT * 100) : 0;
-    const memPct = Math.min(100, stats.memorized / HIFZ_TOTAL_AYAT * 100);
-    const learnPct = Math.min(100-memPct, stats.learning / HIFZ_TOTAL_AYAT * 100);
+    const pct = HIFZ_TOTAL_AYAT ? Math.round(stats.totalAyat / HIFZ_TOTAL_AYAT * 100) : 0;
+    const memPct = Math.min(100, stats.totalAyat / HIFZ_TOTAL_AYAT * 100);
     const arn = n=>n.toLocaleString("ar-EG");
     /* الصفحات هنا تقدير تقريبي (٦٢٣٦ آية ÷ ٦٠٤ صفحة) لتبسيط الحسبة فقط، وليست حدود صفحات دقيقة */
-    const approxPages = Math.round(stats.memorized / (HIFZ_TOTAL_AYAT/HIFZ_TOTAL_PAGES));
+    const approxPages = Math.round(stats.totalAyat / (HIFZ_TOTAL_AYAT/HIFZ_TOTAL_PAGES));
 
-    [["hifzGlobalMemFill","hifzGlobalLearnFill","hifzGlobalStats"],
-     ["hifzOvMemFill","hifzOvLearnFill","hifzOvGlobalStats"]].forEach(([memId,learnId,statId])=>{
-      const memEl = document.getElementById(memId), learnEl = document.getElementById(learnId), statEl = document.getElementById(statId);
+    [["hifzGlobalMemFill","hifzGlobalStats"], ["hifzOvMemFill","hifzOvGlobalStats"]].forEach(([memId,statId])=>{
+      const memEl = document.getElementById(memId), statEl = document.getElementById(statId);
       if(!memEl) return;
       memEl.style.width = memPct+"%";
-      learnEl.style.width = learnPct+"%";
-      statEl.innerHTML = arn(stats.memorized)+" من "+arn(HIFZ_TOTAL_AYAT)+" آية محفوظة (تقريبًا "+arn(approxPages)+" من "+arn(HIFZ_TOTAL_PAGES)+" صفحة) — "+arn(pct)+"٪"
-        + (stats.learning ? "<br>"+arn(stats.learning)+" آية قيد الحفظ" : "");
+      statEl.innerHTML = arn(stats.totalAyat)+" من "+arn(HIFZ_TOTAL_AYAT)+" آية محفوظة (تقريبًا "+arn(approxPages)+" من "+arn(HIFZ_TOTAL_PAGES)+" صفحة) — "+arn(pct)+"٪";
     });
+    ["hifzStatSegments","hifzOvStatSegments"].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent = arn(stats.segmentCount); });
+    ["hifzStatSurahs","hifzOvStatSurahs"].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent = arn(stats.surahsStarted); });
+    ["hifzStatDue","hifzOvStatDue"].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent = arn(stats.dueToday); });
 
-    const needsReviewEntries = stats.entries.filter(e=> hifzStatus(e) === "needs_review");
     const banner = document.getElementById("hifzAlertBanner");
     if(banner){
-      if(needsReviewEntries.length){
+      if(stats.dueToday){
         banner.hidden = false;
-        banner.textContent = "⚠️ لديك "+arn(needsReviewEntries.length)+" مقطعًا يحتاج مراجعة قبل أن يتفلّت";
+        banner.textContent = "⚠️ لديك "+arn(stats.dueToday)+" مقطعًا يحتاج مراجعة اليوم";
       }else{
         banner.hidden = true;
       }
     }
-    renderHifzDetails(stats, needsReviewEntries);
+    renderHifzDetails(stats);
   }
 
-  function renderHifzDetails(stats, needsReviewEntries){
+  function renderHifzDetails(stats){
     const arn = n=>n.toLocaleString("ar-EG");
+    const today = todayStr();
     const reviewBox = document.getElementById("hifzReviewList");
     if(!reviewBox) return; /* الشاشة التفصيلية غير مفتوحة بعد */
-    /* قائمة كل مقاطع الحفظ مع زر مراجعة لكل مقطع — وليس فقط ما تجاوز أسبوعين، حتى يمكن بناء تتابع الأيام الثلاثة أصلًا */
+    /* قائمة مراجعة اليوم أولًا (كل مقطع next_review_date <= اليوم)، ثم بقية المقاطع */
     reviewBox.innerHTML = "";
-    const BADGE = {
-      needs_review: {icon:"⏰", label:"يحتاج مراجعة", cls:"hifz-review-item"},
-      learning: {icon:"🟡", label:"قيد الحفظ", cls:"hifz-review-item hifz-review-item-plain"},
-      memorized: {icon:"🟢", label:"محفوظ", cls:"hifz-review-item hifz-review-item-plain"}
-    };
-    stats.entries.slice().sort((a,b)=> b.addedAt - a.addedAt).forEach(e=>{
-      const st = hifzStatus(e);
-      const s = WITR_SURAHS[e.surahN-1];
-      const badge = BADGE[st];
-      const reviewedToday = e.lastReviewDate === todayStr();
+    const sorted = stats.segments.slice().sort((a,b)=>{
+      const aDue = a.nextReviewDate <= today, bDue = b.nextReviewDate <= today;
+      if(aDue !== bDue) return aDue ? -1 : 1;
+      return b.addedAt - a.addedAt;
+    });
+    sorted.forEach(seg=>{
+      const due = seg.nextReviewDate <= today;
+      const s = WITR_SURAHS[seg.surahN-1];
+      const reviewedToday = seg.lastReviewDate === today;
       const div = document.createElement("div");
-      div.className = badge.cls;
-      div.innerHTML = "<span>"+badge.icon+" "+s.name+" ("+arn(e.from)+"-"+arn(e.to)+") — "+badge.label+"</span>";
+      div.className = due ? "hifz-review-item" : "hifz-review-item hifz-review-item-plain";
+      const label = due ? "يحتاج مراجعة اليوم" : "القادمة: "+seg.nextReviewDate;
+      div.innerHTML = "<span>"+(due?"⏰":"🟢")+" "+s.name+" ("+arn(seg.from)+"-"+arn(seg.to)+") — "+label+"</span>";
       const btn = document.createElement("button");
       btn.textContent = reviewedToday ? "رُوجعت اليوم" : "راجع الآن";
       btn.disabled = reviewedToday;
-      btn.onclick = ()=> hifzOpenReview(e.id);
+      btn.onclick = ()=> hifzOpenReview(seg.id);
       div.appendChild(btn);
       reviewBox.appendChild(div);
     });
-    if(!stats.entries.length){
+    if(!stats.segments.length){
       reviewBox.innerHTML = '<div class="hifz-review-empty">لم تُضف أي مقاطع حفظ بعد</div>';
     }
 
@@ -3256,31 +3369,34 @@
     listBox.innerHTML = "";
     Object.keys(stats.perSurah).map(Number).sort((a,b)=>a-b).forEach(n=>{
       const s = WITR_SURAHS[n-1];
-      const agg = stats.perSurah[n];
-      const memPct = Math.round(agg.memorized / s.ayat * 100);
-      const learnPct = Math.round(agg.learning / s.ayat * 100);
+      const memAyat = stats.perSurah[n];
+      const memPct = Math.round(memAyat / s.ayat * 100);
       const row = document.createElement("div");
       row.className = "hifz-surah-row";
       row.innerHTML =
         '<div class="hifz-surah-row-head"><span>'+s.name+'</span><b>'+arn(memPct)+'٪ محفوظة</b></div>'+
-        '<div class="hifz-mini-bar"><i class="mem" style="width:'+memPct+'%"></i><i class="learn" style="width:'+learnPct+'%"></i></div>';
+        '<div class="hifz-mini-bar"><i class="mem" style="width:'+memPct+'%"></i></div>';
       listBox.appendChild(row);
     });
 
-    /* خريطة السور — "تأثير تتريس" هادئ يمتلئ تدريجيًا مع تقدّم الحفظ */
+    /* خريطة الحفظ (١١٤ مربعًا) — منطق تلوين صارم:
+       أخضر فقط إذا تساوت آيات السورة المحفوظة بإجمالي آياتها، أصفر لو جزئي،
+       أحمر يتغلّب على الكل إن استحق أي مقطع من نفس السورة مراجعة اليوم (منطق التكرار المتباعد)، ورمادي إن لم يبدأ */
     const grid = document.getElementById("hifzSkeleton");
     grid.innerHTML = "";
+    const dueSurahs = new Set(stats.segments.filter(s=> s.nextReviewDate <= today).map(s=>s.surahN));
     WITR_SURAHS.forEach(s=>{
-      const agg = stats.perSurah[s.n];
+      const memAyat = stats.perSurah[s.n] || 0;
       const box = document.createElement("div");
       box.className = "hifz-box";
       box.title = s.name;
-      if(agg){
-        if(agg.needsReview > 0) box.classList.add("hifz-box-alert");
-        else if(agg.memorized >= s.ayat) box.classList.add("hifz-box-full");
-        else if(agg.memorized > 0) box.classList.add("hifz-box-partial");
-        else box.classList.add("hifz-box-learning");
-      }
+      box.setAttribute("tabindex","0");
+      if(dueSurahs.has(s.n)) box.classList.add("hifz-box-alert");
+      else if(memAyat >= s.ayat && memAyat > 0) box.classList.add("hifz-box-full");
+      else if(memAyat > 0) box.classList.add("hifz-box-partial");
+      const pct = memAyat ? Math.round(memAyat/s.ayat*100) : 0;
+      const toastMsg = s.name + (memAyat ? " — "+arn(pct)+"٪ محفوظة" : " — لم تبدأ بعد");
+      box.onclick = ()=> hifzShowToast(toastMsg);
       grid.appendChild(box);
     });
   }
@@ -3317,7 +3433,7 @@
     const grid = document.getElementById("hifzOnboardGrid");
     grid.innerHTML = "";
     WITR_SURAHS.forEach(s=>{
-      const already = data.entries.some(e=> e.surahN===s.n && e.from===1 && e.to===s.ayat);
+      const already = data.segments.some(e=> e.surahN===s.n && e.from===1 && e.to===s.ayat);
       const chip = document.createElement("button");
       chip.className = "hifz-onboard-chip"+(already?" active":"");
       chip.textContent = s.name;
@@ -3334,12 +3450,22 @@
     hifzShowSub("hifzOnboardView");
     hifzRenderOnboardGrid();
   };
+  document.getElementById("hifzMvOnboardBtn").onclick = ()=>{
+    hifzShowSub("hifzOnboardView");
+    hifzRenderOnboardGrid();
+  };
   document.getElementById("hifzOnboardDone").onclick = ()=>{
     hifzShowSub("hifzMainView");
     renderHifzCard();
   };
 
   /* الإدخال اليومي الدقيق: سورة + من آية X إلى آية Y */
+  /* التحقق يمنع الإرسال إن كانت آية البداية أكبر من النهاية، بدل تنبيه بعد الضغط */
+  function hifzValidateAddForm(){
+    const from = parseInt(document.getElementById("hifzAddFrom").value, 10);
+    const to = parseInt(document.getElementById("hifzAddTo").value, 10);
+    document.getElementById("hifzAddSubmit").disabled = !(from <= to);
+  }
   function hifzFillAyahOptions(){
     const surahN = parseInt(document.getElementById("hifzAddSurah").value, 10) || 1;
     const s = WITR_SURAHS[surahN-1];
@@ -3352,6 +3478,7 @@
       const o2 = document.createElement("option"); o2.value=i; o2.textContent=arn(i); toSel.appendChild(o2);
     }
     toSel.value = s.ayat;
+    hifzValidateAddForm();
   }
   function hifzFillAddSurahOptions(){
     const sel = document.getElementById("hifzAddSurah");
@@ -3365,41 +3492,47 @@
     hifzFillAyahOptions();
   }
   document.getElementById("hifzAddSurah").onchange = hifzFillAyahOptions;
+  document.getElementById("hifzAddFrom").onchange = hifzValidateAddForm;
+  document.getElementById("hifzAddTo").onchange = hifzValidateAddForm;
   document.getElementById("hifzAddBtn").onclick = ()=>{
     openHifz();
     hifzShowSub("hifzAddView");
     hifzFillAddSurahOptions();
   };
+  document.getElementById("hifzMvAddBtn").onclick = ()=>{
+    hifzShowSub("hifzAddView");
+    hifzFillAddSurahOptions();
+  };
   document.getElementById("hifzAddCancel").onclick = ()=>{ hifzShowSub("hifzMainView"); renderHifzCard(); };
   document.getElementById("hifzAddSubmit").onclick = ()=>{
+    if(document.getElementById("hifzAddSubmit").disabled) return;
     const surahN = parseInt(document.getElementById("hifzAddSurah").value, 10);
     const from = parseInt(document.getElementById("hifzAddFrom").value, 10);
     const to = parseInt(document.getElementById("hifzAddTo").value, 10);
-    if(!(from <= to)){ alert("تأكد أن آية البداية أقل من أو تساوي آية النهاية"); return; }
     hifzAddEntry(surahN, from, to);
     hifzShowSub("hifzMainView");
     renderHifzCard();
     if(navigator.vibrate) navigator.vibrate(15);
   };
 
-  /* المراجعة: ممتاز / جيد / أعد المراجعة */
+  /* المراجعة: استدعاء نشط (Active Recall) — تُعرض حدود المقطع، ثم تقييم ذاتي بثلاثة أزرار */
   let hifzReviewingId = null;
-  function hifzOpenReview(entryId){
-    hifzReviewingId = entryId;
+  function hifzOpenReview(segmentId){
+    hifzReviewingId = segmentId;
     const data = hifzData();
-    const e = data.entries.find(x=>x.id===entryId);
-    if(!e) return;
-    const s = WITR_SURAHS[e.surahN-1];
+    const seg = data.segments.find(x=>x.id===segmentId);
+    if(!seg) return;
+    const s = WITR_SURAHS[seg.surahN-1];
     const arn = n=>n.toLocaleString("ar-EG");
     document.getElementById("hifzReviewTitle").textContent = "📖 مراجعة: "+s.name;
-    document.getElementById("hifzReviewMeta").textContent = "من الآية "+arn(e.from)+" إلى الآية "+arn(e.to)+" ("+arn(hifzAyatCount(e))+" آية)";
+    document.getElementById("hifzReviewMeta").textContent = "من الآية "+arn(seg.from)+" إلى الآية "+arn(seg.to)+" ("+arn(hifzAyatCount(seg))+" آية)";
     hifzShowSub("hifzReviewView");
   }
   document.querySelectorAll(".hifz-rate-row button").forEach(b=>{
     b.onclick = ()=>{
       if(!hifzReviewingId) return;
       hifzRateEntry(hifzReviewingId, b.dataset.r);
-      if(navigator.vibrate) navigator.vibrate(b.dataset.r === "weak" ? 10 : [15,40,15]);
+      if(navigator.vibrate) navigator.vibrate(b.dataset.r === "hard" ? 10 : [15,40,15]);
       hifzReviewingId = null;
       hifzShowSub("hifzMainView");
       renderHifzCard();
