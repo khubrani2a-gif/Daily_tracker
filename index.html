@@ -804,6 +804,34 @@
     display:block;width:100%;text-align:center;font-size:.74rem;color:var(--accent);
     margin-bottom:1.1rem;cursor:pointer;background:none;border:none;font-family:inherit;
   }
+  /* مكوّن اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) بدل نص حر */
+  .witr-fav-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.9rem;min-height:1.8rem}
+  .witr-fav-empty-inline{font-size:.8rem;color:var(--muted)}
+  .witr-fav-chip{
+    display:inline-flex;align-items:center;gap:.4rem;
+    background:var(--accent-soft);color:var(--accent);border-radius:99px;
+    padding:.3rem .5rem .3rem .85rem;font-size:.8rem;font-weight:600;
+  }
+  .witr-fav-chip button{
+    border:none;background:rgba(0,0,0,.08);color:inherit;border-radius:50%;
+    width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    line-height:1;padding:0;flex-shrink:0;
+  }
+  html.dark .witr-fav-chip button{background:rgba(255,255,255,.14)}
+  .witr-fav-search-wrap{position:relative;margin-bottom:1rem}
+  #witrFavSearch{
+    width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;
+    padding:.7rem .9rem;font-family:inherit;font-size:.9rem;background:var(--paper);color:var(--ink);
+  }
+  #witrFavSearch:focus{outline:none;border-color:var(--accent-2)}
+  .witr-fav-dropdown{
+    position:absolute;top:calc(100% + .3rem);right:0;left:0;z-index:20;
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    max-height:220px;overflow-y:auto;box-shadow:0 10px 24px -8px rgba(0,0,0,.25);
+  }
+  .witr-fav-option{padding:.6rem .9rem;font-size:.85rem;color:var(--ink);cursor:pointer}
+  .witr-fav-option:hover{background:var(--accent-soft);color:var(--accent)}
+  .witr-fav-empty{padding:.6rem .9rem;font-size:.8rem;color:var(--muted);text-align:center}
   .witr-suggestion{background:var(--accent-soft);border-radius:16px;padding:1.1rem;text-align:center}
   .witr-sug-head{font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
   .witr-sug-surah{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--ink);margin-bottom:.3rem;line-height:1.5}
@@ -873,7 +901,9 @@
   html.dark #witrOverlay .witr-suggestion,
   html.dark #witrOverlay .witr-targets button,
   html.dark #witrOverlay .witr-actions button,
-  html.dark #witrOverlay .stat-tile{background:#0a0a0a;border-color:#1e1e1e}
+  html.dark #witrOverlay .stat-tile,
+  html.dark #witrOverlay #witrFavSearch,
+  html.dark #witrOverlay .witr-fav-dropdown{background:#0a0a0a;border-color:#1e1e1e}
   html.dark #witrOverlay .witr-ayat-wrap{color:#f0ede4}
 
   /* ===== الاحتفال ===== */
@@ -1361,7 +1391,7 @@
       </div>
 
       <div id="witrPickView">
-        <div class="witr-q">ما هدفك الليلة؟</div>
+        <div class="witr-q" id="witrPickHeading">ما هدفك الليلة؟</div>
         <div class="witr-targets" id="witrTargets">
           <button data-t="10"><b>🌱 10 آيات</b><small>تُكتب من الذاكرين</small></button>
           <button data-t="100"><b>🌿 100 آية</b><small>تُكتب من القانتين</small></button>
@@ -1375,6 +1405,15 @@
           <span data-p="fav">السور المفضّلة</span>
         </div>
         <button class="witr-fav-edit" id="witrFavEdit">✎ تعديل السور المفضّلة</button>
+
+        <div id="witrFavEditView" hidden>
+          <div class="witr-fav-chips" id="witrFavChips"></div>
+          <div class="witr-fav-search-wrap">
+            <input type="text" id="witrFavSearch" placeholder="اكتب اسم السورة..." autocomplete="off">
+            <div class="witr-fav-dropdown" id="witrFavDropdown" hidden></div>
+          </div>
+          <button class="adhkar-done-btn" id="witrFavDone">✔ تم</button>
+        </div>
 
         <div class="witr-suggestion" id="witrSuggestion" hidden>
           <div class="witr-sug-head">📖 اقتراح الليلة</div>
@@ -1413,7 +1452,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٧</div>
+    <div class="app-version">النسخة ٣٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2390,24 +2429,84 @@
     }).catch(()=>{});
   }
 
-  function witrEditFavorites(){
-    const current = witrFavorites();
-    const currentNames = current.map(n=> (WITR_SURAHS[n-1]||{}).name).filter(Boolean).join("، ");
-    const val = prompt("اكتب أسماء السور المفضّلة لديك، مفصولة بفواصل (مثال: الملك، يس، الرحمن):", currentNames);
-    if(val === null) return;
-    const tokens = val.split(/[,،]/).map(t=>t.trim()).filter(Boolean);
-    const picked = [];
-    tokens.forEach(tok=>{
-      const asNum = parseInt(tok,10);
-      if(asNum >= 1 && asNum <= 114){ picked.push(asNum); return; }
-      const found = WITR_SURAHS.find(s=> s.name === tok || s.name.indexOf(tok) !== -1);
-      if(found) picked.push(found.n);
-    });
-    const meta = witrMeta();
-    meta.favorites = Array.from(new Set(picked));
-    witrMetaSave(meta);
-    witrRenderPickView();
+  /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
+  let witrFavDraft = [];
+  function witrOpenFavEdit(){
+    witrFavDraft = witrFavorites().slice();
+    document.getElementById("witrPickHeading").hidden = true;
+    document.getElementById("witrTargets").hidden = true;
+    document.getElementById("witrPoolChips").hidden = true;
+    document.getElementById("witrFavEdit").hidden = true;
+    document.getElementById("witrSuggestion").hidden = true;
+    document.getElementById("witrFavEditView").hidden = false;
+    document.getElementById("witrFavSearch").value = "";
+    witrRenderFavChips();
+    witrRenderFavDropdown("");
   }
+  function witrCloseFavEdit(){
+    const meta = witrMeta();
+    meta.favorites = witrFavDraft.slice();
+    witrMetaSave(meta);
+    document.getElementById("witrFavEditView").hidden = true;
+    document.getElementById("witrPickHeading").hidden = false;
+    document.getElementById("witrTargets").hidden = false;
+    document.getElementById("witrPoolChips").hidden = false;
+    document.getElementById("witrFavEdit").hidden = false;
+    if(witrPool === "fav" && state.witr) witrPickTarget(state.witr.target);
+    else witrRenderPickView();
+  }
+  function witrRenderFavChips(){
+    const box = document.getElementById("witrFavChips");
+    box.innerHTML = "";
+    if(!witrFavDraft.length){
+      box.innerHTML = '<span class="witr-fav-empty-inline">لم تختر أي سورة بعد</span>';
+      return;
+    }
+    witrFavDraft.forEach(n=>{
+      const s = WITR_SURAHS[n-1];
+      const chip = document.createElement("span");
+      chip.className = "witr-fav-chip";
+      chip.textContent = s.name;
+      const rm = document.createElement("button");
+      rm.textContent = "✕";
+      rm.title = "إزالة";
+      rm.onclick = ()=>{
+        witrFavDraft = witrFavDraft.filter(x=>x!==n);
+        witrRenderFavChips();
+        witrRenderFavDropdown(document.getElementById("witrFavSearch").value);
+      };
+      chip.appendChild(rm);
+      box.appendChild(chip);
+    });
+  }
+  function witrRenderFavDropdown(query){
+    const dd = document.getElementById("witrFavDropdown");
+    const q = query.trim();
+    if(!q){ dd.hidden = true; dd.innerHTML = ""; return; }
+    const matches = WITR_SURAHS.filter(s=> s.name.indexOf(q) !== -1 && witrFavDraft.indexOf(s.n) === -1).slice(0,8);
+    dd.innerHTML = "";
+    if(!matches.length){
+      dd.innerHTML = '<div class="witr-fav-empty">لا توجد سورة مطابقة</div>';
+      dd.hidden = false;
+      return;
+    }
+    matches.forEach(s=>{
+      const opt = document.createElement("div");
+      opt.className = "witr-fav-option";
+      opt.textContent = s.name;
+      opt.onclick = ()=>{
+        witrFavDraft.push(s.n);
+        witrRenderFavChips();
+        document.getElementById("witrFavSearch").value = "";
+        dd.hidden = true;
+        document.getElementById("witrFavSearch").focus();
+      };
+      dd.appendChild(opt);
+    });
+    dd.hidden = false;
+  }
+  document.getElementById("witrFavSearch").oninput = (e)=> witrRenderFavDropdown(e.target.value);
+  document.getElementById("witrFavDone").onclick = witrCloseFavEdit;
 
   function witrPoolIndexes(pool){
     if(pool === "juzamma") return WITR_SURAHS.filter(s=>s.n>=78).map(s=>s.n);
@@ -2415,8 +2514,14 @@
     if(pool === "fav"){ const fav = witrFavorites(); return fav.length ? fav.slice() : WITR_SURAHS.map(s=>s.n); }
     return WITR_SURAHS.map(s=>s.n);
   }
-  /* يبني نطاق آيات كاملاً بدءًا من نقطة معيّنة، ويمتد لسور تالية (بترتيب المصحف) إذا لزم لبلوغ الهدف */
-  function witrBuildRange(startSurahN, startAyah, target){
+  /* السورة التالية ضمن مصفوفة السور المسموحة فقط (وليس ترتيب المصحف العام) — تدور داخل المصفوفة نفسها */
+  function witrNextInPool(indexes, currentN){
+    const i = indexes.indexOf(currentN);
+    return indexes[(i+1) % indexes.length];
+  }
+  /* يبني نطاق آيات كاملاً بدءًا من نقطة معيّنة، ويمتد -عند الحاجة- لسور تالية *ضمن مصفوفة المصدر المختار فقط*
+     (جميع السور / جزء عم / المفصّل / السور المفضّلة) — لا يتجاوزها أبدًا إلى سور خارجها */
+  function witrBuildRange(startSurahN, startAyah, target, poolIndexes){
     let remaining = target, curN = startSurahN, curAyah = startAyah;
     const parts = [];
     while(remaining > 0){
@@ -2428,7 +2533,7 @@
       }else{
         parts.push({n:curN, name:s.name, from:curAyah, to:s.ayat});
         remaining -= avail;
-        curN = curN >= 114 ? 1 : curN+1;
+        curN = witrNextInPool(poolIndexes, curN);
         curAyah = 1;
       }
     }
@@ -2442,7 +2547,7 @@
       const startN = indexes[Math.floor(Math.random()*indexes.length)];
       const s = WITR_SURAHS[startN-1];
       const startAyah = 1 + Math.floor(Math.random()*s.ayat);
-      const parts = witrBuildRange(startN, startAyah, target);
+      const parts = witrBuildRange(startN, startAyah, target, indexes);
       const key = parts[0].n+":"+parts[0].from+":"+parts[parts.length-1].n+":"+parts[parts.length-1].to;
       best = {target, pool, parts, key};
       if(!hist.some(h=>h.key === key)) break;
@@ -2549,13 +2654,16 @@
     c.onclick = ()=>{
       witrPool = c.dataset.p;
       if(witrPool === "fav" && !witrFavorites().length){
-        if(confirm("لا توجد سور مفضّلة بعد. هل تريد إضافتها الآن؟")) witrEditFavorites();
+        if(confirm("لا توجد سور مفضّلة بعد. هل تريد إضافتها الآن؟")){
+          witrOpenFavEdit();
+          return; /* لا تولّد اقتراحًا الآن؛ سيحدث ذلك بعد حفظ المفضّلة */
+        }
       }
       if(state.witr) witrPickTarget(state.witr.target);
       else witrRenderPickView();
     };
   });
-  document.getElementById("witrFavEdit").onclick = witrEditFavorites;
+  document.getElementById("witrFavEdit").onclick = witrOpenFavEdit;
   document.getElementById("witrChangeBtn").onclick = ()=>{
     if(state.witr) witrPickTarget(state.witr.target);
   };
