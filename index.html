@@ -699,6 +699,7 @@
     box-shadow:0 6px 16px -6px rgba(14,122,112,.5);
   }
   .adhkar-done-btn:active{transform:scale(.99)}
+  .adhkar-done-btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:none}
   .adhkar-head{
     display:flex;align-items:center;justify-content:space-between;gap:.6rem;
     padding:.4rem 0 .7rem;
@@ -757,6 +758,10 @@
   .q-iframe{
     width:100%;height:65vh;border:1px solid var(--line);border-radius:14px;
     background:var(--paper);
+  }
+  .q-done-msg{
+    background:var(--accent-soft);color:var(--accent);border-radius:14px;
+    padding:.9rem;text-align:center;font-weight:700;margin-bottom:.8rem;
   }
 
   /* ===== الاحتفال ===== */
@@ -1153,9 +1158,44 @@
     </div>
   </div>
 
+  <!-- ===== قراءة سورة/ورد مخصّص من القرآن ===== -->
+  <div class="adhkar-overlay" id="surahOverlay" hidden>
+    <div class="adhkar-sheet">
+      <div class="adhkar-top">
+        <div class="adhkar-head">
+          <button class="ad-btn ad-close" id="surahClose" title="إغلاق">✕ إغلاق</button>
+          <h2 id="surahTitle">📘 سورة</h2>
+          <button class="ad-btn" id="surahEdit" title="تعديل الهدف اليومي">🎯</button>
+        </div>
+        <div class="adhkar-progress"><div id="surahFill"></div></div>
+        <div class="adhkar-count" id="surahCount"></div>
+      </div>
+
+      <div class="stat-tiles q-tiles">
+        <div class="stat-tile"><div class="v" id="surahCurrent">-</div><div class="l">الصفحة الحالية</div></div>
+        <div class="stat-tile"><div class="v" id="surahRemain">-</div><div class="l">المتبقي (صفحات)</div></div>
+      </div>
+
+      <div class="q-done-msg" id="surahDoneMsg" hidden></div>
+
+      <button class="adhkar-done-btn" id="surahMarkDone">✓ تم قراءة صفحة اليوم</button>
+      <button class="adhkar-done-btn" id="surahContinueBtn">▶ متابعة القراءة</button>
+
+      <div class="q-reader" id="surahReader" hidden>
+        <div class="q-nav">
+          <button id="surahPrev">◀ السابقة</button>
+          <span id="surahPageLabel">صفحة</span>
+          <button id="surahNext">التالية ▶</button>
+        </div>
+        <a class="q-external" id="surahExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
+        <iframe class="q-iframe" id="surahIframe" loading="lazy" title="مصحف دار الحرا"></iframe>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٢</div>
+    <div class="app-version">النسخة ٣٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1206,11 +1246,43 @@
   ];
   const IB_GROUPS = ["adhkar","salah","awrad"];
   const CUSTOM_WORSHIP_KEY = "h2do-custom-worship";
+  const CUSTOM_WORSHIP_META_KEY = "h2do-custom-worship-meta";
   const HIDDEN_WORSHIP_KEY = "h2do-hidden-worship";
   function wCustom(){
     try{ return JSON.parse(localStorage.getItem(CUSTOM_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
   }
-  function wCustomSave(list){ localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(list)); }
+  function wCustomMeta(){
+    try{ return JSON.parse(localStorage.getItem(CUSTOM_WORSHIP_META_KEY)) || {updatedAt:0}; }catch(e){ return {updatedAt:0}; }
+  }
+  function wCustomSave(list){
+    localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(list));
+    const updatedAt = Date.now();
+    localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt}));
+    wCustomPushRemote(list, updatedAt);
+  }
+  /* مزامنة بنود الأوراد المخصّصة (مثل قراءة سورة من القرآن) بين الأجهزة */
+  function wCustomDocRef(){
+    return db.collection("users").doc(user.uid).collection("meta").doc("customWorship");
+  }
+  function wCustomPushRemote(list, updatedAt){
+    if(!db || !user) return;
+    wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
+  }
+  function wCustomPullRemote(){
+    if(!db || !user) return;
+    wCustomDocRef().get().then(snap=>{
+      if(!snap.exists) return;
+      const remote = snap.data();
+      const localMeta = wCustomMeta();
+      if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
+        localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
+        localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
+        renderWorship(); renderProgress();
+      }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
+        wCustomPushRemote(wCustom(), localMeta.updatedAt);
+      }
+    }).catch(()=>{});
+  }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
   }
@@ -1590,6 +1662,7 @@
         syncStatus.textContent = "☁️ المزامنة مفعّلة — "+(u.displayName||u.email||"");
         pullRemote(currentDate);
         qPullRemote();
+        wCustomPullRemote();
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
         syncStatus.textContent = "";
@@ -1774,6 +1847,167 @@
     q.target = n;
     qSave(q);
     qRenderOverlay();
+  };
+
+  /* ---------- قراءة سورة/ورد مخصّص من القرآن (نطاق صفحات محدد + هدف يومي) ---------- */
+  function ibAddQuranItem(){
+    const surah = prompt("اسم السورة أو الورد (مثال: سورة البقرة):");
+    if(!surah || !surah.trim()) return;
+    const startStr = prompt("صفحة البداية:", "1");
+    if(startStr === null) return;
+    const start = parseInt(startStr.trim(), 10);
+    if(!start || start < 1){ alert("صفحة البداية غير صحيحة"); return; }
+    const endStr = prompt("صفحة النهاية:", String(start));
+    if(endStr === null) return;
+    const end = parseInt(endStr.trim(), 10);
+    if(!end || end < start){ alert("صفحة النهاية يجب أن تكون أكبر من أو تساوي صفحة البداية"); return; }
+    const targetStr = prompt("عدد الصفحات المستهدف قراءتها يوميًا:", "1");
+    if(targetStr === null) return;
+    const target = Math.max(1, parseInt(targetStr.trim(), 10) || 1);
+    const icon = (prompt("رمز اختياري لهذا الورد (اتركه فارغًا لاستخدام 📘):", "") || "").trim();
+    const item = {
+      id: "quran_"+Date.now(),
+      label: surah.trim(),
+      group: "awrad",
+      kind: "quran",
+      icon: icon || "📘",
+      mode: "page",
+      startPage: start,
+      endPage: end,
+      currentPage: start,
+      target: target,
+      lastReadDate: "",
+      completed: false
+    };
+    const list = wCustom();
+    list.push(item);
+    wCustomSave(list);
+    renderWorship(); renderProgress();
+  }
+
+  let qsActiveId = null;
+  let qsViewPage = 1;
+  const surahOverlay = document.getElementById("surahOverlay");
+
+  function qsFindItem(id){ return wCustom().find(w=> w.id === id); }
+  function qsSaveItem(item){
+    const list = wCustom();
+    const idx = list.findIndex(w=> w.id === item.id);
+    if(idx === -1) return;
+    list[idx] = item;
+    wCustomSave(list);
+  }
+  function qsRenderOverlay(){
+    const w = qsFindItem(qsActiveId);
+    if(!w){ closeSurahUI(); return; }
+    const arn = n => n.toLocaleString("ar-EG");
+    const current = Math.min(w.currentPage, w.endPage);
+    const done = !!w.completed || w.currentPage > w.endPage;
+    document.getElementById("surahTitle").textContent = (w.icon||"📘")+" "+w.label;
+    document.getElementById("surahCurrent").textContent = arn(current)+" / "+arn(w.endPage);
+    document.getElementById("surahRemain").textContent = done ? "٠" : arn(Math.max(0, w.endPage - w.currentPage + 1));
+    const totalSpan = Math.max(1, w.endPage - w.startPage + 1);
+    const pct = Math.min(100, Math.max(0, Math.round(((current - w.startPage + 1) / totalSpan) * 100)));
+    document.getElementById("surahFill").style.width = pct+"%";
+    document.getElementById("surahCount").textContent = done
+      ? "تمت قراءة "+w.label+" ✅"
+      : arn(current)+" / "+arn(w.endPage)+" صفحة";
+    const doneMsg = document.getElementById("surahDoneMsg");
+    const markBtn = document.getElementById("surahMarkDone");
+    const contBtn = document.getElementById("surahContinueBtn");
+    if(done){
+      doneMsg.hidden = false;
+      doneMsg.textContent = "✅ تمت قراءة "+w.label;
+      markBtn.hidden = true;
+      contBtn.disabled = true;
+      contBtn.textContent = "✅ اكتملت القراءة";
+    }else{
+      doneMsg.hidden = true;
+      markBtn.hidden = false;
+      contBtn.disabled = false;
+      contBtn.textContent = "▶ متابعة القراءة من صفحة "+arn(current);
+      const readToday = w.lastReadDate === todayStr();
+      markBtn.disabled = readToday;
+      markBtn.textContent = readToday ? "✓ تمت قراءتك لليوم" : "✓ تم قراءة صفحة اليوم";
+    }
+  }
+  function qsRenderReader(){
+    const w = qsFindItem(qsActiveId);
+    if(!w) return;
+    const arn = n => n.toLocaleString("ar-EG");
+    document.getElementById("surahPageLabel").textContent = "صفحة "+arn(qsViewPage);
+    document.getElementById("surahIframe").src = qPageUrl(qsViewPage);
+    document.getElementById("surahExternal").href = qPageUrl(qsViewPage);
+    document.getElementById("surahPrev").disabled = qsViewPage <= w.startPage;
+    document.getElementById("surahNext").disabled = qsViewPage >= w.endPage;
+  }
+  function qsOpenReader(){
+    const w = qsFindItem(qsActiveId);
+    if(!w) return;
+    qsViewPage = Math.min(w.currentPage, w.endPage);
+    document.getElementById("surahReader").hidden = false;
+    qsRenderReader();
+  }
+  function qsNext(){
+    const w = qsFindItem(qsActiveId);
+    if(!w || qsViewPage >= w.endPage) return;
+    qsViewPage++;
+    qsRenderReader();
+  }
+  function qsPrev(){
+    const w = qsFindItem(qsActiveId);
+    if(!w || qsViewPage <= w.startPage) return;
+    qsViewPage--;
+    qsRenderReader();
+  }
+  /* التقدم يتحرك فقط عبر زر "تم قراءة صفحة اليوم"، ومرة واحدة يوميًا (lastReadDate) لمنع التقدّم غير المقصود */
+  function qsMarkTodayDone(){
+    const w = qsFindItem(qsActiveId);
+    if(!w) return;
+    if(w.lastReadDate === todayStr()) return;
+    if(!!w.completed || w.currentPage > w.endPage) return;
+    w.currentPage += (w.target || 1);
+    w.lastReadDate = todayStr();
+    if(w.currentPage > w.endPage) w.completed = true;
+    qsSaveItem(w);
+    renderWorship(); renderProgress();
+    qsRenderOverlay();
+    if(w.completed) celebrate();
+  }
+  function openSurah(id){
+    qsActiveId = id;
+    surahOverlay.hidden = false;
+    surahOverlay.scrollTop = 0;
+    document.body.style.overflow = "hidden";
+    document.getElementById("surahReader").hidden = true;
+    qsRenderOverlay();
+    try{ history.pushState({surah:true}, ""); }catch(e){}
+  }
+  function closeSurahUI(){
+    surahOverlay.hidden = true;
+    document.body.style.overflow = "";
+    renderWorship(); renderProgress();
+  }
+  function closeSurah(){
+    if(history.state && history.state.surah) history.back();
+    else closeSurahUI();
+  }
+  window.addEventListener("popstate", ()=>{ if(!surahOverlay.hidden) closeSurahUI(); });
+  document.getElementById("surahClose").onclick = closeSurah;
+  document.getElementById("surahContinueBtn").onclick = qsOpenReader;
+  document.getElementById("surahMarkDone").onclick = qsMarkTodayDone;
+  document.getElementById("surahPrev").onclick = qsPrev;
+  document.getElementById("surahNext").onclick = qsNext;
+  document.getElementById("surahEdit").onclick = ()=>{
+    const w = qsFindItem(qsActiveId);
+    if(!w) return;
+    const val = prompt("عدد الصفحات المستهدف قراءتها يوميًا:", w.target || 1);
+    if(val === null) return;
+    const n = parseInt(val, 10);
+    if(!n || n < 1) return;
+    w.target = n;
+    qsSaveItem(w);
+    qsRenderOverlay();
   };
 
   /* ---------- Hijri date ---------- */
@@ -1982,6 +2216,30 @@
   function ibRenderItem(w, ul){
     const li = document.createElement("li");
 
+    /* قراءة سورة/ورد مخصّص من القرآن: صفحة بداية/نهاية وهدف يومي، بدل مربع صح عادي */
+    if(w.kind === "quran"){
+      li.classList.add("tally-row");
+      const arn = n => n.toLocaleString("ar-EG");
+      const current = Math.min(w.currentPage, w.endPage);
+      const done = !!w.completed || w.currentPage > w.endPage;
+      state.worship[w.id] = done;
+      const chk = document.createElement("span");
+      chk.className = "chk"+(done?" on":"");
+      chk.textContent = "✔";
+      const lbl = document.createElement("span");
+      lbl.className = "lbl"+(done?" done-line":"");
+      lbl.textContent = (w.icon||"📘")+" "+w.label;
+      lbl.onclick = ()=> openSurah(w.id);
+      const chip = document.createElement("span");
+      chip.className = "read-chip";
+      chip.textContent = done ? "✅ تمت" : arn(current)+"/"+arn(w.endPage);
+      chip.onclick = ()=> openSurah(w.id);
+      li.append(chk, lbl, chip);
+      li.appendChild(ibMakeDelBtn(w));
+      ul.appendChild(li);
+      return;
+    }
+
     /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
     if(w.id === "istighfar"){
       li.classList.add("tally-row");
@@ -2125,6 +2383,11 @@
   }
 
   function ibRemainLabel(w){
+    if(w.kind === "quran"){
+      if(!!w.completed || w.currentPage > w.endPage) return null;
+      const remaining = Math.max(0, w.endPage - w.currentPage + 1);
+      return (w.icon||"📘")+" "+w.label+" (متبقي "+remaining.toLocaleString("ar-EG")+" صفحة)";
+    }
     if(w.id === "istighfar"){
       const left = Math.max(0, 100 - (state.istighfar||0));
       return left ? w.label+" (متبقي "+left.toLocaleString("ar-EG")+")" : null;
@@ -2202,6 +2465,10 @@
   document.querySelectorAll(".ib-add").forEach(btn=>{
     btn.onclick = ()=>{
       const group = btn.dataset.group;
+      if(group === "awrad" && confirm("📘 هل تريد إضافة «قراءة سورة/ورد من القرآن» بصفحة بداية ونهاية وهدف يومي؟\n\nموافق = قراءة قرآن، إلغاء = ورد عادي")){
+        ibAddQuranItem();
+        return;
+      }
       const gname = group === "adhkar" ? "الأذكار" : group === "salah" ? "الصلاة والنوافل" : "الأوراد اليومية";
       const label = prompt("أضف بندًا جديدًا إلى «"+gname+"»:");
       if(!label || !label.trim()) return;
