@@ -1021,38 +1021,68 @@
   .hifz-recall-loading, .hifz-recall-fallback{color:var(--muted);font-size:.9rem}
   .hifz-recall-text{
     font-family:"Thmanyah Sans", serif;
-    font-size:1.5rem;line-height:2.5;color:var(--ink);text-align:center;
-    filter:blur(9px);transition:filter .3s ease;
+    font-size:1.5rem;line-height:2.6;color:var(--ink);text-align:center;
   }
-  .hifz-recall.revealed .hifz-recall-text{filter:blur(0)}
   .hifz-recall-hint{
     margin-top:.9rem;font-size:.78rem;color:var(--accent);font-weight:600;
     transition:opacity .3s ease;
   }
-  .hifz-recall.revealed .hifz-recall-hint{opacity:0;pointer-events:none}
+  .hifz-recall.all-revealed .hifz-recall-hint{opacity:0;pointer-events:none}
   .hifz-ayah-num{
     display:inline-flex;align-items:center;justify-content:center;
     width:1.7em;height:1.7em;border:1px solid var(--accent-2);border-radius:50%;
     font-size:.5em;color:var(--accent);margin:0 .15em;vertical-align:middle;
   }
-  /* الآية الجارية أثناء التشغيل — إبراز لطيف */
-  .hifz-ayah{border-radius:8px;padding:.05em .15em;transition:background .2s;cursor:pointer}
+  /* تمويه لكل آية على حدة (index > revealedVerseIndex) — يُكشف بالنقر أو عند تشغيل صوتها */
+  .hifz-ayah{border-radius:8px;padding:.05em .15em;transition:filter .25s ease, background .2s;cursor:pointer}
+  .hifz-ayah.blurred{filter:blur(5px)}
   .hifz-ayah.playing{background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent-2) inset}
 
   /* مشغّل الآيات (آية آية) */
   .hifz-player{
-    display:flex;align-items:center;justify-content:center;gap:.5rem;
-    margin-top:1rem;padding-top:.9rem;border-top:1px dashed var(--line);flex-wrap:wrap;
+    margin-top:1rem;padding-top:.9rem;border-top:1px dashed var(--line);
   }
+  .hifz-pl-main-row{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:.7rem}
+  .hifz-pl-meta-row{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap}
   .hifz-pl-btn{
     width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);
     color:var(--accent);font-size:1rem;cursor:pointer;transition:.15s;flex-shrink:0;
   }
   .hifz-pl-btn:hover{background:var(--accent-soft);border-color:var(--accent-2)}
   .hifz-pl-main{width:52px;height:52px;font-size:1.3rem;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:none}
-  .hifz-pl-btn.active{background:var(--accent);color:#fff;border-color:transparent}
-  .hifz-pl-counter{font-size:.82rem;color:var(--muted);font-weight:600;min-width:70px;text-align:center}
-  html.dark #hifzOverlay .hifz-pl-btn{background:#0a0a0a;border-color:#1e1e1e}
+  .hifz-pl-counter{font-size:.82rem;color:var(--muted);font-weight:600;min-width:64px;text-align:center}
+  .hifz-pl-chip{
+    border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:99px;
+    padding:.32rem .7rem;font-family:inherit;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .hifz-pl-chip:hover{border-color:var(--accent-2);color:var(--accent)}
+  .hifz-pl-chip.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-2)}
+  html.dark #hifzOverlay .hifz-pl-btn, html.dark #hifzOverlay .hifz-pl-chip{background:#0a0a0a;border-color:#1e1e1e}
+
+  /* ورقة القرّاء المنبثقة (Bottom Sheet) مع بحث ثابت */
+  .hifz-sheet-overlay{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
+  .hifz-sheet-overlay[hidden]{display:none}
+  .hifz-sheet{
+    background:var(--bg);width:100%;max-width:720px;margin:0 auto;border-radius:20px 20px 0 0;
+    max-height:80vh;display:flex;flex-direction:column;padding:.9rem 1rem 1.3rem;
+  }
+  .hifz-sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem}
+  .hifz-sheet-head span{font-weight:700;color:var(--accent);font-size:1rem}
+  .hifz-sheet-head button{border:none;background:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+  .hifz-sheet-search{
+    position:sticky;top:0;width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;
+    padding:.65rem .9rem;font-family:inherit;font-size:.9rem;background:var(--paper);color:var(--ink);margin-bottom:.6rem;
+  }
+  .hifz-sheet-search:focus{outline:none;border-color:var(--accent-2)}
+  .hifz-reciter-list{overflow-y:auto;flex:1}
+  .hifz-reciter-opt{
+    padding:.7rem .8rem;border-radius:10px;font-size:.88rem;color:var(--ink);cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  }
+  .hifz-reciter-opt:hover{background:var(--chip-bg)}
+  .hifz-reciter-opt.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
+  .hifz-reciter-opt small{color:var(--muted);font-size:.72rem}
+  .hifz-reciter-empty{text-align:center;color:var(--muted);font-size:.82rem;padding:1rem}
 
   .hifz-rate-row{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem}
   .hifz-rate-row button{
@@ -1725,11 +1755,17 @@
           </div>
 
           <div class="hifz-player" id="hifzPlayer" hidden>
-            <button class="hifz-pl-btn" id="hifzPlPrev" title="الآية السابقة">⏮</button>
-            <button class="hifz-pl-btn hifz-pl-main" id="hifzPlPlay" title="تشغيل/إيقاف">▶</button>
-            <button class="hifz-pl-btn" id="hifzPlNext" title="الآية التالية">⏭</button>
-            <button class="hifz-pl-btn" id="hifzPlRepeat" title="تكرار الآية">🔁</button>
-            <span class="hifz-pl-counter" id="hifzPlCounter"></span>
+            <div class="hifz-pl-main-row">
+              <button class="hifz-pl-btn" id="hifzPlPrev" title="الآية السابقة">⏮</button>
+              <button class="hifz-pl-btn hifz-pl-main" id="hifzPlPlay" title="تشغيل/إيقاف">▶</button>
+              <button class="hifz-pl-btn" id="hifzPlNext" title="الآية التالية">⏭</button>
+              <button class="hifz-pl-btn" id="hifzPlReciter" title="تغيير القارئ">🎧</button>
+            </div>
+            <div class="hifz-pl-meta-row">
+              <span class="hifz-pl-counter" id="hifzPlCounter"></span>
+              <button class="hifz-pl-chip" id="hifzPlVerseRep" title="تكرار الآية">🔁 آية: ١×</button>
+              <button class="hifz-pl-chip" id="hifzPlSegRep" title="تكرار المقطع كاملًا">🔁 المقطع: ١×</button>
+            </div>
           </div>
         </div>
 
@@ -1744,9 +1780,21 @@
     <div class="hifz-toast" id="hifzToast" hidden></div>
   </div>
 
+  <!-- ورقة اختيار القارئ -->
+  <div class="hifz-sheet-overlay" id="hifzReciterSheet" hidden>
+    <div class="hifz-sheet">
+      <div class="hifz-sheet-head">
+        <span>🎧 اختر القارئ</span>
+        <button id="hifzReciterClose" title="إغلاق">✕</button>
+      </div>
+      <input type="text" id="hifzReciterSearch" class="hifz-sheet-search" placeholder="ابحث عن قارئ..." autocomplete="off">
+      <div class="hifz-reciter-list" id="hifzReciterList"></div>
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٤٤</div>
+    <div class="app-version">النسخة ٤٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2683,8 +2731,11 @@
     return out;
   }
   /* رابط صوت آية واحدة (تلاوة مشاري العفاسي، 128kbps) عبر شبكة AlQuran.cloud — آية آية لا دفعة واحدة */
-  function ayahAudioUrl(globalNumber){
-    return "https://cdn.islamic.network/quran/audio/128/ar.alafasy/"+globalNumber+".mp3";
+  /* القارئ الحالي (يُحفظ محليًا) + رابط صوت آية واحدة لأي قارئ */
+  const HIFZ_RECITER_KEY = "h2do-hifz-reciter";
+  function hifzCurrentReciter(){ return localStorage.getItem(HIFZ_RECITER_KEY) || "ar.alafasy"; }
+  function ayahAudioUrl(globalNumber, reciter){
+    return "https://cdn.islamic.network/quran/audio/128/"+(reciter||hifzCurrentReciter())+"/"+globalNumber+".mp3";
   }
   function witrChunkByRakah(ayahList, rakahs){
     const perRakah = Math.max(1, Math.ceil(ayahList.length / rakahs));
@@ -3679,7 +3730,6 @@
   /* المراجعة: استدعاء نشط (Active Recall) في وضع تركيز — تُعرض السورة والآيات مموّهة،
      يسمّع المستخدم من حفظه ثم يضغط لكشف النص، ثم يقيّم نفسه بأزرار السُّنّة النبوية الثلاثة */
   let hifzReviewingId = null;
-  let hifzRecallRevealed = false;
   const hifzRecallBox = document.getElementById("hifzRecallBox");
   const hifzRateRow = document.getElementById("hifzRateRow");
 
@@ -3714,7 +3764,6 @@
 
   async function hifzOpenReview(segmentId){
     hifzReviewingId = segmentId;
-    hifzRecallRevealed = false;
     const data = hifzData();
     const seg = data.segments.find(x=>x.id===segmentId);
     if(!seg) return;
@@ -3730,8 +3779,8 @@
     document.getElementById("hifzReviewMeta").textContent = meta;
     hifzShowSub("hifzReviewView");
 
-    /* حالة أولية: نص مموّه + أزرار التقييم مقفلة حتى الكشف */
-    hifzRecallBox.classList.remove("revealed");
+    /* حالة أولية: كل آية مموّهة على حدة + أزرار التقييم مقفلة حتى كشف كامل المقطع */
+    hifzRecallBox.classList.remove("all-revealed");
     hifzRateRow.classList.add("locked");
     const loadingEl = document.getElementById("hifzRecallLoading");
     const textEl = document.getElementById("hifzRecallText");
@@ -3754,49 +3803,91 @@
         num.className = "hifz-ayah-num";
         num.textContent = arn(a.n);
         span.appendChild(num);
-        /* الضغط على آية يشغّلها (آية آية) */
-        span.onclick = (ev)=>{ ev.stopPropagation(); hifzPlPlayIndex(idx); };
+        span.onclick = (ev)=>{ ev.stopPropagation(); hifzOnVerseTap(idx); };
         textEl.appendChild(span);
       });
       loadingEl.hidden = true; textEl.hidden = false; hintEl.hidden = false;
+      hifzRevealedIdx = -1;      /* كل الآيات مموّهة في البداية */
+      hifzApplyBlur();
       /* إظهار المشغّل فقط إن توفّرت أرقام الآيات العامة (روابط الصوت) */
-      if(ayahList.length && typeof ayahList[0].g === "number"){
-        hifzPlSetup();
-      }
+      if(ayahList.length && typeof ayahList[0].g === "number") hifzPlSetup();
     }catch(e){
       loadingEl.hidden = true; fbEl.hidden = false;
       /* عند تعذّر التحميل نفكّ قفل التقييم مباشرة لأن الكشف غير متاح */
       hifzRateRow.classList.remove("locked");
-      hifzRecallRevealed = true;
     }
   }
 
-  /* ---------- مشغّل الآيات (آية آية، لا التلاوة كاملة دفعة واحدة) ---------- */
+  /* ---------- الكشف التدريجي: تمويه كل آية على حدة (index > revealedVerseIndex) ---------- */
+  let hifzRevealedIdx = -1;
+  function hifzApplyBlur(){
+    document.querySelectorAll("#hifzRecallText .hifz-ayah").forEach(sp=>{
+      sp.classList.toggle("blurred", (+sp.dataset.idx) > hifzRevealedIdx);
+    });
+  }
+  function hifzRevealUpTo(idx){
+    if(idx > hifzRevealedIdx){ hifzRevealedIdx = idx; hifzApplyBlur(); }
+    const last = hifzReviewAyat.length - 1;
+    if(hifzRevealedIdx >= last && last >= 0){
+      hifzRateRow.classList.remove("locked"); /* اكتمل الكشف → افتح التقييم */
+      hifzRecallBox.classList.add("all-revealed");
+    }
+  }
+  function hifzRevealAll(){ hifzRevealUpTo(hifzReviewAyat.length - 1); }
+  /* الضغط على آية: يكشفها (يزيل التمويه) ويشغّلها إن توفّر الصوت */
+  function hifzOnVerseTap(idx){
+    hifzRevealUpTo(idx);
+    if(navigator.vibrate) navigator.vibrate(6);
+    if(hifzReviewAyat[idx] && typeof hifzReviewAyat[idx].g === "number") hifzPlPlayIndex(idx);
+  }
+  /* الضغط على الصندوق نفسه (خارج الآيات) يكشف الكل — اختصار مريح */
+  hifzRecallBox.onclick = ()=>{ if(!document.getElementById("hifzRecallText").hidden) hifzRevealAll(); };
+  hifzRecallBox.onkeydown = (ev)=>{ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); hifzRevealAll(); } };
+
+  /* ---------- مشغّل الآيات (آية آية، مع تكرار الآية وتكرار المقطع كاملًا) ---------- */
   let hifzReviewAyat = [];
   let hifzPlIndex = 0;
   let hifzPlPlaying = false;
-  let hifzPlRepeat = false;
+  const HIFZ_REP_CYCLE = [1, 3, 5, Infinity];
+  let hifzVerseTarget = 1;        /* تكرار الآية الواحدة */
+  let hifzSegTarget = 1;          /* تكرار المقطع كاملًا */
+  let hifzVersePlayCount = 0;     /* كم مرة شُغّلت الآية الحالية */
+  let hifzSegPlayCount = 0;       /* كم مرة اكتمل المقطع كاملًا */
   const hifzAudio = new Audio();
   hifzAudio.preload = "none";
+  let hifzAudioTriedLo = false;   /* هل جرّبنا جودة ٦٤ عند فشل ١٢٨؟ */
   const hifzPlayerEl = document.getElementById("hifzPlayer");
   const hifzPlPlayBtn = document.getElementById("hifzPlPlay");
-  const hifzPlRepeatBtn = document.getElementById("hifzPlRepeat");
   const hifzPlCounterEl = document.getElementById("hifzPlCounter");
 
+  function hifzRepLabel(t){ return t === Infinity ? "∞" : t.toLocaleString("ar-EG")+"×"; }
+  function hifzPlSyncChips(){
+    const vb = document.getElementById("hifzPlVerseRep");
+    const sb = document.getElementById("hifzPlSegRep");
+    vb.textContent = "🔁 آية: "+hifzRepLabel(hifzVerseTarget);
+    sb.textContent = "🔁 المقطع: "+hifzRepLabel(hifzSegTarget);
+    vb.classList.toggle("on", hifzVerseTarget !== 1);
+    sb.classList.toggle("on", hifzSegTarget !== 1);
+  }
   function hifzPlReset(){
     try{ hifzAudio.pause(); }catch(e){}
     hifzAudio.removeAttribute("src");
     hifzReviewAyat = [];
     hifzPlIndex = 0;
     hifzPlPlaying = false;
+    hifzVersePlayCount = 0;
+    hifzSegPlayCount = 0;
     hifzPlayerEl.hidden = true;
     hifzPlPlayBtn.textContent = "▶";
   }
   function hifzPlSetup(){
     hifzPlIndex = 0;
-    hifzPlayerEl.hidden = false;
     hifzPlPlaying = false;
+    hifzVersePlayCount = 0;
+    hifzSegPlayCount = 0;
+    hifzPlayerEl.hidden = false;
     hifzPlPlayBtn.textContent = "▶";
+    hifzPlSyncChips();
     hifzPlHighlight();
     hifzPlUpdateCounter();
   }
@@ -3811,73 +3902,165 @@
     const cur = spans[hifzPlIndex];
     if(cur && cur.scrollIntoView) try{ cur.scrollIntoView({block:"nearest", behavior:"smooth"}); }catch(e){}
   }
-  function hifzPlLoadCurrent(){
+  /* يشغّل الآية عند hifzPlIndex الحالي: يكشف تمويهها، يبرزها، ويبدأ صوتها */
+  function hifzPlayCurrent(){
     const a = hifzReviewAyat[hifzPlIndex];
     if(!a || typeof a.g !== "number") return;
-    hifzAudio.src = ayahAudioUrl(a.g);
+    hifzRevealUpTo(hifzPlIndex);   /* تشغيل الآية يكشفها (المطلوب #1) */
     hifzPlHighlight();
     hifzPlUpdateCounter();
-  }
-  function hifzPlStartPlaying(){
-    hifzPlLoadCurrent();
+    hifzAudioTriedLo = false;
+    hifzAudio.src = ayahAudioUrl(a.g);
     hifzPlPlaying = true;
     hifzPlPlayBtn.textContent = "⏸";
     const p = hifzAudio.play();
-    if(p && p.catch) p.catch(()=>{ /* تعذّر التشغيل (بلا اتصال/تفاعل) */ });
+    if(p && p.catch) p.catch(()=>{});
   }
   function hifzPlPause(){
     hifzPlPlaying = false;
     hifzPlPlayBtn.textContent = "▶";
     try{ hifzAudio.pause(); }catch(e){}
   }
-  function hifzPlToggle(){
-    if(hifzPlPlaying) hifzPlPause();
-    else hifzPlStartPlaying();
-  }
+  /* بدء تشغيل جديد بمبادرة المستخدم من آية معيّنة (يصفّر العدّادات) */
   function hifzPlPlayIndex(idx){
     if(idx < 0 || idx >= hifzReviewAyat.length) return;
     hifzPlIndex = idx;
-    hifzPlStartPlaying();
+    hifzVersePlayCount = 0;
+    hifzSegPlayCount = 0;
+    hifzPlayCurrent();
+  }
+  function hifzPlToggle(){
+    if(hifzPlPlaying){ hifzPlPause(); return; }
+    if(!hifzReviewAyat.length) return;
+    hifzVersePlayCount = 0;
+    hifzSegPlayCount = 0;
+    hifzPlayCurrent();
   }
   function hifzPlNext(){
     if(hifzPlIndex < hifzReviewAyat.length-1){
       hifzPlIndex++;
-      if(hifzPlPlaying) hifzPlStartPlaying(); else { hifzPlLoadCurrent(); }
+      hifzVersePlayCount = 0;
+      if(hifzPlPlaying) hifzPlayCurrent();
+      else { hifzRevealUpTo(hifzPlIndex); hifzPlHighlight(); hifzPlUpdateCounter(); }
     }
   }
   function hifzPlPrev(){
     if(hifzPlIndex > 0){
       hifzPlIndex--;
-      if(hifzPlPlaying) hifzPlStartPlaying(); else { hifzPlLoadCurrent(); }
+      hifzVersePlayCount = 0;
+      if(hifzPlPlaying) hifzPlayCurrent();
+      else { hifzPlHighlight(); hifzPlUpdateCounter(); }
     }
   }
-  /* عند انتهاء آية: كرّرها إن كان التكرار مفعّلًا، وإلا انتقل للآية التالية وتوقّف عند نهاية المقطع */
+  /* منطق النهاية: تكرار الآية ثم الانتقال، وعند نهاية المقطع تكرار المقطع أو التوقّف وإظهار التقييم */
   hifzAudio.addEventListener("ended", ()=>{
-    if(hifzPlRepeat){ hifzPlStartPlaying(); return; }
-    if(hifzPlIndex < hifzReviewAyat.length-1){
+    hifzVersePlayCount++;
+    if(hifzVersePlayCount < hifzVerseTarget){ hifzPlayCurrent(); return; } /* أعد الآية نفسها */
+    hifzVersePlayCount = 0;
+    if(hifzPlIndex < hifzReviewAyat.length - 1){
       hifzPlIndex++;
-      hifzPlStartPlaying();
+      hifzPlayCurrent();               /* الآية التالية */
     }else{
-      hifzPlPause();
+      /* انتهت آخر آية في المقطع */
+      hifzSegPlayCount++;
+      if(hifzSegPlayCount < hifzSegTarget){
+        hifzPlIndex = 0;
+        hifzPlayCurrent();             /* أعد المقطع من أوله */
+      }else{
+        hifzSegPlayCount = 0;
+        hifzPlPause();                 /* توقّف كامل */
+        hifzRevealAll();               /* اكشف الكل وأظهر أزرار التقييم (المطلوب #4) */
+      }
     }
+  });
+  /* عند فشل تحميل صوت القارئ بجودة ١٢٨، جرّب ٦٤ مرة واحدة */
+  hifzAudio.addEventListener("error", ()=>{
+    if(hifzAudioTriedLo || !hifzReviewAyat[hifzPlIndex]) return;
+    hifzAudioTriedLo = true;
+    const g = hifzReviewAyat[hifzPlIndex].g;
+    hifzAudio.src = "https://cdn.islamic.network/quran/audio/64/"+hifzCurrentReciter()+"/"+g+".mp3";
+    if(hifzPlPlaying){ const p = hifzAudio.play(); if(p&&p.catch) p.catch(()=>{}); }
   });
   hifzPlPlayBtn.onclick = hifzPlToggle;
   document.getElementById("hifzPlNext").onclick = hifzPlNext;
   document.getElementById("hifzPlPrev").onclick = hifzPlPrev;
-  hifzPlRepeatBtn.onclick = ()=>{
-    hifzPlRepeat = !hifzPlRepeat;
-    hifzPlRepeatBtn.classList.toggle("active", hifzPlRepeat);
+  document.getElementById("hifzPlVerseRep").onclick = ()=>{
+    hifzVerseTarget = HIFZ_REP_CYCLE[(HIFZ_REP_CYCLE.indexOf(hifzVerseTarget)+1) % HIFZ_REP_CYCLE.length];
+    hifzPlSyncChips();
   };
-  function hifzRevealRecall(){
-    if(hifzRecallRevealed) return;
-    if(document.getElementById("hifzRecallText").hidden) return; /* لا شيء لكشفه بعد */
-    hifzRecallRevealed = true;
-    hifzRecallBox.classList.add("revealed");
-    hifzRateRow.classList.remove("locked");
-    if(navigator.vibrate) navigator.vibrate(8); /* تغذية لمسية خفيفة عند الكشف */
+  document.getElementById("hifzPlSegRep").onclick = ()=>{
+    hifzSegTarget = HIFZ_REP_CYCLE[(HIFZ_REP_CYCLE.indexOf(hifzSegTarget)+1) % HIFZ_REP_CYCLE.length];
+    hifzPlSyncChips();
+  };
+
+  /* ---------- ورقة اختيار القارئ (قائمة قرّاء ديناميكية من AlQuran.cloud + بحث) ---------- */
+  const HIFZ_RECITERS_KEY = "h2do-reciters";
+  let hifzReciters = [];
+  try{ hifzReciters = JSON.parse(localStorage.getItem(HIFZ_RECITERS_KEY)) || []; }catch(e){ hifzReciters = []; }
+  /* قائمة أساسية تعمل فورًا/بلا اتصال حتى يكتمل الجلب الديناميكي */
+  const HIFZ_RECITERS_FALLBACK = [
+    {identifier:"ar.alafasy", name:"مشاري العفاسي", englishName:"Alafasy"},
+    {identifier:"ar.abdulbasitmurattal", name:"عبد الباسط (مرتّل)", englishName:"Abdul Basit"},
+    {identifier:"ar.husary", name:"محمود الحصري", englishName:"Al-Husary"},
+    {identifier:"ar.minshawi", name:"محمد المنشاوي", englishName:"Minshawi"},
+    {identifier:"ar.mahermuaiqly", name:"ماهر المعيقلي", englishName:"Maher Al Muaiqly"},
+    {identifier:"ar.abdurrahmaansudais", name:"عبدالرحمن السديس", englishName:"Sudais"},
+    {identifier:"ar.saoodshuraym", name:"سعود الشريم", englishName:"Shuraym"},
+    {identifier:"ar.hudhaify", name:"علي الحذيفي", englishName:"Al-Hudhaify"},
+    {identifier:"ar.ahmedajamy", name:"أحمد العجمي", englishName:"Al-Ajamy"}
+  ];
+  function hifzReciterName(id){
+    const r = (hifzReciters.concat(HIFZ_RECITERS_FALLBACK)).find(x=>x.identifier===id);
+    return r ? r.name : id;
   }
-  hifzRecallBox.onclick = hifzRevealRecall;
-  hifzRecallBox.onkeydown = (ev)=>{ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); hifzRevealRecall(); } };
+  function hifzLoadReciters(){
+    fetch("https://api.alquran.cloud/v1/edition?format=audio&language=ar")
+      .then(r=>r.json())
+      .then(j=>{
+        if(j && Array.isArray(j.data) && j.data.length){
+          hifzReciters = j.data.map(e=>({identifier:e.identifier, name:e.name, englishName:e.englishName}));
+          try{ localStorage.setItem(HIFZ_RECITERS_KEY, JSON.stringify(hifzReciters)); }catch(e){}
+        }
+      }).catch(()=>{});
+  }
+  hifzLoadReciters();
+  const hifzReciterSheet = document.getElementById("hifzReciterSheet");
+  function hifzRenderReciterList(filter){
+    const list = document.getElementById("hifzReciterList");
+    const q = (filter||"").trim();
+    const src = (hifzReciters.length ? hifzReciters : HIFZ_RECITERS_FALLBACK);
+    const cur = hifzCurrentReciter();
+    const items = src.filter(r=> !q || (r.name && r.name.indexOf(q)!==-1) || (r.englishName && r.englishName.toLowerCase().indexOf(q.toLowerCase())!==-1));
+    list.innerHTML = "";
+    if(!items.length){ list.innerHTML = '<div class="hifz-reciter-empty">لا يوجد قارئ مطابق</div>'; return; }
+    items.forEach(r=>{
+      const opt = document.createElement("div");
+      opt.className = "hifz-reciter-opt"+(r.identifier===cur?" active":"");
+      opt.innerHTML = "<span>"+(r.name||r.identifier)+"</span>"+(r.englishName?"<small>"+r.englishName+"</small>":"");
+      opt.onclick = ()=> hifzSelectReciter(r.identifier);
+      list.appendChild(opt);
+    });
+  }
+  function hifzOpenReciterSheet(){
+    document.getElementById("hifzReciterSearch").value = "";
+    hifzRenderReciterList("");
+    hifzReciterSheet.hidden = false;
+  }
+  function hifzCloseReciterSheet(){ hifzReciterSheet.hidden = true; }
+  function hifzSelectReciter(id){
+    localStorage.setItem(HIFZ_RECITER_KEY, id);
+    hifzCloseReciterSheet();
+    hifzShowToast("القارئ: "+hifzReciterName(id));
+    /* إعادة تحميل الآية الحالية بالقارئ الجديد */
+    if(hifzReviewAyat.length){
+      if(hifzPlPlaying) hifzPlayCurrent();
+      else{ hifzAudioTriedLo = false; const a = hifzReviewAyat[hifzPlIndex]; if(a) hifzAudio.src = ayahAudioUrl(a.g); }
+    }
+  }
+  document.getElementById("hifzPlReciter").onclick = hifzOpenReciterSheet;
+  document.getElementById("hifzReciterClose").onclick = hifzCloseReciterSheet;
+  document.getElementById("hifzReciterSearch").oninput = (e)=> hifzRenderReciterList(e.target.value);
+  hifzReciterSheet.onclick = (ev)=>{ if(ev.target === hifzReciterSheet) hifzCloseReciterSheet(); };
 
   document.querySelectorAll(".hifz-rate-row button").forEach(b=>{
     b.onclick = async ()=>{
