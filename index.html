@@ -362,6 +362,23 @@
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;
   }
 
+  /* ===== بطاقة القرآن ===== */
+  .qc-werd{background:var(--accent-soft);border-radius:14px;padding:1rem;margin-bottom:1.1rem}
+  .qc-werd-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.5rem}
+  .qc-werd-head span:first-child{font-size:.9rem;font-weight:700;color:var(--accent)}
+  .qc-werd-chip{font-size:.76rem;font-weight:600;color:var(--accent)}
+  .qc-werd-chip.done{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2));padding:.15rem .7rem;border-radius:99px}
+  .qc-werd-bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:.5rem 0}
+  .qc-werd-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .4s}
+  .qc-werd-stats{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+  .qc-werd button{
+    display:block;width:100%;border:none;border-radius:12px;padding:.7rem;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;
+  }
+  .qc-werd button:active{transform:scale(.99)}
+  .qc-empty{font-size:.8rem;color:var(--muted);text-align:center;padding:.6rem 0}
+
   /* ===== Water ===== */
   .water{display:flex;justify-content:center;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
   .cup{
@@ -926,6 +943,34 @@
         </div>
       </div>
 
+      <div class="card" id="quranCard">
+        <div class="ib-head">
+          <div>
+            <h2 class="ib-title"><span class="ico">📖</span> القرآن</h2>
+            <div class="ib-sub">اجعل لسانك رطبًا بذكر الله وكتابه 🌿</div>
+          </div>
+        </div>
+
+        <div class="qc-werd">
+          <div class="qc-werd-head">
+            <span>📗 الورد اليومي (كامل المصحف)</span>
+            <span class="qc-werd-chip" id="qcWerdChip">٠ / ٥ صفحات اليوم</span>
+          </div>
+          <div class="qc-werd-bar"><i id="qcWerdFill"></i></div>
+          <div class="qc-werd-stats">
+            <span>آخر صفحة: <b id="qcWerdLastPage">١</b></span>
+            <span>الهدف اليومي: <b id="qcWerdTarget">٥</b></span>
+          </div>
+          <button id="qcWerdBtn">▶ متابعة القراءة</button>
+        </div>
+
+        <div class="ib-group">
+          <div class="ib-group-head"><span>📘 قراءة سور مخصّصة</span><button class="ib-add" id="qcAddSurah" title="إضافة قراءة سورة">＋</button></div>
+          <ul class="checklist" id="qcList"></ul>
+          <div class="qc-empty" id="qcEmpty">أضف سورة أو جزءًا لتتبّع قراءته صفحة بصفحة 📘</div>
+        </div>
+      </div>
+
       <div class="card" id="sportCard">
         <h2><span class="ico">🏃</span> الرياضة</h2>
 
@@ -1195,7 +1240,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٣</div>
+    <div class="app-version">النسخة ٣٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1290,6 +1335,10 @@
   function wAllItems(){
     const hidden = wHidden();
     return WORSHIP.filter(w=>hidden.indexOf(w.id) === -1).concat(wCustom());
+  }
+  /* بنود بطاقة «العبادات» فقط (أذكار/صلاة/أوراد عادية) — الورد اليومي وقراءة السور المخصّصة لها بطاقة «القرآن» المستقلة */
+  function ibOnlyItems(){
+    return wAllItems().filter(w=> w.id !== "werd" && w.kind !== "quran");
   }
   /* حذف بند: مخصّص يُزال نهائيًا، أصلي في مجموعة الأوراد يُخفى فقط (قابل لإرجاعه مستقبلًا لو احتجنا) */
   function ibRemoveItem(w){
@@ -2009,6 +2058,54 @@
     qsSaveItem(w);
     qsRenderOverlay();
   };
+  document.getElementById("qcWerdBtn").onclick = openQuran;
+  document.getElementById("qcAddSurah").onclick = ibAddQuranItem;
+
+  /* بطاقة «القرآن»: تحدّث حالة الإنجاز الفعلية (للحلقة/الإحصائيات اليومية) وترسم محتوى البطاقة.
+     لا تُحدَّث state.worship إلا عند تصفّح يوم اليوم الفعلي، حتى لا يُكتب تقدّم اليوم خطأً في يوم آخر محفوظ. */
+  function renderQuranCard(){
+    const isToday = currentDate === todayStr();
+    const arn = n => n.toLocaleString("ar-EG");
+
+    const q = qLoad();
+    const readToday = Math.max(0, q.page - q.startPage);
+    const werdDone = readToday >= q.target;
+    if(isToday) state.worship.werd = werdDone;
+    document.getElementById("qcWerdLastPage").textContent = arn(q.page);
+    document.getElementById("qcWerdTarget").textContent = arn(q.target);
+    const fill = Math.min(100, Math.round(readToday / q.target * 100));
+    document.getElementById("qcWerdFill").style.width = fill+"%";
+    const chip = document.getElementById("qcWerdChip");
+    chip.textContent = werdDone ? "✅ تم إنجاز ورد اليوم" : arn(readToday)+" / "+arn(q.target)+" صفحات اليوم";
+    chip.classList.toggle("done", werdDone);
+    document.getElementById("qcWerdBtn").textContent = "▶ متابعة القراءة من صفحة "+arn(q.page);
+
+    const list = wCustom().filter(w=> w.kind === "quran");
+    const ul = document.getElementById("qcList");
+    ul.innerHTML = "";
+    list.forEach(w=>{
+      const current = Math.min(w.currentPage, w.endPage);
+      const done = !!w.completed || w.currentPage > w.endPage;
+      if(isToday) state.worship[w.id] = done;
+      const li = document.createElement("li");
+      li.className = "tally-row";
+      const chk = document.createElement("span");
+      chk.className = "chk"+(done?" on":"");
+      chk.textContent = "✔";
+      const lbl = document.createElement("span");
+      lbl.className = "lbl"+(done?" done-line":"");
+      lbl.textContent = (w.icon||"📘")+" "+w.label;
+      lbl.onclick = ()=> openSurah(w.id);
+      const rchip = document.createElement("span");
+      rchip.className = "read-chip";
+      rchip.textContent = done ? "✅ تمت" : arn(current)+"/"+arn(w.endPage);
+      rchip.onclick = ()=> openSurah(w.id);
+      li.append(chk, lbl, rchip);
+      li.appendChild(ibMakeDelBtn(w));
+      ul.appendChild(li);
+    });
+    document.getElementById("qcEmpty").hidden = list.length > 0;
+  }
 
   /* ---------- Hijri date ---------- */
   function renderHijri(dateStr){
@@ -2216,30 +2313,6 @@
   function ibRenderItem(w, ul){
     const li = document.createElement("li");
 
-    /* قراءة سورة/ورد مخصّص من القرآن: صفحة بداية/نهاية وهدف يومي، بدل مربع صح عادي */
-    if(w.kind === "quran"){
-      li.classList.add("tally-row");
-      const arn = n => n.toLocaleString("ar-EG");
-      const current = Math.min(w.currentPage, w.endPage);
-      const done = !!w.completed || w.currentPage > w.endPage;
-      state.worship[w.id] = done;
-      const chk = document.createElement("span");
-      chk.className = "chk"+(done?" on":"");
-      chk.textContent = "✔";
-      const lbl = document.createElement("span");
-      lbl.className = "lbl"+(done?" done-line":"");
-      lbl.textContent = (w.icon||"📘")+" "+w.label;
-      lbl.onclick = ()=> openSurah(w.id);
-      const chip = document.createElement("span");
-      chip.className = "read-chip";
-      chip.textContent = done ? "✅ تمت" : arn(current)+"/"+arn(w.endPage);
-      chip.onclick = ()=> openSurah(w.id);
-      li.append(chk, lbl, chip);
-      li.appendChild(ibMakeDelBtn(w));
-      ul.appendChild(li);
-      return;
-    }
-
     /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
     if(w.id === "istighfar"){
       li.classList.add("tally-row");
@@ -2279,31 +2352,6 @@
       ctrl.append(tally, rst);
       if(w.custom || w.group === "awrad") ctrl.appendChild(ibMakeDelBtn(w));
       li.append(chk, lbl, ctrl);
-      ul.appendChild(li);
-      return;
-    }
-
-    /* الورد اليومي من القرآن: في يوم اليوم يُعرض كشريط تقدم يفتح قارئ المصحف داخل التطبيق،
-       وفي الأيام الماضية يبقى مربع صح عادي (سجل تاريخي لذلك اليوم) */
-    if(w.id === "werd" && currentDate === todayStr()){
-      const q = qLoad();
-      const arn = n => n.toLocaleString("ar-EG");
-      const readToday = Math.max(0, q.page - q.startPage);
-      const done = readToday >= q.target;
-      state.worship.werd = done;
-      const chk = document.createElement("span");
-      chk.className = "chk"+(done?" on":"");
-      chk.textContent = "✔";
-      const lbl = document.createElement("span");
-      lbl.className = "lbl"+(done?" done-line":"");
-      lbl.textContent = w.label;
-      lbl.onclick = openQuran;
-      const read = document.createElement("span");
-      read.className = "read-chip";
-      read.textContent = "📖 "+arn(readToday)+"/"+arn(q.target);
-      read.onclick = openQuran;
-      li.append(chk, lbl, read);
-      li.appendChild(ibMakeDelBtn(w));
       ul.appendChild(li);
       return;
     }
@@ -2383,20 +2431,9 @@
   }
 
   function ibRemainLabel(w){
-    if(w.kind === "quran"){
-      if(!!w.completed || w.currentPage > w.endPage) return null;
-      const remaining = Math.max(0, w.endPage - w.currentPage + 1);
-      return (w.icon||"📘")+" "+w.label+" (متبقي "+remaining.toLocaleString("ar-EG")+" صفحة)";
-    }
     if(w.id === "istighfar"){
       const left = Math.max(0, 100 - (state.istighfar||0));
       return left ? w.label+" (متبقي "+left.toLocaleString("ar-EG")+")" : null;
-    }
-    if(w.id === "werd" && currentDate === todayStr()){
-      const q = qLoad();
-      const readToday = Math.max(0, q.page - q.startPage);
-      const left = Math.max(0, q.target - readToday);
-      return left ? w.label+" (متبقي "+left.toLocaleString("ar-EG")+" صفحة)" : null;
     }
     if(w.target && w.target > 1){
       const left = Math.max(0, w.target - ((state.wCounts && state.wCounts[w.id]) || 0));
@@ -2411,12 +2448,14 @@
     IB_GROUPS.forEach(g=>{
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
-      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1).forEach(w=> ibRenderItem(w, ul));
-      custom.filter(w=>w.group === g).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd").forEach(w=> ibRenderItem(w, ul));
+      custom.filter(w=>w.group === g && w.kind !== "quran").forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
     });
 
-    /* إحصائيات البطاقة: الحلقة + العدّاد + المتبقي */
-    const all = wAllItems();
+    renderQuranCard();
+
+    /* إحصائيات البطاقة: الحلقة + العدّاد + المتبقي (الورد اليومي وقراءة السور المخصّصة لهما بطاقة مستقلة) */
+    const all = ibOnlyItems();
     const done = all.filter(w=>!!state.worship[w.id]);
     const total = all.length;
     const pct = total ? Math.round(done.length/total*100) : 0;
@@ -2462,13 +2501,9 @@
     state.sunnahDone = !state.sunnahDone;
     save(); renderWorship();
   };
-  document.querySelectorAll(".ib-add").forEach(btn=>{
+  document.querySelectorAll(".ib-add[data-group]").forEach(btn=>{
     btn.onclick = ()=>{
       const group = btn.dataset.group;
-      if(group === "awrad" && confirm("📘 هل تريد إضافة «قراءة سورة/ورد من القرآن» بصفحة بداية ونهاية وهدف يومي؟\n\nموافق = قراءة قرآن، إلغاء = ورد عادي")){
-        ibAddQuranItem();
-        return;
-      }
       const gname = group === "adhkar" ? "الأذكار" : group === "salah" ? "الصلاة والنوافل" : "الأوراد اليومية";
       const label = prompt("أضف بندًا جديدًا إلى «"+gname+"»:");
       if(!label || !label.trim()) return;
