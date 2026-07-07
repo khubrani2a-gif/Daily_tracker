@@ -150,9 +150,18 @@
     transition:.15s;
   }
   .date-nav button:hover{background:rgba(255,255,255,.28)}
-  .date-nav input[type=date]{
-    border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:.45rem .65rem;
-    background:var(--paper);color:var(--ink);font-family:inherit;font-size:.95rem;
+  .date-pill{
+    display:flex;align-items:center;gap:.35rem;
+    border:1px solid rgba(255,255,255,.35);border-radius:10px;
+    background:var(--paper);padding:0 .55rem;
+  }
+  html.dark .date-pill{
+    background:#123a36;border-color:rgba(255,255,255,.22);
+  }
+  .date-pill-ico{font-size:.85rem;flex-shrink:0;opacity:.85}
+  .date-pill input[type=date]{
+    border:none;background:none;padding:.45rem .1rem;
+    color:var(--ink);font-family:inherit;font-size:.95rem;
     color-scheme:light dark;
   }
   .hijri{color:#fdf3d6;font-size:.92rem;font-weight:600;margin-top:.35rem;text-align:left}
@@ -803,7 +812,10 @@
           <button id="statsBtn" title="الإحصائيات وشبكة السنة">📊</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
-          <input type="date" id="datePicker">
+          <span class="date-pill">
+            <span class="date-pill-ico">📅</span>
+            <input type="date" id="datePicker">
+          </span>
           <button id="nextDay" title="اليوم التالي">‹</button>
         </div>
         <div class="hijri" id="hijriDate"></div>
@@ -1090,7 +1102,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٠</div>
+    <div class="app-version">النسخة ٣١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1141,11 +1153,38 @@
   ];
   const IB_GROUPS = ["adhkar","salah","awrad"];
   const CUSTOM_WORSHIP_KEY = "h2do-custom-worship";
+  const HIDDEN_WORSHIP_KEY = "h2do-hidden-worship";
   function wCustom(){
     try{ return JSON.parse(localStorage.getItem(CUSTOM_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
   }
   function wCustomSave(list){ localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(list)); }
-  function wAllItems(){ return WORSHIP.concat(wCustom()); }
+  function wHidden(){
+    try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
+  }
+  function wHiddenSave(list){ localStorage.setItem(HIDDEN_WORSHIP_KEY, JSON.stringify(list)); }
+  function wAllItems(){
+    const hidden = wHidden();
+    return WORSHIP.filter(w=>hidden.indexOf(w.id) === -1).concat(wCustom());
+  }
+  /* حذف بند: مخصّص يُزال نهائيًا، أصلي في مجموعة الأوراد يُخفى فقط (قابل لإرجاعه مستقبلًا لو احتجنا) */
+  function ibRemoveItem(w){
+    if(!confirm("حذف «"+w.label+"» من القائمة؟")) return;
+    if(w.custom){
+      wCustomSave(wCustom().filter(x=>x.id !== w.id));
+    }else{
+      const hidden = wHidden();
+      if(hidden.indexOf(w.id) === -1){ hidden.push(w.id); wHiddenSave(hidden); }
+    }
+    renderWorship(); renderProgress();
+  }
+  function ibMakeDelBtn(w){
+    const del = document.createElement("button");
+    del.className = "ib-custom-del";
+    del.textContent = "🗑️";
+    del.title = "حذف";
+    del.onclick = (ev)=>{ ev.stopPropagation(); ibRemoveItem(w); };
+    return del;
+  }
 
   /* سنة اليوم — تدوير يومي */
   const SUNAN_TIPS = [
@@ -1777,6 +1816,7 @@
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
       ctrl.append(tally, rst);
+      if(w.custom || w.group === "awrad") ctrl.appendChild(ibMakeDelBtn(w));
       li.append(chk, lbl, ctrl);
       ul.appendChild(li);
       return;
@@ -1821,19 +1861,7 @@
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
       ctrl.append(tally, rst);
-      if(w.custom){
-        const del = document.createElement("button");
-        del.className = "ib-custom-del";
-        del.textContent = "🗑️";
-        del.title = "حذف";
-        del.onclick = (ev)=>{
-          ev.stopPropagation();
-          if(!confirm("حذف «"+w.label+"»؟")) return;
-          wCustomSave(wCustom().filter(x=>x.id !== w.id));
-          renderWorship(); renderProgress();
-        };
-        ctrl.appendChild(del);
-      }
+      if(w.custom || w.group === "awrad") ctrl.appendChild(ibMakeDelBtn(w));
       li.append(chk, lbl, ctrl);
       ul.appendChild(li);
       return;
@@ -1863,20 +1891,8 @@
 
     lbl.onclick = chk.onclick;
     li.appendChild(chk); li.appendChild(lbl);
-    /* عناصر مخصّصة يضيفها المستخدم: زر حذف صغير */
-    if(w.custom){
-      const del = document.createElement("button");
-      del.className = "ib-custom-del";
-      del.textContent = "🗑️";
-      del.title = "حذف";
-      del.onclick = (ev)=>{
-        ev.stopPropagation();
-        if(!confirm("حذف «"+w.label+"»؟")) return;
-        wCustomSave(wCustom().filter(x=>x.id !== w.id));
-        renderWorship(); renderProgress();
-      };
-      li.appendChild(del);
-    }
+    /* عناصر مخصّصة، وكل عناصر الأوراد اليومية لتناسق الشكل: زر حذف صغير */
+    if(w.custom || w.group === "awrad") li.appendChild(ibMakeDelBtn(w));
     ul.appendChild(li);
   }
 
@@ -1894,10 +1910,11 @@
 
   function renderWorship(){
     const custom = wCustom();
+    const hidden = wHidden();
     IB_GROUPS.forEach(g=>{
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
-      WORSHIP.filter(w=>w.group === g).forEach(w=> ibRenderItem(w, ul));
+      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1).forEach(w=> ibRenderItem(w, ul));
       custom.filter(w=>w.group === g).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
     });
 
