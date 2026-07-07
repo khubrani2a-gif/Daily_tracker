@@ -724,6 +724,7 @@
   .adhkar-head h2{
     font-family:"Thmanyah Display","Thmanyah Sans",serif;
     color:var(--accent);font-size:1.25rem;
+    flex:1;min-width:0;text-align:center;
   }
   .ad-btn{
     width:38px;height:38px;border-radius:11px;border:1px solid var(--line);
@@ -780,6 +781,39 @@
     background:var(--accent-soft);color:var(--accent);border-radius:14px;
     padding:.9rem;text-align:center;font-weight:700;margin-bottom:.8rem;
   }
+
+  /* ===== الوتر وقيام الليل ===== */
+  .witr-q{font-size:.92rem;font-weight:700;color:var(--ink);text-align:center;margin:.4rem 0 .9rem}
+  .witr-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;margin-bottom:1rem}
+  .witr-targets button{
+    border:1.5px solid var(--line);background:var(--paper);border-radius:14px;padding:.9rem .6rem;
+    cursor:pointer;font-family:inherit;text-align:center;transition:.15s;
+  }
+  .witr-targets button b{display:block;font-size:.98rem;color:var(--ink);margin-bottom:.25rem;font-weight:700}
+  .witr-targets button small{font-size:.72rem;color:var(--muted)}
+  .witr-targets button:hover{border-color:var(--accent-2);background:var(--accent-soft)}
+  .witr-targets button.active{border-color:var(--accent);background:var(--accent-soft)}
+  .witr-targets button.active b{color:var(--accent)}
+  .witr-pool-chips{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-bottom:.5rem}
+  .witr-pool-chips span{
+    border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;font-size:.74rem;color:var(--muted);
+    cursor:pointer;transition:.15s;
+  }
+  .witr-pool-chips span.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .witr-fav-edit{
+    display:block;width:100%;text-align:center;font-size:.74rem;color:var(--accent);
+    margin-bottom:1.1rem;cursor:pointer;background:none;border:none;font-family:inherit;
+  }
+  .witr-suggestion{background:var(--accent-soft);border-radius:16px;padding:1.1rem;text-align:center}
+  .witr-sug-head{font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .witr-sug-surah{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--ink);margin-bottom:.3rem;line-height:1.5}
+  .witr-sug-range{font-size:.88rem;color:var(--muted);margin-bottom:.5rem;line-height:1.6}
+  .witr-sug-meta{font-size:.76rem;color:var(--muted);margin-bottom:1rem}
+  .witr-change-btn{
+    display:block;width:100%;margin-top:.5rem;border:1px solid var(--line);background:var(--paper);
+    color:var(--muted);border-radius:12px;padding:.6rem;font-family:inherit;font-size:.82rem;cursor:pointer;
+  }
+  .witr-change-btn:hover{border-color:var(--accent-2);color:var(--accent)}
 
   /* ===== الاحتفال ===== */
   .confetti{
@@ -1238,9 +1272,59 @@
     </div>
   </div>
 
+  <!-- ===== الوتر وقيام الليل ===== -->
+  <div class="adhkar-overlay" id="witrOverlay" hidden>
+    <div class="adhkar-sheet">
+      <div class="adhkar-top">
+        <div class="adhkar-head">
+          <button class="ad-btn ad-close" id="witrClose" title="إغلاق">✕ إغلاق</button>
+          <h2>🌙 الوتر وقيام الليل</h2>
+          <span></span>
+        </div>
+      </div>
+
+      <div id="witrDoneView" hidden>
+        <div class="q-done-msg" id="witrDoneMsg"></div>
+      </div>
+
+      <div id="witrPickView">
+        <div class="witr-q">ما هدفك الليلة؟</div>
+        <div class="witr-targets" id="witrTargets">
+          <button data-t="10"><b>🌱 10 آيات</b><small>تُكتب من الذاكرين</small></button>
+          <button data-t="100"><b>🌿 100 آية</b><small>تُكتب من القانتين</small></button>
+          <button data-t="1000"><b>👑 1000 آية</b><small>تُكتب من المقنطرين</small></button>
+        </div>
+
+        <div class="witr-pool-chips" id="witrPoolChips">
+          <span data-p="all">جميع السور</span>
+          <span data-p="juzamma">جزء عمّ</span>
+          <span data-p="mufassal">المفصّل</span>
+          <span data-p="fav">السور المفضّلة</span>
+        </div>
+        <button class="witr-fav-edit" id="witrFavEdit">✎ تعديل السور المفضّلة</button>
+
+        <div class="witr-suggestion" id="witrSuggestion" hidden>
+          <div class="witr-sug-head">📖 اقتراح الليلة</div>
+          <div class="witr-sug-surah" id="witrSugSurah"></div>
+          <div class="witr-sug-range" id="witrSugRange"></div>
+          <div class="witr-sug-meta" id="witrSugMeta"></div>
+          <button class="adhkar-done-btn" id="witrStartBtn">▶ ابدأ القراءة</button>
+          <button class="witr-change-btn" id="witrChangeBtn">🔄 تغيير الاقتراح</button>
+        </div>
+      </div>
+
+      <div class="q-reader" id="witrReader" hidden>
+        <div class="q-nav"><span id="witrReaderTitle"></span></div>
+        <a class="q-external" id="witrExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
+        <iframe class="q-iframe" id="witrIframe" loading="lazy" title="القرآن الكريم"></iframe>
+        <button class="adhkar-done-btn" id="witrFinishBtn">✓ أنهيت القراءة الليلة</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٣٤</div>
+    <div class="app-version">النسخة ٣٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1626,6 +1710,7 @@
       weight: "",
       sleep: "",
       adhkar: {am:[], pm:[], sleep:[], wake:[], salah:[]},
+      witr: null,
       celebrated: false,
       sunnahDone: false,
       updatedAt: 0
@@ -1712,6 +1797,7 @@
         pullRemote(currentDate);
         qPullRemote();
         wCustomPullRemote();
+        witrPullRemote();
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
         syncStatus.textContent = "";
@@ -2107,6 +2193,253 @@
     document.getElementById("qcEmpty").hidden = list.length > 0;
   }
 
+  /* ---------- الوتر وقيام الليل: اقتراح آيات تلقائي حسب الهدف الليلي ---------- */
+  const WITR_SURAHS = [
+    [1,"الفاتحة",7],[2,"البقرة",286],[3,"آل عمران",200],[4,"النساء",176],[5,"المائدة",120],
+    [6,"الأنعام",165],[7,"الأعراف",206],[8,"الأنفال",75],[9,"التوبة",129],[10,"يونس",109],
+    [11,"هود",123],[12,"يوسف",111],[13,"الرعد",43],[14,"إبراهيم",52],[15,"الحجر",99],
+    [16,"النحل",128],[17,"الإسراء",111],[18,"الكهف",110],[19,"مريم",98],[20,"طه",135],
+    [21,"الأنبياء",112],[22,"الحج",78],[23,"المؤمنون",118],[24,"النور",64],[25,"الفرقان",77],
+    [26,"الشعراء",227],[27,"النمل",93],[28,"القصص",88],[29,"العنكبوت",69],[30,"الروم",60],
+    [31,"لقمان",34],[32,"السجدة",30],[33,"الأحزاب",73],[34,"سبأ",54],[35,"فاطر",45],
+    [36,"يس",83],[37,"الصافات",182],[38,"ص",88],[39,"الزمر",75],[40,"غافر",85],
+    [41,"فصلت",54],[42,"الشورى",53],[43,"الزخرف",89],[44,"الدخان",59],[45,"الجاثية",37],
+    [46,"الأحقاف",35],[47,"محمد",38],[48,"الفتح",29],[49,"الحجرات",18],[50,"ق",45],
+    [51,"الذاريات",60],[52,"الطور",49],[53,"النجم",62],[54,"القمر",55],[55,"الرحمن",78],
+    [56,"الواقعة",96],[57,"الحديد",29],[58,"المجادلة",22],[59,"الحشر",24],[60,"الممتحنة",13],
+    [61,"الصف",14],[62,"الجمعة",11],[63,"المنافقون",11],[64,"التغابن",18],[65,"الطلاق",12],
+    [66,"التحريم",12],[67,"الملك",30],[68,"القلم",52],[69,"الحاقة",52],[70,"المعارج",44],
+    [71,"نوح",28],[72,"الجن",28],[73,"المزمل",20],[74,"المدثر",56],[75,"القيامة",40],
+    [76,"الإنسان",31],[77,"المرسلات",50],[78,"النبأ",40],[79,"النازعات",46],[80,"عبس",42],
+    [81,"التكوير",29],[82,"الانفطار",19],[83,"المطففين",36],[84,"الانشقاق",25],[85,"البروج",22],
+    [86,"الطارق",17],[87,"الأعلى",19],[88,"الغاشية",26],[89,"الفجر",30],[90,"البلد",20],
+    [91,"الشمس",15],[92,"الليل",21],[93,"الضحى",11],[94,"الشرح",8],[95,"التين",8],
+    [96,"العلق",19],[97,"القدر",5],[98,"البينة",8],[99,"الزلزلة",8],[100,"العاديات",11],
+    [101,"القارعة",11],[102,"التكاثر",8],[103,"العصر",3],[104,"الهمزة",9],[105,"الفيل",5],
+    [106,"قريش",4],[107,"الماعون",7],[108,"الكوثر",3],[109,"الكافرون",6],[110,"النصر",3],
+    [111,"المسد",5],[112,"الإخلاص",4],[113,"الفلق",5],[114,"الناس",6]
+  ].map(([n,name,ayat])=>({n,name,ayat}));
+  const WITR_TARGET_LABEL = {10:"الذاكرين", 100:"القانتين", 1000:"المقنطرين"};
+  function witrMinutes(n){ return Math.max(1, Math.round(n*0.3)); }
+
+  const WITR_META_KEY = "h2do-witr-meta";
+  function witrMeta(){
+    try{ return Object.assign({favorites:[], history:[], updatedAt:0}, JSON.parse(localStorage.getItem(WITR_META_KEY)) || {}); }
+    catch(e){ return {favorites:[], history:[], updatedAt:0}; }
+  }
+  function witrMetaSave(meta){
+    meta.updatedAt = Date.now();
+    localStorage.setItem(WITR_META_KEY, JSON.stringify(meta));
+    witrPushRemote(meta);
+  }
+  function witrFavorites(){ return witrMeta().favorites; }
+  function witrHistory(){ return witrMeta().history; }
+  function witrPushToHistory(key){
+    const meta = witrMeta();
+    meta.history.push({key, ts:Date.now()});
+    if(meta.history.length > 30) meta.history = meta.history.slice(-30);
+    witrMetaSave(meta);
+  }
+  /* مزامنة سجل الاقتراحات والسور المفضّلة عبر الأجهزة */
+  function witrDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("witr"); }
+  function witrPushRemote(meta){
+    if(!db || !user) return;
+    witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
+  }
+  function witrPullRemote(){
+    if(!db || !user) return;
+    witrDocRef().get().then(snap=>{
+      if(!snap.exists) return;
+      const remote = snap.data();
+      const local = witrMeta();
+      if((remote.updatedAt||0) > (local.updatedAt||0)){
+        localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
+      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+        witrPushRemote(local);
+      }
+    }).catch(()=>{});
+  }
+
+  function witrEditFavorites(){
+    const current = witrFavorites();
+    const currentNames = current.map(n=> (WITR_SURAHS[n-1]||{}).name).filter(Boolean).join("، ");
+    const val = prompt("اكتب أسماء السور المفضّلة لديك، مفصولة بفواصل (مثال: الملك، يس، الرحمن):", currentNames);
+    if(val === null) return;
+    const tokens = val.split(/[,،]/).map(t=>t.trim()).filter(Boolean);
+    const picked = [];
+    tokens.forEach(tok=>{
+      const asNum = parseInt(tok,10);
+      if(asNum >= 1 && asNum <= 114){ picked.push(asNum); return; }
+      const found = WITR_SURAHS.find(s=> s.name === tok || s.name.indexOf(tok) !== -1);
+      if(found) picked.push(found.n);
+    });
+    const meta = witrMeta();
+    meta.favorites = Array.from(new Set(picked));
+    witrMetaSave(meta);
+    witrRenderPickView();
+  }
+
+  function witrPoolIndexes(pool){
+    if(pool === "juzamma") return WITR_SURAHS.filter(s=>s.n>=78).map(s=>s.n);
+    if(pool === "mufassal") return WITR_SURAHS.filter(s=>s.n>=49).map(s=>s.n);
+    if(pool === "fav"){ const fav = witrFavorites(); return fav.length ? fav.slice() : WITR_SURAHS.map(s=>s.n); }
+    return WITR_SURAHS.map(s=>s.n);
+  }
+  /* يبني نطاق آيات كاملاً بدءًا من نقطة معيّنة، ويمتد لسور تالية (بترتيب المصحف) إذا لزم لبلوغ الهدف */
+  function witrBuildRange(startSurahN, startAyah, target){
+    let remaining = target, curN = startSurahN, curAyah = startAyah;
+    const parts = [];
+    while(remaining > 0){
+      const s = WITR_SURAHS[curN-1];
+      const avail = s.ayat - curAyah + 1;
+      if(avail >= remaining){
+        parts.push({n:curN, name:s.name, from:curAyah, to:curAyah+remaining-1});
+        remaining = 0;
+      }else{
+        parts.push({n:curN, name:s.name, from:curAyah, to:s.ayat});
+        remaining -= avail;
+        curN = curN >= 114 ? 1 : curN+1;
+        curAyah = 1;
+      }
+    }
+    return parts;
+  }
+  function witrGenerate(target, pool){
+    const indexes = witrPoolIndexes(pool);
+    const hist = witrHistory().slice(-15);
+    let best = null;
+    for(let attempt=0; attempt<10; attempt++){
+      const startN = indexes[Math.floor(Math.random()*indexes.length)];
+      const s = WITR_SURAHS[startN-1];
+      const startAyah = 1 + Math.floor(Math.random()*s.ayat);
+      const parts = witrBuildRange(startN, startAyah, target);
+      const key = parts[0].n+":"+parts[0].from+":"+parts[parts.length-1].n+":"+parts[parts.length-1].to;
+      best = {target, pool, parts, key};
+      if(!hist.some(h=>h.key === key)) break;
+    }
+    return best;
+  }
+  function witrPartsText(parts){
+    const arn = n=>n.toLocaleString("ar-EG");
+    if(parts.length === 1){
+      const p = parts[0];
+      return { surah: "سورة "+p.name, range: "من الآية "+arn(p.from)+" إلى الآية "+arn(p.to) };
+    }
+    const first = parts[0], last = parts[parts.length-1];
+    const surah = "من سورة "+first.name+" إلى سورة "+last.name;
+    return { surah, range: "من آية "+arn(first.from)+" (سورة "+first.name+") إلى آية "+arn(last.to)+" (سورة "+last.name+") — "+arn(parts.length)+" سور" };
+  }
+
+  let witrPool = "all";
+  const witrOverlay = document.getElementById("witrOverlay");
+  function openWitr(){
+    witrOverlay.hidden = false;
+    witrOverlay.scrollTop = 0;
+    document.body.style.overflow = "hidden";
+    document.getElementById("witrReader").hidden = true;
+    document.getElementById("witrPickView").hidden = false;
+    witrRenderAll();
+    try{ history.pushState({witr:true}, ""); }catch(e){}
+  }
+  function closeWitrUI(){
+    witrOverlay.hidden = true;
+    document.body.style.overflow = "";
+    renderWorship(); renderProgress();
+  }
+  function closeWitr(){
+    if(history.state && history.state.witr) history.back();
+    else closeWitrUI();
+  }
+  window.addEventListener("popstate", ()=>{ if(!witrOverlay.hidden) closeWitrUI(); });
+  document.getElementById("witrClose").onclick = closeWitr;
+
+  function witrRenderAll(){
+    const done = !!(state.witr && state.witr.completed);
+    document.getElementById("witrDoneView").hidden = !done;
+    document.getElementById("witrPickView").hidden = done;
+    if(done) witrRenderDone(); else witrRenderPickView();
+  }
+  function witrRenderDone(){
+    const w = state.witr;
+    const arn = n => n.toLocaleString("ar-EG");
+    const txt = witrPartsText(w.parts);
+    document.getElementById("witrDoneMsg").innerHTML =
+      "✅ تم الإنجاز<br><b>"+txt.surah+"</b><br>"+txt.range+"<br>"+
+      arn(w.target)+" آية · تُكتب من "+WITR_TARGET_LABEL[w.target];
+  }
+  function witrRenderPickView(){
+    const w = state.witr;
+    document.querySelectorAll("#witrTargets button").forEach(b=>{
+      b.classList.toggle("active", !!(w && String(w.target) === b.dataset.t));
+    });
+    document.querySelectorAll("#witrPoolChips span").forEach(c=>{
+      c.classList.toggle("active", c.dataset.p === witrPool);
+    });
+    const sugBox = document.getElementById("witrSuggestion");
+    if(w && w.parts){
+      sugBox.hidden = false;
+      const txt = witrPartsText(w.parts);
+      document.getElementById("witrSugSurah").textContent = txt.surah;
+      document.getElementById("witrSugRange").textContent = txt.range;
+      const arn = n=>n.toLocaleString("ar-EG");
+      document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية · تقريبًا "+arn(witrMinutes(w.target))+" دقائق";
+    }else{
+      sugBox.hidden = true;
+    }
+  }
+  function witrPickTarget(target){
+    const sugg = witrGenerate(target, witrPool);
+    state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, completed:false};
+    save();
+    witrRenderPickView();
+  }
+  document.querySelectorAll("#witrTargets button").forEach(b=>{
+    b.onclick = ()=> witrPickTarget(parseInt(b.dataset.t,10));
+  });
+  document.querySelectorAll("#witrPoolChips span").forEach(c=>{
+    c.onclick = ()=>{
+      witrPool = c.dataset.p;
+      if(witrPool === "fav" && !witrFavorites().length){
+        if(confirm("لا توجد سور مفضّلة بعد. هل تريد إضافتها الآن؟")) witrEditFavorites();
+      }
+      if(state.witr) witrPickTarget(state.witr.target);
+      else witrRenderPickView();
+    };
+  });
+  document.getElementById("witrFavEdit").onclick = witrEditFavorites;
+  document.getElementById("witrChangeBtn").onclick = ()=>{
+    if(state.witr) witrPickTarget(state.witr.target);
+  };
+  document.getElementById("witrStartBtn").onclick = ()=>{
+    if(!state.witr) return;
+    state.witr.startedAt = Date.now();
+    save();
+    witrOpenReader();
+  };
+  function witrOpenReader(){
+    const w = state.witr;
+    const p0 = w.parts[0];
+    const endAyah = w.parts.length === 1 ? p0.to : WITR_SURAHS[p0.n-1].ayat;
+    const url = "https://quran.com/"+p0.n+"/"+p0.from+"-"+endAyah;
+    document.getElementById("witrIframe").src = url;
+    document.getElementById("witrExternal").href = url;
+    document.getElementById("witrReaderTitle").textContent = witrPartsText(w.parts).surah;
+    document.getElementById("witrPickView").hidden = true;
+    document.getElementById("witrReader").hidden = false;
+  }
+  document.getElementById("witrFinishBtn").onclick = ()=>{
+    if(!state.witr) return;
+    state.witr.completed = true;
+    state.worship.witr = true;
+    witrPushToHistory(state.witr.key);
+    save();
+    document.getElementById("witrReader").hidden = true;
+    document.getElementById("witrPickView").hidden = false;
+    witrRenderAll();
+    renderWorship(); renderProgress();
+    celebrate();
+  };
+
   /* ---------- Hijri date ---------- */
   function renderHijri(dateStr){
     const el = document.getElementById("hijriDate");
@@ -2312,6 +2645,26 @@
 
   function ibRenderItem(w, ul){
     const li = document.createElement("li");
+
+    /* الوتر وقيام الليل: الضغط يفتح شاشة اقتراح آيات الليلة، بدل مربع صح عادي */
+    if(w.id === "witr"){
+      const done = !!(state.witr && state.witr.completed);
+      state.worship.witr = done;
+      const chk = document.createElement("span");
+      chk.className = "chk"+(done?" on":"");
+      chk.textContent = "✔";
+      const lbl = document.createElement("span");
+      lbl.className = "lbl"+(done?" done-line":"");
+      lbl.textContent = w.label;
+      lbl.onclick = openWitr;
+      const chip = document.createElement("span");
+      chip.className = "read-chip";
+      chip.textContent = done ? "✅ تمت" : "🌙 قيام";
+      chip.onclick = openWitr;
+      li.append(chk, lbl, chip);
+      ul.appendChild(li);
+      return;
+    }
 
     /* عدّاد الاستغفار — يعدّ حتى ١٠٠ مثل السبحة */
     if(w.id === "istighfar"){
