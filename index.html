@@ -331,10 +331,11 @@
   }
   .ib-add:hover{background:var(--accent-soft)}
   .ib-custom-del{
-    border:none;background:none;color:var(--muted);cursor:pointer;font-size:.85rem;
+    border:none;background:none;cursor:pointer;font-size:.8rem;
     flex-shrink:0;padding:.1rem .3rem;border-radius:7px;
+    opacity:.4;transition:opacity .15s, background .15s;line-height:1;
   }
-  .ib-custom-del:hover{color:var(--danger);background:var(--danger-soft)}
+  .ib-custom-del:hover, .ib-custom-del:active{opacity:1;background:var(--danger-soft)}
   .ib-sunnah{
     margin-top:1rem;background:var(--accent-soft);
     border-radius:14px;padding:.9rem 1rem;text-align:center;
@@ -1089,7 +1090,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٢٩</div>
+    <div class="app-version">النسخة ٣٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -1823,7 +1824,7 @@
       if(w.custom){
         const del = document.createElement("button");
         del.className = "ib-custom-del";
-        del.textContent = "✕";
+        del.textContent = "🗑️";
         del.title = "حذف";
         del.onclick = (ev)=>{
           ev.stopPropagation();
@@ -1866,7 +1867,7 @@
     if(w.custom){
       const del = document.createElement("button");
       del.className = "ib-custom-del";
-      del.textContent = "✕";
+      del.textContent = "🗑️";
       del.title = "حذف";
       del.onclick = (ev)=>{
         ev.stopPropagation();
