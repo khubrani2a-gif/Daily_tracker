@@ -1947,7 +1947,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٢</div>
+    <div class="app-version">النسخة ٥٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3890,12 +3890,21 @@
     const lastReview = segs.reduce((acc,seg)=> (seg.lastReviewDate && seg.lastReviewDate > acc) ? seg.lastReviewDate : acc, "");
     const memCount = memorized.reduce((a,r)=> a + (r.to - r.from + 1), 0);
     const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 جزئية" : "🔴 لم تبدأ");
-    /* بطاقة ملخّص موحّدة: الحالة، المحفوظ مقابل الإجمالي، آخر مراجعة */
+    /* قائمة المقاطع المحفوظة الفعلية (كما أدخلها المستخدم، مرتّبة) — المطلوب #1 */
+    const segList = segs.map(seg=> "("+arn(seg.from)+"-"+arn(seg.to)+")").join("، ");
+    /* أول مقطع مستحقّ اليوم في هذه السورة (نفس تعريف الاستحقاق في اللوحة: nextReviewDate ≤ اليوم) — المطلوب #2 */
+    const dueSeg = segs.find(seg=> seg.nextReviewDate <= hifzToday());
+    /* بطاقة ملخّص موحّدة: الحالة، المحفوظ مقابل الإجمالي، المقاطع، آخر مراجعة */
     let html = '<div class="hifz-surah-detail-summary">'+
       '<div class="hifz-surah-detail-status">'+statusTxt+'</div>'+
       '<div class="hifz-surah-detail-meta"><b>'+arn(memCount)+'</b> من <b>'+arn(s.ayat)+'</b> آية محفوظة</div>'+
+      (segList ? '<div class="hifz-surah-detail-meta">المقاطع: '+segList+'</div>' : '')+
       '<div class="hifz-surah-detail-meta">آخر مراجعة: '+(lastReview || "لم تُراجع بعد")+'</div>'+
     '</div>';
+    /* زر "راجع الآن" السياقي — يظهر فقط إن كان في السورة مقطع مستحقّ اليوم — المطلوب #2 */
+    if(dueSeg){
+      html += '<button class="adhkar-done-btn" id="hifzSurahReviewBtn">راجع الآن ('+arn(dueSeg.from)+'-'+arn(dueSeg.to)+')</button>';
+    }
     if(!segs.length){
       html += '<div class="hifz-surah-detail-empty">لم تبدأ حفظ هذه السورة بعد</div>';
     }else{
@@ -3907,6 +3916,11 @@
       });
     }
     document.getElementById("hifzSurahSheetBody").innerHTML = html;
+    /* ربط الزر بعد الحقن: يغلق النافذة ثم يفتح مشغّل الاستدعاء النشط لنفس المقطع — نفس تدفّق اللوحة تمامًا — المطلوب #3 */
+    if(dueSeg){
+      const revBtn = document.getElementById("hifzSurahReviewBtn");
+      if(revBtn) revBtn.onclick = ()=>{ hifzCloseSurahSheet(); hifzOpenReview(dueSeg.id); };
+    }
     hifzSurahSheet.hidden = false;
   }
   function hifzCloseSurahSheet(){ hifzSurahSheet.hidden = true; }
