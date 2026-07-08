@@ -1149,9 +1149,20 @@
   .hifz-surah-detail-status{font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:.4rem}
 
   /* عرض كل السور (من زر "عرض الكل") — قائمة أشرطة تقدّم للقراءة فقط */
-  .hifz-all-surahs-body{overflow-y:auto}
-  .hifz-all-surahs-body .hifz-surah-row:last-child{margin-bottom:.3rem}
-  .hifz-all-surahs-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:1rem}
+  .hifz-all-surahs-body{padding-top:.4rem}
+  .hifz-all-surahs-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:1.5rem 1rem}
+  /* عنصر السورة في شاشة "عرض الكل" الكاملة: معلومات (اسم/شريط/عدد) + زر مراجعة اختياري بجانبه */
+  .hifz-allsurah-item{
+    display:flex;align-items:center;gap:.7rem;
+    padding:.7rem .2rem;border-bottom:1px solid var(--line);
+  }
+  .hifz-allsurah-item:last-child{border-bottom:none}
+  .hifz-allsurah-info{flex:1;min-width:0}
+  .hifz-allsurah-count{font-size:.72rem;color:var(--muted);margin-top:.3rem}
+  .hifz-allsurah-review{
+    border:none;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    border-radius:9px;padding:.45rem .85rem;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;
+  }
 
   /* بطاقة التهنئة عند إتمام كشف المقطع (حلقة التحفيز) — هادئة ولطيفة */
   .hifz-congrats{
@@ -1175,6 +1186,7 @@
     padding:.55rem .8rem;font-family:inherit;font-size:.88rem;background:var(--paper);color:var(--ink);
   }
   .hifz-rep-input:focus{outline:none;border-color:var(--accent-2)}
+  .hifz-rep-input[hidden]{display:none} /* حقل العدد المخصّص يظهر فقط عند اختيار "مخصّص" (كشف تدريجي) */
   .hifz-rep-range{display:flex;gap:.7rem;margin-bottom:.6rem}
   .hifz-rep-range label{flex:1;font-size:.76rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
   .hifz-rep-range select{
@@ -1873,6 +1885,7 @@
             </div>
             <div class="hifz-pl-meta-row">
               <span class="hifz-pl-counter" id="hifzPlCounter"></span>
+              <button class="hifz-pl-chip" id="hifzPlSpeed" title="سرعة التشغيل">⚡ ١×</button>
               <button class="hifz-pl-chip" id="hifzPlVerseRep" title="تكرار الآية">🔁 آية: ١×</button>
               <button class="hifz-pl-chip" id="hifzPlSegRep" title="تكرار المقطع كاملًا">🔁 المقطع: ١×</button>
             </div>
@@ -1927,12 +1940,15 @@
     </div>
   </div>
 
-  <!-- ورقة "عرض الكل": أشرطة تقدّم كل السور التي بدأها المستخدم (للقراءة فقط) -->
-  <div class="hifz-sheet-overlay" id="hifzAllSurahsSheet" hidden>
-    <div class="hifz-sheet">
-      <div class="hifz-sheet-head">
-        <span>📗 كل السور التي بدأتها</span>
-        <button id="hifzAllSurahsClose" title="إغلاق">✕</button>
+  <!-- شاشة "عرض الكل" الكاملة: أشرطة تقدّم كل السور التي بدأها المستخدم + زر مراجعة سريع عند الاستحقاق -->
+  <div class="adhkar-overlay" id="hifzAllSurahsSheet" hidden>
+    <div class="adhkar-sheet">
+      <div class="adhkar-top">
+        <div class="adhkar-head">
+          <button class="ad-btn ad-close" id="hifzAllSurahsClose" title="إغلاق">✕ إغلاق</button>
+          <h2>📗 كل السور التي بدأتها</h2>
+          <span></span>
+        </div>
       </div>
       <div class="hifz-all-surahs-body" id="hifzAllSurahsBody"></div>
     </div>
@@ -1949,9 +1965,9 @@
         <div class="hifz-rep-group">
           <div class="hifz-rep-label">تكرار الآية الواحدة</div>
           <div class="hifz-rep-presets" id="hifzVersePresets">
-            <button data-v="1">١×</button><button data-v="3">٣×</button><button data-v="5">٥×</button><button data-v="Infinity">∞</button>
+            <button data-v="1">١×</button><button data-v="3">٣×</button><button data-v="5">٥×</button><button data-v="custom">مخصّص</button><button data-v="Infinity">∞</button>
           </div>
-          <input type="number" min="1" inputmode="numeric" id="hifzVerseCustom" class="hifz-rep-input" placeholder="عدد مخصّص…">
+          <input type="number" min="1" inputmode="numeric" id="hifzVerseCustom" class="hifz-rep-input" placeholder="عدد مخصّص…" hidden>
         </div>
 
         <div class="hifz-rep-group">
@@ -1961,9 +1977,9 @@
             <label>إلى آية <select id="hifzLoopEnd"></select></label>
           </div>
           <div class="hifz-rep-presets" id="hifzSegPresets">
-            <button data-s="1">١×</button><button data-s="3">٣×</button><button data-s="5">٥×</button><button data-s="Infinity">∞</button>
+            <button data-s="1">١×</button><button data-s="3">٣×</button><button data-s="5">٥×</button><button data-s="custom">مخصّص</button><button data-s="Infinity">∞</button>
           </div>
-          <input type="number" min="1" inputmode="numeric" id="hifzSegCustom" class="hifz-rep-input" placeholder="عدد مخصّص…">
+          <input type="number" min="1" inputmode="numeric" id="hifzSegCustom" class="hifz-rep-input" placeholder="عدد مخصّص…" hidden>
         </div>
       </div>
       <button class="adhkar-done-btn" id="hifzRepApply">✔ تطبيق</button>
@@ -1972,7 +1988,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٤</div>
+    <div class="app-version">النسخة ٥٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3958,7 +3974,7 @@
     /* أقرب موعد مراجعة قادم للسورة = أصغر nextReviewDate بين مقاطعها */
     const nextReview = segs.reduce((acc,seg)=> (seg.nextReviewDate && (!acc || seg.nextReviewDate < acc)) ? seg.nextReviewDate : acc, "");
     const memCount = memorized.reduce((a,r)=> a + (r.to - r.from + 1), 0);
-    const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 حفظ جزئي" : "🔴 لم تبدأ");
+    const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 محفوظة جزئيًا" : "🔴 لم تبدأ");
     /* قائمة المقاطع المحفوظة الفعلية (كما أدخلها المستخدم، مرتّبة) — المطلوب #1 */
     const segList = segs.map(seg=> "("+arn(seg.from)+"-"+arn(seg.to)+")").join("، ");
     /* أول مقطع مستحقّ اليوم في هذه السورة (نفس تعريف الاستحقاق في اللوحة: nextReviewDate ≤ اليوم) */
@@ -3997,32 +4013,58 @@
   document.getElementById("hifzSurahSheetClose").onclick = hifzCloseSurahSheet;
   hifzSurahSheet.onclick = (ev)=>{ if(ev.target === hifzSurahSheet) hifzCloseSurahSheet(); };
 
-  /* ورقة "عرض الكل": أشرطة تقدّم لكل السور التي بدأها المستخدم — للقراءة فقط (بلا تعديل/حذف)،
-     متميّزة عن شاشة "السجل والخريطة" الإدارية */
+  /* شاشة "عرض الكل" الكاملة: تقدّم كل السور التي بدأها المستخدم + زر مراجعة سريع عند الاستحقاق —
+     مركز بصري وسريع للمراجعة (بلا خريطة الـ١١٤ ولا أزرار تعديل/حذف)، متميّزة عن شاشة السجل الإدارية */
   const hifzAllSurahsSheet = document.getElementById("hifzAllSurahsSheet");
   function hifzOpenAllSurahs(){
     const arn = n=>n.toLocaleString("ar-EG");
+    const today = hifzToday();
     const stats = hifzStats();
     const rec = hifzSurahRecency(stats.segments);
     const surahs = Object.keys(stats.perSurah).map(Number).sort((a,b)=> (rec[b]||0) - (rec[a]||0));
     const body = document.getElementById("hifzAllSurahsBody");
+    body.innerHTML = "";
     if(!surahs.length){
       body.innerHTML = '<div class="hifz-all-surahs-empty">لم تبدأ حفظ أي سورة بعد 🌱</div>';
     }else{
-      body.innerHTML = surahs.map(n=>{
+      const frag = document.createDocumentFragment();
+      surahs.forEach(n=>{
         const s = WITR_SURAHS[n-1];
+        const memAyat = Math.min(s.ayat, stats.perSurah[n]);
         const memPct = Math.min(100, Math.round(stats.perSurah[n] / s.ayat * 100));
-        return '<div class="hifz-surah-row">'+
-          '<div class="hifz-surah-row-head"><span>'+s.name+'</span><b>'+arn(memPct)+'٪</b></div>'+
-          '<div class="hifz-mini-bar"><i class="mem" style="width:'+memPct+'%"></i></div>'+
-        '</div>';
-      }).join("");
+        /* أول مقطع مستحقّ اليوم في هذه السورة (نفس تعريف الاستحقاق في اللوحة) */
+        const dueSeg = stats.segments
+          .filter(seg=> seg.surahN===n && seg.nextReviewDate <= today)
+          .sort((a,b)=> a.from - b.from)[0];
+        const item = document.createElement("div");
+        item.className = "hifz-allsurah-item";
+        item.innerHTML =
+          '<div class="hifz-allsurah-info">'+
+            '<div class="hifz-surah-row-head"><span>'+s.name+'</span><b>'+arn(memPct)+'٪</b></div>'+
+            '<div class="hifz-mini-bar"><i class="mem" style="width:'+memPct+'%"></i></div>'+
+            '<div class="hifz-allsurah-count">'+arn(memAyat)+' من '+arn(s.ayat)+' آية محفوظة</div>'+
+          '</div>';
+        if(dueSeg){
+          const btn = document.createElement("button");
+          btn.className = "hifz-allsurah-review";
+          btn.textContent = "راجع الآن";
+          btn.onclick = ()=>{ hifzCloseAllSurahs(); hifzOpenReview(dueSeg.id); };
+          item.appendChild(btn);
+        }
+        frag.appendChild(item);
+      });
+      body.appendChild(frag);
     }
     hifzAllSurahsSheet.hidden = false;
+    hifzAllSurahsSheet.scrollTop = 0;
+    document.body.style.overflow = "hidden";
   }
-  function hifzCloseAllSurahs(){ hifzAllSurahsSheet.hidden = true; }
+  function hifzCloseAllSurahs(){
+    hifzAllSurahsSheet.hidden = true;
+    /* لا نرفع قفل تمرير الصفحة إن كانت شاشة الحفظ الرئيسية ما تزال مفتوحة */
+    if(hifzOverlay.hidden) document.body.style.overflow = "";
+  }
   document.getElementById("hifzAllSurahsClose").onclick = hifzCloseAllSurahs;
-  hifzAllSurahsSheet.onclick = (ev)=>{ if(ev.target === hifzAllSurahsSheet) hifzCloseAllSurahs(); };
 
   const hifzOverlay = document.getElementById("hifzOverlay");
   function hifzShowSub(id){
@@ -4383,6 +4425,24 @@
   const hifzPlPlayBtn = document.getElementById("hifzPlPlay");
   const hifzPlCounterEl = document.getElementById("hifzPlCounter");
 
+  /* سرعة التشغيل: دورة بين القيم، تُطبّق فورًا وتُحفظ وتُستعاد في كل الجلسات القادمة */
+  const HIFZ_SPEEDS = [1, 1.25, 1.5, 2, 0.75];
+  const HIFZ_SPEED_KEY = "h2do-hifz-speed";
+  let hifzSpeed = parseFloat(localStorage.getItem(HIFZ_SPEED_KEY));
+  if(!HIFZ_SPEEDS.includes(hifzSpeed)) hifzSpeed = 1;
+  function hifzApplySpeed(){
+    try{ hifzAudio.defaultPlaybackRate = hifzSpeed; hifzAudio.playbackRate = hifzSpeed; }catch(e){}
+    const btn = document.getElementById("hifzPlSpeed");
+    if(btn) btn.textContent = "⚡ "+hifzSpeed.toLocaleString("ar-EG")+"×";
+  }
+  function hifzCycleSpeed(){
+    const i = HIFZ_SPEEDS.indexOf(hifzSpeed);
+    hifzSpeed = HIFZ_SPEEDS[(i + 1) % HIFZ_SPEEDS.length];
+    try{ localStorage.setItem(HIFZ_SPEED_KEY, String(hifzSpeed)); }catch(e){}
+    hifzApplySpeed();
+  }
+  hifzApplySpeed(); /* استعادة السرعة المحفوظة عند التهيئة */
+
   function hifzRepLabel(t){ return t === Infinity ? "∞" : t.toLocaleString("ar-EG")+"×"; }
   function hifzIsSubLoop(){
     return hifzLoopStart > 0 || hifzLoopEnd < hifzReviewAyat.length - 1;
@@ -4455,6 +4515,7 @@
     hifzPlUpdateCounter();
     hifzAudioTriedLo = false;
     hifzAudio.src = ayahAudioUrl(a.g);
+    hifzAudio.playbackRate = hifzSpeed; /* أعِد تطبيق السرعة — تغيير المصدر قد يُعيدها إلى الافتراضي */
     hifzPlPlaying = true;
     hifzPlPlayBtn.textContent = "⏸";
     const p = hifzAudio.play();
@@ -4535,6 +4596,7 @@
     hifzAudioTriedLo = true;
     const g = hifzReviewAyat[hifzPlIndex].g;
     hifzAudio.src = "https://cdn.islamic.network/quran/audio/64/"+hifzCurrentReciter()+"/"+g+".mp3";
+    hifzAudio.playbackRate = hifzSpeed;
     if(hifzPlPlaying){ const p = hifzAudio.play(); if(p&&p.catch) p.catch(()=>{}); }
   }
   /* ربط/نزع مستمعات الصوت صراحةً — يمنع تراكم المستمعات وتسرّب الذاكرة عبر دورات فتح/إغلاق المراجعة */
@@ -4554,18 +4616,25 @@
   hifzPlPlayBtn.onclick = hifzPlToggle;
   document.getElementById("hifzPlNext").onclick = hifzPlNext;
   document.getElementById("hifzPlPrev").onclick = hifzPlPrev;
+  document.getElementById("hifzPlSpeed").onclick = hifzCycleSpeed;
   /* ---------- ورقة إعدادات التكرار: أعداد مخصّصة + حلقة A–B ---------- */
   const hifzRepSheet = document.getElementById("hifzRepSheet");
   let hifzRepVerseSel = 1;   /* القيمة المختارة مؤقتًا داخل الورقة قبل التطبيق */
   let hifzRepSegSel = 1;
   function hifzRepSyncPresets(){
+    const vCustomMode = !document.getElementById("hifzVerseCustom").hidden;
     document.querySelectorAll("#hifzVersePresets button").forEach(b=>{
-      const v = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10);
-      b.classList.toggle("on", hifzRepVerseSel === v && !document.getElementById("hifzVerseCustom").value);
+      let on;
+      if(b.dataset.v === "custom") on = vCustomMode;
+      else{ const v = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10); on = !vCustomMode && hifzRepVerseSel === v; }
+      b.classList.toggle("on", on);
     });
+    const sCustomMode = !document.getElementById("hifzSegCustom").hidden;
     document.querySelectorAll("#hifzSegPresets button").forEach(b=>{
-      const v = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10);
-      b.classList.toggle("on", hifzRepSegSel === v && !document.getElementById("hifzSegCustom").value);
+      let on;
+      if(b.dataset.s === "custom") on = sCustomMode;
+      else{ const v = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10); on = !sCustomMode && hifzRepSegSel === v; }
+      b.classList.toggle("on", on);
     });
   }
   function hifzRepFillLoopSelects(){
@@ -4590,12 +4659,18 @@
     document.getElementById("hifzRepApply").disabled = bad;
     return !bad;
   }
+  const HIFZ_REP_PRESETS = [1, 3, 5, Infinity];
   function hifzOpenRepSheet(){
     if(!hifzReviewAyat.length) return;
     hifzRepVerseSel = hifzVerseTarget;
     hifzRepSegSel = hifzSegTarget;
-    document.getElementById("hifzVerseCustom").value = "";
-    document.getElementById("hifzSegCustom").value = "";
+    /* كشف تدريجي: يظهر حقل العدد المخصّص فقط إن كانت القيمة الحالية خارج القيم الجاهزة */
+    const vInput = document.getElementById("hifzVerseCustom");
+    if(HIFZ_REP_PRESETS.includes(hifzVerseTarget)){ vInput.hidden = true; vInput.value = ""; }
+    else{ vInput.hidden = false; vInput.value = hifzVerseTarget; hifzRepVerseSel = null; }
+    const sInput = document.getElementById("hifzSegCustom");
+    if(HIFZ_REP_PRESETS.includes(hifzSegTarget)){ sInput.hidden = true; sInput.value = ""; }
+    else{ sInput.hidden = false; sInput.value = hifzSegTarget; hifzRepSegSel = null; }
     hifzRepFillLoopSelects();
     hifzRepSyncPresets();
     hifzRepValidateLoop();
@@ -4608,15 +4683,25 @@
   hifzRepSheet.onclick = (ev)=>{ if(ev.target === hifzRepSheet) hifzCloseRepSheet(); };
   document.querySelectorAll("#hifzVersePresets button").forEach(b=>{
     b.onclick = ()=>{
-      hifzRepVerseSel = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10);
-      document.getElementById("hifzVerseCustom").value = "";
+      const input = document.getElementById("hifzVerseCustom");
+      if(b.dataset.v === "custom"){
+        input.hidden = false; hifzRepVerseSel = null; input.focus();
+      }else{
+        input.hidden = true; input.value = "";
+        hifzRepVerseSel = b.dataset.v === "Infinity" ? Infinity : parseInt(b.dataset.v,10);
+      }
       hifzRepSyncPresets();
     };
   });
   document.querySelectorAll("#hifzSegPresets button").forEach(b=>{
     b.onclick = ()=>{
-      hifzRepSegSel = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10);
-      document.getElementById("hifzSegCustom").value = "";
+      const input = document.getElementById("hifzSegCustom");
+      if(b.dataset.s === "custom"){
+        input.hidden = false; hifzRepSegSel = null; input.focus();
+      }else{
+        input.hidden = true; input.value = "";
+        hifzRepSegSel = b.dataset.s === "Infinity" ? Infinity : parseInt(b.dataset.s,10);
+      }
       hifzRepSyncPresets();
     };
   });
@@ -4635,10 +4720,13 @@
   };
   document.getElementById("hifzRepApply").onclick = ()=>{
     if(!hifzRepValidateLoop()) return;
-    const vCustom = parseInt(document.getElementById("hifzVerseCustom").value, 10);
-    const sCustom = parseInt(document.getElementById("hifzSegCustom").value, 10);
-    hifzVerseTarget = (vCustom >= 1) ? vCustom : hifzRepVerseSel;
-    hifzSegTarget = (sCustom >= 1) ? sCustom : hifzRepSegSel;
+    const vInput = document.getElementById("hifzVerseCustom");
+    const sInput = document.getElementById("hifzSegCustom");
+    const vCustom = parseInt(vInput.value, 10);
+    const sCustom = parseInt(sInput.value, 10);
+    /* في وضع "مخصّص": نأخذ العدد المُدخل، وإن كان فارغًا/غير صالح نعود لـ١؛ وإلا نأخذ القيمة الجاهزة المختارة */
+    hifzVerseTarget = !vInput.hidden ? (vCustom >= 1 ? vCustom : 1) : (hifzRepVerseSel || 1);
+    hifzSegTarget = !sInput.hidden ? (sCustom >= 1 ? sCustom : 1) : (hifzRepSegSel || 1);
     hifzLoopStart = parseInt(document.getElementById("hifzLoopStart").value, 10) || 0;
     hifzLoopEnd = parseInt(document.getElementById("hifzLoopEnd").value, 10);
     if(isNaN(hifzLoopEnd)) hifzLoopEnd = hifzReviewAyat.length - 1;
