@@ -1092,6 +1092,19 @@
   /* ورقة القرّاء المنبثقة (Bottom Sheet) مع بحث ثابت */
   .hifz-sheet-overlay{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
   .hifz-sheet-overlay[hidden]{display:none}
+
+  /* نافذة تأكيد مخصّصة متمركزة (بديل window.confirm) */
+  .hifz-dialog-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:1.2rem}
+  .hifz-dialog-overlay[hidden]{display:none}
+  .hifz-dialog{
+    background:var(--bg);width:100%;max-width:360px;border-radius:18px;
+    padding:1.3rem 1.2rem 1.1rem;box-shadow:0 18px 40px -12px rgba(0,0,0,.4);
+  }
+  .hifz-dialog-title{font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:.5rem;text-align:center}
+  .hifz-dialog-body{font-size:.9rem;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:1.1rem}
+  .hifz-dialog-actions{display:flex;flex-direction:column;gap:.5rem}
+  .hifz-dialog-actions .adhkar-done-btn,
+  .hifz-dialog-actions .witr-change-btn{margin-top:0}
   .hifz-sheet{
     background:var(--bg);width:100%;max-width:720px;margin:0 auto;border-radius:20px 20px 0 0;
     max-height:80vh;display:flex;flex-direction:column;padding:.9rem 1rem 1.3rem;
@@ -1879,6 +1892,18 @@
     <div class="hifz-toast" id="hifzToast" hidden></div>
   </div>
 
+  <!-- نافذة تأكيد مخصّصة (بديل window.confirm الأصلي) — بالعربية وبسمة التطبيق -->
+  <div class="hifz-dialog-overlay" id="hifzDialog" hidden>
+    <div class="hifz-dialog">
+      <div class="hifz-dialog-title" id="hifzDialogTitle"></div>
+      <div class="hifz-dialog-body" id="hifzDialogBody"></div>
+      <div class="hifz-dialog-actions">
+        <button class="adhkar-done-btn" id="hifzDialogOk"></button>
+        <button class="witr-change-btn" id="hifzDialogCancel"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- ورقة اختيار القارئ -->
   <div class="hifz-sheet-overlay" id="hifzReciterSheet" hidden>
     <div class="hifz-sheet">
@@ -1947,7 +1972,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٣</div>
+    <div class="app-version">النسخة ٥٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3577,6 +3602,32 @@
     if(days <= 10) return "بعد "+n+" أيام";
     return "بعد "+n+" يومًا";
   }
+  /* فرق الأيام بين تاريخ (Y-M-D) و"اليوم" المنطقي — موجب للمستقبل، سالب للماضي (تثبيت الظهيرة يتفادى فروق التوقيت الصيفي) */
+  function hifzDayDiff(dateStr){
+    const a = new Date(hifzToday()+"T12:00:00");
+    const b = new Date(dateStr+"T12:00:00");
+    return Math.round((b - a) / 86400000);
+  }
+  /* صياغة تاريخ ماضٍ نسبيًا (آخر مراجعة): اليوم / أمس / منذ ن أيام */
+  function hifzRelPast(dateStr){
+    const d = hifzDayDiff(dateStr);
+    if(d >= 0) return "اليوم";
+    const n = Math.abs(d);
+    if(n === 1) return "أمس";
+    if(n === 2) return "منذ يومين";
+    const na = n.toLocaleString("ar-EG");
+    return n <= 10 ? "منذ "+na+" أيام" : "منذ "+na+" يومًا";
+  }
+  /* صياغة تاريخ مستقبلي نسبيًا (المراجعة القادمة): مستحقّة الآن / اليوم / غدًا / بعد ن أيام */
+  function hifzRelFuture(dateStr){
+    const d = hifzDayDiff(dateStr);
+    if(d < 0) return "مستحقّة الآن";
+    if(d === 0) return "اليوم";
+    if(d === 1) return "غدًا";
+    if(d === 2) return "بعد يومين";
+    const na = d.toLocaleString("ar-EG");
+    return d <= 10 ? "بعد "+na+" أيام" : "بعد "+na+" يومًا";
+  }
   /* تحديث التوقّعات تحت الأزرار الثلاثة قبل الضغط — يمنح المستخدم شفافية كاملة (Anki-style) */
   function hifzUpdateRateEtas(seg){
     document.querySelectorAll(".hifz-rate-row button").forEach(b=>{
@@ -3687,6 +3738,22 @@
     clearTimeout(hifzToastTimer);
     hifzToastTimer = setTimeout(()=>{ toast.hidden = true; }, 1600);
   }
+
+  /* ---------- نافذة تأكيد مخصّصة (بديل window.confirm الأصلي) — بالعربية وبسمة التطبيق ---------- */
+  const hifzDialog = document.getElementById("hifzDialog");
+  let hifzDialogOnOk = null;
+  function hifzShowConfirm(opts){
+    document.getElementById("hifzDialogTitle").textContent = opts.title || "";
+    document.getElementById("hifzDialogBody").textContent = opts.body || "";
+    document.getElementById("hifzDialogOk").textContent = opts.okText || "تأكيد";
+    document.getElementById("hifzDialogCancel").textContent = opts.cancelText || "إلغاء";
+    hifzDialogOnOk = typeof opts.onOk === "function" ? opts.onOk : null;
+    hifzDialog.hidden = false;
+  }
+  function hifzCloseDialog(){ hifzDialog.hidden = true; hifzDialogOnOk = null; }
+  document.getElementById("hifzDialogOk").onclick = ()=>{ const fn = hifzDialogOnOk; hifzCloseDialog(); if(fn) fn(); };
+  document.getElementById("hifzDialogCancel").onclick = hifzCloseDialog;
+  hifzDialog.onclick = (ev)=>{ if(ev.target === hifzDialog) hifzCloseDialog(); };
 
   /* ---------- عرض بطاقة حفظ القرآن (في الصفحة الرئيسية والشاشة التفصيلية معًا) ---------- */
   /* آخر تفاعل لكل سورة (أحدث إضافة أو مراجعة) — لعرض "أحدث السور" في القسم الثاني */
@@ -3888,18 +3955,21 @@
     const {memorized, gaps, segs} = hifzSurahRanges(surahN);
     document.getElementById("hifzSurahSheetTitle").textContent = s.name;
     const lastReview = segs.reduce((acc,seg)=> (seg.lastReviewDate && seg.lastReviewDate > acc) ? seg.lastReviewDate : acc, "");
+    /* أقرب موعد مراجعة قادم للسورة = أصغر nextReviewDate بين مقاطعها */
+    const nextReview = segs.reduce((acc,seg)=> (seg.nextReviewDate && (!acc || seg.nextReviewDate < acc)) ? seg.nextReviewDate : acc, "");
     const memCount = memorized.reduce((a,r)=> a + (r.to - r.from + 1), 0);
-    const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 جزئية" : "🔴 لم تبدأ");
+    const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 حفظ جزئي" : "🔴 لم تبدأ");
     /* قائمة المقاطع المحفوظة الفعلية (كما أدخلها المستخدم، مرتّبة) — المطلوب #1 */
     const segList = segs.map(seg=> "("+arn(seg.from)+"-"+arn(seg.to)+")").join("، ");
-    /* أول مقطع مستحقّ اليوم في هذه السورة (نفس تعريف الاستحقاق في اللوحة: nextReviewDate ≤ اليوم) — المطلوب #2 */
+    /* أول مقطع مستحقّ اليوم في هذه السورة (نفس تعريف الاستحقاق في اللوحة: nextReviewDate ≤ اليوم) */
     const dueSeg = segs.find(seg=> seg.nextReviewDate <= hifzToday());
-    /* بطاقة ملخّص موحّدة: الحالة، المحفوظ مقابل الإجمالي، المقاطع، آخر مراجعة */
+    /* بطاقة ملخّص موحّدة: الحالة، المحفوظ مقابل الإجمالي، المقاطع، آخر مراجعة، المراجعة القادمة */
     let html = '<div class="hifz-surah-detail-summary">'+
       '<div class="hifz-surah-detail-status">'+statusTxt+'</div>'+
       '<div class="hifz-surah-detail-meta"><b>'+arn(memCount)+'</b> من <b>'+arn(s.ayat)+'</b> آية محفوظة</div>'+
       (segList ? '<div class="hifz-surah-detail-meta">المقاطع: '+segList+'</div>' : '')+
-      '<div class="hifz-surah-detail-meta">آخر مراجعة: '+(lastReview || "لم تُراجع بعد")+'</div>'+
+      '<div class="hifz-surah-detail-meta">آخر مراجعة: '+(lastReview ? hifzRelPast(lastReview) : "لم تُراجع بعد")+'</div>'+
+      (nextReview ? '<div class="hifz-surah-detail-meta">المراجعة القادمة: '+hifzRelFuture(nextReview)+'</div>' : '')+
     '</div>';
     /* زر "راجع الآن" السياقي — يظهر فقط إن كان في السورة مقطع مستحقّ اليوم — المطلوب #2 */
     if(dueSeg){
@@ -4131,7 +4201,13 @@
       /* منع التكرار: إن وُجد مقطع متقاطع في نفس السورة، نوقف الإنشاء ونعرض خيار التحديث بدلًا منه */
       const overlap = hifzFindOverlap(surahN, from, to, null);
       if(overlap){
-        if(confirm("هذا المقطع موجود مسبقاً، هل تريد تحديثه؟")) hifzOpenEdit(overlap.id);
+        hifzShowConfirm({
+          title: "تحديث المقطع؟",
+          body: "هذا المقطع محفوظ مسبقاً.",
+          okText: "تحديث",
+          cancelText: "إلغاء",
+          onOk: ()=> hifzOpenEdit(overlap.id)
+        });
         return;
       }
       hifzAddEntry(surahN, from, to);
