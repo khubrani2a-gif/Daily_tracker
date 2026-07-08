@@ -1886,8 +1886,7 @@
             <div class="hifz-pl-meta-row">
               <span class="hifz-pl-counter" id="hifzPlCounter"></span>
               <button class="hifz-pl-chip" id="hifzPlSpeed" title="سرعة التشغيل">⚡ ١×</button>
-              <button class="hifz-pl-chip" id="hifzPlVerseRep" title="تكرار الآية">🔁 آية: ١×</button>
-              <button class="hifz-pl-chip" id="hifzPlSegRep" title="تكرار المقطع كاملًا">🔁 المقطع: ١×</button>
+              <button class="hifz-pl-chip" id="hifzPlRepeat" title="إعدادات التكرار">🔁 التكرار</button>
             </div>
           </div>
         </div>
@@ -1988,7 +1987,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٥</div>
+    <div class="app-version">النسخة ٥٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3600,19 +3599,20 @@
   function hifzAyatCount(seg){ return seg.to - seg.from + 1; }
   /* حساب الفاصل التالي (بالأيام) وفق نوع التقييم — مصدر واحد للحقيقة، ديناميكي (غير ثابت)،
      يُستخدم للجدولة الفعلية ولعرض التوقّعات الشفّافة تحت الأزرار الثلاثة (بأسلوب Anki):
-       🟢 حفظ متقن (firm):     الفاصل × معامل السهولة
-       🟡 أحتاج لتعاهده (refresh): الفاصل × ١٫٢ (نموّ معتدل)
-       🔴 تفلّت مني (escaped):   إعادة للغد (فاصل = ١) */
+       🟢 حفظ متقن (firm):        الفاصل × معامل السهولة
+       🟡 أحتاج لتعاهده (refresh): فاصل = ١ (غدًا)
+       🔴 تفلّت مني (escaped):     فاصل = ٠ (اليوم — يبقى مستحقًّا اليوم ضمن قائمة مراجعة اليوم) */
   function hifzProjectInterval(seg, assessmentType){
     const interval = seg.intervalDays || 1;
     const ef = seg.easeFactor || 2.5;
-    if(assessmentType === "escaped") return 1;
-    if(assessmentType === "refresh") return Math.max(1, Math.round(interval * 1.2));
+    if(assessmentType === "escaped") return 0;
+    if(assessmentType === "refresh") return 1;
     return Math.max(1, Math.round(interval * ef)); /* firm */
   }
-  /* صياغة التوقّع الزمني بالعربية الصحيحة (مفرد/مثنى/جمع) */
+  /* صياغة التوقّع الزمني بالعربية الصحيحة (اليوم/غدًا/مثنى/جمع) */
   function hifzFmtEta(days){
-    if(days <= 1) return "غدًا";
+    if(days <= 0) return "اليوم";
+    if(days === 1) return "غدًا";
     if(days === 2) return "بعد يومين";
     const n = days.toLocaleString("ar-EG");
     if(days <= 10) return "بعد "+n+" أيام";
@@ -3676,7 +3676,9 @@
     const data = hifzData();
     const seg = data.segments.find(s=>s.id===segmentId);
     if(!seg) return null;
-    if(seg.lastReviewDate === hifzToday()) return seg; /* مراجعة واحدة لكل مقطع يوميًا */
+    /* نمنع إعادة المعالجة فقط للمقاطع التي رُوجعت اليوم وجُدولت للمستقبل (متقن/تعاهده)؛
+       أمّا "تفلّت مني" فيبقى فاصله ٠ (مستحقًّا اليوم) فنسمح بإعادة تسميعه في نفس اليوم */
+    if(seg.lastReviewDate === hifzToday() && seg.nextReviewDate > hifzToday()) return seg;
     hifzScheduleNext(seg, assessmentType);
     hifzUpsertSegment(seg); /* يحفظ محليًا ويزامن مستند المقطع في Firestore (يعمل دون اتصال أيضًا) */
     return seg;
@@ -3826,15 +3828,15 @@
       box.innerHTML = '<div class="hifz-review-empty">'+(stats.segmentCount ? "لا مراجعات مستحقّة اليوم — أحسنت 🌿" : "لم تُضف أي مقاطع حفظ بعد")+'</div>';
       return;
     }
+    /* القائمة لا تحوي إلا مقاطع مستحقّة اليوم (nextReviewDate ≤ اليوم) — كلها قابلة للمراجعة،
+       بما فيها ما تفلّت اليوم وبقي مستحقًّا (فاصل ٠) فيمكن إعادة تسميعه في نفس اليوم */
     due.forEach(seg=>{
       const s = WITR_SURAHS[seg.surahN-1];
-      const reviewedToday = seg.lastReviewDate === today;
       const div = document.createElement("div");
       div.className = "hifz-review-item";
       div.innerHTML = "<span>⏰ "+s.name+" ("+arn(seg.from)+"-"+arn(seg.to)+")</span>";
       const btn = document.createElement("button");
-      btn.textContent = reviewedToday ? "رُوجعت اليوم" : "راجع الآن";
-      btn.disabled = reviewedToday;
+      btn.textContent = "راجع الآن";
       btn.onclick = ()=> hifzOpenReview(seg.id);
       div.appendChild(btn);
       box.appendChild(div);
@@ -4296,8 +4298,9 @@
   let hifzQueueTotal = 0;    /* العدد الكلي لجلسة اليوم (لعرض التقدّم) */
   function hifzDueSegmentIds(){
     const today = hifzToday();
+    /* كل المقاطع المستحقّة اليوم (بما فيها ما تفلّت اليوم وبقي فاصله ٠) تبقى في طابور اليوم */
     return hifzData().segments
-      .filter(s=> s.nextReviewDate <= today && s.lastReviewDate !== today)
+      .filter(s=> s.nextReviewDate <= today)
       .sort((a,b)=> a.nextReviewDate < b.nextReviewDate ? -1 : 1)
       .map(s=> s.id);
   }
@@ -4443,24 +4446,13 @@
   }
   hifzApplySpeed(); /* استعادة السرعة المحفوظة عند التهيئة */
 
-  function hifzRepLabel(t){ return t === Infinity ? "∞" : t.toLocaleString("ar-EG")+"×"; }
   function hifzIsSubLoop(){
     return hifzLoopStart > 0 || hifzLoopEnd < hifzReviewAyat.length - 1;
   }
+  /* زر تكرار موحّد: يُبرز (on) متى فُعّل أيّ تكرار (آية أو مقطع أو حلقة A–B فرعية) */
   function hifzPlSyncChips(){
-    const vb = document.getElementById("hifzPlVerseRep");
-    const sb = document.getElementById("hifzPlSegRep");
-    const arn = n=>n.toLocaleString("ar-EG");
-    vb.textContent = "🔁 آية: "+hifzRepLabel(hifzVerseTarget);
-    /* إن كانت حلقة A–B مقطعًا فرعيًا نعرض نطاق أرقام الآيات */
-    let segTxt = "🔁 المقطع: "+hifzRepLabel(hifzSegTarget);
-    if(hifzIsSubLoop() && hifzReviewAyat.length){
-      const a = hifzReviewAyat[hifzLoopStart], b = hifzReviewAyat[hifzLoopEnd];
-      if(a && b) segTxt = "🔁 "+arn(a.n)+"-"+arn(b.n)+": "+hifzRepLabel(hifzSegTarget);
-    }
-    sb.textContent = segTxt;
-    vb.classList.toggle("on", hifzVerseTarget !== 1);
-    sb.classList.toggle("on", hifzSegTarget !== 1 || hifzIsSubLoop());
+    const rb = document.getElementById("hifzPlRepeat");
+    if(rb) rb.classList.toggle("on", hifzVerseTarget !== 1 || hifzSegTarget !== 1 || hifzIsSubLoop());
   }
   /* دالة التنظيف (تُستدعى عند إغلاق/مغادرة شاشة المراجعة): توقف الصوت صراحةً،
      تنزع المستمعات، تُفرّغ عنصر الوسائط عبر load() لإجهاض أي تحميل جارٍ وتحرير موارده،
@@ -4677,8 +4669,7 @@
     hifzRepSheet.hidden = false;
   }
   function hifzCloseRepSheet(){ hifzRepSheet.hidden = true; }
-  document.getElementById("hifzPlVerseRep").onclick = hifzOpenRepSheet;
-  document.getElementById("hifzPlSegRep").onclick = hifzOpenRepSheet;
+  document.getElementById("hifzPlRepeat").onclick = hifzOpenRepSheet;
   document.getElementById("hifzRepClose").onclick = hifzCloseRepSheet;
   hifzRepSheet.onclick = (ev)=>{ if(ev.target === hifzRepSheet) hifzCloseRepSheet(); };
   document.querySelectorAll("#hifzVersePresets button").forEach(b=>{
