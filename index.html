@@ -1127,8 +1127,25 @@
   }
   .hifz-surah-detail-tag.mem{background:var(--accent-soft);color:var(--accent)}
   .hifz-surah-detail-tag.gap{background:var(--danger-soft);color:var(--danger)}
-  .hifz-surah-detail-meta{color:var(--muted);font-size:.8rem;margin-bottom:.5rem}
+  .hifz-surah-detail-meta{color:var(--muted);font-size:.8rem;margin-bottom:.35rem}
+  .hifz-surah-detail-meta b{color:var(--accent)}
   .hifz-surah-detail-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:1rem}
+  .hifz-surah-detail-summary{
+    background:var(--chip-bg);border-radius:12px;padding:.7rem .9rem;margin-bottom:.8rem;
+  }
+  .hifz-surah-detail-status{font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:.4rem}
+
+  /* عرض كل السور (من زر "عرض الكل") — قائمة أشرطة تقدّم للقراءة فقط */
+  .hifz-all-surahs-body{overflow-y:auto}
+  .hifz-all-surahs-body .hifz-surah-row:last-child{margin-bottom:.3rem}
+  .hifz-all-surahs-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:1rem}
+
+  /* بطاقة التهنئة عند إتمام كشف المقطع (حلقة التحفيز) — هادئة ولطيفة */
+  .hifz-congrats{
+    background:var(--accent-soft);color:var(--accent);border-radius:12px;
+    padding:.8rem 1rem;font-size:.9rem;font-weight:600;text-align:center;
+    margin-bottom:.8rem;line-height:1.6;
+  }
 
   /* إعدادات التكرار */
   .hifz-rep-body{overflow-y:auto}
@@ -1849,6 +1866,8 @@
           </div>
         </div>
 
+        <div class="hifz-congrats" id="hifzCongrats" hidden>🎉 أحسنت! أنهيت مراجعة هذا المقطع. كيف كان حفظك؟</div>
+
         <div class="hifz-rate-row" id="hifzRateRow">
           <button data-r="firm"><span class="hifz-dot hifz-dot-green"></span><span class="hifz-rate-label">حفظ متقن<small class="hifz-rate-eta"></small></span></button>
           <button data-r="refresh"><span class="hifz-dot hifz-dot-gold"></span><span class="hifz-rate-label">أحتاج لتعاهده<small class="hifz-rate-eta"></small></span></button>
@@ -1880,6 +1899,17 @@
         <button id="hifzSurahSheetClose" title="إغلاق">✕</button>
       </div>
       <div class="hifz-surah-detail-body" id="hifzSurahSheetBody"></div>
+    </div>
+  </div>
+
+  <!-- ورقة "عرض الكل": أشرطة تقدّم كل السور التي بدأها المستخدم (للقراءة فقط) -->
+  <div class="hifz-sheet-overlay" id="hifzAllSurahsSheet" hidden>
+    <div class="hifz-sheet">
+      <div class="hifz-sheet-head">
+        <span>📗 كل السور التي بدأتها</span>
+        <button id="hifzAllSurahsClose" title="إغلاق">✕</button>
+      </div>
+      <div class="hifz-all-surahs-body" id="hifzAllSurahsBody"></div>
     </div>
   </div>
 
@@ -1917,7 +1947,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥١</div>
+    <div class="app-version">النسخة ٥٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3676,9 +3706,11 @@
     const quoteEl = document.getElementById("hifzDailyQuote"); if(quoteEl) quoteEl.textContent = q;
 
     const stats = hifzStats();
-    const approxPages = Math.round(stats.memorizedAyat / (HIFZ_TOTAL_AYAT/HIFZ_TOTAL_PAGES));
+    /* المقاييس تعكس كل ما أدخله المستخدم فورًا — بصرف النظر عن حالة SRS (محفوظ/يحتاج مراجعة)،
+       فالمقطع المُضاف حديثًا "يحتاج مراجعة" يظل مُدخَلًا حقيقيًا يجب أن يُحسب، لا صفرًا */
+    const approxPages = Math.round(stats.totalAyat / (HIFZ_TOTAL_AYAT/HIFZ_TOTAL_PAGES));
     const milestonesHTML =
-      "<span>📌 <b>"+arn(stats.memorizedSegmentCount)+"</b> مقاطع</span>"+
+      "<span>📌 <b>"+arn(stats.segmentCount)+"</b> مقاطع</span>"+
       "<span>📗 <b>"+arn(stats.surahsStarted)+"</b> سور</span>"+
       "<span>📄 <b>"+arn(approxPages)+"</b> صفحات تقريبًا</span>";
     const statsEl = document.getElementById("hifzGlobalStats"); if(statsEl) statsEl.innerHTML = milestonesHTML;
@@ -3856,7 +3888,14 @@
     const {memorized, gaps, segs} = hifzSurahRanges(surahN);
     document.getElementById("hifzSurahSheetTitle").textContent = s.name;
     const lastReview = segs.reduce((acc,seg)=> (seg.lastReviewDate && seg.lastReviewDate > acc) ? seg.lastReviewDate : acc, "");
-    let html = '<div class="hifz-surah-detail-meta">آخر مراجعة: '+(lastReview || "لم تُراجع بعد")+'</div>';
+    const memCount = memorized.reduce((a,r)=> a + (r.to - r.from + 1), 0);
+    const statusTxt = memCount >= s.ayat ? "🟢 كاملة" : (memCount > 0 ? "🟡 جزئية" : "🔴 لم تبدأ");
+    /* بطاقة ملخّص موحّدة: الحالة، المحفوظ مقابل الإجمالي، آخر مراجعة */
+    let html = '<div class="hifz-surah-detail-summary">'+
+      '<div class="hifz-surah-detail-status">'+statusTxt+'</div>'+
+      '<div class="hifz-surah-detail-meta"><b>'+arn(memCount)+'</b> من <b>'+arn(s.ayat)+'</b> آية محفوظة</div>'+
+      '<div class="hifz-surah-detail-meta">آخر مراجعة: '+(lastReview || "لم تُراجع بعد")+'</div>'+
+    '</div>';
     if(!segs.length){
       html += '<div class="hifz-surah-detail-empty">لم تبدأ حفظ هذه السورة بعد</div>';
     }else{
@@ -3873,6 +3912,33 @@
   function hifzCloseSurahSheet(){ hifzSurahSheet.hidden = true; }
   document.getElementById("hifzSurahSheetClose").onclick = hifzCloseSurahSheet;
   hifzSurahSheet.onclick = (ev)=>{ if(ev.target === hifzSurahSheet) hifzCloseSurahSheet(); };
+
+  /* ورقة "عرض الكل": أشرطة تقدّم لكل السور التي بدأها المستخدم — للقراءة فقط (بلا تعديل/حذف)،
+     متميّزة عن شاشة "السجل والخريطة" الإدارية */
+  const hifzAllSurahsSheet = document.getElementById("hifzAllSurahsSheet");
+  function hifzOpenAllSurahs(){
+    const arn = n=>n.toLocaleString("ar-EG");
+    const stats = hifzStats();
+    const rec = hifzSurahRecency(stats.segments);
+    const surahs = Object.keys(stats.perSurah).map(Number).sort((a,b)=> (rec[b]||0) - (rec[a]||0));
+    const body = document.getElementById("hifzAllSurahsBody");
+    if(!surahs.length){
+      body.innerHTML = '<div class="hifz-all-surahs-empty">لم تبدأ حفظ أي سورة بعد 🌱</div>';
+    }else{
+      body.innerHTML = surahs.map(n=>{
+        const s = WITR_SURAHS[n-1];
+        const memPct = Math.min(100, Math.round(stats.perSurah[n] / s.ayat * 100));
+        return '<div class="hifz-surah-row">'+
+          '<div class="hifz-surah-row-head"><span>'+s.name+'</span><b>'+arn(memPct)+'٪</b></div>'+
+          '<div class="hifz-mini-bar"><i class="mem" style="width:'+memPct+'%"></i></div>'+
+        '</div>';
+      }).join("");
+    }
+    hifzAllSurahsSheet.hidden = false;
+  }
+  function hifzCloseAllSurahs(){ hifzAllSurahsSheet.hidden = true; }
+  document.getElementById("hifzAllSurahsClose").onclick = hifzCloseAllSurahs;
+  hifzAllSurahsSheet.onclick = (ev)=>{ if(ev.target === hifzAllSurahsSheet) hifzCloseAllSurahs(); };
 
   const hifzOverlay = document.getElementById("hifzOverlay");
   function hifzShowSub(id){
@@ -3947,7 +4013,7 @@
     hifzOpenArchive(); /* الرجوع للسجل لأن التأسيس يُفتح من هناك */
     renderHifzCard();
   };
-  document.getElementById("hifzViewAllBtn").onclick = hifzOpenArchive;
+  document.getElementById("hifzViewAllBtn").onclick = hifzOpenAllSurahs;
   document.getElementById("hifzArchiveBack").onclick = ()=>{ closeHifz(); renderHifzCard(); };
   /* إدخال تأسيسي جماعي بضغطة واحدة: يضيف كل سور المجموعة المحفوظة دفعة واحدة */
   const HIFZ_BULK_RANGES = { juzamma:[78,114], tabarak:[67,77], mufassal:[50,114] };
@@ -4145,6 +4211,7 @@
     /* حالة أولية: كل آية مموّهة على حدة + أزرار التقييم مقفلة حتى كشف كامل المقطع */
     hifzRecallBox.classList.remove("all-revealed");
     hifzRateRow.classList.add("locked");
+    const congratsEl = document.getElementById("hifzCongrats"); if(congratsEl) congratsEl.hidden = true;
     const loadingEl = document.getElementById("hifzRecallLoading");
     const textEl = document.getElementById("hifzRecallText");
     const hintEl = document.getElementById("hifzRecallHint");
@@ -4194,6 +4261,8 @@
     if(hifzRevealedIdx >= last && last >= 0){
       hifzRateRow.classList.remove("locked"); /* اكتمل الكشف → افتح التقييم */
       hifzRecallBox.classList.add("all-revealed");
+      /* بلغ المستخدم الآية الأخيرة → أظهِر بطاقة التهنئة اللطيفة فوق أزرار التقييم (حلقة تحفيز) */
+      const congratsEl = document.getElementById("hifzCongrats"); if(congratsEl) congratsEl.hidden = false;
     }
   }
   function hifzRevealAll(){ hifzRevealUpTo(hifzReviewAyat.length - 1); }
