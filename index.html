@@ -832,6 +832,18 @@
   .witr-fav-option{padding:.6rem .9rem;font-size:.85rem;color:var(--ink);cursor:pointer}
   .witr-fav-option:hover{background:var(--accent-soft);color:var(--accent)}
   .witr-fav-empty{padding:.6rem .9rem;font-size:.8rem;color:var(--muted);text-align:center}
+  /* أوراد الحفظ والمراجعة داخل إعداد القيام */
+  .hifz-wird{border:1px solid var(--line);border-radius:16px;padding:1rem;margin:.2rem 0 1rem}
+  .hifz-wird-head{font-size:.92rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:.8rem}
+  .hifz-wird-opt{display:flex;align-items:center;gap:.6rem;padding:.55rem .2rem;font-size:.9rem;color:var(--ink);cursor:pointer}
+  .hifz-wird-opt input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+  .hifz-wird-opt small{display:block;color:var(--muted);font-size:.72rem;margin-top:.1rem}
+  .hifz-wird-manual{margin:.4rem 0 .2rem;padding:.7rem;background:var(--chip-bg);border-radius:12px}
+  .hifz-wird-manual[hidden]{display:none}
+  .hifz-wird-manual-hint{font-size:.78rem;color:var(--muted);margin-bottom:.6rem}
+  .hifz-wird-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+  .hifz-wird-empty{font-size:.8rem;color:var(--muted);text-align:center;padding:.4rem}
+  #hifzWirdStart{margin-top:.9rem}
   .witr-suggestion{background:var(--accent-soft);border-radius:16px;padding:1.1rem;text-align:center}
   .witr-sug-head{font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:.5rem}
   .witr-sug-surah{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--ink);margin-bottom:.3rem;line-height:1.5}
@@ -1761,6 +1773,18 @@
           <button class="adhkar-done-btn" id="witrFavDone">✔ تم</button>
         </div>
 
+        <div class="hifz-wird" id="hifzWird">
+          <div class="hifz-wird-head">📚 أوراد الحفظ والمراجعة</div>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdDue"><span>المراجعات المستحقة<small>المقاطع التي حان موعد مراجعتها اليوم</small></span></label>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdRecent"><span>الحفظ القريب<small>ما راجعته اليوم أو أمس</small></span></label>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdManual"><span>تحديد مخصص<small>اختر سورًا بعينها من محفوظاتك</small></span></label>
+          <div class="hifz-wird-manual" id="hifzWirdManualBox" hidden>
+            <div class="hifz-wird-manual-hint">اختر السور التي تريد مراجعة مقاطعها المحفوظة:</div>
+            <div class="hifz-wird-chips" id="hifzWirdChips"></div>
+          </div>
+          <button class="adhkar-done-btn" id="hifzWirdStart">▶ ابدأ الورد</button>
+        </div>
+
         <div class="witr-suggestion" id="witrSuggestion" hidden>
           <div class="witr-sug-head">📖 اقتراح الليلة</div>
           <div class="witr-sug-surah" id="witrSugSurah"></div>
@@ -1987,7 +2011,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٦</div>
+    <div class="app-version">النسخة ٥٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3000,6 +3024,7 @@
     document.getElementById("witrPoolChips").hidden = true;
     document.getElementById("witrFavEdit").hidden = true;
     document.getElementById("witrSuggestion").hidden = true;
+    document.getElementById("hifzWird").hidden = true;
     document.getElementById("witrFavEditView").hidden = false;
     document.getElementById("witrFavSearch").value = "";
     witrRenderFavChips();
@@ -3014,6 +3039,7 @@
     document.getElementById("witrTargets").hidden = false;
     document.getElementById("witrPoolChips").hidden = false;
     document.getElementById("witrFavEdit").hidden = false;
+    document.getElementById("hifzWird").hidden = false;
     if(witrPool === "fav" && state.witr) witrPickTarget(state.witr.target);
     else witrRenderPickView();
   }
@@ -3168,7 +3194,7 @@
     const txt = witrPartsText(last.parts);
     document.getElementById("witrDoneMsg").innerHTML =
       "✅ تم الإنجاز<br><b>"+txt.surah+"</b><br>"+txt.range+"<br>"+
-      arn(last.ayat)+" آية · تُكتب من "+WITR_TARGET_LABEL[last.target];
+      arn(last.ayat)+" آية"+(WITR_TARGET_LABEL[last.target] ? " · تُكتب من "+WITR_TARGET_LABEL[last.target] : " · ورد حفظ");
     const totalAyat = sessions.reduce((a,s)=>a+s.ayat,0);
     document.getElementById("witrTonightStats").textContent =
       "عدد جلسات الليلة: "+arn(sessions.length)+" · إجمالي الآيات المقروءة: "+arn(totalAyat);
@@ -3181,6 +3207,11 @@
     document.querySelectorAll("#witrPoolChips span").forEach(c=>{
       c.classList.toggle("active", c.dataset.p === witrPool);
     });
+    /* حدّث شرائح التحديد المخصص إن كانت ظاهرة (قد تتغيّر محفوظات المستخدم) */
+    if(document.getElementById("hifzWirdManual").checked){
+      document.getElementById("hifzWirdManualBox").hidden = false;
+      hifzWirdRenderChips();
+    }
     const sugBox = document.getElementById("witrSuggestion");
     if(w && w.parts){
       sugBox.hidden = false;
@@ -3236,6 +3267,92 @@
     witrOpenReader();
   };
 
+  /* ==================== أوراد الحفظ والمراجعة (تكامل الحفظ داخل القيام) ==================== */
+  let hifzWirdSel = new Set(); /* أرقام السور المختارة يدويًا (chips) */
+
+  /* شرائح التحديد المخصص: سورة واحدة لكل سورة يملك المستخدم فيها مقاطع محفوظة فعلًا */
+  function hifzWirdRenderChips(){
+    const box = document.getElementById("hifzWirdChips");
+    if(!box) return;
+    const savedSurahs = [...new Set(hifzData().segments.map(s=>s.surahN))].sort((a,b)=>a-b);
+    box.innerHTML = "";
+    if(!savedSurahs.length){
+      box.innerHTML = '<div class="hifz-wird-empty">لا سور محفوظة بعد</div>';
+      return;
+    }
+    savedSurahs.forEach(n=>{
+      const chip = document.createElement("button");
+      chip.className = "hifz-pl-chip" + (hifzWirdSel.has(n) ? " on" : "");
+      chip.textContent = WITR_SURAHS[n-1].name;
+      chip.onclick = ()=>{
+        if(hifzWirdSel.has(n)) hifzWirdSel.delete(n); else hifzWirdSel.add(n);
+        chip.classList.toggle("on");
+      };
+      box.appendChild(chip);
+    });
+  }
+  document.getElementById("hifzWirdManual").onchange = (e)=>{
+    const box = document.getElementById("hifzWirdManualBox");
+    box.hidden = !e.target.checked;
+    if(e.target.checked) hifzWirdRenderChips();
+  };
+
+  /* التجميع الصارم: يجمع المقاطع المحفوظة فعلًا فقط وفق الخيارات، يزيل تكرار الآيات، ويرتّب
+     (بالسورة ثم الآية). لا يجلب السورة كاملة أبدًا — فقط ما حفظه المستخدم من مقاطع. */
+  function hifzWirdBuildParts(opts){
+    const today = hifzToday();
+    const yd = new Date(today+"T12:00:00"); yd.setDate(yd.getDate()-1);
+    const yesterday = fmtDate(yd);
+    const segs = hifzData().segments;
+    const chosen = [];
+    if(opts.due){
+      segs.forEach(s=>{ if(s.status === "needs_review" && s.nextReviewDate <= today) chosen.push(s); });
+    }
+    if(opts.recent){
+      segs.forEach(s=>{ if(s.lastReviewDate === today || s.lastReviewDate === yesterday) chosen.push(s); });
+    }
+    if(opts.manual && opts.surahs && opts.surahs.length){
+      const set = new Set(opts.surahs);
+      segs.forEach(s=>{ if(set.has(s.surahN)) chosen.push(s); }); /* فقط المقاطع المحفوظة لهذه السور */
+    }
+    /* إزالة تكرار الآيات: اتحاد أرقام الآيات لكل سورة */
+    const bySurah = {};
+    chosen.forEach(s=>{
+      if(!bySurah[s.surahN]) bySurah[s.surahN] = new Set();
+      for(let a=s.from; a<=s.to; a++) bySurah[s.surahN].add(a);
+    });
+    /* بناء المقاطع: لكل سورة (مرتّبة) نجمع الآيات المتّصلة في نطاقات */
+    const parts = [];
+    Object.keys(bySurah).map(Number).sort((a,b)=>a-b).forEach(n=>{
+      const ayahs = [...bySurah[n]].sort((a,b)=>a-b);
+      let runStart = null, prev = null;
+      ayahs.forEach(a=>{
+        if(runStart === null){ runStart = a; prev = a; }
+        else if(a === prev + 1){ prev = a; }
+        else { parts.push({n, name:WITR_SURAHS[n-1].name, from:runStart, to:prev}); runStart = a; prev = a; }
+      });
+      if(runStart !== null) parts.push({n, name:WITR_SURAHS[n-1].name, from:runStart, to:prev});
+    });
+    return parts;
+  }
+
+  function hifzWirdStart(){
+    const opts = {
+      due: document.getElementById("hifzWirdDue").checked,
+      recent: document.getElementById("hifzWirdRecent").checked,
+      manual: document.getElementById("hifzWirdManual").checked,
+      surahs: [...hifzWirdSel]
+    };
+    const parts = hifzWirdBuildParts(opts);
+    if(!parts.length){ alert("لا توجد مقاطع مطابقة لاختيارك."); return; }
+    const totalAyat = parts.reduce((a,p)=> a + (p.to - p.from + 1), 0);
+    /* تجاوز حدّ الهدف (١٠/١٠٠/١٠٠٠) تمامًا — نغطّي الورد كاملًا */
+    state.witr = { target: totalAyat, pool:"wird", parts, key:"wird:"+Date.now(), startedAt: Date.now(), readPage:0, wird:true };
+    save();
+    witrOpenReader();
+  }
+  document.getElementById("hifzWirdStart").onclick = hifzWirdStart;
+
   /* عرض الآيات: نص أصلي عبر AlQuran.cloud بدل iframe — تحكم كامل بالخط والألوان وتخزين مؤقت للقراءة بلا إنترنت */
   let witrAyahChunks = null;
   let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.25");
@@ -3266,7 +3383,8 @@
 
     try{
       const ayahList = await witrBuildAyahList(w.parts);
-      const rakahs = witrRakahCount(w.target);
+      /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
+      const rakahs = w.wird ? 1 : witrRakahCount(w.target);
       witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
       if(typeof w.readPage !== "number") w.readPage = 0;
       if(w.readPage >= witrAyahChunks.length) w.readPage = witrAyahChunks.length - 1;
@@ -3304,7 +3422,9 @@
       span.appendChild(num);
       box.appendChild(span);
     });
-    document.getElementById("witrRakahLabel").textContent = "الركعة "+arn(w.readPage+1)+" من "+arn(witrAyahChunks.length);
+    document.getElementById("witrRakahLabel").textContent = w.wird
+      ? "📚 ورد الحفظ · "+arn(chunk.length)+" آية"
+      : "الركعة "+arn(w.readPage+1)+" من "+arn(witrAyahChunks.length);
     document.getElementById("witrRakahPrev").disabled = w.readPage <= 0;
     document.getElementById("witrRakahNext").disabled = w.readPage >= witrAyahChunks.length-1;
   }
