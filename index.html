@@ -795,6 +795,7 @@
   .witr-targets button.active{border-color:var(--accent);background:var(--accent-soft)}
   .witr-targets button.active b{color:var(--accent)}
   .witr-pool-chips{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-bottom:.5rem}
+  .witr-pool-chips[hidden]{display:none} /* السمة hidden يجب أن تغلب على display:flex عند تبديل المسار */
   .witr-pool-chips span{
     border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;font-size:.74rem;color:var(--muted);
     cursor:pointer;transition:.15s;
@@ -804,6 +805,7 @@
     display:block;width:100%;text-align:center;font-size:.74rem;color:var(--accent);
     margin-bottom:1.1rem;cursor:pointer;background:none;border:none;font-family:inherit;
   }
+  .witr-fav-edit[hidden]{display:none}
   /* مكوّن اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) بدل نص حر */
   .witr-fav-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.9rem;min-height:1.8rem}
   .witr-fav-empty-inline{font-size:.8rem;color:var(--muted)}
@@ -1754,6 +1756,7 @@
           <button data-t="10"><b>🌱 10 آيات</b><small>تُكتب من الذاكرين</small></button>
           <button data-t="100"><b>🌿 100 آية</b><small>تُكتب من القانتين</small></button>
           <button data-t="1000"><b>👑 1000 آية</b><small>تُكتب من المقنطرين</small></button>
+          <button data-t="wird" id="witrWirdCard" hidden><b>📚 ورد الحفظ</b><small>من محفوظاتك</small></button>
         </div>
 
         <div class="witr-pool-chips" id="witrPoolChips">
@@ -1773,11 +1776,11 @@
           <button class="adhkar-done-btn" id="witrFavDone">✔ تم</button>
         </div>
 
-        <div class="hifz-wird" id="hifzWird">
+        <div class="hifz-wird" id="hifzWird" hidden>
           <div class="hifz-wird-head">📚 أوراد الحفظ والمراجعة</div>
-          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdDue"><span>المراجعات المستحقة<small>المقاطع التي حان موعد مراجعتها اليوم</small></span></label>
-          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdRecent"><span>الحفظ القريب<small>ما راجعته اليوم أو أمس</small></span></label>
-          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdManual"><span>تحديد مخصص<small>اختر سورًا بعينها من محفوظاتك</small></span></label>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdDue"><span><b id="hifzWirdDueLabel">المراجعات المستحقة</b><small>المقاطع التي حان موعد مراجعتها اليوم</small></span></label>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdRecent"><span><b id="hifzWirdRecentLabel">🌱 المحفوظات الجديدة</b><small>ما أضفته أو راجعته اليوم أو أمس</small></span></label>
+          <label class="hifz-wird-opt"><input type="checkbox" id="hifzWirdManual"><span><b id="hifzWirdManualLabel">تحديد مخصص</b><small>اختر سورًا بعينها من محفوظاتك</small></span></label>
           <div class="hifz-wird-manual" id="hifzWirdManualBox" hidden>
             <div class="hifz-wird-manual-hint">اختر السور التي تريد مراجعة مقاطعها المحفوظة:</div>
             <div class="hifz-wird-chips" id="hifzWirdChips"></div>
@@ -1788,9 +1791,7 @@
         <div class="witr-suggestion" id="witrSuggestion" hidden>
           <div class="witr-sug-head">📖 اقتراح الليلة</div>
           <div class="witr-sug-surah" id="witrSugSurah"></div>
-          <div class="witr-sug-range" id="witrSugRange"></div>
           <div class="witr-sug-meta" id="witrSugMeta"></div>
-          <div class="witr-rakah-plan" id="witrRakahPlan"></div>
           <button class="adhkar-done-btn" id="witrStartBtn">▶ ابدأ القراءة</button>
           <button class="witr-change-btn" id="witrChangeBtn">🔄 تغيير الاقتراح</button>
         </div>
@@ -2011,7 +2012,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٥٨</div>
+    <div class="app-version">النسخة ٦٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3037,9 +3038,8 @@
     document.getElementById("witrFavEditView").hidden = true;
     document.getElementById("witrPickHeading").hidden = false;
     document.getElementById("witrTargets").hidden = false;
-    document.getElementById("witrPoolChips").hidden = false;
-    document.getElementById("witrFavEdit").hidden = false;
-    document.getElementById("hifzWird").hidden = false;
+    /* رؤية المصادر/الحفظ تُدار حسب المسار في witrRenderPickView — الرجوع من تعديل المفضّلة دائمًا في مسار "goal" */
+    witrMode = "goal";
     if(witrPool === "fav" && state.witr) witrPickTarget(state.witr.target);
     else witrRenderPickView();
   }
@@ -3199,39 +3199,83 @@
     document.getElementById("witrTonightStats").textContent =
       "عدد جلسات الليلة: "+arn(sessions.length)+" · إجمالي الآيات المقروءة: "+arn(totalAyat);
   }
+  /* آلة حالة من مسارين: "goal" (١٠/١٠٠/١٠٠٠ + مصادر عادية) و"wird" (خيارات الحفظ).
+     إن لم يملك المستخدم أي مقطع حفظ، نُخفي كل عناصر الحفظ ونُثبّت المسار على "goal". */
+  let witrMode = "goal";
   function witrRenderPickView(){
     const w = state.witr;
+    const arn = n=>n.toLocaleString("ar-EG");
+    const hasHifz = hifzData().segments.length > 0;
+    /* المطلوب ١: إخفاء كل واجهة الحفظ عند غياب البيانات */
+    document.getElementById("witrWirdCard").hidden = !hasHifz;
+    if(!hasHifz) witrMode = "goal";
+    const wird = witrMode === "wird";
+
+    /* حالة تفعيل بطاقات الهدف (البطاقة الرابعة "ورد الحفظ" مقابل الأهداف الرقمية) */
     document.querySelectorAll("#witrTargets button").forEach(b=>{
-      b.classList.toggle("active", !!(w && String(w.target) === b.dataset.t));
+      if(b.dataset.t === "wird") b.classList.toggle("active", wird);
+      else b.classList.toggle("active", !wird && !!(w && !w.wird && String(w.target) === b.dataset.t));
     });
     document.querySelectorAll("#witrPoolChips span").forEach(c=>{
       c.classList.toggle("active", c.dataset.p === witrPool);
     });
-    /* حدّث شرائح التحديد المخصص إن كانت ظاهرة (قد تتغيّر محفوظات المستخدم) */
-    if(document.getElementById("hifzWirdManual").checked){
-      document.getElementById("hifzWirdManualBox").hidden = false;
-      hifzWirdRenderChips();
+
+    /* المطلوب ٢: تبديل الأقسام حسب المسار */
+    document.getElementById("witrPoolChips").hidden = wird;
+    document.getElementById("witrFavEdit").hidden = wird;
+    document.getElementById("hifzWird").hidden = !wird;
+
+    if(wird){
+      document.getElementById("witrSuggestion").hidden = true;
+      hifzWirdRenderCounts(); /* المطلوب ٣: عدّادات ديناميكية */
+      if(document.getElementById("hifzWirdManual").checked){
+        document.getElementById("hifzWirdManualBox").hidden = false;
+        hifzWirdRenderChips();
+      }
+      return;
     }
+
+    /* مسار الأهداف: بطاقة الاقتراح المضغوطة (المطلوب ٥) */
     const sugBox = document.getElementById("witrSuggestion");
-    if(w && w.parts){
+    if(w && w.parts && !w.wird){
       sugBox.hidden = false;
-      const txt = witrPartsText(w.parts);
-      document.getElementById("witrSugSurah").textContent = txt.surah;
-      document.getElementById("witrSugRange").textContent = txt.range;
-      const arn = n=>n.toLocaleString("ar-EG");
-      document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية · تقريبًا "+arn(witrMinutes(w.target))+" دقائق";
-      const rakahs = witrRakahCount(w.target);
-      const perRakah = Math.ceil(w.target/rakahs);
-      document.getElementById("witrRakahPlan").textContent =
-        "🕌 لو صليت "+arn(rakahs)+" ركعات، ستقرأ تقريبًا "+arn(perRakah)+" آية في كل ركعة (~"+arn(witrMinutes(perRakah))+" دقائق)";
+      let line;
+      if(w.parts.length === 1){
+        const p = w.parts[0];
+        line = "سورة "+p.name+" (الآيات "+arn(p.from)+" - "+arn(p.to)+")";
+      }else{
+        const f = w.parts[0], l = w.parts[w.parts.length-1];
+        line = "من سورة "+f.name+" إلى سورة "+l.name+" ("+arn(w.parts.length)+" سور)";
+      }
+      document.getElementById("witrSugSurah").textContent = line;
+      document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية • "+arn(witrMinutes(w.target))+" دقائق";
       const startBtn = document.getElementById("witrStartBtn");
-      const resuming = w.readPage > 0;
-      startBtn.textContent = resuming
+      startBtn.textContent = (w.readPage > 0)
         ? "▶ استكمال القراءة (الركعة "+arn(w.readPage+1)+")"
         : "▶ ابدأ القراءة";
     }else{
       sugBox.hidden = true;
     }
+  }
+  /* المطلوب ٣: حساب عدد المقاطع المتاحة لكل خيار حفظ وعرضه بجانب التسمية */
+  function hifzWirdCounts(){
+    const today = hifzToday();
+    const yd = new Date(today+"T12:00:00"); yd.setDate(yd.getDate()-1);
+    const yesterday = fmtDate(yd);
+    const segs = hifzData().segments;
+    let due = 0, fresh = 0;
+    segs.forEach(s=>{
+      if(s.status === "needs_review" && s.nextReviewDate <= today) due++;
+      if(s.lastReviewDate === today || s.lastReviewDate === yesterday || s.dateAdded === today || s.dateAdded === yesterday) fresh++;
+    });
+    return { due, fresh, surahs: new Set(segs.map(s=>s.surahN)).size };
+  }
+  function hifzWirdRenderCounts(){
+    const arn = n=>n.toLocaleString("ar-EG");
+    const c = hifzWirdCounts();
+    document.getElementById("hifzWirdDueLabel").textContent = "المراجعات المستحقة ("+arn(c.due)+")";
+    document.getElementById("hifzWirdRecentLabel").textContent = "🌱 المحفوظات الجديدة ("+arn(c.fresh)+")";
+    document.getElementById("hifzWirdManualLabel").textContent = "تحديد مخصص ("+arn(c.surahs)+")";
   }
   function witrPickTarget(target){
     const sugg = witrGenerate(target, witrPool);
@@ -3241,7 +3285,15 @@
     witrRenderAll();
   }
   document.querySelectorAll("#witrTargets button").forEach(b=>{
-    b.onclick = ()=> witrPickTarget(parseInt(b.dataset.t,10));
+    b.onclick = ()=>{
+      if(b.dataset.t === "wird"){            /* المسار ب: ورد الحفظ */
+        witrMode = "wird";
+        witrRenderPickView();
+      }else{                                  /* المسار أ: هدف رقمي */
+        witrMode = "goal";
+        witrPickTarget(parseInt(b.dataset.t,10));
+      }
+    };
   });
   document.querySelectorAll("#witrPoolChips span").forEach(c=>{
     c.onclick = ()=>{
@@ -3308,8 +3360,8 @@
     if(opts.due){
       segs.forEach(s=>{ if(s.status === "needs_review" && s.nextReviewDate <= today) chosen.push(s); });
     }
-    if(opts.recent){
-      segs.forEach(s=>{ if(s.lastReviewDate === today || s.lastReviewDate === yesterday) chosen.push(s); });
+    if(opts.recent){ /* المحفوظات الجديدة: أُضيفت أو رُوجعت اليوم أو أمس */
+      segs.forEach(s=>{ if(s.lastReviewDate === today || s.lastReviewDate === yesterday || s.dateAdded === today || s.dateAdded === yesterday) chosen.push(s); });
     }
     if(opts.manual && opts.surahs && opts.surahs.length){
       const set = new Set(opts.surahs);
