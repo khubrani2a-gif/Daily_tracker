@@ -285,27 +285,28 @@
   li .done-line{text-decoration:line-through;color:var(--muted)}
 
   /* ===== قراءة سور مخصّصة: إدارة + إتمام أنظف ===== */
-  /* ترويسة القسم: أزرار إجراء متماسكة على هيئة أقراص */
-  .qc-head-actions{display:flex;align-items:center;gap:.35rem;background:var(--chip-bg);border-radius:11px;padding:.2rem}
+  /* ترويسة القسم: أزرار إجراء أصغر ومتماسكة، مع إبقاء العنوان مهيمنًا */
+  .qc-group-head{padding:.25rem 0 .1rem}
+  .qc-head-actions{display:flex;align-items:center;gap:.25rem;background:var(--chip-bg);border-radius:10px;padding:.15rem}
   .qc-manage-btn{
     border:none;background:transparent;color:var(--muted);
-    border-radius:8px;padding:.28rem .7rem;font-family:inherit;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
+    border-radius:7px;padding:.22rem .6rem;font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;transition:.15s;
   }
   .qc-manage-btn:hover{background:var(--accent-soft);color:var(--accent)}
   .qc-manage-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
   .qc-add-btn{
     border:none;background:var(--paper);color:var(--accent);
-    width:28px;height:26px;border-radius:8px;font-size:1.05rem;line-height:1;cursor:pointer;transition:.15s;
+    width:26px;height:24px;border-radius:7px;font-size:1rem;line-height:1;cursor:pointer;transition:.15s;
     display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.06);
   }
   .qc-add-btn:hover{background:var(--accent-soft)}
-  /* ملخّص التقدّم العام (مشتقّ من بيانات الإتمام) */
+  /* ملخّص التقدّم — معلومة مساندة خفيفة لا بطاقة (بلا خلفية، حجم أصغر، مسافة أقل) */
   .qc-summary{
-    display:flex;align-items:center;gap:.4rem;font-size:.76rem;color:var(--muted);
-    background:var(--chip-bg);border-radius:10px;padding:.4rem .7rem;margin:.2rem 0 .5rem;
+    display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--muted);
+    padding:.1rem .15rem;margin:.05rem 0 .4rem;
   }
   .qc-summary[hidden]{display:none}
-  .qc-summary b{color:var(--accent);font-weight:700}
+  .qc-summary b{color:var(--ink);font-weight:600}
   /* محاذاة رموز المستخدم (إيموجي) بأناقة دون تغييرها */
   .qc-emoji{display:inline-block;line-height:1;vertical-align:-.08em;margin-inline-end:.4rem;flex-shrink:0}
   .qc-label-text{vertical-align:middle}
@@ -314,6 +315,8 @@
   .qc-title-wrap{flex:1;min-width:0;cursor:pointer}
   .qc-title-main{color:var(--ink)}
   .qc-done-note{font-size:.72rem;font-weight:700;color:#2ea86f;margin-top:.15rem}
+  /* مربّع المكتمل قابل للنقر لإلغاء الإكمال بعد تأكيد */
+  .qc-chk-done{cursor:pointer}
   /* وضع الإدارة: مقبض سحب بمساحة لمس مريحة + أزرار تعديل/حذف أخفّ */
   .qc-drag{
     cursor:grab;color:var(--muted);font-size:1.05rem;flex-shrink:0;
@@ -2200,7 +2203,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧١</div>
+    <div class="app-version">النسخة ٧٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3124,7 +3127,9 @@
       }else if(done){
         /* وضع الإتمام النظيف: مربّع محدّد + عنوان + "✨ أتممتها" أسفله، بلا نسبة ولا شطب */
         const chk = document.createElement("span");
-        chk.className = "chk on"; chk.textContent = "✔";
+        chk.className = "chk on qc-chk-done"; chk.textContent = "✔";
+        chk.title = "إلغاء الإكمال";
+        chk.onclick = (ev)=>{ ev.stopPropagation(); qcRollbackComplete(w.id); };
         const wrap = document.createElement("div");
         wrap.className = "qc-title-wrap";
         const t = document.createElement("div"); t.className = "qc-title-main"; qcSetTitle(t, w);
@@ -3154,7 +3159,7 @@
       const total = list.length;
       const doneCount = list.filter(w=> !!w.completed || w.currentPage > w.endPage).length;
       if(total){
-        summary.innerHTML = "📊 التقدّم العام: <b>"+arn(doneCount)+"</b> من <b>"+arn(total)+"</b> مقاطع مكتملة";
+        summary.innerHTML = "📊 <b>"+arn(doneCount)+"</b> من <b>"+arn(total)+"</b> مقاطع مكتملة";
         summary.hidden = false;
       }else summary.hidden = true;
     }
@@ -3221,6 +3226,25 @@
       cancelText: "إلغاء",
       onOk: ()=>{
         wCustomSave(wCustom().filter(x=> x.id !== id));
+        renderWorship(); renderProgress();
+      }
+    });
+  }
+
+  /* إلغاء إكمال مقطع مع تأكيد: نزيل علامة الإتمام فقط ونُبقي سجلّ القراءة وبيانات التقدّم كما هي */
+  function qcRollbackComplete(id){
+    const w = qsFindItem(id);
+    if(!w) return;
+    hifzShowConfirm({
+      title: "إلغاء إكمال هذا المقطع؟",
+      body: "سيعود المقطع إلى حالة غير مكتملة.",
+      okText: "تأكيد",
+      cancelText: "إلغاء",
+      onOk: ()=>{
+        w.completed = false;
+        /* نُبقي التقدّم داخل النطاق كي يصير المقطع «غير مكتمل» دون المساس بسجلّ القراءة (lastReadDate) */
+        if(w.currentPage > w.endPage) w.currentPage = w.endPage;
+        qsSaveItem(w);
         renderWorship(); renderProgress();
       }
     });
