@@ -762,6 +762,16 @@
   /* ===== الورد اليومي من القرآن ===== */
   .q-tiles{margin-bottom:.9rem}
   .q-reader{margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--line)}
+  /* ورقة تقسيم الركعات */
+  .witr-rakah-body{display:flex;flex-direction:column}
+  .witr-rakah-or{text-align:center;font-size:.82rem;color:var(--muted);margin:1rem 0 .6rem}
+  .witr-rakah-nums{display:flex;gap:.5rem}
+  .witr-rakah-nums button{
+    flex:1;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+    border-radius:12px;padding:.8rem;font-family:inherit;font-size:1.1rem;font-weight:700;cursor:pointer;transition:.15s;
+  }
+  .witr-rakah-nums button:hover,.witr-rakah-nums button.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  html.dark #witrRakahSheet .witr-rakah-nums button{background:#0a0a0a;border-color:#1e1e1e}
   .q-nav{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.6rem}
   .q-nav button{
     border:1px solid var(--line);background:var(--paper);color:var(--accent);
@@ -1820,7 +1830,27 @@
             <a id="witrExternal" target="_blank" rel="noopener noreferrer">↗ افتح في نافذة جديدة</a>
           </div>
         </div>
+        <button class="witr-change-btn" id="witrRakahToggle">🧮 تقسيم الركعات</button>
         <button class="adhkar-done-btn" id="witrFinishBtn">✓ أنهيت القراءة الليلة</button>
+        <div class="hifz-toast" id="witrToast" hidden></div>
+      </div>
+    </div>
+
+    <!-- ورقة تقسيم الركعات (تُفتح داخل قارئ القيام) -->
+    <div class="hifz-sheet-overlay" id="witrRakahSheet" hidden>
+      <div class="hifz-sheet">
+        <div class="hifz-sheet-head">
+          <span>🧮 تقسيم الركعات</span>
+          <button id="witrRakahSheetClose" title="إغلاق">✕</button>
+        </div>
+        <div class="witr-rakah-body">
+          <button class="adhkar-done-btn" id="witrRakahAuto">🤖 تقسيم تلقائي (ذكي)</button>
+          <div class="witr-rakah-or">أو اختر عدد الركعات:</div>
+          <div class="witr-rakah-nums" id="witrRakahNums">
+            <button data-r="2">٢</button><button data-r="4">٤</button><button data-r="6">٦</button><button data-r="8">٨</button>
+          </div>
+          <button class="witr-change-btn" id="witrRakahCancel">إلغاء</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2016,7 +2046,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٢</div>
+    <div class="app-version">النسخة ٦٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3172,7 +3202,21 @@
   function closeWitrUI(){
     witrOverlay.hidden = true;
     document.body.style.overflow = "";
+    witrResetRakahState(); /* تنظيف حالة التقسيم المؤقتة عند إغلاق القارئ (لا تُحفظ إطلاقًا) */
     renderWorship(); renderProgress();
+  }
+  /* تصفير حالة تقسيم الركعات المؤقتة واستعادة واجهة القارئ الافتراضية */
+  function witrResetRakahState(){
+    witrRakahDist = null;
+    witrFullAyahList = [];
+    witrSessionUnits = [];
+    const prev = document.getElementById("witrRakahPrev");
+    if(prev) prev.parentElement.style.display = "";
+    const sheet = document.getElementById("witrRakahSheet");
+    if(sheet) sheet.hidden = true;
+    const box = document.getElementById("witrAyatBox");
+    if(box) box.innerHTML = ""; /* لا تُبقِ فواصل قديمة في DOM القارئ المخفي */
+    witrUpdateRakahToggleBtn();
   }
   function closeWitr(){
     if(history.state && history.state.witr) history.back();
@@ -3451,6 +3495,7 @@
     document.getElementById("witrPickView").hidden = true;
     document.getElementById("witrDoneView").hidden = true;
     document.getElementById("witrReader").hidden = false;
+    witrResetRakahState(); /* ابدأ كل جلسة قراءة بلا تقسيم */
     witrApplyFontSize();
     document.getElementById("witrLoading").hidden = false;
     document.getElementById("witrAyatBox").hidden = true;
@@ -3464,7 +3509,12 @@
       witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
       if(typeof w.readPage !== "number") w.readPage = 0;
       if(w.readPage >= witrAyahChunks.length) w.readPage = witrAyahChunks.length - 1;
-      witrRenderReaderPage();
+      /* حالة تقسيم الركعات (مؤقتة، لا تُحفظ في Firebase): نبني القائمة الكاملة والوحدات غير القابلة للتقسيم */
+      witrFullAyahList = ayahList;
+      witrSessionUnits = witrBuildUnits(w, ayahList);
+      witrRakahDist = null;
+      witrUpdateRakahToggleBtn();
+      witrRenderReaderView();
       document.getElementById("witrLoading").hidden = true;
       document.getElementById("witrAyatBox").hidden = false;
     }catch(e){
@@ -3475,6 +3525,174 @@
       document.getElementById("witrExternal").href = "https://quran.com/"+p0.n+"/"+p0.from+"-"+endAyah;
     }
   }
+  /* ===================== تقسيم الركعات (v64) ===================== */
+  /* حالة مؤقتة تُدار في ذاكرة القارئ فقط — لا تُحفظ محليًا ولا في Firebase، وتُصفّر عند إغلاق القارئ */
+  let witrFullAyahList = [];   /* القائمة الكاملة المسطّحة للجلسة الحالية (المصدر غير المتغيّر) */
+  let witrSessionUnits = [];   /* الوحدات غير القابلة للتقسيم (مقاطع الحفظ، أو آية آية للأهداف الرقمية) */
+  let witrRakahDist = null;    /* { mode, requestedCount, actualCount, breakAfterVerseKeys:[] } */
+  const WITR_ORDINALS = ["","الأولى","الثانية","الثالثة","الرابعة","الخامسة","السادسة","السابعة","الثامنة","التاسعة","العاشرة"];
+  function witrVerseKey(a){ return (typeof a.g === "number") ? ("g"+a.g) : (a.surahName+":"+a.n); }
+  /* الوحدات: في جلسة ورد الحفظ كل مقطع محفوظ وحدة غير قابلة للتقسيم؛ في الأهداف الرقمية كل آية وحدة */
+  function witrBuildUnits(w, ayahList){
+    if(w.wird && Array.isArray(w.parts)){
+      const units = [];
+      let idx = 0;
+      for(const p of w.parts){
+        const cnt = (p.to - p.from + 1);
+        const slice = ayahList.slice(idx, idx + cnt);
+        if(slice.length) units.push(slice);
+        idx += cnt;
+      }
+      /* أمان: إن اختلّت المحاذاة لأي سبب نعود إلى آية آية */
+      const covered = units.reduce((a,u)=>a+u.length,0);
+      if(covered === ayahList.length && units.length) return units;
+    }
+    return ayahList.map(a=>[a]);
+  }
+  /* خوارزمية التقسيم: توزيع الوحدات المتتالية على K ركعة مع تقليل أكبر حِمل (Painter's partition)
+     → يقلّل التفاوت بين الركعات دون تقسيم أي وحدة. تُرجع عدد الوحدات في كل ركعة. */
+  function witrPartition(weights, K){
+    const m = weights.length;
+    K = Math.max(1, Math.min(K, m));
+    if(K === 1) return [m];
+    const pre = [0]; for(let i=0;i<m;i++) pre.push(pre[i] + weights[i]);
+    const sum = (a,b)=> pre[b] - pre[a];
+    const INF = Infinity;
+    const dp  = Array.from({length:K+1}, ()=> new Array(m+1).fill(INF));
+    const cut = Array.from({length:K+1}, ()=> new Array(m+1).fill(0));
+    dp[0][0] = 0;
+    for(let k=1;k<=K;k++){
+      for(let i=k;i<=m;i++){
+        for(let j=k-1;j<i;j++){
+          if(dp[k-1][j] === INF) continue;
+          const cost = Math.max(dp[k-1][j], sum(j,i));
+          if(cost < dp[k][i]){ dp[k][i] = cost; cut[k][i] = j; }
+        }
+      }
+    }
+    const sizes = []; let i = m;
+    for(let k=K;k>=1;k--){ const j = cut[k][i]; sizes.unshift(i - j); i = j; }
+    return sizes;
+  }
+  /* الوضع التلقائي: يختار حصريًا من {٢،٤،٦،٨} وفق حجم الورد، ثم يُقيَّد بعدد الوحدات المتاح */
+  function witrAutoRakahCount(totalVerses, unitCount){
+    let target = totalVerses <= 20 ? 2 : totalVerses <= 60 ? 4 : totalVerses <= 120 ? 6 : 8;
+    return Math.max(1, Math.min(target, unitCount, 8));
+  }
+  function witrComputeDistribution(mode, requested){
+    const units = witrSessionUnits;
+    const unitCount = units.length;
+    const total = witrFullAyahList.length;
+    let requestedCount, K;
+    if(mode === "auto"){ requestedCount = witrAutoRakahCount(total, unitCount); K = requestedCount; }
+    else { requestedCount = requested; K = Math.min(requested, unitCount); } /* الحد الأقصى المطلوب */
+    K = Math.max(1, Math.min(K, unitCount));
+    const sizes = witrPartition(units.map(u=>u.length), K);
+    /* مفاتيح الآيات التي يلي كلًّا منها فاصل (آخر آية في كل ركعة عدا الأخيرة) — دائمًا على حدود الوحدات */
+    const breakKeys = [];
+    let unitIdx = 0;
+    for(let g=0; g<sizes.length-1; g++){
+      unitIdx += sizes[g];
+      const lastUnit = units[unitIdx-1];
+      breakKeys.push(witrVerseKey(lastUnit[lastUnit.length-1]));
+    }
+    return { mode, requestedCount, actualCount: sizes.length, breakAfterVerseKeys: breakKeys };
+  }
+
+  /* موزّع العرض: مع التقسيم يعرض متّصلًا بفواصل؛ بدونه يعود للعرض المُصفَّح المعتاد */
+  function witrRenderReaderView(){
+    if(witrRakahDist) witrRenderContinuous(witrRakahDist);
+    else witrRenderReaderPage();
+    /* إخفاء تنقّل الصفحات أثناء التقسيم (عرض متّصل) */
+    document.getElementById("witrRakahPrev").parentElement.style.display = witrRakahDist ? "none" : "";
+  }
+  function witrRenderContinuous(dist){
+    const arn = n=>n.toLocaleString("ar-EG");
+    const box = document.getElementById("witrAyatBox");
+    box.innerHTML = "";
+    const breakSet = new Set(dist.breakAfterVerseKeys);
+    const last = witrFullAyahList.length - 1;
+    let lastSurah = null, rakahNo = 1;
+    witrFullAyahList.forEach((a, i)=>{
+      if(a.surahName !== lastSurah){
+        const h = document.createElement("div");
+        h.className = "witr-surah-tag";
+        h.textContent = "سورة "+a.surahName;
+        box.appendChild(h);
+        lastSurah = a.surahName;
+      }
+      const span = document.createElement("span");
+      span.textContent = a.text + " ";
+      const num = document.createElement("span");
+      num.className = "witr-ayah-num";
+      num.textContent = arn(a.n);
+      span.appendChild(num);
+      box.appendChild(span);
+      /* فاصل: لا قبل الأولى، لا بعد الأخيرة، لا داخل وحدة (المفاتيح على الحدود فقط) */
+      if(i < last && breakSet.has(witrVerseKey(a))){
+        rakahNo++;
+        const div = document.createElement("div");
+        div.className = "rakah-divider";
+        div.setAttribute("style", "text-align:center; padding:15px; margin: 40px 0; color:#4CAF50; border-top:1px dashed #4CAF50; border-bottom:1px dashed #4CAF50; font-size: 1.2rem;");
+        div.textContent = "بداية الركعة "+(WITR_ORDINALS[rakahNo] || (arn(rakahNo)));
+        box.appendChild(div);
+        lastSurah = null; /* أعِد عنوان السورة بعد الفاصل لوضوح بداية الركعة */
+      }
+    });
+    document.getElementById("witrRakahLabel").textContent = "🧮 مقسّم على "+arn(dist.actualCount)+" ركعات";
+  }
+  function witrUpdateRakahToggleBtn(){
+    const btn = document.getElementById("witrRakahToggle");
+    if(btn) btn.textContent = witrRakahDist ? "✖️ إلغاء التقسيم" : "🧮 تقسيم الركعات";
+  }
+  function witrApplyDistribution(mode, requested){
+    if(!witrFullAyahList.length) return;
+    witrRakahDist = witrComputeDistribution(mode, requested);
+    witrUpdateRakahToggleBtn();
+    witrRenderReaderView();
+    /* إشعار عند تعذّر بلوغ العدد المطلوب بسبب حدود مقاطع الحفظ */
+    if(witrRakahDist.actualCount < witrRakahDist.requestedCount){
+      witrShowToast("تم توزيع الورد على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات بما يتناسب مع حدود مقاطع الحفظ");
+    }
+  }
+  function witrClearDistribution(){
+    witrRakahDist = null;
+    witrUpdateRakahToggleBtn();
+    witrRenderReaderView();
+  }
+
+  /* توست خاص بقارئ القيام */
+  let witrToastTimer = null;
+  function witrShowToast(text){
+    const t = document.getElementById("witrToast");
+    if(!t) return;
+    t.textContent = text; t.hidden = false;
+    t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+    clearTimeout(witrToastTimer);
+    witrToastTimer = setTimeout(()=>{ t.hidden = true; }, 2600);
+  }
+
+  /* ورقة التقسيم + زرّ التبديل في القارئ */
+  const witrRakahSheet = document.getElementById("witrRakahSheet");
+  function witrOpenRakahSheet(){
+    document.querySelectorAll("#witrRakahNums button").forEach(b=>{
+      b.classList.toggle("on", !!witrRakahDist && witrRakahDist.mode === "manual" && witrRakahDist.requestedCount === parseInt(b.dataset.r,10));
+    });
+    witrRakahSheet.hidden = false;
+  }
+  function witrCloseRakahSheet(){ witrRakahSheet.hidden = true; }
+  document.getElementById("witrRakahToggle").onclick = ()=>{
+    if(witrRakahDist) witrClearDistribution();  /* نشط → إلغاء التقسيم */
+    else witrOpenRakahSheet();
+  };
+  document.getElementById("witrRakahSheetClose").onclick = witrCloseRakahSheet;
+  document.getElementById("witrRakahCancel").onclick = witrCloseRakahSheet;
+  witrRakahSheet.onclick = (ev)=>{ if(ev.target === witrRakahSheet) witrCloseRakahSheet(); };
+  document.getElementById("witrRakahAuto").onclick = ()=>{ witrCloseRakahSheet(); witrApplyDistribution("auto"); };
+  document.querySelectorAll("#witrRakahNums button").forEach(b=>{
+    b.onclick = ()=>{ witrCloseRakahSheet(); witrApplyDistribution("manual", parseInt(b.dataset.r,10)); };
+  });
+
   function witrRenderReaderPage(){
     const w = state.witr;
     const arn = n=>n.toLocaleString("ar-EG");
@@ -3505,12 +3723,14 @@
     document.getElementById("witrRakahNext").disabled = w.readPage >= witrAyahChunks.length-1;
   }
   document.getElementById("witrRakahPrev").onclick = ()=>{
+    if(witrRakahDist) return; /* التنقّل معطّل أثناء التقسيم المتّصل */
     if(!state.witr || !witrAyahChunks || state.witr.readPage <= 0) return;
     state.witr.readPage--;
     save();
     witrRenderReaderPage();
   };
   document.getElementById("witrRakahNext").onclick = ()=>{
+    if(witrRakahDist) return;
     if(!state.witr || !witrAyahChunks || state.witr.readPage >= witrAyahChunks.length-1) return;
     state.witr.readPage++;
     save();
@@ -3586,6 +3806,7 @@
     state.witr = null;
     witrForceNew = false;
     save();
+    witrResetRakahState(); /* تنظيف حالة التقسيم عند إنهاء القراءة */
     document.getElementById("witrReader").hidden = true;
     witrRenderAll();
     renderWorship(); renderProgress();
