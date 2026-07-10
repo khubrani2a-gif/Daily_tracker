@@ -783,7 +783,8 @@
   .witr-rakah-preview-head{font-size:.95rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:.7rem}
   .witr-rakah-preview-list{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;max-height:45vh;overflow-y:auto}
   .witr-rakah-preview-row{font-size:.88rem;color:var(--ink);padding:.5rem .7rem;background:var(--chip-bg);border-radius:10px}
-  .witr-rakah-preview-row b{color:var(--accent)}
+  .witr-rakah-preview-row b{color:var(--accent);display:block;margin-bottom:.15rem}
+  .witr-rakah-range{display:block;color:var(--ink)}
   .witr-rakah-preview .witr-change-btn{margin-top:.5rem}
   /* شارة تقدّم الركعة العائمة — مؤشّر قراءة خفيف أسفل الترويسة */
   .witr-rakah-badge{
@@ -793,18 +794,14 @@
     box-shadow:0 2px 7px -4px rgba(0,0,0,.3);pointer-events:none;backdrop-filter:blur(3px);
   }
   .witr-rakah-badge[hidden]{display:none}
-  /* رسالة إتمام الركعة أعلى الفاصل — أخفّ من العنوان الرئيسي */
-  .rakah-divider-complete{font-size:.82rem;font-weight:400;opacity:.7;margin-bottom:.7rem}
-  .rakah-divider-line{height:0;border-top:1px dashed #4CAF50;width:100%;margin:.7rem auto}
+  /* رسالة إتمام الركعة أعلى الفاصل — أخفّ من العنوان الرئيسي (فجوة أصغر قبل أول خط) */
+  .rakah-divider-complete{font-size:.82rem;font-weight:400;opacity:.7;margin-bottom:.42rem}
+  .rakah-divider-line{height:0;border-top:1px dashed #4CAF50;width:100%;margin:.42rem auto}
   .rakah-divider-title{font-weight:700}
   /* عرض التوزيع الحالي داخل الورقة */
   .witr-rakah-active-head{font-size:.95rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:.7rem}
-  /* نقطة انطلاق التوزيع قبل القارئ (بطاقة الاقتراح) */
+  /* نقطة انطلاق التوزيع قبل القارئ (بطاقة الاقتراح وإعداد الحفظ) */
   .witr-predist-btn{position:relative}
-  .witr-new-badge{
-    display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
-    border-radius:999px;font-size:.58rem;font-weight:700;padding:.06rem .42rem;margin-inline-start:.35rem;vertical-align:middle;
-  }
   .witr-predist-hint{font-size:.7rem;color:var(--muted);text-align:center;line-height:1.5;margin:.35rem 0 .1rem}
   .witr-predist-hint[hidden]{display:none}
   .witr-predist-status{
@@ -1839,6 +1836,9 @@
             <div class="hifz-wird-manual-hint">اختر السور التي تريد مراجعة مقاطعها المحفوظة:</div>
             <div class="hifz-wird-chips" id="hifzWirdChips"></div>
           </div>
+          <button class="witr-change-btn witr-predist-btn" id="hifzWirdDistBtn">🕌 توزيع الورد على الركعات</button>
+          <div class="witr-predist-hint">يوزع الآيات ومقاطع الحفظ تلقائياً على ركعاتك.</div>
+          <div class="witr-predist-status" id="hifzWirdDistStatus" hidden></div>
           <button class="adhkar-done-btn" id="hifzWirdStart">▶ ابدأ الورد</button>
         </div>
 
@@ -1846,8 +1846,8 @@
           <div class="witr-sug-head">📖 اقتراح الليلة</div>
           <div class="witr-sug-surah" id="witrSugSurah"></div>
           <div class="witr-sug-meta" id="witrSugMeta"></div>
-          <button class="witr-change-btn witr-predist-btn" id="witrPreDistBtn">🕌 توزيع الورد على الركعات <span class="witr-new-badge">✨ جديد</span></button>
-          <div class="witr-predist-hint" id="witrPreDistHint">توزيع الآيات ومقاطع الحفظ تلقائياً على ركعاتك.</div>
+          <button class="witr-change-btn witr-predist-btn" id="witrPreDistBtn">🕌 توزيع الورد على الركعات</button>
+          <div class="witr-predist-hint" id="witrPreDistHint">يوزع الآيات ومقاطع الحفظ تلقائياً على ركعاتك.</div>
           <div class="witr-predist-status" id="witrPreDistStatus" hidden></div>
           <button class="adhkar-done-btn" id="witrStartBtn">▶ ابدأ القراءة</button>
           <button class="witr-change-btn" id="witrChangeBtn">🔄 تغيير الاقتراح</button>
@@ -1906,7 +1906,7 @@
         <div class="witr-rakah-active" id="witrRakahActive" hidden>
           <div class="witr-rakah-active-head">التوزيع الحالي:</div>
           <div class="witr-rakah-preview-list" id="witrRakahActiveList"></div>
-          <button class="adhkar-done-btn" id="witrRakahActiveEdit">🔄 تعديل التوزيع</button>
+          <button class="adhkar-done-btn" id="witrRakahActiveEdit">🔄 إعادة توزيع الورد</button>
           <button class="witr-change-btn" id="witrRakahActiveCancelDist">✖️ إلغاء التوزيع</button>
           <button class="witr-change-btn" id="witrRakahActiveClose">إغلاق</button>
         </div>
@@ -2105,7 +2105,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٨</div>
+    <div class="app-version">النسخة ٦٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3345,6 +3345,7 @@
     if(wird){
       document.getElementById("witrSuggestion").hidden = true;
       hifzWirdRenderCounts(); /* المطلوب ٣: عدّادات ديناميكية */
+      witrRenderPreDistStatus(); /* مؤشّر "تم إعداد التوزيع" على إعداد الحفظ */
       if(document.getElementById("hifzWirdManual").checked){
         document.getElementById("hifzWirdManualBox").hidden = false;
         hifzWirdRenderChips();
@@ -3370,9 +3371,7 @@
       startBtn.textContent = (w.readPage > 0)
         ? "▶ استكمال القراءة (الركعة "+arn(w.readPage+1)+")"
         : "▶ ابدأ القراءة";
-      /* تلميح الاكتشاف يختفي دائمًا بعد أول فتح للتوزيع؛ ومؤشّر "تم الإعداد" يعكس الحالة الحالية */
-      const hint = document.getElementById("witrPreDistHint");
-      if(hint) hint.hidden = !!localStorage.getItem("witrDistDiscovered");
+      /* النص المساعد وصفٌ دائم للزر (لم يعد تلميح اكتشاف يختفي)؛ والمؤشّر يعكس حالة الإعداد */
       witrRenderPreDistStatus();
     }else{
       sugBox.hidden = true;
@@ -3478,6 +3477,7 @@
       chip.onclick = ()=>{
         if(hifzWirdSel.has(n)) hifzWirdSel.delete(n); else hifzWirdSel.add(n);
         chip.classList.toggle("on");
+        hifzWirdInvalidateDist(); /* تغيّر الاختيار → أبطِل توزيعًا مُعدًّا مسبقًا */
       };
       box.appendChild(chip);
     });
@@ -3486,7 +3486,10 @@
     const box = document.getElementById("hifzWirdManualBox");
     box.hidden = !e.target.checked;
     if(e.target.checked) hifzWirdRenderChips();
+    hifzWirdInvalidateDist();
   };
+  document.getElementById("hifzWirdDue").onchange = hifzWirdInvalidateDist;
+  document.getElementById("hifzWirdRecent").onchange = hifzWirdInvalidateDist;
 
   /* التجميع الصارم: يجمع المقاطع المحفوظة فعلًا فقط وفق الخيارات، يزيل تكرار الآيات، ويرتّب
      (بالسورة ثم الآية). لا يجلب السورة كاملة أبدًا — فقط ما حفظه المستخدم من مقاطع. */
@@ -3527,22 +3530,54 @@
     return parts;
   }
 
-  function hifzWirdStart(){
-    const opts = {
+  /* يقرأ صناديق اختيار الحفظ الحالية */
+  function hifzWirdReadOpts(){
+    return {
       due: document.getElementById("hifzWirdDue").checked,
       recent: document.getElementById("hifzWirdRecent").checked,
       manual: document.getElementById("hifzWirdManual").checked,
       surahs: [...hifzWirdSel]
     };
-    const parts = hifzWirdBuildParts(opts);
-    if(!parts.length){ alert("لا توجد مقاطع مطابقة لاختيارك."); return; }
+  }
+  /* مفتاح ثابت مشتقّ من محتوى الورد — يسمح بحفظ التوزيع المُعدّ مسبقًا واستعادته عند نفس الاختيار */
+  function hifzWirdKey(parts){ return "wird:"+parts.map(p=>p.n+":"+p.from+"-"+p.to).join(","); }
+  /* يبني جلسة ورد من الاختيار الحالي (بلا فتح القارئ)؛ يُرجع null إن لم توجد مقاطع مطابقة */
+  function hifzWirdMakeSession(startedAt){
+    const parts = hifzWirdBuildParts(hifzWirdReadOpts());
+    if(!parts.length) return null;
     const totalAyat = parts.reduce((a,p)=> a + (p.to - p.from + 1), 0);
     /* تجاوز حدّ الهدف (١٠/١٠٠/١٠٠٠) تمامًا — نغطّي الورد كاملًا */
-    state.witr = { target: totalAyat, pool:"wird", parts, key:"wird:"+Date.now(), startedAt: Date.now(), readPage:0, wird:true };
+    return { target: totalAyat, pool:"wird", parts, key: hifzWirdKey(parts), startedAt: startedAt || null, readPage:0, wird:true };
+  }
+  function hifzWirdStart(){
+    const sess = hifzWirdMakeSession(Date.now());
+    if(!sess){ alert("لا توجد مقاطع مطابقة لاختيارك."); return; }
+    state.witr = sess;
     save();
     witrOpenReader();
   }
   document.getElementById("hifzWirdStart").onclick = hifzWirdStart;
+
+  /* نقطة انطلاق التوزيع من إعداد الحفظ (المطلوب ٢+٣): تجمّع مقاطع الاختيار الحالي وتحضّر آياتها قبل الحساب */
+  document.getElementById("hifzWirdDistBtn").onclick = async ()=>{
+    const btn = document.getElementById("hifzWirdDistBtn");
+    btn.disabled = true;
+    try{
+      const sess = hifzWirdMakeSession(null);
+      if(!sess){ alert("لا توجد مقاطع مطابقة لاختيارك."); return; }
+      state.witr = sess;                 /* جلسة ورد مرحلية (بمفتاح ثابت) لضبط التوزيع */
+      const ok = await witrPrepareVerses(); /* يبني قائمة الآيات لهذه المقاطع فقط ثم يمكّن المحرّك */
+      if(!ok || !witrFullAyahList.length){ alert("تعذّر تحضير آيات الورد."); return; }
+      witrOpenRakahSheet();              /* نفس المحرّك والورقة تمامًا */
+    }catch(e){
+      alert("تعذّر تحميل الآيات (تحقق من الاتصال).");
+    }finally{ btn.disabled = false; }
+  };
+  /* أي تغيير في اختيار الحفظ يُبطل التوزيع المُعدّ مسبقًا (آيات مختلفة) */
+  function hifzWirdInvalidateDist(){
+    if(witrRakahDist || witrPreparedKey){ witrRakahDist = null; witrPreparedKey = null; witrUpdateRakahToggleBtn(); }
+    witrRenderPreDistStatus();
+  }
 
   /* حالة القفل التوجيهية: نافذة تعريفية تفتح شاشة حفظ القرآن لإضافة أول مقطع */
   function hifzWirdShowOnboarding(){
@@ -3801,14 +3836,15 @@
     return witrFullAyahList.length > 0;
   }
   /* مؤشّر "تم إعداد التوزيع" فوق زرّ ابدأ القراءة */
+  /* مؤشّر "تم إعداد التوزيع" على كِلا مدخلي ما قبل القارئ (بطاقة الاقتراح + إعداد الحفظ) */
   function witrRenderPreDistStatus(){
-    const el = document.getElementById("witrPreDistStatus");
-    if(!el) return;
     const active = !!(witrRakahDist && state.witr && witrPreparedKey === state.witr.key);
-    if(active){
-      el.textContent = "✅ تم إعداد التوزيع على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات";
-      el.hidden = false;
-    }else el.hidden = true;
+    const txt = active ? "✅ تم إعداد التوزيع على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات" : "";
+    ["witrPreDistStatus","hifzWirdDistStatus"].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(active){ el.textContent = txt; el.hidden = false; } else el.hidden = true;
+    });
   }
   function witrApplyDistribution(mode, requested){
     if(!witrFullAyahList.length) return;
@@ -3836,7 +3872,7 @@
   function witrRangesHTML(dist){
     const arn = n=>n.toLocaleString("ar-EG");
     return witrDistributionRanges(dist).map((r,i)=>
-      '<div class="witr-rakah-preview-row"><b>الركعة '+arn(i+1)+':</b> '+r+'</div>').join("");
+      '<div class="witr-rakah-preview-row"><b>الركعة '+arn(i+1)+'</b><span class="witr-rakah-range">'+r+'</span></div>').join("");
   }
   function witrClearDistribution(){
     witrRakahDist = null;
