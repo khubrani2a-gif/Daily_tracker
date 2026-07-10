@@ -285,27 +285,49 @@
   li .done-line{text-decoration:line-through;color:var(--muted)}
 
   /* ===== قراءة سور مخصّصة: إدارة + إتمام أنظف ===== */
-  .qc-head-actions{display:flex;align-items:center;gap:.4rem}
+  /* ترويسة القسم: أزرار إجراء متماسكة على هيئة أقراص */
+  .qc-head-actions{display:flex;align-items:center;gap:.35rem;background:var(--chip-bg);border-radius:11px;padding:.2rem}
   .qc-manage-btn{
-    border:1px solid var(--line);background:var(--paper);color:var(--muted);
-    border-radius:8px;padding:.2rem .7rem;font-family:inherit;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
+    border:none;background:transparent;color:var(--muted);
+    border-radius:8px;padding:.28rem .7rem;font-family:inherit;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
   }
-  .qc-manage-btn:hover{border-color:var(--accent-2);color:var(--accent)}
-  .qc-manage-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
-  /* الصفّ المكتمل: بلا شطب، بلا "تمت"، شفافية أقل، وملاحظة نجاح لطيفة */
-  li.qc-done{opacity:.6}
+  .qc-manage-btn:hover{background:var(--accent-soft);color:var(--accent)}
+  .qc-manage-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+  .qc-add-btn{
+    border:none;background:var(--paper);color:var(--accent);
+    width:28px;height:26px;border-radius:8px;font-size:1.05rem;line-height:1;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.06);
+  }
+  .qc-add-btn:hover{background:var(--accent-soft)}
+  /* ملخّص التقدّم العام (مشتقّ من بيانات الإتمام) */
+  .qc-summary{
+    display:flex;align-items:center;gap:.4rem;font-size:.76rem;color:var(--muted);
+    background:var(--chip-bg);border-radius:10px;padding:.4rem .7rem;margin:.2rem 0 .5rem;
+  }
+  .qc-summary[hidden]{display:none}
+  .qc-summary b{color:var(--accent);font-weight:700}
+  /* محاذاة رموز المستخدم (إيموجي) بأناقة دون تغييرها */
+  .qc-emoji{display:inline-block;line-height:1;vertical-align:-.08em;margin-inline-end:.4rem;flex-shrink:0}
+  .qc-label-text{vertical-align:middle}
+  /* الصفّ المكتمل: بلا شطب، بلا "تمت"، هادئ لا باهت، وملاحظة نجاح لطيفة */
+  li.qc-done{opacity:.82}
   .qc-title-wrap{flex:1;min-width:0;cursor:pointer}
   .qc-title-main{color:var(--ink)}
   .qc-done-note{font-size:.72rem;font-weight:700;color:#2ea86f;margin-top:.15rem}
-  /* وضع الإدارة: مقبض سحب + أزرار تعديل/حذف */
-  .qc-drag{cursor:grab;color:var(--muted);font-size:1.05rem;flex-shrink:0;padding:0 .2rem;touch-action:none;user-select:none}
+  /* وضع الإدارة: مقبض سحب بمساحة لمس مريحة + أزرار تعديل/حذف أخفّ */
+  .qc-drag{
+    cursor:grab;color:var(--muted);font-size:1.05rem;flex-shrink:0;
+    padding:.4rem .55rem;margin-inline-end:.15rem;border-radius:8px;
+    touch-action:none;user-select:none;opacity:.75;
+  }
+  .qc-drag:hover{background:var(--chip-bg);opacity:1}
   .qc-drag:active{cursor:grabbing}
   li.qc-dragging{opacity:.5;background:var(--accent-soft);border-radius:10px}
   .qc-icon-btn{
-    border:none;background:none;cursor:pointer;font-size:.95rem;flex-shrink:0;
+    border:none;background:none;cursor:pointer;font-size:.8rem;flex-shrink:0;color:var(--muted);opacity:.7;
     padding:.15rem .35rem;border-radius:8px;transition:.15s;line-height:1;
   }
-  .qc-icon-btn:hover{background:var(--accent-soft)}
+  .qc-icon-btn:hover{background:var(--accent-soft);opacity:1}
   .qc-icon-btn.del:hover{background:var(--danger-soft)}
   /* ورقة تعديل المقطع */
   .qc-edit-body{display:flex;flex-direction:column;overflow-y:auto}
@@ -1507,13 +1529,14 @@
         </div>
 
         <div class="ib-group">
-          <div class="ib-group-head">
+          <div class="ib-group-head qc-group-head">
             <span>📘 قراءة سور مخصّصة</span>
             <div class="qc-head-actions">
               <button class="qc-manage-btn" id="qcManageBtn">تعديل</button>
-              <button class="ib-add" id="qcAddSurah" title="إضافة قراءة سورة">＋</button>
+              <button class="qc-add-btn" id="qcAddSurah" title="إضافة قراءة سورة" aria-label="إضافة">＋</button>
             </div>
           </div>
+          <div class="qc-summary" id="qcSummary" hidden></div>
           <ul class="checklist" id="qcList"></ul>
           <div class="qc-empty" id="qcEmpty">أضف سورة أو جزءًا لتتبّع قراءته صفحة بصفحة 📘</div>
         </div>
@@ -2177,7 +2200,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٠</div>
+    <div class="app-version">النسخة ٧١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3064,8 +3087,14 @@
     }
     return s;
   }
+  /* عنوان المقطع: يحترم رمز المستخدم (إيموجي) بلا تغيير، ويلفّه لمحاذاة نظيفة */
+  function qcSetTitle(el, w){
+    el.textContent = "";
+    const em = document.createElement("span"); em.className = "qc-emoji"; em.textContent = (w.icon||"📘");
+    const tx = document.createElement("span"); tx.className = "qc-label-text"; tx.textContent = qcDisplayLabel(w.label);
+    el.append(em, tx);
+  }
   function qcRenderList(){
-    const isToday = currentDate === todayStr();
     const arn = n => n.toLocaleString("ar-EG");
     const list = wCustom().filter(w=> w.kind === "quran");
     const ul = document.getElementById("qcList");
@@ -3083,8 +3112,7 @@
         const handle = document.createElement("span");
         handle.className = "qc-drag"; handle.textContent = "☰"; handle.title = "اسحب لإعادة الترتيب";
         const lbl = document.createElement("span");
-        lbl.className = "lbl qc-title";
-        lbl.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        lbl.className = "lbl qc-title"; qcSetTitle(lbl, w);
         const edit = document.createElement("button");
         edit.className = "qc-icon-btn"; edit.textContent = "✏️"; edit.title = "تعديل";
         edit.onclick = (ev)=>{ ev.stopPropagation(); qcOpenEditor(w.id); };
@@ -3099,7 +3127,7 @@
         chk.className = "chk on"; chk.textContent = "✔";
         const wrap = document.createElement("div");
         wrap.className = "qc-title-wrap";
-        const t = document.createElement("div"); t.className = "qc-title-main"; t.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        const t = document.createElement("div"); t.className = "qc-title-main"; qcSetTitle(t, w);
         const note = document.createElement("div"); note.className = "qc-done-note"; note.textContent = "✨ أتممتها";
         wrap.append(t, note);
         wrap.onclick = ()=> openSurah(w.id);
@@ -3109,8 +3137,7 @@
         const chk = document.createElement("span");
         chk.className = "chk"; chk.textContent = "✔";
         const lbl = document.createElement("span");
-        lbl.className = "lbl qc-title";
-        lbl.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        lbl.className = "lbl qc-title"; qcSetTitle(lbl, w);
         lbl.onclick = ()=> openSurah(w.id);
         const rchip = document.createElement("span");
         rchip.className = "read-chip";
@@ -3121,6 +3148,16 @@
       ul.appendChild(li);
     });
     document.getElementById("qcEmpty").hidden = list.length > 0;
+    /* ملخّص التقدّم العام (مشتقّ من بيانات الإتمام فقط) */
+    const summary = document.getElementById("qcSummary");
+    if(summary){
+      const total = list.length;
+      const doneCount = list.filter(w=> !!w.completed || w.currentPage > w.endPage).length;
+      if(total){
+        summary.innerHTML = "📊 التقدّم العام: <b>"+arn(doneCount)+"</b> من <b>"+arn(total)+"</b> مقاطع مكتملة";
+        summary.hidden = false;
+      }else summary.hidden = true;
+    }
   }
 
   /* حفظ ترتيب مقاطع القراءة: نعيد ترتيب عناصر quran فقط داخل قائمة الأوراد المخصّصة (نبقي البقية بمواضعها) */
