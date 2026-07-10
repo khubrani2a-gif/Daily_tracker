@@ -794,6 +794,9 @@
   .witr-targets button:hover{border-color:var(--accent-2);background:var(--accent-soft)}
   .witr-targets button.active{border-color:var(--accent);background:var(--accent-soft)}
   .witr-targets button.active b{color:var(--accent)}
+  /* حالة القفل التوجيهية للبطاقة الرابعة عند غياب أي محفوظات */
+  .witr-targets button.witr-card-locked{opacity:.65;cursor:pointer}
+  .witr-targets button.witr-card-locked:hover{border-color:var(--line);background:var(--paper)}
   .witr-pool-chips{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-bottom:.5rem}
   .witr-pool-chips[hidden]{display:none} /* السمة hidden يجب أن تغلب على display:flex عند تبديل المسار */
   .witr-pool-chips span{
@@ -856,6 +859,7 @@
     color:var(--muted);border-radius:12px;padding:.6rem;font-family:inherit;font-size:.82rem;cursor:pointer;
   }
   .witr-change-btn:hover{border-color:var(--accent-2);color:var(--accent)}
+  .witr-change-btn[hidden]{display:none} /* السمة hidden تغلب display:block (نافذة بزرّ واحد) */
   .witr-tonight-stats{text-align:center;font-size:.78rem;color:var(--muted);margin:.6rem 0 1rem}
   .witr-actions{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
   .witr-actions button{
@@ -2012,7 +2016,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٠</div>
+    <div class="app-version">النسخة ٦١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3206,9 +3210,13 @@
     const w = state.witr;
     const arn = n=>n.toLocaleString("ar-EG");
     const hasHifz = hifzData().segments.length > 0;
-    /* المطلوب ١: إخفاء كل واجهة الحفظ عند غياب البيانات */
-    document.getElementById("witrWirdCard").hidden = !hasHifz;
-    if(!hasHifz) witrMode = "goal";
+    /* البطاقة الرابعة تظهر دائمًا؛ عند غياب المحفوظات تُعرَض بحالة قفل توجيهية (لا تُخفى) */
+    const wirdCard = document.getElementById("witrWirdCard");
+    wirdCard.hidden = false;
+    wirdCard.classList.toggle("witr-card-locked", !hasHifz);
+    const wirdSub = wirdCard.querySelector("small");
+    if(wirdSub) wirdSub.textContent = hasHifz ? "من محفوظاتك" : "🔒 أضف محفوظاتك لتفعيل الورد";
+    if(!hasHifz) witrMode = "goal"; /* لا يمكن دخول مسار الورد دون بيانات */
     const wird = witrMode === "wird";
 
     /* حالة تفعيل بطاقات الهدف (البطاقة الرابعة "ورد الحفظ" مقابل الأهداف الرقمية) */
@@ -3287,6 +3295,7 @@
   document.querySelectorAll("#witrTargets button").forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.t === "wird"){            /* المسار ب: ورد الحفظ */
+        if(hifzData().segments.length === 0){ hifzWirdShowOnboarding(); return; } /* حالة القفل التوجيهية */
         witrMode = "wird";
         witrRenderPickView();
       }else{                                  /* المسار أ: هدف رقمي */
@@ -3404,6 +3413,21 @@
     witrOpenReader();
   }
   document.getElementById("hifzWirdStart").onclick = hifzWirdStart;
+
+  /* حالة القفل التوجيهية: نافذة تعريفية تفتح شاشة حفظ القرآن لإضافة أول مقطع */
+  function hifzWirdShowOnboarding(){
+    hifzShowConfirm({
+      title: "📚 ورد الحفظ والمراجعة",
+      body: "لم تضف محفوظات بعد. أضف أول مقطع في قسم حفظ القرآن لتتمكن من إنشاء ورد مراجعة تلقائي لصلاتك.",
+      okText: "➕ إضافة أول محفوظ",
+      cancelText: null, /* نافذة بزرّ واحد */
+      onOk: ()=>{
+        closeWitrUI();          /* أغلق القيام */
+        hifzOpenOverlay();      /* افتح شاشة حفظ القرآن */
+        hifzOpenAdd("home");    /* مباشرة على نموذج إضافة أول مقطع */
+      }
+    });
+  }
 
   /* عرض الآيات: نص أصلي عبر AlQuran.cloud بدل iframe — تحكم كامل بالخط والألوان وتخزين مؤقت للقراءة بلا إنترنت */
   let witrAyahChunks = null;
@@ -3936,7 +3960,10 @@
     document.getElementById("hifzDialogTitle").textContent = opts.title || "";
     document.getElementById("hifzDialogBody").textContent = opts.body || "";
     document.getElementById("hifzDialogOk").textContent = opts.okText || "تأكيد";
-    document.getElementById("hifzDialogCancel").textContent = opts.cancelText || "إلغاء";
+    /* زر الإلغاء اختياري: إن مُرِّر cancelText === null نُخفيه (نافذة بزرّ واحد) */
+    const cancelBtn = document.getElementById("hifzDialogCancel");
+    if(opts.cancelText === null){ cancelBtn.hidden = true; }
+    else{ cancelBtn.hidden = false; cancelBtn.textContent = opts.cancelText || "إلغاء"; }
     hifzDialogOnOk = typeof opts.onOk === "function" ? opts.onOk : null;
     hifzDialog.hidden = false;
   }
