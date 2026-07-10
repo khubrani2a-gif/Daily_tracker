@@ -762,16 +762,29 @@
   /* ===== الورد اليومي من القرآن ===== */
   .q-tiles{margin-bottom:.9rem}
   .q-reader{margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--line)}
-  /* ورقة تقسيم الركعات */
+  /* ورقة توزيع الورد على الركعات (مضغوطة) */
   .witr-rakah-body{display:flex;flex-direction:column}
-  .witr-rakah-or{text-align:center;font-size:.82rem;color:var(--muted);margin:1rem 0 .6rem}
+  .witr-rakah-body .adhkar-done-btn{margin-top:0}
+  .witr-rakah-hint{font-size:.74rem;color:var(--muted);text-align:center;line-height:1.5;margin:.5rem .2rem 0}
+  .witr-rakah-or{text-align:center;font-size:.8rem;color:var(--muted);margin:.7rem 0 .5rem}
   .witr-rakah-nums{display:flex;gap:.5rem}
   .witr-rakah-nums button{
     flex:1;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
-    border-radius:12px;padding:.8rem;font-family:inherit;font-size:1.1rem;font-weight:700;cursor:pointer;transition:.15s;
+    border-radius:12px;padding:.65rem;font-family:inherit;font-size:1.1rem;font-weight:700;cursor:pointer;transition:.15s;
   }
   .witr-rakah-nums button:hover,.witr-rakah-nums button.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
   html.dark #witrRakahSheet .witr-rakah-nums button{background:#0a0a0a;border-color:#1e1e1e}
+  .witr-rakah-body .witr-change-btn{margin-top:.6rem}
+  /* شارة تقدّم الركعة العائمة */
+  .witr-rakah-badge{
+    position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:130;
+    background:rgba(76,175,80,.16);color:#4CAF50;border:1px solid rgba(76,175,80,.5);
+    border-radius:999px;padding:.3rem .95rem;font-size:.8rem;font-weight:700;
+    box-shadow:0 4px 14px -5px rgba(0,0,0,.45);pointer-events:none;backdrop-filter:blur(4px);
+  }
+  .witr-rakah-badge[hidden]{display:none}
+  /* عنوان فرعي خافت أسفل الفاصل */
+  .rakah-divider-sub{font-size:.72rem;font-weight:400;opacity:.7;margin-top:.3rem}
   .q-nav{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.6rem}
   .q-nav button{
     border:1px solid var(--line);background:var(--paper);color:var(--accent);
@@ -1812,6 +1825,7 @@
       </div>
 
       <div class="q-reader" id="witrReader" hidden>
+        <div class="witr-rakah-badge" id="witrRakahBadge" hidden></div>
         <div class="q-nav">
           <button id="witrRakahPrev">◀ السابقة</button>
           <span id="witrReaderTitle"></span>
@@ -1830,22 +1844,23 @@
             <a id="witrExternal" target="_blank" rel="noopener noreferrer">↗ افتح في نافذة جديدة</a>
           </div>
         </div>
-        <button class="witr-change-btn" id="witrRakahToggle">🧮 تقسيم الركعات</button>
+        <button class="witr-change-btn" id="witrRakahToggle">🕌 توزيع الورد على الركعات</button>
         <button class="adhkar-done-btn" id="witrFinishBtn">✓ أنهيت القراءة الليلة</button>
         <div class="hifz-toast" id="witrToast" hidden></div>
       </div>
     </div>
 
-    <!-- ورقة تقسيم الركعات (تُفتح داخل قارئ القيام) -->
+    <!-- ورقة توزيع الورد على الركعات (تُفتح داخل قارئ القيام) -->
     <div class="hifz-sheet-overlay" id="witrRakahSheet" hidden>
       <div class="hifz-sheet">
         <div class="hifz-sheet-head">
-          <span>🧮 تقسيم الركعات</span>
+          <span>🕌 توزيع الورد على الركعات</span>
           <button id="witrRakahSheetClose" title="إغلاق">✕</button>
         </div>
         <div class="witr-rakah-body">
-          <button class="adhkar-done-btn" id="witrRakahAuto">🤖 تقسيم تلقائي (ذكي)</button>
-          <div class="witr-rakah-or">أو اختر عدد الركعات:</div>
+          <button class="adhkar-done-btn" id="witrRakahAuto">✨ توزيع مقترح</button>
+          <div class="witr-rakah-hint">يقترح التطبيق توزيعاً مناسباً للورد بناءً على حجمه وحدود مقاطع الحفظ.</div>
+          <div class="witr-rakah-or">أو اختر بنفسك:</div>
           <div class="witr-rakah-nums" id="witrRakahNums">
             <button data-r="2">٢</button><button data-r="4">٤</button><button data-r="6">٦</button><button data-r="8">٨</button>
           </div>
@@ -2046,7 +2061,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٤</div>
+    <div class="app-version">النسخة ٦٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3210,12 +3225,15 @@
     witrRakahDist = null;
     witrFullAyahList = [];
     witrSessionUnits = [];
+    witrDividerEls = [];
     const prev = document.getElementById("witrRakahPrev");
     if(prev) prev.parentElement.style.display = "";
     const sheet = document.getElementById("witrRakahSheet");
     if(sheet) sheet.hidden = true;
     const box = document.getElementById("witrAyatBox");
     if(box) box.innerHTML = ""; /* لا تُبقِ فواصل قديمة في DOM القارئ المخفي */
+    const badge = document.getElementById("witrRakahBadge");
+    if(badge) badge.hidden = true;
     witrUpdateRakahToggleBtn();
   }
   function closeWitr(){
@@ -3605,6 +3623,7 @@
     else witrRenderReaderPage();
     /* إخفاء تنقّل الصفحات أثناء التقسيم (عرض متّصل) */
     document.getElementById("witrRakahPrev").parentElement.style.display = witrRakahDist ? "none" : "";
+    witrUpdateRakahBadge(); /* إظهار/إخفاء شارة تقدّم الركعة */
   }
   function witrRenderContinuous(dist){
     const arn = n=>n.toLocaleString("ar-EG");
@@ -3634,22 +3653,50 @@
         const div = document.createElement("div");
         div.className = "rakah-divider";
         div.setAttribute("style", "text-align:center; padding:15px; margin: 40px 0; color:#4CAF50; border-top:1px dashed #4CAF50; border-bottom:1px dashed #4CAF50; font-size: 1.2rem;");
-        div.textContent = "بداية الركعة "+(WITR_ORDINALS[rakahNo] || (arn(rakahNo)));
+        const title = document.createElement("div");
+        title.textContent = "🕌 بداية الركعة "+(WITR_ORDINALS[rakahNo] || (arn(rakahNo)));
+        const sub = document.createElement("div");
+        sub.className = "rakah-divider-sub";
+        sub.textContent = "موضع الانتقال إلى الركعة التالية";
+        div.append(title, sub);
         box.appendChild(div);
         lastSurah = null; /* أعِد عنوان السورة بعد الفاصل لوضوح بداية الركعة */
       }
     });
-    document.getElementById("witrRakahLabel").textContent = "🧮 مقسّم على "+arn(dist.actualCount)+" ركعات";
+    document.getElementById("witrRakahLabel").textContent = "🕌 موزّع على "+arn(dist.actualCount)+" ركعات";
+    witrDividerEls = [...box.querySelectorAll(".rakah-divider")]; /* لتتبّع التمرير */
   }
   function witrUpdateRakahToggleBtn(){
     const btn = document.getElementById("witrRakahToggle");
-    if(btn) btn.textContent = witrRakahDist ? "✖️ إلغاء التقسيم" : "🧮 تقسيم الركعات";
+    if(btn) btn.textContent = witrRakahDist ? "✖️ إلغاء توزيع الورد" : "🕌 توزيع الورد على الركعات";
   }
+  /* شارة تقدّم الركعة: تُحسب الركعة الحالية بمقارنة مواضع الفواصل بخط قريب من أعلى القارئ */
+  let witrDividerEls = [];
+  let witrScrollRaf = null;
+  function witrUpdateRakahBadge(){
+    const badge = document.getElementById("witrRakahBadge");
+    if(!badge) return;
+    if(!witrRakahDist){ badge.hidden = true; return; }
+    const arn = n=>n.toLocaleString("ar-EG");
+    const threshold = 130; /* بكسل من أعلى الشاشة (أسفل الشارة) */
+    let cur = 1;
+    for(const d of witrDividerEls){ if(d.getBoundingClientRect().top <= threshold) cur++; }
+    cur = Math.max(1, Math.min(cur, witrRakahDist.actualCount));
+    badge.textContent = "الركعة "+arn(cur)+" من "+arn(witrRakahDist.actualCount);
+    badge.hidden = false;
+  }
+  function witrOnReaderScroll(){
+    if(witrScrollRaf) return;
+    witrScrollRaf = requestAnimationFrame(()=>{ witrScrollRaf = null; witrUpdateRakahBadge(); });
+  }
+  witrOverlay.addEventListener("scroll", witrOnReaderScroll, {passive:true});
   function witrApplyDistribution(mode, requested){
     if(!witrFullAyahList.length) return;
     witrRakahDist = witrComputeDistribution(mode, requested);
     witrUpdateRakahToggleBtn();
     witrRenderReaderView();
+    witrOverlay.scrollTop = 0; /* ابدأ من الركعة الأولى */
+    witrUpdateRakahBadge();
     /* إشعار عند تعذّر بلوغ العدد المطلوب بسبب حدود مقاطع الحفظ */
     if(witrRakahDist.actualCount < witrRakahDist.requestedCount){
       witrShowToast("تم توزيع الورد على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات بما يتناسب مع حدود مقاطع الحفظ");
@@ -3657,6 +3704,7 @@
   }
   function witrClearDistribution(){
     witrRakahDist = null;
+    witrDividerEls = [];
     witrUpdateRakahToggleBtn();
     witrRenderReaderView();
   }
