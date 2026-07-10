@@ -284,6 +284,43 @@
   li.sub{padding-right:1.6rem;font-size:.85rem;color:var(--muted)}
   li .done-line{text-decoration:line-through;color:var(--muted)}
 
+  /* ===== قراءة سور مخصّصة: إدارة + إتمام أنظف ===== */
+  .qc-head-actions{display:flex;align-items:center;gap:.4rem}
+  .qc-manage-btn{
+    border:1px solid var(--line);background:var(--paper);color:var(--muted);
+    border-radius:8px;padding:.2rem .7rem;font-family:inherit;font-size:.74rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .qc-manage-btn:hover{border-color:var(--accent-2);color:var(--accent)}
+  .qc-manage-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  /* الصفّ المكتمل: بلا شطب، بلا "تمت"، شفافية أقل، وملاحظة نجاح لطيفة */
+  li.qc-done{opacity:.6}
+  .qc-title-wrap{flex:1;min-width:0;cursor:pointer}
+  .qc-title-main{color:var(--ink)}
+  .qc-done-note{font-size:.72rem;font-weight:700;color:#2ea86f;margin-top:.15rem}
+  /* وضع الإدارة: مقبض سحب + أزرار تعديل/حذف */
+  .qc-drag{cursor:grab;color:var(--muted);font-size:1.05rem;flex-shrink:0;padding:0 .2rem;touch-action:none;user-select:none}
+  .qc-drag:active{cursor:grabbing}
+  li.qc-dragging{opacity:.5;background:var(--accent-soft);border-radius:10px}
+  .qc-icon-btn{
+    border:none;background:none;cursor:pointer;font-size:.95rem;flex-shrink:0;
+    padding:.15rem .35rem;border-radius:8px;transition:.15s;line-height:1;
+  }
+  .qc-icon-btn:hover{background:var(--accent-soft)}
+  .qc-icon-btn.del:hover{background:var(--danger-soft)}
+  /* ورقة تعديل المقطع */
+  .qc-edit-body{display:flex;flex-direction:column;overflow-y:auto}
+  .qc-edit-field{display:flex;flex-direction:column;gap:.3rem;font-size:.8rem;color:var(--muted);margin-bottom:.8rem}
+  .qc-edit-field input{
+    border:1.5px solid var(--line);border-radius:10px;padding:.6rem .8rem;
+    font-family:inherit;font-size:.9rem;background:var(--paper);color:var(--ink);box-sizing:border-box;width:100%;
+  }
+  .qc-edit-field input:focus{outline:none;border-color:var(--accent-2)}
+  .qc-edit-row{display:flex;gap:.7rem}
+  .qc-edit-row .qc-edit-field{flex:1}
+  .qc-edit-err{color:var(--danger);font-size:.78rem;text-align:center;margin-bottom:.6rem}
+  .qc-edit-err[hidden]{display:none}
+  html.dark #qcEditSheet .qc-edit-field input{background:#0a0a0a;border-color:#1e1e1e}
+
   /* ===== العبادات (مُعاد تصميمها) ===== */
   .ib-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;margin-bottom:.9rem}
   .ib-title{padding-bottom:0;margin-bottom:0;border-bottom:none}
@@ -1470,7 +1507,13 @@
         </div>
 
         <div class="ib-group">
-          <div class="ib-group-head"><span>📘 قراءة سور مخصّصة</span><button class="ib-add" id="qcAddSurah" title="إضافة قراءة سورة">＋</button></div>
+          <div class="ib-group-head">
+            <span>📘 قراءة سور مخصّصة</span>
+            <div class="qc-head-actions">
+              <button class="qc-manage-btn" id="qcManageBtn">تعديل</button>
+              <button class="ib-add" id="qcAddSurah" title="إضافة قراءة سورة">＋</button>
+            </div>
+          </div>
           <ul class="checklist" id="qcList"></ul>
           <div class="qc-empty" id="qcEmpty">أضف سورة أو جزءًا لتتبّع قراءته صفحة بصفحة 📘</div>
         </div>
@@ -1769,6 +1812,35 @@
         </div>
         <a class="q-external" id="surahExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
         <iframe class="q-iframe" id="surahIframe" loading="lazy" title="مصحف دار الحرا"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ورقة تعديل مقطع القراءة المخصّص -->
+  <div class="hifz-sheet-overlay" id="qcEditSheet" hidden>
+    <div class="hifz-sheet">
+      <div class="hifz-sheet-head">
+        <span>✏️ تعديل مقطع القراءة</span>
+        <button id="qcEditClose" title="إغلاق">✕</button>
+      </div>
+      <div class="qc-edit-body">
+        <label class="qc-edit-field">عنوان المقطع
+          <input type="text" id="qcEditTitle" autocomplete="off" placeholder="مثال: سورة البقرة (الجزء ١)">
+        </label>
+        <div class="qc-edit-row">
+          <label class="qc-edit-field">صفحة البداية
+            <input type="number" min="1" inputmode="numeric" id="qcEditStart">
+          </label>
+          <label class="qc-edit-field">صفحة النهاية
+            <input type="number" min="1" inputmode="numeric" id="qcEditEnd">
+          </label>
+        </div>
+        <label class="qc-edit-field">الهدف اليومي (صفحات)
+          <input type="number" min="1" inputmode="numeric" id="qcEditTarget">
+        </label>
+        <div class="qc-edit-err" id="qcEditErr" hidden></div>
+        <button class="adhkar-done-btn" id="qcEditSave">💾 حفظ التعديل</button>
+        <button class="witr-change-btn" id="qcEditCancel">إلغاء</button>
       </div>
     </div>
   </div>
@@ -2105,7 +2177,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٩</div>
+    <div class="app-version">النسخة ٧٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2839,7 +2911,7 @@
     const arn = n => n.toLocaleString("ar-EG");
     const current = Math.min(w.currentPage, w.endPage);
     const done = !!w.completed || w.currentPage > w.endPage;
-    document.getElementById("surahTitle").textContent = (w.icon||"📘")+" "+w.label;
+    document.getElementById("surahTitle").textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
     document.getElementById("surahCurrent").textContent = arn(current)+" / "+arn(w.endPage);
     document.getElementById("surahRemain").textContent = done ? "٠" : arn(Math.max(0, w.endPage - w.currentPage + 1));
     const totalSpan = Math.max(1, w.endPage - w.startPage + 1);
@@ -2967,32 +3039,209 @@
     chip.classList.toggle("done", werdDone);
     document.getElementById("qcWerdBtn").textContent = "▶ متابعة القراءة من صفحة "+arn(q.page);
 
+    /* حالة الإنجاز تُحدَّث دائمًا (لليوم) ثم تُرسم القائمة حسب وضع العرض/الإدارة */
+    wCustom().filter(w=> w.kind === "quran").forEach(w=>{
+      if(isToday) state.worship[w.id] = (!!w.completed || w.currentPage > w.endPage);
+    });
+    qcRenderList();
+  }
+
+  /* ---------- قراءة سور مخصّصة: تسمية نظيفة + وضع الإدارة + إتمام أوضح ---------- */
+  let qcManageMode = false;
+  /* تنظيف نصّ العنوان: مسافات مكرّرة وبادئة ألف شاردة قبل "سورة" */
+  function qcCleanLabel(raw){
+    let s = (raw || "").toString().trim().replace(/\s+/g, " ");
+    s = s.replace(/^[اأإآ]\s+(?=سورة|سوره)/, "");
+    return s;
+  }
+  /* عرض العنوان: رقم لاحق مثل "سورة البقرة 1" ← "سورة البقرة (الجزء ١)" */
+  function qcDisplayLabel(raw){
+    const s = qcCleanLabel(raw);
+    const m = s.match(/^(.*\S)\s+([0-9٠-٩]+)$/);
+    if(m){
+      const num = m[2].replace(/[0-9]/g, d=> "٠١٢٣٤٥٦٧٨٩"[+d]);
+      return m[1]+" (الجزء "+num+")";
+    }
+    return s;
+  }
+  function qcRenderList(){
+    const isToday = currentDate === todayStr();
+    const arn = n => n.toLocaleString("ar-EG");
     const list = wCustom().filter(w=> w.kind === "quran");
     const ul = document.getElementById("qcList");
     ul.innerHTML = "";
+    ul.classList.toggle("qc-manage", qcManageMode);
     list.forEach(w=>{
       const current = Math.min(w.currentPage, w.endPage);
       const done = !!w.completed || w.currentPage > w.endPage;
-      if(isToday) state.worship[w.id] = done;
       const li = document.createElement("li");
-      li.className = "tally-row";
-      const chk = document.createElement("span");
-      chk.className = "chk"+(done?" on":"");
-      chk.textContent = "✔";
-      const lbl = document.createElement("span");
-      lbl.className = "lbl"+(done?" done-line":"");
-      lbl.textContent = (w.icon||"📘")+" "+w.label;
-      lbl.onclick = ()=> openSurah(w.id);
-      const rchip = document.createElement("span");
-      rchip.className = "read-chip";
-      rchip.textContent = done ? "✅ تمت" : arn(current)+"/"+arn(w.endPage);
-      rchip.onclick = ()=> openSurah(w.id);
-      li.append(chk, lbl, rchip);
-      li.appendChild(ibMakeDelBtn(w));
+      li.className = "tally-row qc-row"+(done?" qc-done":"");
+      li.dataset.id = w.id;
+
+      if(qcManageMode){
+        /* وضع الإدارة: مقبض سحب + عنوان (بلا مربّع اختيار) + تعديل + حذف */
+        const handle = document.createElement("span");
+        handle.className = "qc-drag"; handle.textContent = "☰"; handle.title = "اسحب لإعادة الترتيب";
+        const lbl = document.createElement("span");
+        lbl.className = "lbl qc-title";
+        lbl.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        const edit = document.createElement("button");
+        edit.className = "qc-icon-btn"; edit.textContent = "✏️"; edit.title = "تعديل";
+        edit.onclick = (ev)=>{ ev.stopPropagation(); qcOpenEditor(w.id); };
+        const del = document.createElement("button");
+        del.className = "qc-icon-btn del"; del.textContent = "🗑️"; del.title = "حذف";
+        del.onclick = (ev)=>{ ev.stopPropagation(); qcDeleteSegment(w.id); };
+        li.append(handle, lbl, edit, del);
+        qcWireDrag(handle, li, ul);
+      }else if(done){
+        /* وضع الإتمام النظيف: مربّع محدّد + عنوان + "✨ أتممتها" أسفله، بلا نسبة ولا شطب */
+        const chk = document.createElement("span");
+        chk.className = "chk on"; chk.textContent = "✔";
+        const wrap = document.createElement("div");
+        wrap.className = "qc-title-wrap";
+        const t = document.createElement("div"); t.className = "qc-title-main"; t.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        const note = document.createElement("div"); note.className = "qc-done-note"; note.textContent = "✨ أتممتها";
+        wrap.append(t, note);
+        wrap.onclick = ()=> openSurah(w.id);
+        li.append(chk, wrap);
+      }else{
+        /* الوضع الافتراضي النشط: مربّع + عنوان + شارة تقدّم فقط */
+        const chk = document.createElement("span");
+        chk.className = "chk"; chk.textContent = "✔";
+        const lbl = document.createElement("span");
+        lbl.className = "lbl qc-title";
+        lbl.textContent = (w.icon||"📘")+" "+qcDisplayLabel(w.label);
+        lbl.onclick = ()=> openSurah(w.id);
+        const rchip = document.createElement("span");
+        rchip.className = "read-chip";
+        rchip.textContent = arn(current)+"/"+arn(w.endPage);
+        rchip.onclick = ()=> openSurah(w.id);
+        li.append(chk, lbl, rchip);
+      }
       ul.appendChild(li);
     });
     document.getElementById("qcEmpty").hidden = list.length > 0;
   }
+
+  /* حفظ ترتيب مقاطع القراءة: نعيد ترتيب عناصر quran فقط داخل قائمة الأوراد المخصّصة (نبقي البقية بمواضعها) */
+  function qcSaveOrder(orderedIds){
+    const full = wCustom();
+    const byId = {};
+    full.forEach(w=>{ if(w.kind === "quran") byId[w.id] = w; });
+    const newQuran = orderedIds.map(id=> byId[id]).filter(Boolean);
+    let qi = 0;
+    const result = full.map(w=> w.kind === "quran" ? (newQuran[qi++] || w) : w);
+    wCustomSave(result);
+  }
+  function qcCommitOrder(){
+    const ul = document.getElementById("qcList");
+    const ids = [...ul.querySelectorAll(".qc-row")].map(li=> li.dataset.id);
+    qcSaveOrder(ids);
+    renderWorship(); renderProgress();
+  }
+  /* السحب بالمؤشّر (يعمل باللمس والفأرة) عبر المقبض ☰ */
+  function qcDragAfter(ul, y){
+    const els = [...ul.querySelectorAll(".qc-row:not(.qc-dragging)")];
+    let best = { offset: -Infinity, el: null };
+    els.forEach(child=>{
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height/2;
+      if(offset < 0 && offset > best.offset) best = { offset, el: child };
+    });
+    return best.el;
+  }
+  function qcWireDrag(handle, li, ul){
+    handle.addEventListener("pointerdown", (e)=>{
+      e.preventDefault();
+      li.classList.add("qc-dragging");
+      /* نستمع على المستند ليعمل السحب باللمس والفأرة دون الاعتماد على التقاط المؤشّر */
+      const move = (ev)=>{
+        const after = qcDragAfter(ul, ev.clientY);
+        if(after == null) ul.appendChild(li);
+        else if(after !== li) ul.insertBefore(li, after);
+      };
+      const up = ()=>{
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", up);
+        li.classList.remove("qc-dragging");
+        qcCommitOrder();
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", up);
+    });
+  }
+
+  /* حذف مقطع قراءة مع تأكيد صريح */
+  function qcDeleteSegment(id){
+    const w = qsFindItem(id);
+    if(!w) return;
+    hifzShowConfirm({
+      title: "حذف «"+qcDisplayLabel(w.label)+"»؟",
+      body: "لن يؤثر ذلك على تقدمك في المقاطع الأخرى.",
+      okText: "حذف",
+      cancelText: "إلغاء",
+      onOk: ()=>{
+        wCustomSave(wCustom().filter(x=> x.id !== id));
+        renderWorship(); renderProgress();
+      }
+    });
+  }
+
+  /* محرّر المقطع (ورقة سفلية): العنوان + صفحة البداية/النهاية + الهدف اليومي */
+  let qcEditingId = null;
+  const qcEditSheet = document.getElementById("qcEditSheet");
+  function qcOpenEditor(id){
+    const w = qsFindItem(id);
+    if(!w) return;
+    qcEditingId = id;
+    document.getElementById("qcEditTitle").value = qcCleanLabel(w.label);
+    document.getElementById("qcEditStart").value = w.startPage;
+    document.getElementById("qcEditEnd").value = w.endPage;
+    document.getElementById("qcEditTarget").value = w.target || 1;
+    document.getElementById("qcEditErr").hidden = true;
+    qcEditSheet.hidden = false;
+  }
+  function qcCloseEditor(){ qcEditSheet.hidden = true; qcEditingId = null; }
+  function qcSaveEditor(){
+    const w = qsFindItem(qcEditingId);
+    if(!w) return;
+    const title = document.getElementById("qcEditTitle").value.trim();
+    const start = parseInt(document.getElementById("qcEditStart").value, 10);
+    const end = parseInt(document.getElementById("qcEditEnd").value, 10);
+    const target = parseInt(document.getElementById("qcEditTarget").value, 10);
+    const err = document.getElementById("qcEditErr");
+    const fail = (m)=>{ err.textContent = m; err.hidden = false; };
+    if(!title){ return fail("أدخل عنوان المقطع"); }
+    if(!start || start < 1){ return fail("صفحة البداية غير صحيحة"); }
+    if(!end || end < start){ return fail("صفحة النهاية يجب أن تكون ≥ صفحة البداية"); }
+    if(!target || target < 1){ return fail("الهدف اليومي غير صحيح"); }
+    w.label = title;
+    w.startPage = start;
+    w.endPage = end;
+    w.target = target;
+    /* أبقِ التقدّم ضمن النطاق الجديد وأعِد احتساب الإتمام (منطق التقدّم كما هو) */
+    if(w.currentPage < start) w.currentPage = start;
+    if(w.currentPage > end + 1) w.currentPage = end + 1;
+    w.completed = w.currentPage > w.endPage;
+    qsSaveItem(w);
+    qcCloseEditor();
+    renderWorship(); renderProgress();
+  }
+  document.getElementById("qcEditSave").onclick = qcSaveEditor;
+  document.getElementById("qcEditCancel").onclick = qcCloseEditor;
+  document.getElementById("qcEditClose").onclick = qcCloseEditor;
+  qcEditSheet.onclick = (ev)=>{ if(ev.target === qcEditSheet) qcCloseEditor(); };
+
+  /* زرّ الإدارة: تبديل بين الوضع الافتراضي ووضع الإدارة */
+  document.getElementById("qcManageBtn").onclick = ()=>{
+    qcManageMode = !qcManageMode;
+    const btn = document.getElementById("qcManageBtn");
+    btn.textContent = qcManageMode ? "تم" : "تعديل";
+    btn.classList.toggle("on", qcManageMode);
+    qcRenderList();
+  };
 
   /* ---------- الوتر وقيام الليل: اقتراح آيات تلقائي حسب الهدف الليلي ---------- */
   const WITR_SURAHS = [
