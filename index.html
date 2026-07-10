@@ -432,6 +432,7 @@
   .qc-werd-chip.done{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2));padding:.15rem .7rem;border-radius:99px}
   .qc-werd-bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:.5rem 0}
   .qc-werd-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .4s}
+  .qc-werd-pct{font-size:.68rem;color:var(--muted);opacity:.85;margin:-.15rem 0 .45rem}
   .qc-werd-stats{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
   .qc-werd button{
     display:block;width:100%;border:none;border-radius:12px;padding:.7rem;
@@ -1524,9 +1525,10 @@
             <span class="qc-werd-chip" id="qcWerdChip">٠ / ٥ صفحات اليوم</span>
           </div>
           <div class="qc-werd-bar"><i id="qcWerdFill"></i></div>
+          <div class="qc-werd-pct" id="qcWerdPct">٠٪ من هدف اليوم</div>
           <div class="qc-werd-stats">
-            <span>آخر صفحة: <b id="qcWerdLastPage">١</b></span>
-            <span>الهدف اليومي: <b id="qcWerdTarget">٥</b></span>
+            <span>📍 الصفحة الحالية: <b id="qcWerdLastPage">١</b></span>
+            <span>🎯 الهدف اليومي: <b id="qcWerdTarget">٥</b> صفحات</span>
           </div>
           <button id="qcWerdBtn">▶ متابعة القراءة</button>
         </div>
@@ -2203,7 +2205,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٢</div>
+    <div class="app-version">النسخة ٧٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3060,6 +3062,7 @@
     document.getElementById("qcWerdTarget").textContent = arn(q.target);
     const fill = Math.min(100, Math.round(readToday / q.target * 100));
     document.getElementById("qcWerdFill").style.width = fill+"%";
+    document.getElementById("qcWerdPct").textContent = arn(fill)+"٪ من هدف اليوم";
     const chip = document.getElementById("qcWerdChip");
     chip.textContent = werdDone ? "✅ تم إنجاز ورد اليوم" : arn(readToday)+" / "+arn(q.target)+" صفحات اليوم";
     chip.classList.toggle("done", werdDone);
@@ -3238,8 +3241,8 @@
     hifzShowConfirm({
       title: "إلغاء إكمال هذا المقطع؟",
       body: "سيعود المقطع إلى حالة غير مكتملة.",
-      okText: "تأكيد",
-      cancelText: "إلغاء",
+      okText: "إلغاء الإكمال",
+      cancelText: "رجوع",
       onOk: ()=>{
         w.completed = false;
         /* نُبقي التقدّم داخل النطاق كي يصير المقطع «غير مكتمل» دون المساس بسجلّ القراءة (lastReadDate) */
