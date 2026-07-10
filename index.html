@@ -2205,7 +2205,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٣</div>
+    <div class="app-version">النسخة ٧٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2963,8 +2963,11 @@
       contBtn.disabled = false;
       contBtn.textContent = "▶ متابعة القراءة من صفحة "+arn(current);
       const readToday = w.lastReadDate === todayStr();
-      markBtn.disabled = readToday;
-      markBtn.textContent = readToday ? "✓ تمت قراءتك لليوم" : "✓ تم قراءة صفحة اليوم";
+      /* على آخر صفحة (endPage) والمقطع غير مكتمل: الإتمام متاح دائمًا حتى بعد قراءة اليوم،
+         كي لا يعلق الزر إذا حُفظ التقدّم عند النهاية بعد «إلغاء إكمال» سابق */
+      const finishing = w.currentPage >= w.endPage;
+      markBtn.disabled = readToday && !finishing;
+      markBtn.textContent = (readToday && !finishing) ? "✓ تمت قراءتك لليوم" : "✓ تم قراءة صفحة اليوم";
     }
   }
   function qsRenderReader(){
@@ -3000,8 +3003,12 @@
   function qsMarkTodayDone(){
     const w = qsFindItem(qsActiveId);
     if(!w) return;
-    if(w.lastReadDate === todayStr()) return;
-    if(!!w.completed || w.currentPage > w.endPage) return;
+    if(!!w.completed) return;
+    /* حالة الإتمام النهائي: القارئ على آخر صفحة (endPage) والمقطع غير مكتمل — قد ينشأ هذا بعد
+       «إلغاء إكمال» سابق حُفظ فيه التقدّم عند النهاية. نُتمّه دائمًا دون التقيّد بقيد «مرة واحدة
+       يوميًا»؛ أمّا القراءة العادية في منتصف المقطع فتبقى محكومة بذلك القيد كما هي. */
+    const finishing = w.currentPage >= w.endPage;
+    if(!finishing && w.lastReadDate === todayStr()) return;
     w.currentPage += (w.target || 1);
     w.lastReadDate = todayStr();
     if(w.currentPage > w.endPage) w.completed = true;
