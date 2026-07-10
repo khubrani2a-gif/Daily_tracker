@@ -825,6 +825,8 @@
   /* ===== الورد اليومي من القرآن ===== */
   .q-tiles{margin-bottom:.9rem}
   .q-reader{margin-top:1rem;padding-top:1rem;border-top:1px dashed var(--line)}
+  /* توسيط صفحة المصحف وتأطيرها كصفحة مقروءة (قارئ القرآن فقط، دون قارئ الوتر/القيام) */
+  #qReader, #surahReader{max-width:650px;margin-inline:auto;padding-inline:16px;box-sizing:border-box}
   /* ورقة توزيع الورد على الركعات (مضغوطة) */
   .witr-rakah-body{display:flex;flex-direction:column}
   .witr-rakah-active{display:flex;flex-direction:column}
@@ -884,8 +886,8 @@
     color:var(--accent);text-decoration:none;
   }
   .q-iframe{
-    width:100%;height:65vh;border:1px solid var(--line);border-radius:14px;
-    background:var(--paper);
+    width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;
+    background:#fff;
   }
   .q-done-msg{
     background:var(--accent-soft);color:var(--accent);border-radius:14px;
@@ -2204,7 +2206,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٥</div>
+    <div class="app-version">النسخة ٧٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3014,7 +3016,11 @@
     qsSaveItem(w);
     renderWorship(); renderProgress();
     qsRenderOverlay();
-    if(w.completed) celebrate();
+    if(w.completed){
+      /* أغلق القارئ بعد الإتمام حتى لا يبقى معلّقًا (خاصةً بعد إلغاء إكمال سابق) */
+      document.getElementById("surahReader").hidden = true;
+      celebrate();
+    }
   }
   function openSurah(id){
     qsActiveId = id;
