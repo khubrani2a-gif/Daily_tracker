@@ -1528,7 +1528,6 @@
           <div class="qc-werd-pct" id="qcWerdPct">٠٪ من هدف اليوم</div>
           <div class="qc-werd-stats">
             <span>📍 الصفحة الحالية: <b id="qcWerdLastPage">١</b></span>
-            <span>🎯 الهدف اليومي: <b id="qcWerdTarget">٥</b> صفحات</span>
           </div>
           <button id="qcWerdBtn">▶ متابعة القراءة</button>
         </div>
@@ -2205,7 +2204,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٤</div>
+    <div class="app-version">النسخة ٧٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3066,7 +3065,6 @@
     const werdDone = readToday >= q.target;
     if(isToday) state.worship.werd = werdDone;
     document.getElementById("qcWerdLastPage").textContent = arn(q.page);
-    document.getElementById("qcWerdTarget").textContent = arn(q.target);
     const fill = Math.min(100, Math.round(readToday / q.target * 100));
     document.getElementById("qcWerdFill").style.width = fill+"%";
     document.getElementById("qcWerdPct").textContent = arn(fill)+"٪ من هدف اليوم";
