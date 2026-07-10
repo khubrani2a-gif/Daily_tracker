@@ -775,16 +775,24 @@
   .witr-rakah-nums button:hover,.witr-rakah-nums button.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
   html.dark #witrRakahSheet .witr-rakah-nums button{background:#0a0a0a;border-color:#1e1e1e}
   .witr-rakah-body .witr-change-btn{margin-top:.6rem}
-  /* شارة تقدّم الركعة العائمة */
+  /* معاينة التوزيع المقترح */
+  .witr-rakah-preview{display:flex;flex-direction:column}
+  .witr-rakah-preview-head{font-size:.95rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:.7rem}
+  .witr-rakah-preview-list{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;max-height:45vh;overflow-y:auto}
+  .witr-rakah-preview-row{font-size:.88rem;color:var(--ink);padding:.5rem .7rem;background:var(--chip-bg);border-radius:10px}
+  .witr-rakah-preview-row b{color:var(--accent)}
+  .witr-rakah-preview .witr-change-btn{margin-top:.5rem}
+  /* شارة تقدّم الركعة العائمة — مؤشّر قراءة خفيف أسفل الترويسة */
   .witr-rakah-badge{
-    position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:130;
-    background:rgba(76,175,80,.16);color:#4CAF50;border:1px solid rgba(76,175,80,.5);
-    border-radius:999px;padding:.3rem .95rem;font-size:.8rem;font-weight:700;
-    box-shadow:0 4px 14px -5px rgba(0,0,0,.45);pointer-events:none;backdrop-filter:blur(4px);
+    position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:110;
+    background:rgba(76,175,80,.12);color:#4CAF50;border:1px solid rgba(76,175,80,.35);
+    border-radius:999px;padding:.16rem .7rem;font-size:.72rem;font-weight:600;
+    box-shadow:0 2px 7px -4px rgba(0,0,0,.3);pointer-events:none;backdrop-filter:blur(3px);
   }
   .witr-rakah-badge[hidden]{display:none}
-  /* عنوان فرعي خافت أسفل الفاصل */
-  .rakah-divider-sub{font-size:.72rem;font-weight:400;opacity:.7;margin-top:.3rem}
+  /* رسالة إتمام الركعة أعلى الفاصل — أخفّ من العنوان الرئيسي */
+  .rakah-divider-complete{font-size:.82rem;font-weight:400;opacity:.7;margin-bottom:.55rem}
+  .rakah-divider-title{font-weight:700}
   .q-nav{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.6rem}
   .q-nav button{
     border:1px solid var(--line);background:var(--paper);color:var(--accent);
@@ -1857,14 +1865,20 @@
           <span>🕌 توزيع الورد على الركعات</span>
           <button id="witrRakahSheetClose" title="إغلاق">✕</button>
         </div>
-        <div class="witr-rakah-body">
+        <div class="witr-rakah-body" id="witrRakahOptions">
           <button class="adhkar-done-btn" id="witrRakahAuto">✨ توزيع مقترح</button>
-          <div class="witr-rakah-hint">يقترح التطبيق توزيعاً مناسباً للورد بناءً على حجمه وحدود مقاطع الحفظ.</div>
+          <div class="witr-rakah-hint">يراعي مواضع الوقف ومقاطع الحفظ قدر الإمكان</div>
           <div class="witr-rakah-or">أو اختر بنفسك:</div>
           <div class="witr-rakah-nums" id="witrRakahNums">
             <button data-r="2">٢</button><button data-r="4">٤</button><button data-r="6">٦</button><button data-r="8">٨</button>
           </div>
           <button class="witr-change-btn" id="witrRakahCancel">إلغاء</button>
+        </div>
+        <div class="witr-rakah-preview" id="witrRakahPreview" hidden>
+          <div class="witr-rakah-preview-head">✨ التوزيع المقترح</div>
+          <div class="witr-rakah-preview-list" id="witrRakahPreviewList"></div>
+          <button class="adhkar-done-btn" id="witrRakahApply">تطبيق التوزيع</button>
+          <button class="witr-change-btn" id="witrRakahPreviewCancel">إلغاء</button>
         </div>
       </div>
     </div>
@@ -2061,7 +2075,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٥</div>
+    <div class="app-version">النسخة ٦٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3653,12 +3667,14 @@
         const div = document.createElement("div");
         div.className = "rakah-divider";
         div.setAttribute("style", "text-align:center; padding:15px; margin: 40px 0; color:#4CAF50; border-top:1px dashed #4CAF50; border-bottom:1px dashed #4CAF50; font-size: 1.2rem;");
+        /* رسالة إتمام الركعة السابقة (أخفّ) ثم عنوان بداية الركعة التالية (الأبرز) */
+        const complete = document.createElement("div");
+        complete.className = "rakah-divider-complete";
+        complete.textContent = "✨ يمكنك هنا إتمام الركعة "+(WITR_ORDINALS[rakahNo-1] || (arn(rakahNo-1)));
         const title = document.createElement("div");
+        title.className = "rakah-divider-title";
         title.textContent = "🕌 بداية الركعة "+(WITR_ORDINALS[rakahNo] || (arn(rakahNo)));
-        const sub = document.createElement("div");
-        sub.className = "rakah-divider-sub";
-        sub.textContent = "موضع الانتقال إلى الركعة التالية";
-        div.append(title, sub);
+        div.append(complete, title);
         box.appendChild(div);
         lastSurah = null; /* أعِد عنوان السورة بعد الفاصل لوضوح بداية الركعة */
       }
@@ -3690,17 +3706,39 @@
     witrScrollRaf = requestAnimationFrame(()=>{ witrScrollRaf = null; witrUpdateRakahBadge(); });
   }
   witrOverlay.addEventListener("scroll", witrOnReaderScroll, {passive:true});
-  function witrApplyDistribution(mode, requested){
-    if(!witrFullAyahList.length) return;
-    witrRakahDist = witrComputeDistribution(mode, requested);
+  /* يطبّق توزيعًا محسوبًا مسبقًا كما هو (بلا إعادة حساب) */
+  function witrApplyComputedDistribution(dist){
+    witrRakahDist = dist;
     witrUpdateRakahToggleBtn();
     witrRenderReaderView();
     witrOverlay.scrollTop = 0; /* ابدأ من الركعة الأولى */
     witrUpdateRakahBadge();
     /* إشعار عند تعذّر بلوغ العدد المطلوب بسبب حدود مقاطع الحفظ */
-    if(witrRakahDist.actualCount < witrRakahDist.requestedCount){
-      witrShowToast("تم توزيع الورد على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات بما يتناسب مع حدود مقاطع الحفظ");
+    if(dist.actualCount < dist.requestedCount){
+      witrShowToast("تم توزيع الورد على "+dist.actualCount.toLocaleString("ar-EG")+" ركعات بما يتناسب مع حدود مقاطع الحفظ");
     }
+  }
+  function witrApplyDistribution(mode, requested){
+    if(!witrFullAyahList.length) return;
+    witrApplyComputedDistribution(witrComputeDistribution(mode, requested));
+  }
+  /* يبني نطاقات الركعات من توزيع محسوب (للمعاينة) — يعتمد على نفس الحدود دون إعادة حساب */
+  function witrDistributionRanges(dist){
+    const arn = n=>n.toLocaleString("ar-EG");
+    const breakSet = new Set(dist.breakAfterVerseKeys);
+    const groups = []; let cur = [];
+    const last = witrFullAyahList.length - 1;
+    witrFullAyahList.forEach((a, i)=>{
+      cur.push(a);
+      if(i < last && breakSet.has(witrVerseKey(a))){ groups.push(cur); cur = []; }
+    });
+    if(cur.length) groups.push(cur);
+    return groups.map(g=>{
+      const f = g[0], l = g[g.length-1];
+      return (f.surahName === l.surahName)
+        ? f.surahName+" "+arn(f.n)+"–"+arn(l.n)
+        : f.surahName+" "+arn(f.n)+" – "+l.surahName+" "+arn(l.n);
+    });
   }
   function witrClearDistribution(){
     witrRakahDist = null;
@@ -3723,20 +3761,44 @@
   /* ورقة التقسيم + زرّ التبديل في القارئ */
   const witrRakahSheet = document.getElementById("witrRakahSheet");
   function witrOpenRakahSheet(){
+    witrSheetShowOptions(); /* ابدأ دائمًا من شاشة الخيارات لا المعاينة */
     document.querySelectorAll("#witrRakahNums button").forEach(b=>{
       b.classList.toggle("on", !!witrRakahDist && witrRakahDist.mode === "manual" && witrRakahDist.requestedCount === parseInt(b.dataset.r,10));
     });
     witrRakahSheet.hidden = false;
   }
-  function witrCloseRakahSheet(){ witrRakahSheet.hidden = true; }
+  /* يعيد الورقة إلى شاشة الخيارات (يخفي المعاينة) */
+  function witrSheetShowOptions(){
+    document.getElementById("witrRakahOptions").hidden = false;
+    document.getElementById("witrRakahPreview").hidden = true;
+    witrPreviewDist = null;
+  }
+  function witrCloseRakahSheet(){ witrRakahSheet.hidden = true; witrSheetShowOptions(); }
   document.getElementById("witrRakahToggle").onclick = ()=>{
-    if(witrRakahDist) witrClearDistribution();  /* نشط → إلغاء التقسيم */
+    if(witrRakahDist) witrClearDistribution();  /* نشط → إلغاء التوزيع */
     else witrOpenRakahSheet();
   };
   document.getElementById("witrRakahSheetClose").onclick = witrCloseRakahSheet;
   document.getElementById("witrRakahCancel").onclick = witrCloseRakahSheet;
   witrRakahSheet.onclick = (ev)=>{ if(ev.target === witrRakahSheet) witrCloseRakahSheet(); };
-  document.getElementById("witrRakahAuto").onclick = ()=>{ witrCloseRakahSheet(); witrApplyDistribution("auto"); };
+  /* المطلوب ٤: "توزيع مقترح" يعرض معاينة النطاقات قبل التطبيق (بلا إعادة حساب) */
+  let witrPreviewDist = null;
+  document.getElementById("witrRakahAuto").onclick = ()=>{
+    if(!witrFullAyahList.length) return;
+    witrPreviewDist = witrComputeDistribution("auto");
+    const arn = n=>n.toLocaleString("ar-EG");
+    document.getElementById("witrRakahPreviewList").innerHTML =
+      witrDistributionRanges(witrPreviewDist).map((r,i)=>
+        '<div class="witr-rakah-preview-row"><b>الركعة '+arn(i+1)+':</b> '+r+'</div>').join("");
+    document.getElementById("witrRakahOptions").hidden = true;
+    document.getElementById("witrRakahPreview").hidden = false;
+  };
+  document.getElementById("witrRakahApply").onclick = ()=>{
+    const dist = witrPreviewDist;
+    witrCloseRakahSheet();
+    if(dist) witrApplyComputedDistribution(dist); /* يطبّق نفس التوزيع المعروض تمامًا */
+  };
+  document.getElementById("witrRakahPreviewCancel").onclick = witrCloseRakahSheet;
   document.querySelectorAll("#witrRakahNums button").forEach(b=>{
     b.onclick = ()=>{ witrCloseRakahSheet(); witrApplyDistribution("manual", parseInt(b.dataset.r,10)); };
   });
