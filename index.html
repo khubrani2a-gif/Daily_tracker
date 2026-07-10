@@ -799,6 +799,19 @@
   .rakah-divider-title{font-weight:700}
   /* عرض التوزيع الحالي داخل الورقة */
   .witr-rakah-active-head{font-size:.95rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:.7rem}
+  /* نقطة انطلاق التوزيع قبل القارئ (بطاقة الاقتراح) */
+  .witr-predist-btn{position:relative}
+  .witr-new-badge{
+    display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    border-radius:999px;font-size:.58rem;font-weight:700;padding:.06rem .42rem;margin-inline-start:.35rem;vertical-align:middle;
+  }
+  .witr-predist-hint{font-size:.7rem;color:var(--muted);text-align:center;line-height:1.5;margin:.35rem 0 .1rem}
+  .witr-predist-hint[hidden]{display:none}
+  .witr-predist-status{
+    font-size:.82rem;font-weight:700;color:#2ea86f;text-align:center;
+    background:rgba(76,175,80,.12);border-radius:10px;padding:.45rem;margin:.6rem 0 .2rem;
+  }
+  .witr-predist-status[hidden]{display:none}
   .q-nav{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.6rem}
   .q-nav button{
     border:1px solid var(--line);background:var(--paper);color:var(--accent);
@@ -1833,6 +1846,9 @@
           <div class="witr-sug-head">📖 اقتراح الليلة</div>
           <div class="witr-sug-surah" id="witrSugSurah"></div>
           <div class="witr-sug-meta" id="witrSugMeta"></div>
+          <button class="witr-change-btn witr-predist-btn" id="witrPreDistBtn">🕌 توزيع الورد على الركعات <span class="witr-new-badge">✨ جديد</span></button>
+          <div class="witr-predist-hint" id="witrPreDistHint">توزيع الآيات ومقاطع الحفظ تلقائياً على ركعاتك.</div>
+          <div class="witr-predist-status" id="witrPreDistStatus" hidden></div>
           <button class="adhkar-done-btn" id="witrStartBtn">▶ ابدأ القراءة</button>
           <button class="witr-change-btn" id="witrChangeBtn">🔄 تغيير الاقتراح</button>
         </div>
@@ -2089,7 +2105,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٦٧</div>
+    <div class="app-version">النسخة ٦٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3253,6 +3269,7 @@
     witrRakahDist = null;
     witrFullAyahList = [];
     witrSessionUnits = [];
+    witrPreparedKey = null;
     witrDividerEls = [];
     const prev = document.getElementById("witrRakahPrev");
     if(prev) prev.parentElement.style.display = "";
@@ -3353,6 +3370,10 @@
       startBtn.textContent = (w.readPage > 0)
         ? "▶ استكمال القراءة (الركعة "+arn(w.readPage+1)+")"
         : "▶ ابدأ القراءة";
+      /* تلميح الاكتشاف يختفي دائمًا بعد أول فتح للتوزيع؛ ومؤشّر "تم الإعداد" يعكس الحالة الحالية */
+      const hint = document.getElementById("witrPreDistHint");
+      if(hint) hint.hidden = !!localStorage.getItem("witrDistDiscovered");
+      witrRenderPreDistStatus();
     }else{
       sugBox.hidden = true;
     }
@@ -3380,6 +3401,8 @@
   function witrPickTarget(target){
     const sugg = witrGenerate(target, witrPool);
     state.witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, readPage:0};
+    /* اقتراح جديد ← أبطِل أي توزيع أُعدّ لاقتراح سابق (آيات مختلفة) */
+    witrRakahDist = null; witrPreparedKey = null;
     witrForceNew = false;
     save();
     witrRenderAll();
@@ -3418,6 +3441,21 @@
     state.witr.startedAt = state.witr.startedAt || Date.now();
     save();
     witrOpenReader();
+  };
+  /* نقطة انطلاق التوزيع قبل القارئ: تحضّر آيات الورد الحالي بأمان ثم تفتح نفس الورقة */
+  document.getElementById("witrPreDistBtn").onclick = async ()=>{
+    if(!state.witr) return;
+    const btn = document.getElementById("witrPreDistBtn");
+    btn.disabled = true;
+    try{
+      const ok = await witrPrepareVerses(); /* تحذير تقني: نضمن تحميل الآيات قبل حساب التوزيع */
+      if(!ok || !witrFullAyahList.length){ alert("تعذّر تحضير آيات الورد."); return; }
+      localStorage.setItem("witrDistDiscovered", "1"); /* أخفِ تلميح الاكتشاف نهائيًا */
+      const hint = document.getElementById("witrPreDistHint"); if(hint) hint.hidden = true;
+      witrOpenRakahSheet(); /* نفس آلة الحالة المستخدمة داخل القارئ */
+    }catch(e){
+      alert("تعذّر تحميل الآيات (تحقق من الاتصال).");
+    }finally{ btn.disabled = false; }
   };
 
   /* ==================== أوراد الحفظ والمراجعة (تكامل الحفظ داخل القيام) ==================== */
@@ -3543,6 +3581,8 @@
     document.getElementById("witrPickView").hidden = true;
     document.getElementById("witrDoneView").hidden = true;
     document.getElementById("witrReader").hidden = false;
+    /* حافظ على التوزيع الذي أُعدّ من شاشة الاقتراح لنفس الورد (إن وُجد) قبل التصفير */
+    const preDist = (witrRakahDist && witrPreparedKey === w.key) ? witrRakahDist : null;
     witrResetRakahState(); /* ابدأ كل جلسة قراءة بلا تقسيم */
     witrApplyFontSize();
     document.getElementById("witrLoading").hidden = false;
@@ -3560,11 +3600,18 @@
       /* حالة تقسيم الركعات (مؤقتة، لا تُحفظ في Firebase): نبني القائمة الكاملة والوحدات غير القابلة للتقسيم */
       witrFullAyahList = ayahList;
       witrSessionUnits = witrBuildUnits(w, ayahList);
-      witrRakahDist = null;
-      witrUpdateRakahToggleBtn();
-      witrRenderReaderView();
+      witrPreparedKey = w.key;
+      if(preDist){
+        witrApplyComputedDistribution(preDist); /* أعِد تطبيق التوزيع المُعدّ من شاشة الاقتراح */
+      }else{
+        witrRakahDist = null;
+        witrUpdateRakahToggleBtn();
+        witrRenderReaderView();
+      }
       document.getElementById("witrLoading").hidden = true;
       document.getElementById("witrAyatBox").hidden = false;
+      /* أعِد حساب الشارة بعد ظهور الصندوق (كانت مواضع الفواصل صفرًا وهو مخفي) */
+      if(witrRakahDist){ witrOverlay.scrollTop = 0; witrUpdateRakahBadge(); }
     }catch(e){
       document.getElementById("witrLoading").hidden = true;
       document.getElementById("witrFallback").hidden = false;
@@ -3578,6 +3625,7 @@
   let witrFullAyahList = [];   /* القائمة الكاملة المسطّحة للجلسة الحالية (المصدر غير المتغيّر) */
   let witrSessionUnits = [];   /* الوحدات غير القابلة للتقسيم (مقاطع الحفظ، أو آية آية للأهداف الرقمية) */
   let witrRakahDist = null;    /* { mode, requestedCount, actualCount, breakAfterVerseKeys:[] } */
+  let witrPreparedKey = null;  /* مفتاح الورد الذي حُضّرت آياته (للتوزيع قبل فتح القارئ) */
   const WITR_ORDINALS = ["","الأولى","الثانية","الثالثة","الرابعة","الخامسة","السادسة","السابعة","الثامنة","التاسعة","العاشرة"];
   function witrVerseKey(a){ return (typeof a.g === "number") ? ("g"+a.g) : (a.surahName+":"+a.n); }
   /* الوحدات: في جلسة ورد الحفظ كل مقطع محفوظ وحدة غير قابلة للتقسيم؛ في الأهداف الرقمية كل آية وحدة */
@@ -3730,12 +3778,37 @@
     witrRakahDist = dist;
     witrUpdateRakahToggleBtn();
     witrRenderReaderView();
-    witrOverlay.scrollTop = 0; /* ابدأ من الركعة الأولى */
-    witrUpdateRakahBadge();
+    /* أمور خاصة بالقارئ تُنفَّذ فقط حين يكون القارئ ظاهرًا (قد يُستدعى التطبيق من شاشة الاقتراح قبل القارئ) */
+    if(!document.getElementById("witrReader").hidden){
+      witrOverlay.scrollTop = 0; /* ابدأ من الركعة الأولى */
+      witrUpdateRakahBadge();
+    }
+    witrRenderPreDistStatus(); /* حدّث مؤشّر "تم إعداد التوزيع" على شاشة الاقتراح */
     /* إشعار عند تعذّر بلوغ العدد المطلوب بسبب حدود مقاطع الحفظ */
     if(dist.actualCount < dist.requestedCount){
       witrShowToast("تم توزيع الورد على "+dist.actualCount.toLocaleString("ar-EG")+" ركعات بما يتناسب مع حدود مقاطع الحفظ");
     }
+  }
+  /* يحضّر آيات الورد الحالي (المقترح) قبل فتح القارئ — يستخدم التخزين المؤقت ولا يُعيد الجلب */
+  async function witrPrepareVerses(){
+    const w = state.witr;
+    if(!w || !Array.isArray(w.parts) || !w.parts.length) return false;
+    if(witrPreparedKey === w.key && witrFullAyahList.length) return true; /* محضّر لنفس الورد */
+    const ayahList = await witrBuildAyahList(w.parts);
+    witrFullAyahList = ayahList;
+    witrSessionUnits = witrBuildUnits(w, ayahList);
+    witrPreparedKey = w.key;
+    return witrFullAyahList.length > 0;
+  }
+  /* مؤشّر "تم إعداد التوزيع" فوق زرّ ابدأ القراءة */
+  function witrRenderPreDistStatus(){
+    const el = document.getElementById("witrPreDistStatus");
+    if(!el) return;
+    const active = !!(witrRakahDist && state.witr && witrPreparedKey === state.witr.key);
+    if(active){
+      el.textContent = "✅ تم إعداد التوزيع على "+witrRakahDist.actualCount.toLocaleString("ar-EG")+" ركعات";
+      el.hidden = false;
+    }else el.hidden = true;
   }
   function witrApplyDistribution(mode, requested){
     if(!witrFullAyahList.length) return;
@@ -3770,6 +3843,7 @@
     witrDividerEls = [];
     witrUpdateRakahToggleBtn();
     witrRenderReaderView();
+    witrRenderPreDistStatus();
   }
 
   /* توست خاص بقارئ القيام */
