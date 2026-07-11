@@ -881,36 +881,14 @@
   }
   .q-nav button:disabled{opacity:.4;cursor:default}
   .q-nav span{font-size:.85rem;color:var(--muted);font-weight:600}
-  /* قارئ نصّي أصيل للمصحف: نصّ حقيقي داخل التطبيق بخطّ كبير وتباعد أسطر مريح للتشكيل */
-  .q-textbox{
-    font-family:"Thmanyah Sans", serif;
-    font-size:clamp(24px, 6vw, 32px);
-    line-height:2.4;
-    color:var(--ink);
-    direction:rtl;
-    text-align:justify;text-align-last:center;
-    padding:.6rem .2rem 1.2rem;
-    min-height:42vh;
+  .q-external{
+    display:block;text-align:center;margin-bottom:.6rem;font-size:.8rem;
+    color:var(--accent);text-decoration:none;
   }
-  .q-surah-tag{
-    font-family:"Thmanyah Display","Thmanyah Sans",serif;
-    color:var(--accent);font-size:.95rem;font-weight:700;
-    margin:1.2rem 0 .7rem;text-align:center;
-    padding-bottom:.5rem;border-bottom:1px dashed var(--line);
+  .q-iframe{
+    width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;
+    background:#fff;
   }
-  .q-ayah-num{
-    display:inline-flex;align-items:center;justify-content:center;
-    min-width:1.7em;height:1.7em;padding:0 .18em;box-sizing:border-box;
-    border:1px solid var(--accent-2);border-radius:50%;
-    font-size:.5em;color:var(--accent);margin:0 .22em;vertical-align:middle;
-    font-family:"Thmanyah Sans",sans-serif;
-  }
-  .q-loading,.q-error{text-align:center;color:var(--muted);padding:2.6rem .6rem;font-size:.9rem;line-height:1.9}
-  .q-retry{
-    margin-top:.9rem;border:1px solid var(--accent);background:transparent;color:var(--accent);
-    border-radius:10px;padding:.45rem 1.1rem;font-family:inherit;font-weight:600;cursor:pointer;
-  }
-  html.dark .q-textbox{color:#f0ede4}
   .q-done-msg{
     background:var(--accent-soft);color:var(--accent);border-radius:14px;
     padding:.9rem;text-align:center;font-weight:700;margin-bottom:.8rem;
@@ -1826,7 +1804,8 @@
           <span id="qPageLabel">صفحة ١</span>
           <button id="qNext">التالية ▶</button>
         </div>
-        <div class="q-textbox" id="qText"></div>
+        <a class="q-external" id="qExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
+        <iframe class="q-iframe" id="qIframe" loading="lazy" title="مصحف دار الحرا"></iframe>
       </div>
     </div>
   </div>
@@ -1860,7 +1839,8 @@
           <span id="surahPageLabel">صفحة</span>
           <button id="surahNext">التالية ▶</button>
         </div>
-        <div class="q-textbox" id="surahText"></div>
+        <a class="q-external" id="surahExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
+        <iframe class="q-iframe" id="surahIframe" loading="lazy" title="مصحف دار الحرا"></iframe>
       </div>
     </div>
   </div>
@@ -2226,7 +2206,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٧</div>
+    <div class="app-version">النسخة ٧٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2775,61 +2755,8 @@
     localStorage.setItem(QURAN_KEY, JSON.stringify(q));
     qPushRemote(q);
   }
-  /* ---------- قارئ نصّي أصيل للمصحف (بديل الإطار الخارجي) ----------
-     يجلب نصّ صفحة المصحف (١..٦٠٤) من شبكة AlQuran.cloud ويعرضه كنصّ حقيقي داخل التطبيق،
-     مع تخزين مؤقّت محلّي ليعمل دون اتصال في الزيارات القادمة. لا يمسّ منطق التقدّم إطلاقًا. */
-  const QURAN_PAGE_CACHE_KEY = "h2do-quran-page-cache";
-  function qPageCache(){ try{ return JSON.parse(localStorage.getItem(QURAN_PAGE_CACHE_KEY)) || {}; }catch(e){ return {}; } }
-  function qPageCacheSave(c){ try{ localStorage.setItem(QURAN_PAGE_CACHE_KEY, JSON.stringify(c)); }catch(e){} }
-  async function qFetchPageText(pageNum){
-    const cache = qPageCache();
-    if(cache[pageNum] && Array.isArray(cache[pageNum].ayahs) && cache[pageNum].ayahs.length) return cache[pageNum].ayahs;
-    const res = await fetch("https://api.alquran.cloud/v1/page/"+pageNum+"/quran-uthmani");
-    const json = await res.json();
-    const ayahs = json.data.ayahs.map(a=>({ n:a.numberInSurah, text:a.text, sName:a.surah.name, sNum:a.surah.number }));
-    cache[pageNum] = { ayahs, ts:Date.now() };
-    qPageCacheSave(cache);
-    return ayahs;
-  }
-  function qPaintAyahs(box, ayahs){
-    const arn = n=>n.toLocaleString("ar-EG");
-    box.innerHTML = "";
-    let lastSurah = null;
-    ayahs.forEach(a=>{
-      if(a.sNum !== lastSurah){
-        const h = document.createElement("div");
-        h.className = "q-surah-tag";
-        h.textContent = "سورة "+a.sName;
-        box.appendChild(h);
-        lastSurah = a.sNum;
-      }
-      const span = document.createElement("span");
-      span.className = "q-ayah";
-      span.textContent = a.text + " ";
-      const num = document.createElement("span");
-      num.className = "q-ayah-num";
-      num.textContent = arn(a.n);
-      span.appendChild(num);
-      box.appendChild(span);
-    });
-  }
-  /* رمز يمنع تداخل النتائج إذا انتقل المستخدم بين الصفحات بسرعة قبل اكتمال الجلب */
-  let qReaderReqToken = 0;
-  async function qRenderPageText(boxId, pageNum){
-    const box = document.getElementById(boxId);
-    if(!box) return;
-    const token = ++qReaderReqToken;
-    box.innerHTML = '<div class="q-loading">…جارٍ تحميل الصفحة</div>';
-    try{
-      const ayahs = await qFetchPageText(pageNum);
-      if(token !== qReaderReqToken) return; /* نتيجة قديمة — تجاهلها */
-      qPaintAyahs(box, ayahs);
-    }catch(e){
-      if(token !== qReaderReqToken) return;
-      box.innerHTML = '<div class="q-error">تعذّر تحميل الصفحة. تحقّق من اتصالك ثم أعد المحاولة.<br><button class="q-retry">إعادة المحاولة</button></div>';
-      const btn = box.querySelector(".q-retry");
-      if(btn) btn.onclick = ()=> qRenderPageText(boxId, pageNum);
-    }
+  function qPageUrl(n){
+    return "https://qurangharhira.com/qy/qghhahp"+String(n).padStart(3,"0")+".html";
   }
   function qDocRef(){
     return db.collection("users").doc(user.uid).collection("meta").doc("quran");
@@ -2893,9 +2820,10 @@
   function qRenderReader(){
     const arn = n => n.toLocaleString("ar-EG");
     document.getElementById("qPageLabel").textContent = "صفحة "+arn(qViewPage);
+    document.getElementById("qIframe").src = qPageUrl(qViewPage);
+    document.getElementById("qExternal").href = qPageUrl(qViewPage);
     document.getElementById("qPrev").disabled = qViewPage <= 1;
     document.getElementById("qNext").disabled = qViewPage >= QURAN_LAST_PAGE;
-    qRenderPageText("qText", qViewPage);
   }
   function qOpenReader(){
     const q = qLoad();
@@ -3048,9 +2976,10 @@
     if(!w) return;
     const arn = n => n.toLocaleString("ar-EG");
     document.getElementById("surahPageLabel").textContent = "صفحة "+arn(qsViewPage);
+    document.getElementById("surahIframe").src = qPageUrl(qsViewPage);
+    document.getElementById("surahExternal").href = qPageUrl(qsViewPage);
     document.getElementById("surahPrev").disabled = qsViewPage <= w.startPage;
     document.getElementById("surahNext").disabled = qsViewPage >= w.endPage;
-    qRenderPageText("surahText", qsViewPage);
   }
   function qsOpenReader(){
     const w = qsFindItem(qsActiveId);
