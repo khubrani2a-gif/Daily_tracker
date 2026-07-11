@@ -669,6 +669,23 @@
   .task-drag:hover{background:var(--chip-bg);opacity:1}
   .task-drag:active{cursor:grabbing}
   .task-row.task-dragging{opacity:.6;background:var(--paper);border-radius:10px;box-shadow:var(--shadow)}
+  /* أولوية مرتبطة بمهمة: النصّ للقراءة + مؤشّر 🔗 خفيف + أزرار فكّ/حذف — بلا أي تغيير على مربّع الإكمال */
+  .task-linkwrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:.05rem;padding:.15rem 0}
+  .task-linktext{color:var(--ink);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .task-row.linked.done .task-linktext{color:var(--muted)}
+  .task-linkchip{font-size:.68rem;color:var(--muted);opacity:.9}
+  .task-linkbtn{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.2rem .3rem;border-radius:7px;flex-shrink:0;opacity:.7;line-height:1}
+  .task-linkbtn:hover{background:var(--chip-bg);opacity:1}
+  .task-linkbtn.del:hover{color:var(--danger)}
+  /* خيارا الإنشاء والمنتقي */
+  .task-choose{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
+  .task-choose-btn{display:block;width:100%;border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:.55rem;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s}
+  .task-choose-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .task-choose-cancel{align-self:center;border:none;background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer;padding:.15rem .5rem}
+  .task-choose-cancel:hover{color:var(--ink)}
+  .task-pick-item{display:block;width:100%;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-size:.9rem;cursor:pointer;transition:.15s}
+  .task-pick-item:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .task-pick-empty{color:var(--muted);font-size:.82rem;text-align:center;padding:.6rem}
   .task-empty{color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0 .5rem}
   .task-add-btn{
     display:block;width:100%;margin-top:.55rem;border:1px dashed var(--line);
@@ -2241,7 +2258,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٤</div>
+    <div class="app-version">النسخة ٨٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2622,6 +2639,27 @@
     });
     return changed;
   }
+  /* ===== ربط اختياري: أولوية مرتبطة تحمل sourceTaskId فقط، والمصدر الوحيد للحقيقة هو المهمة ===== */
+  function taskById(id, arr){ return (arr || (state && state.tasks) || []).find(t=> t && t.id === id); }
+  /* هل العنصر «مُستخدَم»؟ (مرتبط دائمًا مستخدَم، وإلا فبوجود نصّ) */
+  function itemFilled(it){ return !!(it && (it.sourceTaskId || (it.text && it.text.trim()))); }
+  /* حلّ النصّ/الإكمال: المرتبط يُقرأ من المهمة الأصلية؛ وإن غابت نعود لآخر قيمة محفوظة (إن وُجدت) */
+  function itemText(it, tasksArr){
+    if(it && it.sourceTaskId){ const t = taskById(it.sourceTaskId, tasksArr); return t ? (t.text||"") : (it.text||""); }
+    return (it && it.text) || "";
+  }
+  function itemDone(it, tasksArr){
+    if(it && it.sourceTaskId){ const t = taskById(it.sourceTaskId, tasksArr); return t ? !!t.done : !!(it && it.done); }
+    return !!(it && it.done);
+  }
+  /* تحقّق دفاعي: أيّ أولوية مرتبطة بمصدر غير موجود ضمن نفس الحالة تُزال بأمان (لا مراجع مكسورة، لا تعطّل) */
+  function validateLinks(st){
+    if(!st || !Array.isArray(st.priorities)) return false;
+    const ids = new Set((st.tasks||[]).map(t=> t && t.id).filter(Boolean));
+    const before = st.priorities.length;
+    st.priorities = st.priorities.filter(p=> !(p && p.sourceTaskId) || ids.has(p.sourceTaskId));
+    return st.priorities.length !== before;
+  }
 
   function blankState(){
     return {
@@ -2682,8 +2720,11 @@
       }
     }
     if(!prev) return;
-    const pendingTasks = (prev.tasks||[]).filter(t=>t.text.trim() && !t.done);
-    const pendingPr   = (prev.priorities||[]).filter(t=>t.text.trim() && !t.done);
+    const pendingTasks = (prev.tasks||[]).filter(t=> t && t.text && t.text.trim() && !t.done);
+    /* الأولويات المرتبطة تُحلّ من مهام اليوم السابق وتُنقل كأولويات مستقلّة (لا مراجع مكسورة عبر الأيام) */
+    const pendingPr = (prev.priorities||[])
+      .map(p=> ({ text: itemText(p, prev.tasks), done: itemDone(p, prev.tasks) }))
+      .filter(x=> x.text && x.text.trim() && !x.done);
     const n = pendingTasks.length + pendingPr.length;
     if(!n) return;
     if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
@@ -4814,6 +4855,7 @@
   /* ---------- نافذة تأكيد مخصّصة (بديل window.confirm الأصلي) — بالعربية وبسمة التطبيق ---------- */
   const hifzDialog = document.getElementById("hifzDialog");
   let hifzDialogOnOk = null;
+  let hifzDialogOnCancel = null;   /* إجراء اختياري لزرّ «الإلغاء» (لخيارَي حذف المهمة المرتبطة) */
   function hifzShowConfirm(opts){
     document.getElementById("hifzDialogTitle").textContent = opts.title || "";
     document.getElementById("hifzDialogBody").textContent = opts.body || "";
@@ -4823,11 +4865,12 @@
     if(opts.cancelText === null){ cancelBtn.hidden = true; }
     else{ cancelBtn.hidden = false; cancelBtn.textContent = opts.cancelText || "إلغاء"; }
     hifzDialogOnOk = typeof opts.onOk === "function" ? opts.onOk : null;
+    hifzDialogOnCancel = typeof opts.onCancel === "function" ? opts.onCancel : null;
     hifzDialog.hidden = false;
   }
-  function hifzCloseDialog(){ hifzDialog.hidden = true; hifzDialogOnOk = null; }
+  function hifzCloseDialog(){ hifzDialog.hidden = true; hifzDialogOnOk = null; hifzDialogOnCancel = null; }
   document.getElementById("hifzDialogOk").onclick = ()=>{ const fn = hifzDialogOnOk; hifzCloseDialog(); if(fn) fn(); };
-  document.getElementById("hifzDialogCancel").onclick = hifzCloseDialog;
+  document.getElementById("hifzDialogCancel").onclick = ()=>{ const fn = hifzDialogOnCancel; hifzCloseDialog(); if(fn) fn(); };
   hifzDialog.onclick = (ev)=>{ if(ev.target === hifzDialog) hifzCloseDialog(); };
 
   /* ---------- عرض بطاقة حفظ القرآن (في الصفحة الرئيسية والشاشة التفصيلية معًا) ---------- */
@@ -6643,13 +6686,36 @@
 
   /* وضع «إضافة صفّ» المؤقّت لكل قائمة (لا يُخزَّن) — القائمتان مستقلّتان تمامًا بلا أي مزامنة */
   const taskAddOpen = { tasks:false, priorities:false };
+  let prioChoosing = false;   /* عرض خيارَي إنشاء الأولوية (جديدة / اختيار من المهام) */
+  let prioPicking  = false;   /* عرض منتقي مهام اليوم لإنشاء أولوية مرتبطة */
   let rowsRendering = false; /* حارس ضدّ إعادة الرسم المتداخلة عند إطلاق blur أثناء الرسم */
+  const TASK_OPTS = {addText:"أضف مهمة", emptyText:"لا توجد مهام حالياً", placeholder:"اكتب المهمة…", summaryId:"tasksSummary"};
+  const PRIORITY_OPTS = {addText:"أضف أولوية", emptyText:"لا توجد أولويات حالياً", placeholder:"اكتب الأولوية…", summaryId:"prioritiesSummary", expandable:true, baseLimit:N_PRIORITIES, extraText:"إضافة أولوية إضافية", linkable:true};
+  /* يعيد رسم القائمتين معًا لمزامنة الأولويات المرتبطة مع مصدرها من المهام (مصدر واحد للحقيقة) */
+  function renderTaskLists(){
+    renderRows("tasks", state.tasks, TASK_COLORS, TASK_OPTS);
+    renderRows("priorities", state.priorities, ["#c9a227"], PRIORITY_OPTS);
+    renderProgress();
+  }
+  /* إنشاء أولوية مرتبطة بمهمة (تشغل خانة كالمستقلّة؛ إن امتلأت السعة نزيدها) */
+  function addLinkedPriority(taskId){
+    let free = state.priorities.findIndex(p=> !itemFilled(p));
+    if(free === -1){ state.priorities.push({ id:newId(), text:"", done:false, sourceTaskId:taskId }); }
+    else { const p = state.priorities[free]; p.sourceTaskId = taskId; p.text = ""; p.done = false; }
+    prioPicking = false; prioChoosing = false;
+    save(); renderTaskLists();
+  }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
     rowsRendering = true;
     const box = document.getElementById(containerId);
     box.innerHTML = "";
-    const rerender = ()=>{ renderRows(containerId, items, colors, opts); renderProgress(); };
+    const isTasks = containerId === "tasks";
+    const linkable = !!opts.linkable;
+    const priorityAdding = linkable && (prioChoosing || prioPicking);
+    const adding = taskAddOpen[containerId] || priorityAdding;
+    const rerender = ()=>{ if(isTasks) renderTaskLists(); else { renderRows(containerId, items, colors, opts); renderProgress(); } };
+    const rerenderBoth = ()=>{ renderTaskLists(); };
     /* ===== سحب وإفلات لإعادة الترتيب (نفس تجربة إدارة مقاطع القرآن: مقبض ☰ + مؤشّر يعمل باللمس والفأرة) ===== */
     function dragAfter(y){
       const els = [...box.querySelectorAll(".task-row:not(.task-dragging)")].filter(r=> !r.classList.contains("adding"));
@@ -6666,10 +6732,10 @@
         .filter(r=> !r.classList.contains("adding") && r.dataset.idx !== undefined)
         .map(r=> +r.dataset.idx);
       const filledInOrder = domIdx.map(i=> items[i]).filter(Boolean);
-      const empties = items.filter(it=> !it.text.trim());
+      const empties = items.filter(it=> !itemFilled(it));
       const newArr = filledInOrder.concat(empties);
       items.length = 0; for(const it of newArr) items.push(it);
-      save();                              /* حفظ الترتيب فورًا */
+      save();                              /* حفظ الترتيب فورًا — لا يمسّ الروابط ولا المعرّفات */
       renderRows(containerId, items, colors, opts);
       renderProgress();
     }
@@ -6697,20 +6763,24 @@
         document.addEventListener("pointercancel", up);
       });
     }
-    /* صفّ عنصر محفوظ: مربّع اختيار + عنوان قابل للتحرير + شارة لون */
-    const savedRow = (item, idx)=>{
+    const mkHandle = ()=>{
+      if(!canDrag) return null;
+      const h = document.createElement("span");
+      h.className = "task-drag"; h.textContent = "☰"; h.title = "اسحب لإعادة الترتيب";
+      return h;
+    };
+    /* صفّ مستقلّ: مربّع اختيار + عنوان قابل للتحرير + شارة لون */
+    const standardRow = (item, idx)=>{
+      const snapText = item.text || "";   /* لقطة وقت الرسم لاستعادة النصّ عند الحذف (oninput يفرّغه حيًّا) */
+      const snapDone = !!item.done;
       const row = document.createElement("div");
       row.className = "task-row"+(item.done?" done":"");
       row.dataset.idx = String(idx);
-      let handle = null;
-      if(canDrag){
-        handle = document.createElement("span");
-        handle.className = "task-drag"; handle.textContent = "☰"; handle.title = "اسحب لإعادة الترتيب";
-      }
+      const handle = mkHandle();
       const chk = document.createElement("span");
       chk.className = "chk"+(item.done?" on":"");
       chk.textContent = "✔";
-      chk.onclick = ()=>{ item.done = !item.done; save(); rerender(); };
+      chk.onclick = ()=>{ item.done = !item.done; save(); rerender(); };  /* المهام: rerender=القائمتان معًا لتحديث الأولويات المرتبطة */
       const input = document.createElement("input");
       input.type = "text";
       input.className = "task-input";
@@ -6719,15 +6789,65 @@
       input.oninput = ()=>{ item.text = input.value; save(); updateTaskSummary(items, opts.summaryId, opts); };
       input.onblur = ()=>{
         const t = input.value.trim();            /* حذف الفراغات الطرفية مع إبقاء التباعد الداخلي */
-        if(t){ if(t !== item.text){ item.text = t; input.value = t; save(); } }
-        else { item.text = ""; save(); if(!rowsRendering) requestAnimationFrame(rerender); }  /* أُفرِغ العنصر بعد التشذيب → يختفي */
+        if(t){
+          if(t !== item.text){ item.text = t; input.value = t; save(); }
+          /* تحرير نصّ مهمة لها أولوية مرتبطة يُحدّث عرض الأولوية (المصدر الوحيد للحقيقة) */
+          if(isTasks && !rowsRendering && state.priorities.some(p=> p.sourceTaskId === item.id)) requestAnimationFrame(rerenderBoth);
+          return;
+        }
+        /* أُفرِغ العنصر → حذف. إن كانت مهمةً لها أولوية مرتبطة نعرض خيارَين ولا نحذف صامتًا */
+        if(isTasks){
+          const linked = state.priorities.filter(p=> p.sourceTaskId === item.id);
+          if(linked.length){
+            item.text = snapText; input.value = snapText;   /* أعِد النصّ حتى يختار المستخدم (لا نحذف صامتًا) */
+            hifzShowConfirm({
+              title: "هذه المهمة مرتبطة بأولوية",
+              body: "ماذا تريد أن يحدث للأولوية المرتبطة بها؟",
+              okText: "حذف المهمة والأولوية",
+              cancelText: "إبقاؤها كأولوية مستقلة",
+              onOk: ()=>{ state.priorities = state.priorities.filter(p=> p.sourceTaskId !== item.id); item.text=""; item.done=false; save(); renderTaskLists(); },
+              onCancel: ()=>{ state.priorities.forEach(p=>{ if(p.sourceTaskId===item.id){ p.text=snapText; p.done=snapDone; delete p.sourceTaskId; } }); item.text=""; item.done=false; save(); renderTaskLists(); }
+            });
+            return;
+          }
+        }
+        item.text = ""; save(); if(!rowsRendering) requestAnimationFrame(rerender);
       };
       const flag = document.createElement("span");
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
-      /* ترتيب DOM: (مقبض السحب) → مربّع الاختيار → العنوان → شارة اللون؛ في RTL يظهر المقبض يمينًا والشارة أقصى اليسار */
       if(handle){ row.append(handle, chk, input, flag); wireDrag(handle, row); }
       else row.append(chk, input, flag);
+      box.appendChild(row);
+    };
+    /* صفّ أولوية مرتبطة: النصّ والإكمال يُقرآن من المهمة الأصلية؛ مؤشّر 🔗 + فكّ ارتباط + حذف */
+    const linkedRow = (item, idx)=>{
+      const src = taskById(item.sourceTaskId);
+      const text = src ? (src.text||"") : (item.text||"");
+      const done = src ? !!src.done : !!item.done;
+      const row = document.createElement("div");
+      row.className = "task-row linked"+(done?" done":"");
+      row.dataset.idx = String(idx);
+      const handle = mkHandle();
+      const chk = document.createElement("span");
+      chk.className = "chk"+(done?" on":"");
+      chk.textContent = "✔";
+      chk.onclick = ()=>{ if(src){ src.done = !src.done; } else { item.done = !item.done; } save(); rerenderBoth(); };  /* إكمال الأولوية المرتبطة يُبدّل حالة المهمة الأصلية */
+      const wrap = document.createElement("div");
+      wrap.className = "task-linkwrap";
+      const txt = document.createElement("div");
+      txt.className = "task-linktext"; txt.textContent = text || "(مهمة بلا نص)";
+      const chip = document.createElement("div");
+      chip.className = "task-linkchip"; chip.textContent = "🔗 من مهام اليوم";
+      wrap.append(txt, chip);
+      const unlink = document.createElement("button");
+      unlink.className = "task-linkbtn"; unlink.textContent = "⛓️‍💥"; unlink.title = "فكّ الارتباط (تصبح أولوية مستقلة)";
+      unlink.onclick = (e)=>{ e.stopPropagation(); const s=taskById(item.sourceTaskId); item.text = s?(s.text||""):(item.text||""); item.done = s?!!s.done:!!item.done; delete item.sourceTaskId; save(); rerender(); };
+      const del = document.createElement("button");
+      del.className = "task-linkbtn del"; del.textContent = "🗑"; del.title = "حذف الأولوية (لا تُحذف المهمة)";
+      del.onclick = (e)=>{ e.stopPropagation(); const i=items.indexOf(item); if(i>=0) items.splice(i,1); save(); rerender(); };
+      if(handle){ row.append(handle, chk, wrap, unlink, del); wireDrag(handle, row); }
+      else row.append(chk, wrap, unlink, del);
       box.appendChild(row);
     };
     /* صفّ الإدخال المؤقّت: حقل نصّ فقط (يُخفى المربّع والشارة بصريًّا مع الحفاظ على المحاذاة) */
@@ -6761,45 +6881,93 @@
       input.focus();
     };
     /* قائمة قابلة للتوسّع (الأولويات): اقصُص الخانات الفارغة الزائدة فوق الحدّ الأساسي كي تبقى السعة = المستخدَم */
-    if(opts.expandable && !taskAddOpen[containerId]){
+    if(opts.expandable && !adding){
       let popped = false;
       const base = opts.baseLimit || 3;
-      while(items.length > base && !items[items.length-1].text.trim()){ items.pop(); popped = true; }
+      while(items.length > base && !itemFilled(items[items.length-1])){ items.pop(); popped = true; }
       if(popped) save();
     }
-    /* السحب متاح فقط خارج وضع الإضافة وعند وجود عنصرين فأكثر */
-    const canDrag = !taskAddOpen[containerId] && items.filter(it=> it.text.trim()).length >= 2;
+    /* السحب متاح فقط خارج وضع الإضافة وعند وجود عنصرين فأكثر — يشمل المرتبطة */
+    const canDrag = !adding && items.filter(itemFilled).length >= 2;
     let shown = 0;
-    items.forEach((item, idx)=>{ if(item.text.trim()){ savedRow(item, idx); shown++; } });
+    items.forEach((item, idx)=>{
+      if(!itemFilled(item)) return;
+      if(linkable && item.sourceTaskId) linkedRow(item, idx);
+      else standardRow(item, idx);
+      shown++;
+    });
     if(taskAddOpen[containerId]){
-      const free = items.findIndex(it=> !it.text.trim());
+      const free = items.findIndex(it=> !itemFilled(it));
       if(free !== -1) inputRow(items[free], free);
       else taskAddOpen[containerId] = false;
     }
-    if(shown === 0 && !taskAddOpen[containerId]){
+    if(shown === 0 && !adding){
       const empty = document.createElement("div");
       empty.className = "task-empty";
       empty.textContent = opts.emptyText || "لا توجد مهام حالياً";
       box.appendChild(empty);
     }
-    if(!taskAddOpen[containerId]){
-      if(items.some(it=> !it.text.trim())){
+    /* ---- منطقة الإضافة ---- */
+    if(taskAddOpen[containerId]){
+      /* حقل الإدخال معروض بالأعلى — لا أزرار */
+    } else if(linkable && prioPicking){
+      /* منتقي مهام اليوم: المهام الممتلئة غير المرتبطة سابقًا (منع التكرار عبر sourceTaskId فقط) */
+      const eligible = (state.tasks||[]).filter(t=> t.text && t.text.trim() && !state.priorities.some(p=> p.sourceTaskId === t.id));
+      const list = document.createElement("div"); list.className = "task-choose";
+      if(eligible.length){
+        eligible.forEach(t=>{
+          const bt = document.createElement("button");
+          bt.className = "task-pick-item"; bt.textContent = (t.done?"✅ ":"") + t.text;
+          bt.onclick = ()=> addLinkedPriority(t.id);
+          list.appendChild(bt);
+        });
+      } else {
+        const e = document.createElement("div"); e.className = "task-pick-empty"; e.textContent = "لا توجد مهام متاحة للربط";
+        list.appendChild(e);
+      }
+      const cancel = document.createElement("button");
+      cancel.className = "task-choose-cancel"; cancel.textContent = "إلغاء";
+      cancel.onclick = ()=>{ prioPicking = false; renderRows(containerId, items, colors, opts); };
+      list.appendChild(cancel);
+      box.appendChild(list);
+    } else if(linkable && prioChoosing){
+      /* خيارا إنشاء الأولوية: جديدة مستقلّة أو ربط من مهام اليوم */
+      const wrap = document.createElement("div"); wrap.className = "task-choose";
+      const bNew = document.createElement("button");
+      bNew.className = "task-choose-btn"; bNew.textContent = "➕ أولوية جديدة";
+      bNew.onclick = ()=>{
+        prioChoosing = false;
+        if(!items.some(it=> !itemFilled(it))) items.push({ id:newId(), text:"", done:false });
+        taskAddOpen[containerId] = true; save();
+        renderRows(containerId, items, colors, opts);
+      };
+      const bPick = document.createElement("button");
+      bPick.className = "task-choose-btn"; bPick.textContent = "📋 اختيار من مهام اليوم";
+      bPick.onclick = ()=>{ prioChoosing = false; prioPicking = true; renderRows(containerId, items, colors, opts); };
+      const cancel = document.createElement("button");
+      cancel.className = "task-choose-cancel"; cancel.textContent = "إلغاء";
+      cancel.onclick = ()=>{ prioChoosing = false; renderRows(containerId, items, colors, opts); };
+      wrap.append(bNew, bPick, cancel);
+      box.appendChild(wrap);
+    } else {
+      if(items.some(it=> !itemFilled(it))){
         /* زرّ الإضافة القياسي: يظهر ما دامت هناك خانة حرّة (لا علاقة له بالإكمال) */
         const btn = document.createElement("button");
         btn.className = "task-add-btn";
         btn.textContent = "＋ " + (opts.addText || "أضف مهمة");
-        btn.onclick = ()=>{ taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); };
+        btn.onclick = ()=>{
+          if(linkable){ prioChoosing = true; renderRows(containerId, items, colors, opts); }
+          else { taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); }
+        };
         box.appendChild(btn);
       } else if(opts.expandable){
-        /* السعة ممتلئة: زرّ ثانوي خفيف يزيد السعة أولويةً واحدة ويفتح الإدخال فورًا (يتكرّر بلا حدّ) */
+        /* السعة ممتلئة: زرّ ثانوي خفيف — للأولويات يفتح الخيارَين، وإلا يزيد السعة ويفتح الإدخال */
         const extra = document.createElement("button");
         extra.className = "task-add-extra";
         extra.textContent = "⭐ " + (opts.extraText || "إضافة أولوية إضافية");
         extra.onclick = ()=>{
-          items.push({ id:newId(), text:"", done:false });   /* السعة = طول المصفوفة (متغيّر ديناميكي) */
-          taskAddOpen[containerId] = true;
-          save();
-          renderRows(containerId, items, colors, opts);
+          if(linkable){ prioChoosing = true; renderRows(containerId, items, colors, opts); }
+          else { items.push({ id:newId(), text:"", done:false }); taskAddOpen[containerId] = true; save(); renderRows(containerId, items, colors, opts); }
         };
         box.appendChild(extra);
       }
@@ -6813,8 +6981,8 @@
     const el = document.getElementById(summaryId);
     if(!el) return;
     const arn = n => n.toLocaleString("ar-EG");
-    const filled = items.filter(t=> t.text.trim());
-    const done = filled.filter(t=> t.done).length;
+    const filled = items.filter(itemFilled);
+    const done = filled.filter(it=> itemDone(it)).length;
     if(filled.length){
       let html = "📊 <b>"+arn(done)+"</b> من <b>"+arn(filled.length)+"</b> مكتملة";
       if(opts && opts.expandable){
@@ -6848,8 +7016,8 @@
     total += 1; if(sportDone(state)) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
     total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
-    const filledPr = state.priorities.filter(t=>t.text.trim());
-    total += filledPr.length; done += filledPr.filter(t=>t.done).length;
+    const filledPr = state.priorities.filter(itemFilled);
+    total += filledPr.length; done += filledPr.filter(p=> itemDone(p)).length;
     const pct = total ? Math.round(done/total*100) : 0;
     const C = 163.36;
     document.getElementById("ringFg").style.strokeDashoffset = C * (1 - pct/100);
@@ -6898,10 +7066,10 @@
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= N_CUPS) done += 1;
     total += 1; if(sportDone(s)) done += 1;
-    const ft = (s.tasks || []).filter(t=>t.text && t.text.trim());
+    const ft = (s.tasks || []).filter(t=>t && t.text && t.text.trim());
     total += ft.length; done += ft.filter(t=>t.done).length;
-    const fp = (s.priorities || []).filter(t=>t.text && t.text.trim());
-    total += fp.length; done += fp.filter(t=>t.done).length;
+    const fp = (s.priorities || []).filter(p=> p && (p.sourceTaskId || (p.text && p.text.trim())));
+    total += fp.length; done += fp.filter(p=> itemDone(p, s.tasks)).length;
     return total ? Math.round(done/total*100) : 0;
   }
 
@@ -7141,16 +7309,17 @@
   }
 
   function renderAll(){
-    /* ترحيل معرّفات مرّة واحدة لأي حالة وصلت بلا معرّفات (تحميل قديم أو مزامنة) ثم حفظها لتثبيتها */
-    if(ensureIds(state)) save();
+    /* ترحيل معرّفات + تنظيف روابط مكسورة مرّة واحدة لأي حالة وصلت (تحميل قديم/مزامنة) ثم حفظها لتثبيتها */
+    let migrated = ensureIds(state);
+    if(validateLinks(state)) migrated = true;
+    if(migrated) save();
     renderHijri(currentDate);
     renderPrayers();
     renderWorship();
     renderWater();
     renderSport();
     renderHealth();
-    renderRows("tasks", state.tasks, TASK_COLORS, {addText:"أضف مهمة", emptyText:"لا توجد مهام حالياً", placeholder:"اكتب المهمة…", summaryId:"tasksSummary"});
-    renderRows("priorities", state.priorities, ["#c9a227"], {addText:"أضف أولوية", emptyText:"لا توجد أولويات حالياً", placeholder:"اكتب الأولوية…", summaryId:"prioritiesSummary", expandable:true, baseLimit:N_PRIORITIES, extraText:"إضافة أولوية إضافية"});
+    renderTaskLists();
     bindTextarea("intention","intention");
     bindTextarea("memory","memory");
     bindTextarea("notes","notes");
