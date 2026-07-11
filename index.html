@@ -661,6 +661,14 @@
   /* صفّ الإدخال المؤقّت: حقل النصّ وحده — يُخفى المربّع والشارة مع الحفاظ على المحاذاة */
   .task-row.adding .chk,
   .task-row.adding .task-flag{visibility:hidden}
+  /* مقبض السحب لإعادة الترتيب (بنفس نمط إدارة مقاطع القرآن) */
+  .task-drag{
+    cursor:grab;color:var(--muted);font-size:1rem;flex-shrink:0;
+    padding:.3rem .42rem;border-radius:8px;touch-action:none;user-select:none;opacity:.7;
+  }
+  .task-drag:hover{background:var(--chip-bg);opacity:1}
+  .task-drag:active{cursor:grabbing}
+  .task-row.task-dragging{opacity:.6;background:var(--paper);border-radius:10px;box-shadow:var(--shadow)}
   .task-empty{color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0 .5rem}
   .task-add-btn{
     display:block;width:100%;margin-top:.55rem;border:1px dashed var(--line);
@@ -2233,7 +2241,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٢</div>
+    <div class="app-version">النسخة ٨٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6627,10 +6635,63 @@
     const box = document.getElementById(containerId);
     box.innerHTML = "";
     const rerender = ()=>{ renderRows(containerId, items, colors, opts); renderProgress(); };
+    /* ===== سحب وإفلات لإعادة الترتيب (نفس تجربة إدارة مقاطع القرآن: مقبض ☰ + مؤشّر يعمل باللمس والفأرة) ===== */
+    function dragAfter(y){
+      const els = [...box.querySelectorAll(".task-row:not(.task-dragging)")].filter(r=> !r.classList.contains("adding"));
+      let best = { offset:-Infinity, el:null };
+      els.forEach(child=>{
+        const b = child.getBoundingClientRect();
+        const off = y - b.top - b.height/2;
+        if(off < 0 && off > best.offset) best = { offset:off, el:child };
+      });
+      return best.el;
+    }
+    function commitOrder(){
+      const domIdx = [...box.querySelectorAll(".task-row")]
+        .filter(r=> !r.classList.contains("adding") && r.dataset.idx !== undefined)
+        .map(r=> +r.dataset.idx);
+      const filledInOrder = domIdx.map(i=> items[i]).filter(Boolean);
+      const empties = items.filter(it=> !it.text.trim());
+      const newArr = filledInOrder.concat(empties);
+      items.length = 0; for(const it of newArr) items.push(it);
+      save();                              /* حفظ الترتيب فورًا */
+      renderRows(containerId, items, colors, opts);
+      renderProgress();
+    }
+    function wireDrag(handle, row){
+      handle.addEventListener("pointerdown", (e)=>{
+        e.preventDefault();
+        row.classList.add("task-dragging");
+        const move = (ev)=>{
+          const after = dragAfter(ev.clientY);
+          if(after == null){
+            /* أبقِ الصفّ المسحوب فوق الأزرار/الحالة الفارغة */
+            const anchor = box.querySelector(".task-add-btn, .task-add-extra, .task-empty");
+            if(anchor) box.insertBefore(row, anchor); else box.appendChild(row);
+          } else if(after !== row) box.insertBefore(row, after);
+        };
+        const up = ()=>{
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          document.removeEventListener("pointercancel", up);
+          row.classList.remove("task-dragging");
+          commitOrder();
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up);
+        document.addEventListener("pointercancel", up);
+      });
+    }
     /* صفّ عنصر محفوظ: مربّع اختيار + عنوان قابل للتحرير + شارة لون */
     const savedRow = (item, idx)=>{
       const row = document.createElement("div");
       row.className = "task-row"+(item.done?" done":"");
+      row.dataset.idx = String(idx);
+      let handle = null;
+      if(canDrag){
+        handle = document.createElement("span");
+        handle.className = "task-drag"; handle.textContent = "☰"; handle.title = "اسحب لإعادة الترتيب";
+      }
       const chk = document.createElement("span");
       chk.className = "chk"+(item.done?" on":"");
       chk.textContent = "✔";
@@ -6649,8 +6710,9 @@
       const flag = document.createElement("span");
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
-      /* ترتيب DOM: مربّع الاختيار → العنوان → شارة اللون؛ في RTL يظهر المربّع يمينًا والشارة أقصى اليسار */
-      row.append(chk, input, flag);
+      /* ترتيب DOM: (مقبض السحب) → مربّع الاختيار → العنوان → شارة اللون؛ في RTL يظهر المقبض يمينًا والشارة أقصى اليسار */
+      if(handle){ row.append(handle, chk, input, flag); wireDrag(handle, row); }
+      else row.append(chk, input, flag);
       box.appendChild(row);
     };
     /* صفّ الإدخال المؤقّت: حقل نصّ فقط (يُخفى المربّع والشارة بصريًّا مع الحفاظ على المحاذاة) */
@@ -6690,6 +6752,8 @@
       while(items.length > base && !items[items.length-1].text.trim()){ items.pop(); popped = true; }
       if(popped) save();
     }
+    /* السحب متاح فقط خارج وضع الإضافة وعند وجود عنصرين فأكثر */
+    const canDrag = !taskAddOpen[containerId] && items.filter(it=> it.text.trim()).length >= 2;
     let shown = 0;
     items.forEach((item, idx)=>{ if(item.text.trim()){ savedRow(item, idx); shown++; } });
     if(taskAddOpen[containerId]){
