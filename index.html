@@ -671,9 +671,16 @@
   .task-row.task-dragging{opacity:.6;background:var(--paper);border-radius:10px;box-shadow:var(--shadow)}
   /* أولوية مرتبطة بمهمة: النصّ للقراءة + مؤشّر 🔗 خفيف + أزرار فكّ/حذف — بلا أي تغيير على مربّع الإكمال */
   .task-linkwrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:.05rem;padding:.15rem 0}
-  .task-linktext{color:var(--ink);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .task-row.linked.done .task-linktext{color:var(--muted)}
+  /* تمييز خفيف للأولوية المرتبطة: عنوان أنعم قليلًا (بلا ألوان إكمال، بلا شارات كبيرة) */
+  .task-linktext{color:var(--ink);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9}
+  .task-row.linked.done .task-linktext{color:var(--muted);opacity:1}
   .task-linkchip{font-size:.68rem;color:var(--muted);opacity:.9}
+  /* قائمة الإجراءات ⋯ — مخفيّة افتراضيًّا، تظهر عند الطلب فقط لإبقاء العرض هادئًا */
+  .task-linkmenu{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:1.15rem;line-height:1;padding:.1rem .4rem;border-radius:7px;flex-shrink:0;opacity:.55}
+  .task-linkmenu:hover{background:var(--chip-bg);opacity:1}
+  .task-row.actions-open .task-linkmenu{color:var(--accent);opacity:1}
+  .task-linkactions{display:none;align-items:center;gap:.1rem;flex-shrink:0}
+  .task-row.actions-open .task-linkactions{display:flex}
   .task-linkbtn{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.2rem .3rem;border-radius:7px;flex-shrink:0;opacity:.7;line-height:1}
   .task-linkbtn:hover{background:var(--chip-bg);opacity:1}
   .task-linkbtn.del:hover{color:var(--danger)}
@@ -2258,7 +2265,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٥</div>
+    <div class="app-version">النسخة ٨٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6838,16 +6845,23 @@
       const txt = document.createElement("div");
       txt.className = "task-linktext"; txt.textContent = text || "(مهمة بلا نص)";
       const chip = document.createElement("div");
-      chip.className = "task-linkchip"; chip.textContent = "🔗 من مهام اليوم";
+      chip.className = "task-linkchip"; chip.textContent = "🔗 مرتبطة";
       wrap.append(txt, chip);
+      /* الإجراءات مخفيّة افتراضيًّا خلف قائمة ⋯ لإبقاء العرض هادئًا (منطق الفكّ/الحذف كما هو) */
       const unlink = document.createElement("button");
       unlink.className = "task-linkbtn"; unlink.textContent = "⛓️‍💥"; unlink.title = "فكّ الارتباط (تصبح أولوية مستقلة)";
       unlink.onclick = (e)=>{ e.stopPropagation(); const s=taskById(item.sourceTaskId); item.text = s?(s.text||""):(item.text||""); item.done = s?!!s.done:!!item.done; delete item.sourceTaskId; save(); rerender(); };
       const del = document.createElement("button");
       del.className = "task-linkbtn del"; del.textContent = "🗑"; del.title = "حذف الأولوية (لا تُحذف المهمة)";
       del.onclick = (e)=>{ e.stopPropagation(); const i=items.indexOf(item); if(i>=0) items.splice(i,1); save(); rerender(); };
-      if(handle){ row.append(handle, chk, wrap, unlink, del); wireDrag(handle, row); }
-      else row.append(chk, wrap, unlink, del);
+      const actions = document.createElement("div");
+      actions.className = "task-linkactions";
+      actions.append(unlink, del);
+      const menu = document.createElement("button");
+      menu.className = "task-linkmenu"; menu.textContent = "⋯"; menu.title = "إجراءات";
+      menu.onclick = (e)=>{ e.stopPropagation(); row.classList.toggle("actions-open"); };
+      if(handle){ row.append(handle, chk, wrap, menu, actions); wireDrag(handle, row); }
+      else row.append(chk, wrap, menu, actions);
       box.appendChild(row);
     };
     /* صفّ الإدخال المؤقّت: حقل نصّ فقط (يُخفى المربّع والشارة بصريًّا مع الحفاظ على المحاذاة) */
@@ -6942,7 +6956,7 @@
         renderRows(containerId, items, colors, opts);
       };
       const bPick = document.createElement("button");
-      bPick.className = "task-choose-btn"; bPick.textContent = "📋 اختيار من مهام اليوم";
+      bPick.className = "task-choose-btn"; bPick.textContent = "📋 اختر مهمة موجودة";
       bPick.onclick = ()=>{ prioChoosing = false; prioPicking = true; renderRows(containerId, items, colors, opts); };
       const cancel = document.createElement("button");
       cancel.className = "task-choose-cancel"; cancel.textContent = "إلغاء";
