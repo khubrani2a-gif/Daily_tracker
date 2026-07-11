@@ -687,16 +687,12 @@
   .task-pick-item{display:block;width:100%;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-size:.9rem;cursor:pointer;transition:.15s}
   .task-pick-item:hover{border-color:var(--accent);background:var(--accent-soft)}
   .task-pick-empty{color:var(--muted);font-size:.82rem;text-align:center;padding:.6rem}
-  .prio-add-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center;animation:prioAddFade .18s ease}
-  @keyframes prioAddFade{from{opacity:0}to{opacity:1}}
-  .prio-add-sheet{width:100%;max-width:520px;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;padding:1rem 1rem 1.4rem;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:.55rem;animation:prioAddUp .22s cubic-bezier(.22,1,.36,1)}
-  @keyframes prioAddUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-  .prio-add-title{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-weight:700;font-size:1.05rem;text-align:center;padding:.2rem 0 .55rem;color:var(--ink)}
-  .prio-add-opt{display:block;width:100%;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:14px;padding:.85rem 1rem;font-family:inherit;font-size:.98rem;font-weight:600;cursor:pointer;transition:.15s}
-  .prio-add-opt:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-  .prio-add-opt:active{transform:scale(.99)}
-  .prio-add-cancel{align-self:center;margin-top:.35rem;border:none;background:transparent;color:var(--muted);font-size:.9rem;font-weight:600;cursor:pointer;padding:.5rem 1rem}
-  .prio-add-cancel:hover{color:var(--ink)}
+  .prio-menu-backdrop{position:fixed;inset:0;z-index:1000;background:transparent}
+  .prio-menu{position:fixed;min-width:170px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:.3rem;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:.15rem;animation:prioMenuIn .13s ease}
+  @keyframes prioMenuIn{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+  .prio-menu-item{display:block;width:100%;text-align:right;border:none;background:transparent;color:var(--ink);border-radius:9px;padding:.6rem .7rem;font-family:inherit;font-size:.92rem;font-weight:600;cursor:pointer;transition:.12s;white-space:nowrap}
+  .prio-menu-item:hover{background:var(--accent-soft);color:var(--accent)}
+  .prio-menu-item:active{transform:scale(.99)}
   .task-empty{color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0 .5rem}
   .task-add-btn{
     display:block;width:100%;margin-top:.55rem;border:1px dashed var(--line);
@@ -2269,7 +2265,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٢</div>
+    <div class="app-version">النسخة ٩٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6715,30 +6711,44 @@
     prioPicking = false;
     save(); renderTaskLists();
   }
-  /* ورقة سفلية «إضافة أولوية»: خيار «من مهام اليوم» أو «أولوية جديدة» — تستدعي التدفّقين القائمين دون تعديل */
-  function openPriorityAddSheet(){
-    const ov = document.createElement("div");
-    ov.className = "prio-add-overlay";
-    ov.innerHTML =
-      '<div class="prio-add-sheet" role="dialog" aria-label="إضافة أولوية">' +
-      '<div class="prio-add-title">إضافة أولوية</div>' +
-      '<button class="prio-add-opt" data-act="pick">📋 من مهام اليوم</button>' +
-      '<button class="prio-add-opt" data-act="new">✏️ أولوية جديدة</button>' +
-      '<button class="prio-add-cancel" data-act="cancel">إلغاء</button>' +
-      '</div>';
-    const close = ()=>{ ov.remove(); };
-    ov.addEventListener("click", (e)=>{
-      if(e.target === ov){ close(); return; }                 /* نقر خارج الورقة يُغلق */
-      const btn = e.target.closest("[data-act]"); if(!btn) return;
-      const act = btn.dataset.act; close();
+  /* قائمة خيارين خفيفة مرتبطة بالزر (Popover): «من مهام اليوم» أو «أولوية جديدة»
+     — بلا عنوان أو وصف، تظهر قرب الزر وتختفي فور الاختيار، وتستدعي التدفّقين القائمين دون تعديل */
+  function openPriorityAddMenu(anchor){
+    const back = document.createElement("div");
+    back.className = "prio-menu-backdrop";
+    const menu = document.createElement("div");
+    menu.className = "prio-menu";
+    menu.setAttribute("role", "menu");
+    menu.innerHTML =
+      '<button class="prio-menu-item" data-act="pick" role="menuitem">📋 من مهام اليوم</button>' +
+      '<button class="prio-menu-item" data-act="new" role="menuitem">✏️ أولوية جديدة</button>';
+    const close = ()=>{ back.remove(); document.removeEventListener("keydown", onKey); };
+    const onKey = (e)=>{ if(e.key === "Escape") close(); };
+    back.addEventListener("click", (e)=>{ if(e.target === back) close(); });
+    menu.addEventListener("click", (e)=>{
+      const it = e.target.closest("[data-act]"); if(!it) return;
+      const act = it.dataset.act; close();
       if(act === "pick"){ prioPicking = true; renderTaskLists(); }   /* نفس تدفّق اختيار مهمة موجودة */
       else if(act === "new"){                                        /* نفس تدفّق إنشاء أولوية جديدة */
-        if(!state.priorities.some(it=> !itemFilled(it))) state.priorities.push({ id:newId(), text:"", done:false });
+        if(!state.priorities.some(item=> !itemFilled(item))) state.priorities.push({ id:newId(), text:"", done:false });
         taskAddOpen.priorities = true; save();
         renderTaskLists();
       }
     });
-    document.body.appendChild(ov);
+    back.appendChild(menu);
+    document.body.appendChild(back);
+    /* الوضع بالقرب من الزر: نحاذي الحافة اليمنى (RTL) ونظهر فوق الزر إن لم تكفِ المساحة أسفله */
+    const r = anchor.getBoundingClientRect();
+    const mw = menu.offsetWidth, mh = menu.offsetHeight, gap = 6;
+    let left = r.right - mw;
+    if(left < 8) left = 8;
+    if(left + mw > window.innerWidth - 8) left = window.innerWidth - 8 - mw;
+    let top = r.bottom + gap;
+    if(top + mh > window.innerHeight - 8) top = r.top - gap - mh;   /* لا تكفي المساحة أسفله → أظهرها فوقه */
+    if(top < 8) top = 8;
+    menu.style.left = Math.round(left) + "px";
+    menu.style.top = Math.round(top) + "px";
+    document.addEventListener("keydown", onKey);
   }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
@@ -6986,7 +6996,7 @@
         btn.className = "task-add-btn";
         btn.textContent = "＋ " + (opts.addText || "أضف مهمة");
         btn.onclick = ()=>{
-          if(linkable){ openPriorityAddSheet(); }              /* ورقة الخيارين بدل التوسّع المضمّن */
+          if(linkable){ openPriorityAddMenu(btn); }             /* قائمة خيارين خفيفة مرتبطة بالزر */
           else { taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); }
         };
         box.appendChild(btn);
@@ -6996,7 +7006,7 @@
         extra.className = "task-add-extra";
         extra.textContent = "⭐ " + (opts.extraText || "إضافة أولوية إضافية");
         extra.onclick = ()=>{
-          if(linkable){ openPriorityAddSheet(); }
+          if(linkable){ openPriorityAddMenu(extra); }
           else { items.push({ id:newId(), text:"", done:false }); taskAddOpen[containerId] = true; save(); renderRows(containerId, items, colors, opts); }
         };
         box.appendChild(extra);
