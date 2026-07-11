@@ -673,16 +673,11 @@
   .task-row .chk, .task-row .task-drag, .task-row .task-flag{flex-shrink:0}
   /* أولوية مرتبطة مبسّطة: ☐ العنوان 🔗 — العنوان يُقرأ أوّلًا ثمّ أيقونة الربط الخفيفة */
   .task-linkwrap{flex:1;min-width:0;display:flex;align-items:center;gap:.3rem}
-  .task-linktext{color:var(--ink);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9;min-width:0;cursor:default}
+  .task-linktext{color:var(--ink);font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9;min-width:0}
   .task-row.linked.done .task-linktext{color:var(--muted);opacity:1}
-  /* أيقونة الربط بعد العنوان: صغيرة، لون ثانوي، بلا شارة — وهي زرّ فكّ الربط المباشر */
-  .task-linkmark{font-size:.8rem;color:var(--muted);opacity:.6;flex-shrink:0;border:none;background:transparent;cursor:pointer;padding:.15rem .2rem;border-radius:6px;line-height:1;-webkit-tap-highlight-color:transparent}
+  /* أيقونة الربط بعد العنوان: صغيرة، لون ثانوي، بلا شارة — وهي زرّ إزالة الأولوية المرتبطة */
+  .task-linkmark{font-size:.8rem;color:var(--muted);opacity:.6;flex-shrink:0;border:none;background:transparent;cursor:pointer;padding:.15rem .25rem;border-radius:6px;line-height:1;-webkit-tap-highlight-color:transparent}
   .task-linkmark:hover{opacity:1;background:var(--chip-bg)}
-  /* حذف خفيف يظهر فقط عند التمرير أو لمس العنوان (لا في العرض العادي) */
-  .task-linkdel{display:none;flex-shrink:0;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:1.25rem;line-height:1;width:28px;height:28px;border-radius:7px;align-items:center;justify-content:center;opacity:.75;-webkit-tap-highlight-color:transparent}
-  .task-row.linked:hover .task-linkdel,
-  .task-row.linked.editing .task-linkdel{display:inline-flex}
-  .task-linkdel:hover{background:var(--chip-bg);color:var(--danger);opacity:1}
   /* خيارا الإنشاء والمنتقي */
   .task-choose{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
   .task-choose-btn{display:block;width:100%;border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:.55rem;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s}
@@ -2264,7 +2259,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٠</div>
+    <div class="app-version">النسخة ٩١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6844,28 +6839,24 @@
       wrap.className = "task-linkwrap";
       const txt = document.createElement("span");
       txt.className = "task-linktext"; txt.textContent = text || "(مهمة بلا نص)";
-      txt.onclick = (e)=>{ e.stopPropagation(); row.classList.toggle("editing"); };  /* النقر على العنوان يكشف حذفًا خفيفًا */
-      /* أيقونة الربط بعد العنوان مباشرةً — تفكّ الربط بتأكيد خفيف */
+      /* أيقونة الربط بعد العنوان مباشرةً — النقر عليها يزيل الأولوية المرتبطة بعد تأكيد */
       const mark = document.createElement("button");
-      mark.className = "task-linkmark"; mark.textContent = "🔗"; mark.title = "إزالة الربط"; mark.setAttribute("aria-label", "مرتبطة بمهمة — اضغط لإزالة الربط");
+      mark.className = "task-linkmark"; mark.textContent = "🔗"; mark.title = "إزالة الأولوية المرتبطة"; mark.setAttribute("aria-label", "مرتبطة بمهمة — اضغط لإزالتها");
       mark.onclick = (e)=>{
         e.stopPropagation();
         hifzShowConfirm({
-          title: "إزالة من الأولويات؟",
+          title: "إزالة هذه الأولوية المرتبطة؟",
           body: "",
           okText: "إزالة",
           cancelText: "إلغاء",
-          onOk: ()=>{ const s=taskById(item.sourceTaskId); item.text = s?(s.text||""):(item.text||""); item.done = s?!!s.done:!!item.done; delete item.sourceTaskId; save(); requestAnimationFrame(rerender); }
+          /* حذف الأولوية المرتبطة فقط من القائمة — المهمة الأصلية لا تتأثر إطلاقًا */
+          onOk: ()=>{ const i=items.indexOf(item); if(i>=0) items.splice(i,1); save(); requestAnimationFrame(rerender); }
         });
       };
       wrap.append(txt, mark);
-      /* حذف مباشر صغير — مخفيّ افتراضيًّا، يظهر عند التمرير أو عند لمس العنوان (وضع تحرير خفيف) */
-      const del = document.createElement("button");
-      del.className = "task-linkdel"; del.textContent = "×"; del.title = "حذف الأولوية (لا تُحذف المهمة)"; del.setAttribute("aria-label", "حذف الأولوية");
-      del.onclick = (e)=>{ e.stopPropagation(); const i=items.indexOf(item); if(i>=0) items.splice(i,1); save(); requestAnimationFrame(rerender); };
-      /* ترتيب RTL: المقبض ثمّ المربّع ثمّ (العنوان 🔗) ثمّ زرّ الحذف الخفيف */
-      if(handle){ row.append(handle, chk, wrap, del); wireDrag(handle, row); }
-      else row.append(chk, wrap, del);
+      /* ترتيب RTL: المقبض ثمّ المربّع ثمّ (العنوان 🔗) */
+      if(handle){ row.append(handle, chk, wrap); wireDrag(handle, row); }
+      else row.append(chk, wrap);
       box.appendChild(row);
     };
     /* صفّ الإدخال المؤقّت: حقل نصّ فقط (يُخفى المربّع والشارة بصريًّا مع الحفاظ على المحاذاة) */
