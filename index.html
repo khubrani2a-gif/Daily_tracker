@@ -669,7 +669,7 @@
   }
   .task-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
   /* ملخّص التقدّم: ثانوي وخفيف لا ينافس عنوان القسم */
-  .task-summary{font-size:.85rem;color:var(--muted);font-weight:400;margin:-.4rem 0 .75rem;display:flex;align-items:center;gap:.3rem}
+  .task-summary{font-size:.8rem;color:var(--muted);font-weight:400;margin:-.4rem 0 .75rem;display:flex;align-items:center;gap:.3rem}
   .task-summary[hidden]{display:none}
   .task-summary b{color:var(--muted);font-weight:600}
   .task-card h2{font-size:1.16rem}   /* إبراز عنوانَي المهام والأولويات */
@@ -2226,7 +2226,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٠</div>
+    <div class="app-version">النسخة ٨١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6673,7 +6673,8 @@
       flag.style.background = colors[idx % colors.length];
       row.append(chk, input, flag);
       box.appendChild(row);
-      setTimeout(()=> input.focus(), 0);
+      /* التركيز متزامنًا داخل إيماءة اللمس كي تفتح لوحة المفاتيح على الجوّال (لا داخل setTimeout) */
+      input.focus();
     };
     let shown = 0;
     items.forEach((item, idx)=>{ if(item.text.trim()){ savedRow(item, idx); shown++; } });
