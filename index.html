@@ -646,15 +646,29 @@
   #weightSpark svg{max-width:100%}
 
   /* ===== Tasks ===== */
-  .task-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem}
-  .task-row input[type=text]{
-    flex:1;border:none;border-bottom:1.5px solid var(--line);
-    background:transparent;padding:.35rem .2rem;font-family:inherit;font-size:.92rem;color:var(--ink);
+  /* واجهة رقمية أنيقة للمهام/الأولويات (قائمتان مستقلّتان تمامًا) */
+  .task-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;padding:.15rem 0;transition:opacity .15s}
+  .task-row.done{opacity:.6}                       /* شعور هادئ بالإنجاز — دون شطب */
+  .task-input{
+    flex:1;min-width:0;border:none;border-bottom:1.5px solid transparent;
+    background:transparent;padding:.4rem .15rem;font-family:inherit;font-size:.95rem;color:var(--ink);
     outline:none;transition:.15s;
   }
-  .task-row input[type=text]:focus{border-bottom-color:var(--accent)}
-  .task-row .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-  .task-row input.crossed{text-decoration:line-through;color:var(--muted)}
+  .task-input:focus{border-bottom-color:var(--accent)}
+  .task-input::placeholder{color:var(--muted);opacity:.6}
+  /* مؤشّر الأولوية: شارة لونية خفيفة في أقصى اليسار لا تنافس مربّع الاختيار */
+  .task-flag{width:5px;height:20px;border-radius:99px;flex-shrink:0;opacity:.8}
+  .task-empty{color:var(--muted);font-size:.85rem;text-align:center;padding:1rem 0 .5rem}
+  .task-add-btn{
+    display:block;width:100%;margin-top:.55rem;border:1px dashed var(--line);
+    background:transparent;color:var(--muted);border-radius:12px;padding:.55rem;
+    font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .task-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .task-summary{font-size:.75rem;color:var(--muted);margin:-.45rem 0 .7rem;display:flex;align-items:center;gap:.3rem}
+  .task-summary[hidden]{display:none}
+  .task-summary b{color:var(--accent);font-weight:700}
+  .task-card h2{font-size:1.16rem}   /* إبراز عنوانَي المهام والأولويات */
 
   /* ===== Textareas ===== */
   textarea{
@@ -1657,13 +1671,15 @@
         <textarea class="plain" id="intention" rows="3" placeholder="نويتُ اليوم أن..."></textarea>
       </div>
 
-      <div class="card">
+      <div class="card task-card">
         <h2><span class="ico">📝</span> مهام اليوم</h2>
+        <div class="task-summary" id="tasksSummary" hidden></div>
         <div id="tasks"></div>
       </div>
 
-      <div class="card">
+      <div class="card task-card">
         <h2><span class="ico">⭐</span> الأولويات</h2>
+        <div class="task-summary" id="prioritiesSummary" hidden></div>
         <div id="priorities"></div>
       </div>
     </div>
@@ -2206,7 +2222,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٧٨</div>
+    <div class="app-version">النسخة ٧٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6591,28 +6607,74 @@
     document.getElementById("waterCount").textContent = state.water;
   }
 
-  function renderRows(containerId, items, colors){
+  /* وضع «إضافة صفّ» المؤقّت لكل قائمة (لا يُخزَّن) — القائمتان مستقلّتان تمامًا بلا أي مزامنة */
+  const taskAddOpen = { tasks:false, priorities:false };
+  function renderRows(containerId, items, colors, opts){
+    opts = opts || {};
     const box = document.getElementById(containerId);
     box.innerHTML = "";
-    items.forEach((item,i)=>{
+    const addRow = (item, idx, isNew)=>{
       const row = document.createElement("div");
-      row.className = "task-row";
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      dot.style.background = colors[i%colors.length];
+      row.className = "task-row"+(item.done?" done":"");
       const chk = document.createElement("span");
       chk.className = "chk"+(item.done?" on":"");
       chk.textContent = "✔";
+      chk.onclick = ()=>{ item.done=!item.done; save(); renderRows(containerId,items,colors,opts); renderProgress(); };
       const input = document.createElement("input");
       input.type = "text";
+      input.className = "task-input";
       input.value = item.text;
-      input.placeholder = "................";
-      if(item.done) input.classList.add("crossed");
-      chk.onclick = ()=>{ item.done=!item.done; save(); renderRows(containerId,items,colors); renderProgress(); };
-      input.oninput = ()=>{ item.text = input.value; save(); };
-      row.appendChild(dot); row.appendChild(chk); row.appendChild(input);
+      input.placeholder = opts.placeholder || "اكتب هنا…";
+      input.oninput = ()=>{
+        const wasEmpty = !item.text.trim();
+        item.text = input.value;
+        save();
+        /* أوّل ما يُكتب في صفّ الإضافة الجديد: نُنهي وضع الإضافة ونحدّث الملخّص دون إعادة رسم كي لا يفقد التركيز */
+        if(isNew && input.value.trim() && wasEmpty) taskAddOpen[containerId] = false;
+        updateTaskSummary(containerId, items, opts.summaryId);
+      };
+      const flag = document.createElement("span");
+      flag.className = "task-flag";
+      flag.style.background = colors[idx % colors.length];
+      /* ترتيب DOM: مربّع الاختيار → العنوان → شارة الأولوية؛ في RTL يظهر المربّع يمينًا والشارة أقصى اليسار */
+      row.append(chk, input, flag);
       box.appendChild(row);
-    });
+      if(isNew) setTimeout(()=> input.focus(), 0);
+    };
+    let shown = 0;
+    items.forEach((item, idx)=>{ if(item.text.trim()){ addRow(item, idx, false); shown++; } });
+    if(taskAddOpen[containerId]){
+      const free = items.findIndex(it=> !it.text.trim());
+      if(free !== -1) addRow(items[free], free, true);
+      else taskAddOpen[containerId] = false;
+    }
+    if(shown === 0 && !taskAddOpen[containerId]){
+      const empty = document.createElement("div");
+      empty.className = "task-empty";
+      empty.textContent = opts.emptyText || "لا توجد مهام حالياً";
+      box.appendChild(empty);
+    }
+    if(items.some(it=> !it.text.trim()) && !taskAddOpen[containerId]){
+      const btn = document.createElement("button");
+      btn.className = "task-add-btn";
+      btn.textContent = "＋ " + (opts.addText || "أضف مهمة");
+      btn.onclick = ()=>{ taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); };
+      box.appendChild(btn);
+    }
+    updateTaskSummary(containerId, items, opts.summaryId);
+  }
+  /* ملخّص تقدّم خفيف لكل قائمة على حدة (من بيانات الإتمام القائمة فقط) */
+  function updateTaskSummary(containerId, items, summaryId){
+    if(!summaryId) return;
+    const el = document.getElementById(summaryId);
+    if(!el) return;
+    const arn = n => n.toLocaleString("ar-EG");
+    const filled = items.filter(t=> t.text.trim());
+    const done = filled.filter(t=> t.done).length;
+    if(filled.length){
+      el.innerHTML = "📊 <b>"+arn(done)+"</b> من <b>"+arn(filled.length)+"</b> مكتملة";
+      el.hidden = false;
+    }else el.hidden = true;
   }
 
   function renderStars(){
@@ -6936,8 +6998,8 @@
     renderWater();
     renderSport();
     renderHealth();
-    renderRows("tasks", state.tasks, TASK_COLORS);
-    renderRows("priorities", state.priorities, ["#c9a227"]);
+    renderRows("tasks", state.tasks, TASK_COLORS, {addText:"أضف مهمة", emptyText:"لا توجد مهام حالياً", placeholder:"اكتب المهمة…", summaryId:"tasksSummary"});
+    renderRows("priorities", state.priorities, ["#c9a227"], {addText:"أضف أولوية", emptyText:"لا توجد أولويات حالياً", placeholder:"اكتب الأولوية…", summaryId:"prioritiesSummary"});
     bindTextarea("intention","intention");
     bindTextarea("memory","memory");
     bindTextarea("notes","notes");
