@@ -668,6 +668,13 @@
     font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s;
   }
   .task-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  /* زرّ ثانوي أخفّ لزيادة السعة — أقلّ بروزًا من زرّ الإضافة القياسي */
+  .task-add-extra{
+    display:block;width:100%;margin-top:.4rem;border:none;background:transparent;
+    color:var(--muted);opacity:.9;border-radius:10px;padding:.4rem;
+    font-family:inherit;font-size:.78rem;font-weight:500;cursor:pointer;transition:.15s;
+  }
+  .task-add-extra:hover{color:var(--accent);opacity:1;background:var(--accent-soft)}
   /* ملخّص التقدّم: ثانوي وخفيف لا ينافس عنوان القسم */
   .task-summary{font-size:.8rem;color:var(--muted);font-weight:400;margin:-.4rem 0 .75rem;display:flex;align-items:center;gap:.3rem}
   .task-summary[hidden]{display:none}
@@ -2226,7 +2233,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨١</div>
+    <div class="app-version">النسخة ٨٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6633,7 +6640,7 @@
       input.className = "task-input";
       input.value = item.text;
       input.placeholder = opts.placeholder || "اكتب هنا…";
-      input.oninput = ()=>{ item.text = input.value; save(); updateTaskSummary(containerId, items, opts.summaryId); };
+      input.oninput = ()=>{ item.text = input.value; save(); updateTaskSummary(items, opts.summaryId, opts); };
       input.onblur = ()=>{
         const t = input.value.trim();            /* حذف الفراغات الطرفية مع إبقاء التباعد الداخلي */
         if(t){ if(t !== item.text){ item.text = t; input.value = t; save(); } }
@@ -6676,6 +6683,13 @@
       /* التركيز متزامنًا داخل إيماءة اللمس كي تفتح لوحة المفاتيح على الجوّال (لا داخل setTimeout) */
       input.focus();
     };
+    /* قائمة قابلة للتوسّع (الأولويات): اقصُص الخانات الفارغة الزائدة فوق الحدّ الأساسي كي تبقى السعة = المستخدَم */
+    if(opts.expandable && !taskAddOpen[containerId]){
+      let popped = false;
+      const base = opts.baseLimit || 3;
+      while(items.length > base && !items[items.length-1].text.trim()){ items.pop(); popped = true; }
+      if(popped) save();
+    }
     let shown = 0;
     items.forEach((item, idx)=>{ if(item.text.trim()){ savedRow(item, idx); shown++; } });
     if(taskAddOpen[containerId]){
@@ -6689,19 +6703,33 @@
       empty.textContent = opts.emptyText || "لا توجد مهام حالياً";
       box.appendChild(empty);
     }
-    /* رؤية زرّ الإضافة تعتمد فقط على توفّر خانة حرّة (عدد العناصر < الحدّ) — لا علاقة لها بالإكمال */
-    if(items.some(it=> !it.text.trim()) && !taskAddOpen[containerId]){
-      const btn = document.createElement("button");
-      btn.className = "task-add-btn";
-      btn.textContent = "＋ " + (opts.addText || "أضف مهمة");
-      btn.onclick = ()=>{ taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); };
-      box.appendChild(btn);
+    if(!taskAddOpen[containerId]){
+      if(items.some(it=> !it.text.trim())){
+        /* زرّ الإضافة القياسي: يظهر ما دامت هناك خانة حرّة (لا علاقة له بالإكمال) */
+        const btn = document.createElement("button");
+        btn.className = "task-add-btn";
+        btn.textContent = "＋ " + (opts.addText || "أضف مهمة");
+        btn.onclick = ()=>{ taskAddOpen[containerId] = true; renderRows(containerId, items, colors, opts); };
+        box.appendChild(btn);
+      } else if(opts.expandable){
+        /* السعة ممتلئة: زرّ ثانوي خفيف يزيد السعة أولويةً واحدة ويفتح الإدخال فورًا (يتكرّر بلا حدّ) */
+        const extra = document.createElement("button");
+        extra.className = "task-add-extra";
+        extra.textContent = "⭐ " + (opts.extraText || "إضافة أولوية إضافية");
+        extra.onclick = ()=>{
+          items.push({ text:"", done:false });   /* السعة = طول المصفوفة (متغيّر ديناميكي) */
+          taskAddOpen[containerId] = true;
+          save();
+          renderRows(containerId, items, colors, opts);
+        };
+        box.appendChild(extra);
+      }
     }
-    updateTaskSummary(containerId, items, opts.summaryId);
+    updateTaskSummary(items, opts.summaryId, opts);
     rowsRendering = false;
   }
   /* ملخّص تقدّم خفيف لكل قائمة على حدة (من بيانات الإتمام القائمة فقط) */
-  function updateTaskSummary(containerId, items, summaryId){
+  function updateTaskSummary(items, summaryId, opts){
     if(!summaryId) return;
     const el = document.getElementById(summaryId);
     if(!el) return;
@@ -6709,7 +6737,12 @@
     const filled = items.filter(t=> t.text.trim());
     const done = filled.filter(t=> t.done).length;
     if(filled.length){
-      el.innerHTML = "📊 <b>"+arn(done)+"</b> من <b>"+arn(filled.length)+"</b> مكتملة";
+      let html = "📊 <b>"+arn(done)+"</b> من <b>"+arn(filled.length)+"</b> مكتملة";
+      if(opts && opts.expandable){
+        /* السعة الحالية = طول المصفوفة الديناميكي */
+        html += " • <b>"+arn(filled.length)+"</b>/<b>"+arn(items.length)+"</b> مستخدمة";
+      }
+      el.innerHTML = html;
       el.hidden = false;
     }else el.hidden = true;
   }
@@ -7036,7 +7069,7 @@
     renderSport();
     renderHealth();
     renderRows("tasks", state.tasks, TASK_COLORS, {addText:"أضف مهمة", emptyText:"لا توجد مهام حالياً", placeholder:"اكتب المهمة…", summaryId:"tasksSummary"});
-    renderRows("priorities", state.priorities, ["#c9a227"], {addText:"أضف أولوية", emptyText:"لا توجد أولويات حالياً", placeholder:"اكتب الأولوية…", summaryId:"prioritiesSummary"});
+    renderRows("priorities", state.priorities, ["#c9a227"], {addText:"أضف أولوية", emptyText:"لا توجد أولويات حالياً", placeholder:"اكتب الأولوية…", summaryId:"prioritiesSummary", expandable:true, baseLimit:N_PRIORITIES, extraText:"إضافة أولوية إضافية"});
     bindTextarea("intention","intention");
     bindTextarea("memory","memory");
     bindTextarea("notes","notes");
