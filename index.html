@@ -2264,7 +2264,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٧</div>
+    <div class="app-version">النسخة ٨٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -6895,12 +6895,18 @@
       /* التركيز متزامنًا داخل إيماءة اللمس كي تفتح لوحة المفاتيح على الجوّال (لا داخل setTimeout) */
       input.focus();
     };
-    /* قائمة قابلة للتوسّع (الأولويات): اقصُص الخانات الفارغة الزائدة فوق الحدّ الأساسي كي تبقى السعة = المستخدَم */
+    /* قائمة قابلة للتوسّع (الأولويات): طبّع السعة = max(الحدّ الأساسي، عدد المستخدَم) بإزالة الخانات
+       الفارغة الزائدة أينما كانت (لا الطرفية فقط) مع الحفاظ على ترتيب العناصر المستخدَمة ومعرّفاتها */
     if(opts.expandable && !adding){
-      let popped = false;
       const base = opts.baseLimit || 3;
-      while(items.length > base && !itemFilled(items[items.length-1])){ items.pop(); popped = true; }
-      if(popped) save();
+      const filled = items.filter(itemFilled);
+      const keepEmpties = Math.max(0, base - filled.length);
+      const emptied = items.filter(it=> !itemFilled(it)).slice(0, keepEmpties);
+      const normalized = filled.concat(emptied);
+      if(normalized.length !== items.length){
+        items.length = 0; for(const it of normalized) items.push(it);
+        save();
+      }
     }
     /* السحب متاح فقط خارج وضع الإضافة وعند وجود عنصرين فأكثر — يشمل المرتبطة */
     const canDrag = !adding && items.filter(itemFilled).length >= 2;
