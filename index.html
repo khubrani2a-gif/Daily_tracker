@@ -2241,7 +2241,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٨٣</div>
+    <div class="app-version">النسخة ٨٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2609,14 +2609,28 @@
   }
   function storageKey(date){ return "h2do-tracker:"+date; }
 
+  /* معرّفات ثابتة لعناصر المهام/الأولويات (تأسيس داخلي للمرحلة ٢A — لا أثر مرئيّ) */
+  let _idSeq = 0;
+  function newId(){ return "id" + Date.now().toString(36) + "_" + (_idSeq++).toString(36) + Math.random().toString(36).slice(2,6); }
+  /* يمنح كلّ عنصر مهمة/أولوية معرّفًا ثابتًا إن لم يكن له — ترحيل آمن للبيانات القديمة. يعيد true إن أضاف شيئًا */
+  function ensureIds(st){
+    let changed = false;
+    ["tasks","priorities"].forEach(k=>{
+      if(st && Array.isArray(st[k])) st[k].forEach(it=>{
+        if(it && typeof it === "object" && !it.id){ it.id = newId(); changed = true; }
+      });
+    });
+    return changed;
+  }
+
   function blankState(){
     return {
       prayers: PRAYERS.map(()=>false),
       worship: Object.fromEntries(WORSHIP.map(w=>[w.id,false])),
       water: 0,
       intention: "",
-      tasks: Array.from({length:N_TASKS},()=>({text:"",done:false})),
-      priorities: Array.from({length:N_PRIORITIES},()=>({text:"",done:false})),
+      tasks: Array.from({length:N_TASKS},()=>({id:newId(),text:"",done:false})),
+      priorities: Array.from({length:N_PRIORITIES},()=>({id:newId(),text:"",done:false})),
       memory: "",
       notes: "",
       rating: 0,
@@ -2673,9 +2687,10 @@
     const n = pendingTasks.length + pendingPr.length;
     if(!n) return;
     if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
-      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {text:t.text, done:false}; });
-      pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {text:t.text, done:false}; });
+      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {id:newId(), text:t.text, done:false}; });
+      pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {id:newId(), text:t.text, done:false}; });
     }
+    ensureIds(state);   /* ضمان معرّف لكلّ عنصر قبل الحفظ */
     localStorage.setItem(storageKey(dateStr), JSON.stringify(state));
   }
 
@@ -6781,7 +6796,7 @@
         extra.className = "task-add-extra";
         extra.textContent = "⭐ " + (opts.extraText || "إضافة أولوية إضافية");
         extra.onclick = ()=>{
-          items.push({ text:"", done:false });   /* السعة = طول المصفوفة (متغيّر ديناميكي) */
+          items.push({ id:newId(), text:"", done:false });   /* السعة = طول المصفوفة (متغيّر ديناميكي) */
           taskAddOpen[containerId] = true;
           save();
           renderRows(containerId, items, colors, opts);
@@ -7126,6 +7141,8 @@
   }
 
   function renderAll(){
+    /* ترحيل معرّفات مرّة واحدة لأي حالة وصلت بلا معرّفات (تحميل قديم أو مزامنة) ثم حفظها لتثبيتها */
+    if(ensureIds(state)) save();
     renderHijri(currentDate);
     renderPrayers();
     renderWorship();
