@@ -1612,6 +1612,7 @@
         <div class="hijri" id="hijriDate"></div>
         <div class="sync-box">
           <button class="sync-btn" id="syncBtn" hidden></button>
+          <button class="sync-btn" id="syncAllBtn" hidden>مزامنة جميع البيانات</button>
           <div class="sync-status" id="syncStatus"></div>
         </div>
       </div>
@@ -2458,7 +2459,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٨</div>
+    <div class="app-version">النسخة ٩٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2471,6 +2472,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="sync-core.js"></script>
 <script>
 (function(){
   "use strict";
@@ -2531,20 +2533,25 @@
     if(!db || !user) return;
     wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
   }
-  function wCustomPullRemote(){
-    if(!db || !user) return;
-    wCustomDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function wCustomPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("customWorship","signedOut");
+    return syncCoordinator.runModule("customWorship","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(wCustomDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const localMeta = wCustomMeta();
+      let changed=false;
       if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
         localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
         localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
         renderWorship(); renderProgress();
-      }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (localMeta.updatedAt||0) > (remote.updatedAt||0)){
         wCustomPushRemote(wCustom(), localMeta.updatedAt);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -2948,7 +2955,72 @@
   /* ---------- Firebase sync ---------- */
   let db = null, user = null;
   const syncBtn = document.getElementById("syncBtn");
+  const syncAllBtn = document.getElementById("syncAllBtn");
   const syncStatus = document.getElementById("syncStatus");
+  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses"];
+  const syncCoordinator = MufSyncCore.createCoordinator({moduleNames:SYNC_MODULES, debounceMs:350, throttleMs:1000});
+
+  /* قراءات Firestore: الخادم أولًا، ثم مخزّن IndexedDB المحلي عند تعذّر الشبكة فقط. */
+  async function getDocServerFirst(ref){
+    try{ return {snapshot:await ref.get({source:"server"}), source:"server"}; }
+    catch(serverError){
+      try{ return {snapshot:await ref.get({source:"cache"}), source:"cache", serverError}; }
+      catch(cacheError){ const error=new Error("Firestore document read failed"); error.serverError=serverError; error.cacheError=cacheError; throw error; }
+    }
+  }
+  async function getQueryServerFirst(query){
+    try{ return {snapshot:await query.get({source:"server"}), source:"server"}; }
+    catch(serverError){
+      try{ return {snapshot:await query.get({source:"cache"}), source:"cache", serverError}; }
+      catch(cacheError){ const error=new Error("Firestore query read failed"); error.serverError=serverError; error.cacheError=cacheError; throw error; }
+    }
+  }
+  function syncReadStatus(read){ return read.source==="cache" ? "cacheFallback" : "success"; }
+  function syncSkipped(module, reason){ return Promise.resolve({module,status:"skipped",reason,changed:false}); }
+  function renderGlobalSyncStatus(summary, running){
+    if(!syncStatus) return;
+    if(!user){ syncStatus.textContent=""; return; }
+    if(running){ syncStatus.textContent="🔄 جارٍ مزامنة جميع البيانات"; return; }
+    if(navigator.onLine===false && (!summary || summary.status!=="success")){
+      syncStatus.textContent="📴 بانتظار الاتصال"; return;
+    }
+    if(!summary){ syncStatus.textContent="☁️ المزامنة مفعّلة — "+(user.displayName||user.email||""); return; }
+    if(summary.status==="success") syncStatus.textContent="☁️ تمت مزامنة جميع البيانات";
+    else if(summary.status==="partial" || summary.status==="cacheFallback") syncStatus.textContent="⚠️ تمت مزامنة بعض الأقسام";
+    else if(summary.status==="failed") syncStatus.textContent="⚠️ تعذّرت المزامنة";
+    else syncStatus.textContent="☁️ لا توجد تحديثات جديدة";
+  }
+
+  function syncPullAllModules(trigger, options){
+    options=Object.assign({forceServer:true},options||{});
+    if(!db || !user) return Promise.resolve(syncCoordinator.summarize(SYNC_MODULES.map(m=>({module:m,status:"skipped",reason:"signedOut"}))));
+    renderGlobalSyncStatus(null,true);
+    const pullers={
+      daily:o=>pullRemote(currentDate,Object.assign({},o,{trigger})),
+      quran:o=>qPullRemote(Object.assign({},o,{trigger})),
+      customWorship:o=>wCustomPullRemote(Object.assign({},o,{trigger})),
+      witr:o=>witrPullRemote(Object.assign({},o,{trigger})),
+      hifz:o=>hifzPullRemote(Object.assign({},o,{trigger})),
+      expenses:o=>expPullRemote(Object.assign({},o,{trigger}))
+    };
+    return syncCoordinator.syncAll(trigger,options,pullers).then(summary=>{
+      renderGlobalSyncStatus(summary,false);
+      if(summary.status==="failed" || summary.status==="partial") console.warn("Mufakkirati sync summary",summary);
+      return summary;
+    }).catch(error=>{
+      const summary={status:"failed",error,results:[]}; renderGlobalSyncStatus(summary,false); return summary;
+    });
+  }
+  function triggerGlobalForegroundSync(trigger){
+    return syncCoordinator.triggerDebounced(trigger,t=>syncPullAllModules(t,{forceServer:true}));
+  }
+  function registerGlobalSyncLifecycle(){
+    document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("visibilitychange"); });
+    window.addEventListener("focus",()=>triggerGlobalForegroundSync("focus"));
+    window.addEventListener("pageshow",()=>triggerGlobalForegroundSync("pageshow"));
+    window.addEventListener("online",()=>{ expRenderSyncRow(); triggerGlobalForegroundSync("online"); });
+    window.addEventListener("offline",()=>{ expRenderSyncRow(); renderGlobalSyncStatus(null,false); });
+  }
 
   function initFirebase(){
     if(!FIREBASE_CONFIG.apiKey || typeof firebase === "undefined") return;
@@ -2973,6 +3045,7 @@
       try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(_){}
     }
     syncBtn.hidden = false;
+    syncAllBtn.hidden = false;
     syncBtn.onclick = ()=>{
       if(user){
         firebase.auth().signOut();
@@ -2981,19 +3054,17 @@
           .catch(e=>alert("تعذر تسجيل الدخول: "+e.message));
       }
     };
+    syncAllBtn.onclick = ()=> syncPullAllModules("manual",{forceServer:true,bypassThrottle:true});
     firebase.auth().onAuthStateChanged(u=>{
       user = u;
       if(u){
         syncBtn.textContent = "تسجيل الخروج";
-        syncStatus.textContent = "☁️ المزامنة مفعّلة — "+(u.displayName||u.email||"");
-        pullRemote(currentDate);
-        qPullRemote();
-        wCustomPullRemote();
-        witrPullRemote();
-        hifzPullRemote();
-        expPullRemote();
+        syncAllBtn.disabled = false;
+        renderGlobalSyncStatus(null,false);
+        syncPullAllModules("auth",{forceServer:true,bypassThrottle:true});
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
+        syncAllBtn.disabled = true;
         syncStatus.textContent = "";
       }
     });
@@ -3006,27 +3077,31 @@
   function pushRemote(date, data){
     if(!db || !user) return;
     dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; })
-      .catch(()=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; });
+      .catch(error=>{ syncCoordinator.states.daily.lastError=error; });
   }
 
-  function pullRemote(date){
-    if(!db || !user) return;
-    dayRef(date).get().then(snap=>{
-      if(date !== currentDate) return;
+  function pullRemote(date, options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("daily","signedOut");
+    return syncCoordinator.runModule("daily",date,options.trigger,options,async()=>{
+      const read=await getDocServerFirst(dayRef(date)), snap=read.snapshot;
+      if(date !== currentDate) return {status:syncReadStatus(read),source:read.source,changed:false,reason:"dateChanged"};
+      let changed=false;
       if(snap.exists){
         const remote = snap.data();
         if((remote.updatedAt||0) > (state.updatedAt||0)){
           state = Object.assign(blankState(), remote);
           localStorage.setItem(storageKey(date), JSON.stringify(state));
           renderAll();
-        }else if((state.updatedAt||0) > (remote.updatedAt||0)){
+          changed=true;
+        }else if(read.source==="server" && (state.updatedAt||0) > (remote.updatedAt||0)){
           pushRemote(date, state);
         }
-      }else if(state.updatedAt){
+      }else if(read.source==="server" && state.updatedAt){
         pushRemote(date, state);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3057,22 +3132,27 @@
     if(!db || !user) return;
     qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
   }
-  function qPullRemote(){
-    if(!db || !user) return;
-    qDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function qPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("quran","signedOut");
+    return syncCoordinator.runModule("quran","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(qDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const local = qLoad();
+      let changed=false;
       if((remote.updatedAt||0) > (local.updatedAt||0)){
         const merged = Object.assign({}, remote);
         if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
         localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
         renderWorship();
         if(!quranOverlay.hidden) qRenderOverlay();
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
         qPushRemote(local);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -3711,18 +3791,23 @@
     if(!db || !user) return;
     witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
   }
-  function witrPullRemote(){
-    if(!db || !user) return;
-    witrDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function witrPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("witr","signedOut");
+    return syncCoordinator.runModule("witr","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(witrDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const local = witrMeta();
+      let changed=false;
       if((remote.updatedAt||0) > (local.updatedAt||0)){
         localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
         witrPushRemote(local);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -4863,32 +4948,39 @@
     hifzDeleteSegmentRemote(segmentId);
   }
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
-  function hifzPullRemote(){
-    if(!db || !user) return;
-    db.collection("users").doc(user.uid).collection("hifzSegments").get().then(snap=>{
+  function hifzPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("hifz","signedOut");
+    return syncCoordinator.runModule("hifz","default",options.trigger,options,async()=>{
+      const query=db.collection("users").doc(user.uid).collection("hifzSegments");
+      const read=await getQueryServerFirst(query), snap=read.snapshot;
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
-      if(!remoteSegs.length) return;
+      if(!remoteSegs.length) return {status:syncReadStatus(read),source:read.source,changed:false};
       const data = hifzData();
       const byId = {};
       data.segments.forEach(s=> byId[s.id] = s);
+      let changed=false;
       remoteSegs.forEach(rs=>{
         const ls = byId[rs.id];
-        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
+        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)){ byId[rs.id] = rs; changed=true; }
       });
-      data.segments = Object.values(byId);
-      hifzSaveLocal(data);
-      renderHifzCard();
-    }).catch(()=>{});
+      if(changed){
+        data.segments = Object.values(byId);
+        localStorage.setItem(HIFZ_KEY, JSON.stringify(data));
+        renderHifzCard();
+      }
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
   function hifzFetchDueTodayFromFirestore(){
     if(!db || !user) return Promise.resolve([]);
-    return db.collection("users").doc(user.uid).collection("hifzSegments")
-      .where("nextReviewDate", "<=", hifzToday())
-      .get()
-      .then(snap=>{ const out=[]; snap.forEach(d=> out.push(d.data())); return out; })
+    const query=db.collection("users").doc(user.uid).collection("hifzSegments")
+      .where("nextReviewDate", "<=", hifzToday());
+    return getQueryServerFirst(query)
+      .then(read=>{ const out=[]; read.snapshot.forEach(d=> out.push(d.data())); return out; })
       .catch(()=> []);
   }
 
@@ -7573,7 +7665,7 @@
     renderQuote(dateStr);
     renderAll();
     fetchTimes(dateStr);
-    pullRemote(dateStr);
+    pullRemote(dateStr,{trigger:"navigation",forceServer:true,bypassThrottle:true});
   }
 
   function shiftDay(delta){
@@ -8166,12 +8258,8 @@
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
   let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
-  /* قراءة تُفضّل الخادم لتفادي البيانات المخزّنة القديمة عند العودة للمقدّمة، وترجع للمخزّن المحلي عند انقطاع الشبكة */
-  function expGetDoc(){
-    const ref = expDocRef();
-    try{ return ref.get({source:"server"}).catch(()=> ref.get()); }
-    catch(e){ return ref.get(); }
-  }
+  /* القراءة المشتركة تُفضّل الخادم وترجع صراحةً إلى مخزّن Firestore المحلي عند انقطاع الشبكة. */
+  function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
   function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
   function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
@@ -8193,7 +8281,7 @@
   }
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
-  function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
+  function expTriggerPull(){ if(!db || !user) return syncSkipped("expenses","signedOut"); expLastPullAt=Date.now(); return expPullRemote({trigger:"expenses-open",forceServer:true}); }
   function expPushRemote(d){
     if(!db || !user) return;
     /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
@@ -8201,10 +8289,9 @@
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
     expPushTimer = setTimeout(()=>{
       try{
-        if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
         expDocRef().set(snapshot)
-          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
-          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; expSetSyncState("error"); });
+          .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
+          .catch(error=>{ syncCoordinator.states.expenses.lastError=error; expSetSyncState("error"); });
       }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
     }, 400);
   }
@@ -8265,16 +8352,17 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return; }
-    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return; }
+    if(!db || !user){ expRenderSyncRow(); return syncSkipped("expenses","signedOut"); }
     expSetSyncState("syncing");
-    const done = ()=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); };
-    expGetDoc().then(snap=>{
+    return syncCoordinator.runModule("expenses","default",opts.trigger,opts,async()=>{
+      const read=await expGetDoc(), snap=read.snapshot;
+      const status=syncReadStatus(read);
+      const done = changed=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); return {status,source:read.source,changed:!!changed}; };
       const local = expState;
       if(!snap.exists){
         /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
-        if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        done(); return;
+        if(read.source==="server" && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) expPushRemote(local);
+        return done(false);
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8285,19 +8373,22 @@
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
-        done(); return;
+        return done(true);
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
       const contributed = expSig(merged) !== expSig(remote);   /* هل أضاف المحلي شيئًا؟ (قبل إعادة حساب المثيلات) */
+      const changed = expSig(merged) !== expSig(local);
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
-      localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
-      if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-      done();
-    }).catch(()=>{ expSetSyncState("error"); });
+      if(changed){
+        localStorage.setItem(EXP_KEY, JSON.stringify(merged));
+        expRefresh();                                          /* أعد الرسم فقط عندما ساهم السحب بتغيير فعلي */
+      }
+      if(read.source==="server" && contributed) expPushRemote(merged); /* لا ندفع المحلي بعد فشل قراءة الخادم */
+      return done(changed);
+    }).then(result=>{ if(result.status==="failed") expSetSyncState("error"); else if(result.status==="throttled" || result.status==="skipped") expSetSyncState("idle"); return result; });
   }
 
   let expState = expData();
@@ -9487,14 +9578,7 @@
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
     /* زرّ التحديث اليدوي (يتجاوز الخنق ويقرأ من الخادم مباشرة) */
     const syncBtnEl = document.getElementById("expSyncBtn");
-    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({manual:true}); };
-    /* مشغّلات السحب التلقائية — نفس نمط السحب القائم، بلا آلية جديدة ولا onSnapshot:
-       رجوع التطبيق للمقدّمة / ظهور التبويب / استعادة الصفحة من ذاكرة السفاري / عودة الشبكة */
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") expTriggerPull(); });
-    window.addEventListener("focus", ()=> expTriggerPull());
-    window.addEventListener("pageshow", ()=> expTriggerPull());   /* مهمّ لسفاري iOS عند الرجوع من الخلفية (bfcache) */
-    window.addEventListener("online", ()=>{ expRenderSyncRow(); expTriggerPull(); });
-    window.addEventListener("offline", ()=> expRenderSyncRow());
+    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({trigger:"expenses-manual",forceServer:true,bypassThrottle:true}); };
     expRenderLaunch();
     expRenderSyncRow();
   }
@@ -9530,6 +9614,7 @@
   }
 
   /* ---------- Init ---------- */
+  registerGlobalSyncLifecycle();
   initFirebase();
   goto(todayStr());
   renderHifzCard();
