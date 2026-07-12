@@ -925,6 +925,12 @@
   .exp-check input{width:18px;height:18px;accent-color:var(--accent)}
   .exp-fx-box{border:1px solid var(--line);border-radius:12px;padding:.6rem;margin-bottom:.7rem;background:var(--chip-bg)}
   .exp-fx-out{font-size:.82rem;font-weight:700;color:var(--accent);min-height:1rem;margin-top:.2rem}
+  .exp-sync-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:-.5rem 0 .9rem;padding:.15rem .1rem}
+  .exp-sync-text{flex:1;min-width:0;font-size:.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-sync-btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.32rem .7rem;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;transition:.12s;white-space:nowrap}
+  .exp-sync-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .exp-sync-btn:active{transform:scale(.98)}
+  .exp-sync-btn:disabled{opacity:.5;cursor:default}
 
   /* ===== شاشة الأذكار ===== */
   .adhkar-overlay{
@@ -2327,6 +2333,10 @@
         <button class="exp-tab" data-view="reports">المراجعة</button>
         <button class="exp-tab" data-view="settings">الإعدادات</button>
       </div>
+      <div class="exp-sync-row" id="expSyncRow">
+        <span class="exp-sync-text" id="expSyncText"></span>
+        <button class="exp-sync-btn" id="expSyncBtn">🔄 تحديث</button>
+      </div>
       <div class="exp-view" id="expViewDash">
         <div class="exp-sumgrid" id="expDashSummary"></div>
         <div id="expDashBanner" hidden></div>
@@ -2448,7 +2458,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٦</div>
+    <div class="app-version">النسخة ٩٧</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -8108,8 +8118,37 @@
      مستند واحد لكل مستخدم: users/{uid}/meta/expenses — يخزّن كامل بيانات المصاريف.
      التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
   const EXP_BACKUP_KEY = "h2do-expenses-backup";
-  let expPushTimer = null;
+  const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
+  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
+  /* قراءة تُفضّل الخادم لتفادي البيانات المخزّنة القديمة عند العودة للمقدّمة، وترجع للمخزّن المحلي عند انقطاع الشبكة */
+  function expGetDoc(){
+    const ref = expDocRef();
+    try{ return ref.get({source:"server"}).catch(()=> ref.get()); }
+    catch(e){ return ref.get(); }
+  }
+  /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
+  function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
+  function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
+  function expRelTime(ts){ if(!ts) return "لم تتم بعد"; const s=Math.floor((Date.now()-ts)/1000);
+    if(s<10) return "الآن"; if(s<60) return "قبل ثوانٍ"; const m=Math.floor(s/60); if(m<60) return "قبل "+_arn(m)+" دقيقة";
+    const h=Math.floor(m/60); if(h<24) return "قبل "+_arn(h)+" ساعة"; return "قبل "+_arn(Math.floor(h/24))+" يوم"; }
+  function expRenderSyncRow(){
+    const st=document.getElementById("expSyncText"); const btn=document.getElementById("expSyncBtn");
+    if(!st) return;
+    const online = navigator.onLine !== false;
+    let txt;
+    if(!db || !user) txt = "بلا مزامنة — سجّل الدخول";
+    else if(expSyncState==="syncing") txt = "🔄 جارٍ التحديث…";
+    else if(expSyncState==="error") txt = "⚠️ تعذّرت المزامنة";
+    else if(!online) txt = "📴 بانتظار الاتصال";
+    else txt = "☁️ تمت المزامنة · "+expRelTime(expSyncMeta().lastSyncAt);
+    st.textContent = txt;
+    if(btn) btn.disabled = (expSyncState==="syncing") || !db || !user;
+  }
+  function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
+  /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
+  function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
   function expPushRemote(d){
     if(!db || !user) return;
     /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
@@ -8119,8 +8158,8 @@
       try{
         if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
         expDocRef().set(snapshot)
-          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; })
-          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; });
+          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
+          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; expSetSyncState("error"); });
       }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
     }, 400);
   }
@@ -8179,14 +8218,18 @@
     });
     return d;
   }
-  function expPullRemote(){
-    if(!db || !user) return;
-    expDocRef().get().then(snap=>{
+  function expPullRemote(opts){
+    opts = opts || {};
+    if(!db || !user){ expRenderSyncRow(); return; }
+    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return; }
+    expSetSyncState("syncing");
+    const done = ()=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); };
+    expGetDoc().then(snap=>{
       const local = expState;
       if(!snap.exists){
         /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
         if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        return;
+        done(); return;
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8197,7 +8240,7 @@
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
-        return;
+        done(); return;
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -8206,9 +8249,10 @@
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
       localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية */
+      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
       if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-    }).catch(()=>{});
+      done();
+    }).catch(()=>{ expSetSyncState("error"); });
   }
 
   let expState = expData();
@@ -8479,6 +8523,7 @@
       else if(expCurView==="trips"){ if(expTripDetailId) expRenderTripDetail(); else expRenderTrips(); }
       else if(expCurView==="reports") expRenderReport();
       else if(expCurView==="settings") expRenderSettings();
+      expRenderSyncRow();   /* حدّث شارة «آخر تحديث» مع كل إعادة رسم */
     }
   }
   function expSummaryCards(){
@@ -9264,7 +9309,7 @@
   }
 
   /* ---------- فتح/تبويب الشاشة ---------- */
-  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; expPullRemote(); /* مزامنة عند فتح الوحدة */ }
+  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; expRenderSyncRow(); expTriggerPull(); /* مزامنة عند فتح الوحدة */ }
   function expCloseOverlay(){ expOverlay.hidden=true; document.body.style.overflow=""; }
   function expSetView(v){
     expCurView=v;
@@ -9285,9 +9330,18 @@
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
     expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
-    /* مزامنة عند عودة التطبيق للمقدّمة/ظهور التبويب (نفس نمط السحب لدى بقية الخدمات، بلا آلية جديدة) */
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && db && user) expPullRemote(); });
+    /* زرّ التحديث اليدوي (يتجاوز الخنق ويقرأ من الخادم مباشرة) */
+    const syncBtnEl = document.getElementById("expSyncBtn");
+    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({manual:true}); };
+    /* مشغّلات السحب التلقائية — نفس نمط السحب القائم، بلا آلية جديدة ولا onSnapshot:
+       رجوع التطبيق للمقدّمة / ظهور التبويب / استعادة الصفحة من ذاكرة السفاري / عودة الشبكة */
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") expTriggerPull(); });
+    window.addEventListener("focus", ()=> expTriggerPull());
+    window.addEventListener("pageshow", ()=> expTriggerPull());   /* مهمّ لسفاري iOS عند الرجوع من الخلفية (bfcache) */
+    window.addEventListener("online", ()=>{ expRenderSyncRow(); expTriggerPull(); });
+    window.addEventListener("offline", ()=> expRenderSyncRow());
     expRenderLaunch();
+    expRenderSyncRow();
   }
 
   /* ---------- Theme (light/dark) ---------- */
