@@ -2448,7 +2448,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٥</div>
+    <div class="app-version">النسخة ٩٦</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2981,6 +2981,7 @@
         wCustomPullRemote();
         witrPullRemote();
         hifzPullRemote();
+        expPullRemote();
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
         syncStatus.textContent = "";
@@ -8024,18 +8025,19 @@
   const _arnY = n=> String(n).replace(/[0-9]/g, d=> "٠١٢٣٤٥٦٧٨٩"[+d]);  /* سنة بلا فاصل آلاف */
 
   /* ---------- التخزين والبنية ---------- */
+  const EXP_DEFAULT_NAMES = ["الأكل","مشتريات المنزل","المواصلات","الصيدلية","السيارة","المصروفات الشخصية","السفر","المشتريات الاستثنائية"];
   function expDefault(){
     const now = Date.now();
-    const varNames = ["الأكل","مشتريات المنزل","المواصلات","الصيدلية","السيارة","المصروفات الشخصية","السفر","المشتريات الاستثنائية"];
-    const categories = varNames.map((name,i)=>({
-      id:newId(), name, section:"variable", parentCategoryId:null,
+    /* معرّفات ثابتة حتمية للفئات الافتراضية — كي تتطابق عبر الأجهزة فلا تتكرر عند الدمج */
+    const categories = EXP_DEFAULT_NAMES.map((name,i)=>({
+      id:"expdcat_"+i, seedKey:name, name, section:"variable", parentCategoryId:null,
       budgets:[], icon:null, isActive:true, sortOrder:i,
       createdAt:now, updatedAt:now, archivedAt:null
     }));
     return {
       version:EXP_SCHEMA,
       settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null,
-                 currentBudgetVersion:1, migratedLegacy:true, createdAt:now, updatedAt:now },
+                 currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
       categories, fixedTemplates:[], instances:[], transactions:[], trips:[]
     };
   }
@@ -8100,7 +8102,114 @@
       });
     }catch(e){}
   }
-  function expSave(d){ d.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(d)); }
+  function expSave(d){ d.settings.updatedAt = Date.now(); d.settings.pristineSeed = false; /* أي تعديل حقيقي يُلغي «البذرة النقية» */ localStorage.setItem(EXP_KEY, JSON.stringify(d)); expPushRemote(d); }
+
+  /* ==================== المزامنة السحابية (نفس مسار QURAN meta-doc) ====================
+     مستند واحد لكل مستخدم: users/{uid}/meta/expenses — يخزّن كامل بيانات المصاريف.
+     التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
+  const EXP_BACKUP_KEY = "h2do-expenses-backup";
+  let expPushTimer = null;
+  function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
+  function expPushRemote(d){
+    if(!db || !user) return;
+    /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
+    clearTimeout(expPushTimer);
+    const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
+    expPushTimer = setTimeout(()=>{
+      try{
+        if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
+        expDocRef().set(snapshot)
+          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; })
+          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; });
+      }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
+    }, 400);
+  }
+  /* دمج على مستوى السجل: اتحاد حسب المعرّف الثابت + آخر تحديث يفوز (بلا فقدان، بلا تكرار، بلا جمع مبالغ) */
+  function expMergeById(localArr, remoteArr, keyFn){
+    const map = new Map();
+    (remoteArr||[]).forEach(r=>{ const k=r&&keyFn(r); if(k!=null) map.set(k, r); });
+    (localArr||[]).forEach(l=>{ const k=l&&keyFn(l); if(k==null) return;
+      const ex = map.get(k);
+      if(!ex) map.set(k, l);
+      else map.set(k, (l.updatedAt||0) >= (ex.updatedAt||0) ? l : ex);
+    });
+    return [...map.values()].map(r=> Object.assign({}, r));   /* مراجع جديدة (حالة غير قابلة للطفر) */
+  }
+  function expMerge(localD, remoteD){
+    localD = localD||{}; remoteD = remoteD||{};
+    const out = { version: Math.max(localD.version||1, remoteD.version||1) };
+    const lS = (localD.settings&&localD.settings.updatedAt)||0, rS = (remoteD.settings&&remoteD.settings.updatedAt)||0;
+    out.settings = Object.assign({}, lS >= rS ? localD.settings : remoteD.settings);
+    out.categories = expMergeById(localD.categories, remoteD.categories, c=>c.id);
+    out.fixedTemplates = expMergeById(localD.fixedTemplates, remoteD.fixedTemplates, t=>t.id);
+    out.transactions = expMergeById(localD.transactions, remoteD.transactions, t=>t.id);  /* الحذف الناعم محفوظ كـ tombstone */
+    out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id);
+    /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
+    out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
+    /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
+    const lc=new Map((localD.categories||[]).map(c=>[c.id,c])), rc=new Map((remoteD.categories||[]).map(c=>[c.id,c]));
+    out.categories.forEach(c=>{ const a=lc.get(c.id), b=rc.get(c.id); if(a&&b){ const bm=new Map();
+      ((a.updatedAt||0)>=(b.updatedAt||0)? (b.budgets||[]).concat(a.budgets||[]) : (a.budgets||[]).concat(b.budgets||[]))
+        .forEach(x=>{ if(x&&x.from!=null) bm.set(x.from, x); });
+      c.budgets=[...bm.values()].sort((p,q)=> p.from<q.from?-1:1); } });
+    const lt=new Map((localD.trips||[]).map(t=>[t.id,t])), rt=new Map((remoteD.trips||[]).map(t=>[t.id,t]));
+    out.trips.forEach(t=>{ const a=lt.get(t.id), b=rt.get(t.id); if(a&&b){ const am=new Map();
+      ((a.updatedAt||0)>=(b.updatedAt||0)? (b.allocations||[]).concat(a.allocations||[]) : (a.allocations||[]).concat(b.allocations||[]))
+        .forEach(x=>{ if(x&&x.categoryId) am.set(x.categoryId, x); });
+      t.allocations=[...am.values()]; } });
+    return out;
+  }
+  /* توقيع خفيف لكشف مساهمة المحلي (سجلات إضافية/أحدث) لتقرير الدفع العكسي دون تراشق لا نهائي */
+  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
+  /* هل الحالة المحلية «بذرة افتراضية نقية» لم تُستخدم بعد؟ (فئات افتراضية فقط، بلا معاملات/رحلات/التزامات) */
+  function expIsPristine(d){ return !!(d && d.settings && d.settings.pristineSeed) && !(d.transactions&&d.transactions.length) && !(d.trips&&d.trips.length) && !(d.fixedTemplates&&d.fixedTemplates.length); }
+  /* إزالة تكرار الفئات الافتراضية المتباينة المعرّفات (من أجهزة بذرت قبل الإصلاح) مع إعادة ربط المراجع — بلا فقدان مالي */
+  function expDedupeDefaults(d){
+    const DEF=new Set(EXP_DEFAULT_NAMES), groups={};
+    (d.categories||[]).forEach(c=>{ if(c.section==="variable" && DEF.has(c.name) && (!c.budgets||!c.budgets.length) && !c.archivedAt){ (groups[c.name]=groups[c.name]||[]).push(c); } });
+    Object.keys(groups).forEach(name=>{ const list=groups[name]; if(list.length<2) return;
+      const used=id=> (d.transactions||[]).some(t=>t.categoryId===id) || (d.trips||[]).some(tr=>(tr.allocations||[]).some(a=>a.categoryId===id));
+      list.sort((a,b)=> (used(b.id)?1:0)-(used(a.id)?1:0) || (a.createdAt||0)-(b.createdAt||0) || (a.id<b.id?-1:1));
+      const keep=list[0];
+      list.slice(1).forEach(dup=>{
+        (d.transactions||[]).forEach(t=>{ if(t.categoryId===dup.id) t.categoryId=keep.id; });
+        (d.trips||[]).forEach(tr=>{ (tr.allocations||[]).forEach(a=>{ if(a.categoryId===dup.id) a.categoryId=keep.id; }); });
+        d.categories=d.categories.filter(c=>c.id!==dup.id);
+      });
+    });
+    return d;
+  }
+  function expPullRemote(){
+    if(!db || !user) return;
+    expDocRef().get().then(snap=>{
+      const local = expState;
+      if(!snap.exists){
+        /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
+        if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
+        return;
+      }
+      const remote = snap.data();
+      /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
+      if(!localStorage.getItem(EXP_BACKUP_KEY)){ try{ localStorage.setItem(EXP_BACKUP_KEY, JSON.stringify(local)); }catch(e){} }
+      /* جهاز جديد ما زال على «البذرة النقية» → يتبنّى الخادم كاملًا بلا حقن فئاته الافتراضية (يمنع تكرار الفئات) */
+      if(expIsPristine(local)){
+        const adopt = Object.assign({}, remote);
+        ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
+        adopt.settings = Object.assign({}, remote.settings||{});
+        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
+        return;
+      }
+      let merged = expMerge(local, remote);
+      merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
+      const contributed = expSig(merged) !== expSig(remote);   /* هل أضاف المحلي شيئًا؟ (قبل إعادة حساب المثيلات) */
+      expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
+      /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
+      (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
+      localStorage.setItem(EXP_KEY, JSON.stringify(merged));
+      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية */
+      if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
+    }).catch(()=>{});
+  }
 
   let expState = expData();
 
@@ -9155,7 +9264,7 @@
   }
 
   /* ---------- فتح/تبويب الشاشة ---------- */
-  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; }
+  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; expPullRemote(); /* مزامنة عند فتح الوحدة */ }
   function expCloseOverlay(){ expOverlay.hidden=true; document.body.style.overflow=""; }
   function expSetView(v){
     expCurView=v;
@@ -9176,6 +9285,8 @@
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
     expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
+    /* مزامنة عند عودة التطبيق للمقدّمة/ظهور التبويب (نفس نمط السحب لدى بقية الخدمات، بلا آلية جديدة) */
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && db && user) expPullRemote(); });
     expRenderLaunch();
   }
 
