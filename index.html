@@ -914,6 +914,17 @@
   .exp-barmini{display:flex;gap:2px;align-items:flex-end;height:44px;margin-top:.4rem}
   .exp-barmini .bm{flex:1;background:var(--accent-soft);border-radius:3px 3px 0 0;min-height:3px;position:relative}
   .exp-barmini .bm i{position:absolute;bottom:0;left:0;right:0;background:var(--accent);border-radius:3px 3px 0 0}
+  /* السفر */
+  .exp-travel-banner{display:flex;align-items:center;gap:.6rem;background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px solid var(--accent);border-radius:14px;padding:.6rem .8rem;margin:.2rem 0 .7rem;cursor:pointer;transition:.15s}
+  .exp-travel-banner:hover{filter:brightness(1.03)}
+  .exp-travel-banner .tb-main{flex:1;min-width:0}
+  .exp-travel-banner .tb-title{font-weight:700;font-size:.82rem;color:var(--accent)}
+  .exp-travel-banner .tb-sub{font-size:.8rem;color:var(--ink);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-travel-banner .tb-add{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:.45rem .7rem;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .exp-check{display:flex;align-items:center;gap:.5rem;font-size:.86rem;color:var(--ink);font-weight:600;margin:.2rem 0 .7rem;cursor:pointer}
+  .exp-check input{width:18px;height:18px;accent-color:var(--accent)}
+  .exp-fx-box{border:1px solid var(--line);border-radius:12px;padding:.6rem;margin-bottom:.7rem;background:var(--chip-bg)}
+  .exp-fx-out{font-size:.82rem;font-weight:700;color:var(--accent);min-height:1rem;margin-top:.2rem}
 
   /* ===== شاشة الأذكار ===== */
   .adhkar-overlay{
@@ -1860,6 +1871,7 @@
     <h2><span class="ico">💰</span> المصاريف</h2>
     <div class="hint">تابع صرفك اليومي والالتزامات الشهرية والميزانيات الأسبوعية</div>
     <div class="exp-sumgrid" id="expLaunchSummary"></div>
+    <div id="expLaunchBanner" hidden></div>
     <div class="exp-launch-actions">
       <button class="exp-primary" id="expQuickAdd">＋ إضافة مصروف</button>
       <button class="exp-secondary" id="expOpenBtn">إدارة المصاريف</button>
@@ -2310,17 +2322,22 @@
         </div>
       </div>
       <div class="exp-tabs">
-        <button class="exp-tab active" data-view="dash">لوحة المصاريف</button>
+        <button class="exp-tab active" data-view="dash">اللوحة</button>
+        <button class="exp-tab" data-view="trips">الرحلات</button>
         <button class="exp-tab" data-view="reports">المراجعة</button>
         <button class="exp-tab" data-view="settings">الإعدادات</button>
       </div>
       <div class="exp-view" id="expViewDash">
         <div class="exp-sumgrid" id="expDashSummary"></div>
+        <div id="expDashBanner" hidden></div>
         <button class="exp-primary" id="expAddBtn" style="width:100%;margin-bottom:1rem">＋ إضافة مصروف</button>
         <div class="exp-cards">
           <div class="exp-card" id="expFixedCard"></div>
           <div class="exp-card" id="expVarCard"></div>
         </div>
+      </div>
+      <div class="exp-view" id="expViewTrips" hidden>
+        <div id="expTripsBody"></div>
       </div>
       <div class="exp-view" id="expViewReports" hidden>
         <div class="exp-tabs" style="top:0">
@@ -2431,7 +2448,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٤</div>
+    <div class="app-version">النسخة ٩٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -7994,7 +8011,9 @@
   /* تخزين مستقل عالمي (عبر الأيام) — لا يمسّ حالة اليوم ولا أي ميزة قائمة.
      المصدر الوحيد للحقيقة للصرف الفعلي هو سجل المعاملات (transactions). */
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 1;
+  const EXP_SCHEMA = 2;   /* v2: ميزة السفر (trips + حقول تحويل عملة + countAgainstWeeklyBudget) */
+  const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
+  const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
   const EXP_PURCHASE = ["محلي","توصيل","سفري","متجر إلكتروني","أخرى"];
   const EXP_CONTEXT  = ["عادي","سفر","عمل","مناسبة","طارئ"];
@@ -8002,6 +8021,7 @@
   const EXP_MONTHS   = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
   const _pad2 = n=> String(n).padStart(2,"0");
   const _arn = n=> Number(n).toLocaleString("ar-EG");
+  const _arnY = n=> String(n).replace(/[0-9]/g, d=> "٠١٢٣٤٥٦٧٨٩"[+d]);  /* سنة بلا فاصل آلاف */
 
   /* ---------- التخزين والبنية ---------- */
   function expDefault(){
@@ -8016,7 +8036,7 @@
       version:EXP_SCHEMA,
       settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null,
                  currentBudgetVersion:1, migratedLegacy:true, createdAt:now, updatedAt:now },
-      categories, fixedTemplates:[], instances:[], transactions:[]
+      categories, fixedTemplates:[], instances:[], transactions:[], trips:[]
     };
   }
   function expData(){
@@ -8037,7 +8057,28 @@
     raw.instances = Array.isArray(raw.instances)? raw.instances : [];
     raw.transactions = Array.isArray(raw.transactions)? raw.transactions : [];
     raw.categories.forEach(c=>{ if(!Array.isArray(c.budgets)) c.budgets=[]; if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
+    /* ترحيل v2 (السفر): إضافة مجموعة الرحلات + حقول المعاملات الجديدة دون تغيير أي قيمة قائمة.
+       المعاملات القديمة تحتفظ بسلوك الميزانية الأسبوعية كما كان: countAgainstWeeklyBudget=true. */
+    if(!Array.isArray(raw.trips)) raw.trips = [];
+    if((raw.version||1) < 2){
+      raw.transactions.forEach(t=>{
+        if(t.tripId===undefined) t.tripId = null;
+        if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = true;
+        if(t.originalAmountMinor===undefined) t.originalAmountMinor = null;
+        if(t.originalCurrency===undefined) t.originalCurrency = null;
+        if(t.exchangeRate===undefined) t.exchangeRate = null;
+        if(t.exchangeRateSource===undefined) t.exchangeRateSource = null;
+        if(t.merchantCountry===undefined) t.merchantCountry = null;
+      });
+    } else {
+      /* توافق تصاعدي لأي معاملة تنقصها الحقول */
+      raw.transactions.forEach(t=>{ if(t.tripId===undefined) t.tripId=null; if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = t.tripId? false : true; });
+    }
+    raw.trips.forEach(tr=>{ if(!Array.isArray(tr.allocations)) tr.allocations=[]; if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; });
+    const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
+    /* ثبّت الترحيل في التخزين مرّة واحدة عند رفع النسخة (حتى لا يتكرر الترحيل في كل تحميل) */
+    if(oldVersion < EXP_SCHEMA){ raw.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }
     return raw;
   }
   /* خطّاف ترحيل دفاعي: يبحث عن قوائم مصاريف قديمة محتملة ويستوردها كفئات دون اختلاق معاملات يومية.
@@ -8105,7 +8146,7 @@
   function expLastDayOfMonth(y,m){ return new Date(y, m, 0).getDate(); } /* m:1-12 */
   function expDueDate(t, y, m){ const day = Math.min(t.dueDay||1, expLastDayOfMonth(y,m)); return y+"-"+_pad2(m)+"-"+_pad2(day); }
   function expInRange(dateStr, r){ return dateStr >= r.start && dateStr <= r.end; }
-  function expArDate(dateStr){ const d=new Date(dateStr+"T12:00:00"); return _arn(d.getDate())+" "+EXP_MONTHS[d.getMonth()]+" "+_arn(d.getFullYear()); }
+  function expArDate(dateStr){ const d=new Date(dateStr+"T12:00:00"); return _arn(d.getDate())+" "+EXP_MONTHS[d.getMonth()]+" "+_arnY(d.getFullYear()); }
   function expArDateShort(dateStr){ const d=new Date(dateStr+"T12:00:00"); return _arn(d.getDate())+" "+EXP_MONTHS[d.getMonth()]; }
 
   /* ---------- محدّدات وحسابات (لا تُعدّل المصدر) ---------- */
@@ -8146,7 +8187,49 @@
     return expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt)
       .reduce((a,c)=> a + expBudgetForWeek(c, weekStart), 0);
   }
-  function expVarNetInWeek(r){ return expNetInRange(r, t=> expClassify(t)==="variable"); }
+  /* هل تُحتسب المعاملة ضمن استهلاك الميزانية الأسبوعية العادية؟
+     التصنيف محفوظ على مستوى المعاملة (countAgainstWeeklyBudget) لحماية التقارير التاريخية. */
+  function expCountsWeekly(t){ return t.countAgainstWeeklyBudget !== false; }
+  /* الصرف المتغيّر «العادي» في الأسبوع = متغيّر ويُحتسب أسبوعيًا (يستثني سفر الميزانية المستقلة) */
+  function expVarNetInWeek(r){ return expNetInRange(r, t=> expClassify(t)==="variable" && expCountsWeekly(t)); }
+  /* صرف السفر المستبعَد من الميزانية الأسبوعية (يُعرض منفصلًا) */
+  function expTravelExcludedInWeek(r){ return expNetInRange(r, t=> t.tripId && !expCountsWeekly(t)); }
+
+  /* ==================== حسابات الرحلات (نقية — لا تُعدّل المصدر) ==================== */
+  function expTripById(id){ return (expState.trips||[]).find(t=>t.id===id) || null; }
+  function expTripStatus(trip){
+    if(!trip) return "planned";
+    if(trip.archivedAt) return "archived";
+    if(trip.isManuallyActivated) return "active";
+    const today = todayStr();
+    if(today < trip.startDate) return "planned";
+    if(today > trip.endDate) return "completed";
+    return "active";
+  }
+  function expGetActiveTrips(){ return (expState.trips||[]).filter(t=> !t.archivedAt && expTripStatus(t)==="active"); }
+  function expGetTripTransactions(tripId){ return expActiveTx().filter(t=> t.tripId===tripId && t.transactionType!=="transfer"); }
+  function expTripGross(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="expense").reduce((a,t)=>a+t.amountMinor,0); }
+  function expTripRefunds(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="refund").reduce((a,t)=>a+t.amountMinor,0); }
+  function expTripNet(tripId){ return expTripGross(tripId) - expTripRefunds(tripId); }
+  function expTripRemaining(trip){ if(!trip || trip.totalBudgetMinor==null) return null; return trip.totalBudgetMinor - expTripNet(trip.id); }
+  function expTripUsage(trip){ if(!trip || !trip.totalBudgetMinor) return 0; return expPct(expTripNet(trip.id), trip.totalBudgetMinor); }
+  function expTripCategoryBreakdown(tripId){
+    const map={}; expGetTripTransactions(tripId).forEach(t=>{ const k=t.categoryId||"_"; map[k]=(map[k]||0)+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor); });
+    return map;
+  }
+  function expTripDailyBreakdown(tripId){
+    const map={}; expGetTripTransactions(tripId).forEach(t=>{ map[t.transactionDate]=(map[t.transactionDate]||0)+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor); });
+    return map;
+  }
+  /* تقسيم قبل/أثناء/بعد الرحلة اعتمادًا على تاريخ المعاملة مقابل مدى الرحلة */
+  function expTripPeriodBreakdown(trip){
+    const res={before:0, during:0, after:0};
+    expGetTripTransactions(trip.id).forEach(t=>{ const v=(t.transactionType==="refund"?-t.amountMinor:t.amountMinor);
+      if(t.transactionDate < trip.startDate) res.before+=v; else if(t.transactionDate > trip.endDate) res.after+=v; else res.during+=v; });
+    return res;
+  }
+  function expTripAllocBudget(trip, catId){ const a=(trip.allocations||[]).find(x=>x.categoryId===catId); return a? a.budgetMinor : null; }
+  function expTripDays(trip){ const s=new Date(trip.startDate+"T12:00:00"), e=new Date(trip.endDate+"T12:00:00"); return Math.max(1, Math.round((e-s)/86400000)+1); }
 
   /* ---------- التزامات ثابتة: توليد المثيلات + الدفعات ---------- */
   function expTplActiveInMonth(t, y, m){
@@ -8194,7 +8277,9 @@
     const now=Date.now();
     const rec = Object.assign({ id:newId(), transactionType:"expense", createdAt:now, updatedAt:now, deletedAt:null,
       description:null, subcategory:null, paymentMethod:null, purchaseMethod:null, context:null, beneficiary:null,
-      fixedExpenseInstanceId:null, relatedTransactionId:null }, tx);
+      fixedExpenseInstanceId:null, relatedTransactionId:null,
+      tripId:null, countAgainstWeeklyBudget:true, originalAmountMinor:null, originalCurrency:null,
+      exchangeRate:null, exchangeRateSource:null, merchantCountry:null }, tx);
     expState.transactions.push(rec);
     if(rec.fixedExpenseInstanceId) expRecalcInstance(expInstById(rec.fixedExpenseInstanceId));
     expSave(expState); return rec;
@@ -8235,6 +8320,28 @@
     c.budgets.sort((a,b)=> a.from<b.from?-1:1);
     c.needsBudgetSetup = false; c.updatedAt=Date.now(); expSave(expState);
   }
+  /* ---------- طفرات الرحلات ---------- */
+  function expUpsertTrip(trip){
+    const now=Date.now();
+    if(!Array.isArray(expState.trips)) expState.trips=[];
+    if(trip.id){ const i=expState.trips.findIndex(t=>t.id===trip.id); if(i>=0){ Object.assign(expState.trips[i], trip, {updatedAt:now}); expSave(expState); return expState.trips[i]; } }
+    const rec = Object.assign({ id:newId(), name:"", destination:null, startDate:todayStr(), endDate:todayStr(),
+      totalBudgetMinor:null, includeInWeeklyBudgets:false, baseCurrency:"SAR", preferredForeignCurrency:null,
+      note:null, icon:null, isManuallyActivated:false, allocations:[], createdAt:now, updatedAt:now, archivedAt:null }, trip);
+    expState.trips.push(rec); expSave(expState); return rec;
+  }
+  function expArchiveTrip(id){ const t=expTripById(id); if(!t) return; t.archivedAt=Date.now(); t.isManuallyActivated=false; t.updatedAt=Date.now(); expSave(expState); }
+  function expRestoreTrip(id){ const t=expTripById(id); if(!t) return; t.archivedAt=null; t.updatedAt=Date.now(); expSave(expState); }
+  function expSetManualActive(id, on){
+    const t=expTripById(id); if(!t) return;
+    t.isManuallyActivated=!!on; t.updatedAt=Date.now();
+    if(on){ (expState.trips||[]).forEach(o=>{ if(o.id!==id) o.isManuallyActivated=false; }); expActiveTripId=id; }
+    expSave(expState);
+  }
+  function expCompleteTrip(id){ const t=expTripById(id); if(!t) return; t.isManuallyActivated=false; const y=todayStr(); if(t.endDate>=y) t.endDate=y; t.updatedAt=Date.now(); expSave(expState); }
+  /* حذف رحلة مرتبطة بمصاريف: فكّ الارتباط دون حذف المعاملات */
+  function expUnlinkTripTransactions(id){ expState.transactions.forEach(t=>{ if(t.tripId===id){ t.tripId=null; t.updatedAt=Date.now(); } }); expSave(expState); }
+  function expDeleteTrip(id){ expState.trips=(expState.trips||[]).filter(t=>t.id!==id); expSave(expState); }
 
   /* ==================== العرض ==================== */
   const expOverlay = document.getElementById("expOverlay");
@@ -8245,11 +8352,22 @@
   let expRepDate = todayStr();
   let expSaving = false;
   let expUndoTimer = null;
+  let expActiveTripId = null;   /* آخر رحلة نشطة مختارة للجلسة (عند تداخل الرحلات) */
+  let expTripDetailId = null;   /* الرحلة المفتوحة في صفحة التفاصيل */
+  /* الرحلة النشطة المفضّلة للجلسة (بلا تخمين صامت عند التداخل) */
+  function expPreferredActiveTrip(){
+    const act = expGetActiveTrips();
+    if(!act.length) return null;
+    if(act.length===1) return act[0];
+    const remembered = act.find(t=>t.id===expActiveTripId);
+    return remembered || act[0];
+  }
 
   function expRefresh(){
     expRenderLaunch();
     if(!expOverlay.hidden){
       if(expCurView==="dash") expRenderDash();
+      else if(expCurView==="trips"){ if(expTripDetailId) expRenderTripDetail(); else expRenderTrips(); }
       else if(expCurView==="reports") expRenderReport();
       else if(expCurView==="settings") expRenderSettings();
     }
@@ -8272,10 +8390,29 @@
     const box = document.getElementById("expLaunchSummary"); if(!box) return;
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
+    expRenderTravelBanner("expLaunchBanner");
+  }
+  /* شارة «وضع السفر نشط» المدمجة — تُعرض عند وجود رحلة نشطة، قابلة للضغط لفتح الرحلة */
+  function expRenderTravelBanner(hostId){
+    const host = document.getElementById(hostId); if(!host) return;
+    const trip = expPreferredActiveTrip();
+    if(!trip){ host.hidden=true; host.innerHTML=""; return; }
+    host.hidden=false;
+    const rem = expTripRemaining(trip);
+    const remTxt = rem==null ? "بلا ميزانية محددة" : (rem>=0? "المتبقي: "+expMoney(rem) : "تجاوز: "+expMoney(-rem));
+    const many = expGetActiveTrips().length>1;
+    host.innerHTML =
+      '<div class="exp-travel-banner" data-opentrip="'+trip.id+'"><div class="tb-main"><div class="tb-title">✈️ وضع السفر نشط'+(many?' · رحلات متداخلة':'')+'</div>'+
+      '<div class="tb-sub">'+(trip.icon?trip.icon+" ":"")+expEsc(trip.name)+' — '+remTxt+'</div></div>'+
+      '<button class="tb-add" data-tripadd="'+trip.id+'">＋ مصروف سفر</button></div>';
+    const bn=host.querySelector("[data-opentrip]");
+    bn.onclick=(e)=>{ if(e.target.closest("[data-tripadd]")) return; if(expOverlay.hidden) expOpenOverlay(); expOpenTripDetail(trip.id); };
+    host.querySelector("[data-tripadd]").onclick=(e)=>{ e.stopPropagation(); expOpenExpenseForm(null, trip.id); };
   }
   function expRenderDash(){
     document.getElementById("expDashSummary").innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
+    expRenderTravelBanner("expDashBanner");
     expRenderFixedCard();
     expRenderVarCard();
   }
@@ -8408,7 +8545,7 @@
 
   function expOptions(arr, sel){ return ['<option value="">—</option>'].concat(arr.map(v=>'<option'+(v===sel?' selected':'')+'>'+expEsc(v)+'</option>')).join(""); }
 
-  function expOpenExpenseForm(editId){
+  function expOpenExpenseForm(editId, preTripId){
     const tx = editId ? expState.transactions.find(t=>t.id===editId) : null;
     const cats = expState.categories.filter(c=>c.isActive && !c.archivedAt).sort((a,b)=> (a.section===b.section?0:a.section==="variable"?-1:1) || (a.sortOrder||0)-(b.sortOrder||0));
     const varCats = cats.filter(c=>c.section==="variable");
@@ -8416,21 +8553,38 @@
     const defPay = expState.settings.defaultPaymentMethod || (tx?tx.paymentMethod:"");
     const chips = varCats.map(c=>'<button type="button" class="exp-chip'+(c.id===curCat?' active':'')+'" data-catchip="'+c.id+'">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</button>').join("");
     const catOpts = cats.map(c=>'<option value="'+c.id+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+expEsc(c.name)+'</option>').join("");
+    /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
+    const active = expPreferredActiveTrip();
+    let curTrip = tx? (tx.tripId||"") : (preTripId!=null? preTripId : (active? active.id : ""));
+    /* قائمة الرحلات المتاحة للاختيار: غير المؤرشفة + رحلة المعاملة الحالية إن كانت مؤرشفة (للتعديل) */
+    const tripPool = (expState.trips||[]).filter(t=> !t.archivedAt || (tx && t.id===tx.tripId));
+    const tripOpts = '<option value="">بدون رحلة</option>' + tripPool.map(t=>{ const st=expTripStatus(t); const tag=st==="active"?" ✈️":st==="planned"?" (قادمة)":st==="completed"?" (مكتملة)":st==="archived"?" (مؤرشفة)":""; return '<option value="'+t.id+'"'+(t.id===curTrip?' selected':'')+'>'+expEsc(t.name)+tag+'</option>'; }).join("");
+    const showTripField = tripPool.length>0 || !!active;
+    const initCount = tx? (tx.countAgainstWeeklyBudget!==false) : (curTrip? !!(expTripById(curTrip)||{}).includeInWeeklyBudgets : true);
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(tx?"تعديل مصروف":"إضافة مصروف")+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-field"><label>المبلغ (ر.س)</label><input class="amount" id="efAmount" inputmode="decimal" placeholder="٠" value="'+(tx?(tx.amountMinor/100):"")+'"></div>'+
       '<div class="exp-err" id="efErr"></div>'+
       '<div class="exp-field"><label>الفئة</label><div class="exp-chips" id="efChips">'+chips+'</div></div>'+
       '<div class="exp-field"><select id="efCat">'+catOpts+'</select></div>'+
+      (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
       '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="efDate" value="'+(tx?tx.transactionDate:todayStr())+'"></div>'+
       '<div class="exp-field"><label>النوع</label><select id="efType"><option value="expense"'+(!tx||tx.transactionType==="expense"?" selected":"")+'>مصروف</option><option value="transfer"'+(tx&&tx.transactionType==="transfer"?" selected":"")+'>تحويل/سداد بطاقة</option></select></div></div>'+
       '<button type="button" class="exp-toggle-more" id="efMore">تفاصيل إضافية (اختياري) ▾</button>'+
       '<div id="efExtra" hidden>'+
+        '<div class="exp-fx-box"><div class="exp-card-hint" style="margin:0 0 .4rem">مبلغ بعملة أجنبية (اختياري) — يُحسب الريال تلقائيًا ويمكن تعديله يدويًا</div>'+
+        '<div class="exp-grid2"><div class="exp-field"><label>المبلغ الأصلي</label><input id="efFxAmt" inputmode="decimal" placeholder="٠" value="'+(tx&&tx.originalAmountMinor!=null?(tx.originalAmountMinor/100):"")+'"></div>'+
+        '<div class="exp-field"><label>العملة</label><select id="efFxCur">'+expOptions(EXP_CURRENCIES, tx&&tx.originalCurrency)+'</select></div></div>'+
+        '<div class="exp-grid2"><div class="exp-field"><label>سعر التحويل (١ وحدة = ؟ ر.س)</label><input id="efFxRate" inputmode="decimal" placeholder="٠" value="'+(tx&&tx.exchangeRate!=null?tx.exchangeRate:"")+'"></div>'+
+        '<div class="exp-field"><label>&nbsp;</label><button type="button" class="exp-secondary" id="efFxCalc" style="width:100%">احسب الريال ↺</button></div></div>'+
+        '<div class="exp-fx-out" id="efFxOut"></div></div>'+
         '<div class="exp-field"><label>التفصيل</label><input id="efSub" placeholder="مثال: مطعم" value="'+expEsc(tx&&tx.subcategory||"")+'"></div>'+
         '<div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
         '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE, tx&&tx.purchaseMethod)+'</select></div></div>'+
         '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT, tx&&tx.context)+'</select></div>'+
         '<div class="exp-field"><label>المستفيد</label><select id="efBen">'+expOptions(EXP_BENEF, tx&&tx.beneficiary)+'</select></div></div>'+
+        '<div class="exp-field"><label>الدولة/المدينة</label><input id="efCountry" placeholder="اختياري" value="'+expEsc(tx&&tx.merchantCountry||"")+'"></div>'+
+        '<label class="exp-check"><input type="checkbox" id="efCount"'+(initCount?" checked":"")+'> تُحتسب ضمن الميزانية الأسبوعية العادية</label>'+
         '<div class="exp-field"><label>ملاحظة</label><input id="efNote" placeholder="اختياري" value="'+expEsc(tx&&tx.description||"")+'"></div>'+
       '</div>'+
       '<button class="exp-save" id="efSave">'+(tx?"حفظ التعديل":"حفظ")+'</button>'
@@ -8439,6 +8593,14 @@
     g("#efMore").onclick=()=>{ const x=g("#efExtra"); x.hidden=!x.hidden; g("#efMore").textContent = x.hidden?"تفاصيل إضافية (اختياري) ▾":"إخفاء التفاصيل ▴"; };
     expFormBox.querySelectorAll("[data-catchip]").forEach(b=> b.onclick=()=>{ expFormBox.querySelectorAll("[data-catchip]").forEach(x=>x.classList.remove("active")); b.classList.add("active"); g("#efCat").value=b.dataset.catchip; });
     g("#efCat").onchange=()=>{ expFormBox.querySelectorAll("[data-catchip]").forEach(x=> x.classList.toggle("active", x.dataset.catchip===g("#efCat").value)); };
+    /* عند تغيير الرحلة: حدّث الافتراضي لاحتساب الميزانية الأسبوعية من إعداد الرحلة (قابل للتعديل يدويًا) */
+    if(g("#efTrip")) g("#efTrip").onchange=()=>{ const tid=g("#efTrip").value; const cb=g("#efCount"); if(cb) cb.checked = tid? !!(expTripById(tid)||{}).includeInWeeklyBudgets : true; };
+    /* حساب الريال من العملة الأجنبية × سعر التحويل (وحدة صغرى صحيحة، بلا أخطاء عائمة) */
+    const fxCalc=()=>{ const fa=expParseAmount(g("#efFxAmt").value); const rate=parseFloat(String(g("#efFxRate").value).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace("٫",".").replace(/[^\d.]/g,"")); const out=g("#efFxOut");
+      if(isNaN(fa)||fa<=0||!isFinite(rate)||rate<=0){ out.textContent=""; return null; }
+      const sar=Math.round(fa*rate); g("#efAmount").value=(sar/100); out.textContent="المبلغ المعتمد ≈ "+expMoney(sar); return sar; };
+    if(g("#efFxCalc")) g("#efFxCalc").onclick=fxCalc;
+    if(tx && tx.originalAmountMinor!=null && tx.exchangeRate) { const o=g("#efFxOut"); if(o) o.textContent="سعر محفوظ: ١ "+(tx.originalCurrency||"")+" = "+_arn(tx.exchangeRate)+" ر.س"; }
     g("#efSave").onclick=()=>{
       if(expSaving) return;
       const amt = expParseAmount(g("#efAmount").value);
@@ -8449,12 +8611,23 @@
       const catId = g("#efCat").value;
       if(!catId){ err.textContent="اختر الفئة."; return; }
       const date = g("#efDate").value; if(!date){ err.textContent="اختر التاريخ."; return; }
+      const tripId = g("#efTrip")? (g("#efTrip").value||null) : (tx? tx.tripId : (preTripId||null));
+      /* لا تُختار رحلة مؤرشفة تلقائيًا؛ لكن يجوز إبقاؤها عند التعديل الصريح */
+      const fxAmt=expParseAmount(g("#efFxAmt")?g("#efFxAmt").value:"");
+      const fxRate=g("#efFxRate")? parseFloat(String(g("#efFxRate").value).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace("٫",".").replace(/[^\d.]/g,"")) : NaN;
+      const hasFx = !isNaN(fxAmt) && fxAmt>0 && g("#efFxCur") && g("#efFxCur").value;
       expSaving=true; g("#efSave").disabled=true;
-      const payload={ amountMinor:amt, transactionDate:date, categoryId:catId, transactionType:type,
+      const payload={ amountMinor:amt, transactionDate:date, categoryId:catId, transactionType:type, tripId:tripId,
+        countAgainstWeeklyBudget: g("#efCount")? g("#efCount").checked : (tripId? !!(expTripById(tripId)||{}).includeInWeeklyBudgets : true),
         subcategory:(g("#efSub")&&g("#efSub").value.trim())||null, paymentMethod:(g("#efPay")&&g("#efPay").value)||null,
         purchaseMethod:(g("#efPur")&&g("#efPur").value)||null, context:(g("#efCtx")&&g("#efCtx").value)||null,
-        beneficiary:(g("#efBen")&&g("#efBen").value)||null, description:(g("#efNote")&&g("#efNote").value.trim())||null };
+        beneficiary:(g("#efBen")&&g("#efBen").value)||null, description:(g("#efNote")&&g("#efNote").value.trim())||null,
+        merchantCountry:(g("#efCountry")&&g("#efCountry").value.trim())||null,
+        originalAmountMinor: hasFx? fxAmt : null, originalCurrency: hasFx? g("#efFxCur").value : null,
+        exchangeRate: (hasFx && isFinite(fxRate) && fxRate>0)? fxRate : null,
+        exchangeRateSource: (hasFx && isFinite(fxRate) && fxRate>0)? "manual" : null };
       if(payload.paymentMethod) expState.settings.defaultPaymentMethod = payload.paymentMethod;
+      if(tripId){ const t=expTripById(tripId); if(t) expActiveTripId=tripId; }
       if(tx) expEditTransaction(tx.id, payload); else expAddTransaction(payload);
       expCloseForm(); expRefresh();
     };
@@ -8640,7 +8813,9 @@
     const sub=[t.subcategory, t.purchaseMethod, t.context!=="عادي"?t.context:null, t.paymentMethod, t.description].filter(Boolean).join(" · ");
     const amtCls=t.transactionType==="refund"?"refund":t.transactionType==="transfer"?"transfer":"";
     const sign=t.transactionType==="refund"?"−":t.transactionType==="transfer"?"⇄ ":"";
-    return '<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(c?(c.icon?c.icon+" ":"")+expEsc(c.name):"—")+(t.fixedExpenseInstanceId?' <span class="exp-pill paid">التزام</span>':"")+'</div><div class="t-sub">'+expEsc(sub||expArDate(t.transactionDate))+'</div></div>'+
+    const trip = t.tripId? expTripById(t.tripId) : null;
+    const fx = (t.originalAmountMinor!=null && t.originalCurrency)? ' · '+expMoney(t.originalAmountMinor,false)+' '+t.originalCurrency : '';
+    return '<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(c?(c.icon?c.icon+" ":"")+expEsc(c.name):"—")+(t.fixedExpenseInstanceId?' <span class="exp-pill paid">التزام</span>':"")+(trip?' <span class="exp-pill near">✈️ '+expEsc(trip.name)+'</span>':"")+'</div><div class="t-sub">'+expEsc(sub||expArDate(t.transactionDate))+fx+'</div></div>'+
       '<div class="t-amt '+amtCls+'">'+sign+expMoney(t.amountMinor,false)+'</div>'+
       '<button class="exp-mini" data-txmenu="'+t.id+'">⋯</button></div>';
   }
@@ -8666,7 +8841,7 @@
       if(expSaving) return;
       const amt=expParseAmount(g("#rfAmt").value);
       if(isNaN(amt)||amt<=0){ g("#rfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
-      const proceed=()=>{ expSaving=true; expAddTransaction({ amountMinor:amt, transactionDate:todayStr(), categoryId:t.categoryId, transactionType:"refund", relatedTransactionId:txId, fixedExpenseInstanceId:t.fixedExpenseInstanceId||null, description:"استرجاع" }); expCloseForm(); expRefresh(); };
+      const proceed=()=>{ expSaving=true; expAddTransaction({ amountMinor:amt, transactionDate:todayStr(), categoryId:t.categoryId, transactionType:"refund", relatedTransactionId:txId, fixedExpenseInstanceId:t.fixedExpenseInstanceId||null, tripId:t.tripId||null, countAgainstWeeklyBudget:t.countAgainstWeeklyBudget!==false, description:"استرجاع" }); expCloseForm(); expRefresh(); };
       if(amt>remain){ hifzShowConfirm({title:"الاسترجاع يتجاوز المتبقي", body:"مبلغ الاسترجاع أكبر من المتبقي القابل للاسترجاع. المتابعة؟", okText:"متابعة", cancelText:"إلغاء", onOk:proceed}); }
       else proceed();
     };
@@ -8677,6 +8852,9 @@
     const spend=txs.filter(t=>t.transactionType==="expense").reduce((a,t)=>a+t.amountMinor,0);
     const refunds=txs.filter(t=>t.transactionType==="refund").reduce((a,t)=>a+t.amountMinor,0);
     const net=spend-refunds;
+    /* تفصيل عادي/سفر لصرف اليوم (لا يُطرح السفر من الإجمالي — الإجمالي يمثّل المال الفعلي) */
+    const travelNet=expNetInRange(r, t=> t.tripId);
+    const normalNet=net-travelNet;
     const byCat=expByCategory(r);
     const catLines=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
     const body=document.getElementById("expReportBody");
@@ -8684,6 +8862,7 @@
       '<div class="exp-stat-grid"><div class="exp-stat"><small>صافي الصرف</small><b>'+expMoney(net)+'</b></div>'+
       '<div class="exp-stat"><small>عدد المعاملات</small><b>'+_arn(txs.filter(t=>t.transactionType!=="transfer").length)+'</b></div>'+
       '<div class="exp-stat"><small>استرجاعات</small><b>'+expMoney(refunds)+'</b></div></div>'+
+      (travelNet!==0?'<div class="exp-foot" style="border:none;margin-bottom:.5rem"><div class="exp-foot-row"><span>عادي</span><b>'+expMoney(normalNet)+'</b></div><div class="exp-foot-row"><span>✈️ سفر</span><b>'+expMoney(travelNet)+'</b></div></div>':'')+
       (catLines?'<div class="exp-sec-head">حسب الفئة</div><div class="exp-foot" style="border:none">'+catLines+'</div>':'')+
       '<div class="exp-sec-head">المعاملات</div>'+(txs.length? txs.map(expTxRow).join(""):'<div class="exp-empty">لا معاملات في هذا اليوم.</div>');
     expWireNav(d=>{ const nd=new Date(expRepDate+"T12:00:00"); nd.setDate(nd.getDate()+d); expRepDate=fmtDate(nd); });
@@ -8694,7 +8873,9 @@
     const txs=expTxInRange(r);
     const net=expNet(txs);
     const budget=expWeeklyBudgetTotal(r.start), varSpent=expVarNetInWeek(r), remain=budget-varSpent;
-    const byCat=expByCategory(r, t=>expClassify(t)==="variable");
+    const travelSpent=expTravelExcludedInWeek(r);   /* سفر الميزانية المستقلة — لا يستهلك الميزانية العادية */
+    const totalActual=varSpent+travelSpent;
+    const byCat=expByCategory(r, t=>expClassify(t)==="variable" && expCountsWeekly(t));  /* الفئات العادية فقط */
     const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]);
     const topCat=catKeys.length? expCatById(catKeys[0]):null;
     /* الإنفاق حسب اليوم */
@@ -8704,9 +8885,12 @@
     const catLines=catKeys.map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
     const body=document.getElementById("expReportBody");
     body.innerHTML=expNavBar(expArDateShort(r.start)+" — "+expArDateShort(r.end))+
-      '<div class="exp-stat-grid"><div class="exp-stat"><small>ميزانية الأسبوع</small><b>'+expMoney(budget)+'</b></div>'+
-      '<div class="exp-stat"><small>المتغيّر الفعلي</small><b>'+expMoney(varSpent)+'</b></div>'+
-      '<div class="exp-stat'+(remain<0?'':'')+'"><small>'+(remain<0?"التجاوز":"المتبقي")+'</small><b>'+expMoney(Math.abs(remain))+'</b></div></div>'+
+      '<div class="exp-stat-grid"><div class="exp-stat"><small>الميزانية العادية</small><b>'+expMoney(budget)+'</b></div>'+
+      '<div class="exp-stat"><small>المصروفات العادية</small><b>'+expMoney(varSpent)+'</b></div>'+
+      '<div class="exp-stat"><small>'+(remain<0?"التجاوز":"المتبقي")+'</small><b>'+expMoney(Math.abs(remain))+'</b></div>'+
+      '<div class="exp-stat"><small>✈️ مصروفات السفر</small><b>'+expMoney(travelSpent)+'</b></div>'+
+      '<div class="exp-stat"><small>إجمالي المصروف الفعلي</small><b>'+expMoney(totalActual)+'</b></div></div>'+
+      (travelSpent!==0?'<div class="exp-card-hint">«المتبقي» يعتمد على الميزانية الأسبوعية العادية فقط — مصروفات السفر لا تُنقصه.</div>':'')+
       '<div class="exp-sec-head">الإنفاق حسب اليوم</div><div class="exp-barmini">'+dayBars+'</div>'+
       '<div class="exp-sec-head">حسب الفئة'+(topCat?' · الأعلى: '+expEsc(topCat.name):'')+'</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف متغيّر.</div>')+'</div>'+
       '<div class="exp-sec-head">المعاملات ('+_arn(txs.length)+')</div>'+(txs.length? txs.slice().sort((a,b)=>a.transactionDate<b.transactionDate?1:-1).map(expTxRow).join(""):'<div class="exp-empty">لا معاملات.</div>');
@@ -8716,7 +8900,9 @@
   function expReportMonthly(){
     const r=expMonthRange(expRepDate); const d=new Date(expRepDate+"T12:00:00"), y=d.getFullYear(), m=d.getMonth()+1;
     const fixedActual=expNetInRange(r, t=>expClassify(t)==="fixed");
-    const varActual=expNetInRange(r, t=>expClassify(t)==="variable");
+    const varNormal=expNetInRange(r, t=>expClassify(t)==="variable" && !t.tripId);
+    const travelActual=expNetInRange(r, t=> t.tripId);   /* كل معاملات السفر في الشهر (تُحسب مرة واحدة) */
+    const varActual=varNormal+travelActual;
     const total=fixedActual+varActual;
     const refunds=expRefundsInRange(r);
     expEnsureMonth(y,m);
@@ -8730,13 +8916,14 @@
     for(let i=0;i<6;i++){ const wr={start:ws, end:expWeekRange(ws).end}; const clip={start:(wr.start<r.start?r.start:wr.start), end:(wr.end>r.end?r.end:wr.end)}; const v=expNetInRange(clip); weeks.push({label:expArDateShort(clip.start), v}); if(v>maxW)maxW=v; const nd=new Date(ws+"T12:00:00"); nd.setDate(nd.getDate()+7); ws=fmtDate(nd); if(ws>r.end) break; }
     weeks.forEach(w=> weekBars+='<div class="bm" title="'+w.label+': '+expMoney(w.v)+'"><i style="height:'+Math.max(3,Math.round((Math.max(0,w.v)/maxW)*100))+'%"></i></div>');
     const body=document.getElementById("expReportBody");
-    body.innerHTML=expNavBar(EXP_MONTHS[m-1]+" "+_arn(y))+
+    body.innerHTML=expNavBar(EXP_MONTHS[m-1]+" "+_arnY(y))+
       '<div class="exp-stat-grid"><div class="exp-stat"><small>الثابتة الفعلية</small><b>'+expMoney(fixedActual)+'</b></div>'+
-      '<div class="exp-stat"><small>المتغيّرة الفعلية</small><b>'+expMoney(varActual)+'</b></div>'+
-      '<div class="exp-stat"><small>الإجمالي الفعلي</small><b>'+expMoney(total)+'</b></div>'+
+      '<div class="exp-stat"><small>المتغيّرة العادية</small><b>'+expMoney(varNormal)+'</b></div>'+
+      '<div class="exp-stat"><small>✈️ السفر</small><b>'+expMoney(travelActual)+'</b></div>'+
+      '<div class="exp-stat"><small>الاسترجاعات</small><b>'+expMoney(-refunds)+'</b></div>'+
+      '<div class="exp-stat"><small>الإجمالي الصافي</small><b>'+expMoney(total)+'</b></div>'+
       '<div class="exp-stat"><small>التزامات غير مدفوعة</small><b>'+expMoney(unpaid)+'</b></div>'+
-      '<div class="exp-stat"><small>مدفوعة جزئيًا (متبقٍ)</small><b>'+expMoney(partial)+'</b></div>'+
-      '<div class="exp-stat"><small>صافٍ بعد الاسترجاع</small><b>'+expMoney(total)+'</b></div></div>'+
+      '<div class="exp-stat"><small>مدفوعة جزئيًا (متبقٍ)</small><b>'+expMoney(partial)+'</b></div></div>'+
       '<div class="exp-sec-head">الإنفاق حسب الأسبوع</div><div class="exp-barmini">'+weekBars+'</div>'+
       '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>';
     expWireNav(dd=>{ const nd=new Date(y,m-1+dd,15); expRepDate=fmtDate(nd); });
@@ -8747,6 +8934,12 @@
     const fixedActual=expNetInRange(yr, t=>expClassify(t)==="fixed");
     const varActual=expNetInRange(yr, t=>expClassify(t)==="variable");
     const total=fixedActual+varActual; const refunds=expRefundsInRange(yr);
+    /* مقاييس السفر السنوية — مشتقّة من tripId فقط، بلا إجماليات مُدخلة يدويًا */
+    const yTrips=(expState.trips||[]).filter(t=> expGetTripTransactions(t.id).some(x=> x.transactionDate>=yr.start && x.transactionDate<=yr.end));
+    const tripSpends=yTrips.map(t=>({t, v:expNetInRange(yr, x=> x.tripId===t.id)})).filter(o=>o.v!==0).sort((a,b)=>b.v-a.v);
+    const travelTotal=expNetInRange(yr, t=> t.tripId);
+    const tripCount=tripSpends.length;
+    const avgTrip=tripCount? Math.round(travelTotal/tripCount):0;
     let monthBars=""; let maxM=1; const months=[];
     for(let mm=1;mm<=12;mm++){ const mr={start:y+"-"+_pad2(mm)+"-01", end:y+"-"+_pad2(mm)+"-"+_pad2(expLastDayOfMonth(y,mm))}; const v=expNetInRange(mr); months.push({mm,v}); if(v>maxM)maxM=v; }
     months.forEach(mo=> monthBars+='<div class="bm" title="'+EXP_MONTHS[mo.mm-1]+': '+expMoney(mo.v)+'"><i style="height:'+Math.max(3,Math.round((Math.max(0,mo.v)/maxM)*100))+'%"></i></div>');
@@ -8757,7 +8950,7 @@
     const avg=Math.round(total/activeMonths);
     const fixedPct=expPct(fixedActual, total), varPct=total?100-fixedPct:0;
     const body=document.getElementById("expReportBody");
-    body.innerHTML=expNavBar("سنة "+_arn(y))+
+    body.innerHTML=expNavBar("سنة "+_arnY(y))+
       '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السنة</small><b>'+expMoney(total)+'</b></div>'+
       '<div class="exp-stat"><small>الثابتة</small><b>'+expMoney(fixedActual)+'</b></div>'+
       '<div class="exp-stat"><small>المتغيّرة</small><b>'+expMoney(varActual)+'</b></div>'+
@@ -8766,7 +8959,14 @@
       '<div class="exp-stat"><small>ثابت/متغيّر</small><b>'+_arn(fixedPct)+'٪ / '+_arn(varPct)+'٪</b></div></div>'+
       '<div class="exp-sec-head">مقارنة شهرية</div><div class="exp-barmini">'+monthBars+'</div>'+
       (topMonths.length?'<div class="exp-sec-head">أعلى الشهور</div><div class="exp-foot" style="border:none">'+topMonths.map(m=>'<div class="exp-foot-row"><span>'+EXP_MONTHS[m.mm-1]+'</span><b>'+expMoney(m.v)+'</b></div>').join("")+'</div>':'')+
-      '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>';
+      '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>'+
+      (travelTotal!==0?
+        '<div class="exp-sec-head">✈️ السفر</div>'+
+        '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السفر</small><b>'+expMoney(travelTotal)+'</b></div>'+
+        '<div class="exp-stat"><small>عدد الرحلات</small><b>'+_arn(tripCount)+'</b></div>'+
+        '<div class="exp-stat"><small>متوسط الرحلة</small><b>'+expMoney(avgTrip)+'</b></div></div>'+
+        '<div class="exp-foot" style="border:none">'+tripSpends.map(o=>'<div class="exp-foot-row"><span>'+(o===tripSpends[0]?'🏆 ':'')+expEsc(o.t.name)+'</span><b>'+expMoney(o.v)+'</b></div>').join("")+'</div>'
+      :'');
     expWireNav(dd=>{ const nd=new Date(y+dd,6,1); expRepDate=fmtDate(nd); });
   }
 
@@ -8794,16 +8994,180 @@
     return cats.concat(tpls).map(x=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(x.name)+'</div><div class="exp-row-sub">'+(x.section?"فئة أسبوعية":"التزام شهري")+'</div></div><button class="exp-mini" data-restore="'+x.id+'" title="استعادة">↩️</button></div>').join("");
   }
 
+  /* ==================== واجهة الرحلات ==================== */
+  function expTripRowHtml(t){
+    const st=expTripStatus(t); const net=expTripNet(t.id);
+    let line;
+    if(st==="planned"){ const days=Math.round((new Date(t.startDate+"T12:00:00")-new Date(todayStr()+"T12:00:00"))/86400000); line = days>0? ("تبدأ بعد "+_arn(days)+" أيام") : "تبدأ اليوم"; line += t.totalBudgetMinor!=null? " · الميزانية: "+expMoney(t.totalBudgetMinor) : ""; }
+    else { line = (t.totalBudgetMinor!=null? expMoney(net,false)+" / "+expMoney(t.totalBudgetMinor) : "المصروف: "+expMoney(net)); }
+    const sub = expArDateShort(t.startDate)+" – "+expArDateShort(t.endDate);
+    const badge = st==="active"?'<span class="exp-pill ok">نشطة ✈️</span>':st==="planned"?'<span class="exp-pill near">قادمة</span>':st==="completed"?'<span class="exp-pill partial">مكتملة</span>':'<span class="exp-pill unpaid">مؤرشفة</span>';
+    return '<div class="exp-row" data-triprow="'+t.id+'"><div class="exp-row-main"><div class="exp-row-name">'+(t.icon?t.icon+" ":"")+expEsc(t.name)+' '+badge+'</div>'+
+      '<div class="exp-row-sub">'+sub+' · '+line+'</div></div><button class="exp-mini" data-tripmenu="'+t.id+'">⋯</button></div>';
+  }
+  function expRenderTrips(){
+    const body=document.getElementById("expTripsBody");
+    const trips=(expState.trips||[]);
+    const groups={ active:[], planned:[], completed:[], archived:[] };
+    trips.forEach(t=> groups[expTripStatus(t)].push(t));
+    Object.keys(groups).forEach(k=> groups[k].sort((a,b)=> a.startDate<b.startDate?1:-1));
+    let html='<button class="exp-primary" id="expNewTrip" style="width:100%;margin-bottom:1rem">＋ إنشاء رحلة</button>';
+    if(!trips.length){
+      html += '<div class="exp-empty" style="padding:2rem 1rem">لا توجد رحلات حتى الآن<br><br>أنشئ رحلة لتنظيم مصاريف السفر ومتابعة ميزانيتها.</div>';
+    } else {
+      const sec=(title,arr)=> arr.length? '<div class="exp-sec-head">'+title+' ('+_arn(arr.length)+')</div><div class="exp-card" style="padding:.4rem .8rem">'+arr.map(expTripRowHtml).join("")+'</div>':'';
+      html += sec("نشطة", groups.active) + sec("قادمة", groups.planned) + sec("مكتملة", groups.completed) + sec("مؤرشفة", groups.archived);
+    }
+    body.innerHTML=html;
+    body.querySelector("#expNewTrip").onclick=()=> expOpenTripForm(null);
+    body.querySelectorAll("[data-triprow]").forEach(r=> r.onclick=(e)=>{ if(e.target.closest("[data-tripmenu]"))return; expOpenTripDetail(r.dataset.triprow); });
+    body.querySelectorAll("[data-tripmenu]").forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); expTripRowMenu(b, b.dataset.tripmenu); });
+  }
+  function expTripRowMenu(anchor, tripId){
+    const t=expTripById(tripId); if(!t) return; const st=expTripStatus(t);
+    const items=[{label:"📂 فتح", onClick:()=> expOpenTripDetail(tripId)}];
+    if(st!=="archived"){
+      items.push({label: t.isManuallyActivated?"⏹ إيقاف وضع السفر":"✈️ تفعيل وضع السفر", onClick:()=>{ expSetManualActive(tripId, !t.isManuallyActivated); expRefresh(); }});
+      items.push({label:"✏️ تعديل", onClick:()=> expOpenTripForm(tripId)});
+      if(st!=="completed") items.push({label:"🏁 إكمال الرحلة", onClick:()=>{ expCompleteTrip(tripId); expRefresh(); }});
+      items.push({label:"🗑 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة الرحلة؟", body:"ستبقى في التقارير التاريخية مع كل مصاريفها، ويمكن استعادتها.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ expArchiveTrip(tripId); expRefresh(); }})});
+      items.push({label:"❌ حذف", onClick:()=> expDeleteTripFlow(tripId)});
+    } else {
+      items.push({label:"↩️ استعادة", onClick:()=>{ expRestoreTrip(tripId); expRefresh(); }});
+      items.push({label:"❌ حذف", onClick:()=> expDeleteTripFlow(tripId)});
+    }
+    expActionMenu(anchor, items);
+  }
+  /* حذف رحلة مرتبطة بمصاريف: أرشفة / فكّ الارتباط / إلغاء — لا تُحذف المعاملات أبدًا */
+  function expDeleteTripFlow(tripId){
+    const linked=expState.transactions.filter(t=>t.tripId===tripId && !t.deletedAt).length;
+    if(!linked){ hifzShowConfirm({title:"حذف الرحلة؟", body:"لا مصاريف مرتبطة بها.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{ expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); return; }
+    expOpenForm('<div class="exp-form-head"><h3>هذه الرحلة مرتبطة بمصاريف مسجّلة</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">لديها '+_arn(linked)+' معاملة مرتبطة. ماذا تريد أن تفعل؟</div>'+
+      '<button class="exp-optbtn" data-act="archive">🗑 أرشفة الرحلة<small>تبقى المصاريف والتقارير كما هي</small></button>'+
+      '<button class="exp-optbtn" data-act="unlink">🔗 إزالة ارتباط الرحلة من المصاريف<small>تبقى كل المعاملات بلا رحلة</small></button>');
+    expFormBox.querySelector('[data-act="archive"]').onclick=()=>{ expArchiveTrip(tripId); expCloseForm(); expTripDetailId=null; expSetView("trips"); };
+    expFormBox.querySelector('[data-act="unlink"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({title:"تأكيد إزالة الارتباط", body:"سيُزال ربط الرحلة من "+_arn(linked)+" معاملة (تبقى المعاملات). ثم تُحذف الرحلة. متابعة؟", okText:"نعم، أزل الارتباط واحذف", cancelText:"إلغاء", onOk:()=>{ expUnlinkTripTransactions(tripId); expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); };
+  }
+  function expOpenTripDetail(id){ expTripDetailId=id; if(expCurView!=="trips"){ expSetView("trips"); } expRenderTripDetail(); }
+  function expRenderTripDetail(){
+    const t=expTripById(expTripDetailId); const body=document.getElementById("expTripsBody");
+    if(!t){ expTripDetailId=null; expRenderTrips(); return; }
+    const net=expTripNet(t.id), gross=expTripGross(t.id), refunds=expTripRefunds(t.id);
+    const rem=expTripRemaining(t), usage=expTripUsage(t);
+    const period=expTripPeriodBreakdown(t);
+    const catBk=expTripCategoryBreakdown(t.id);
+    const dayBk=expTripDailyBreakdown(t.id);
+    const txs=expGetTripTransactions(t.id).slice().sort((a,b)=> a.transactionDate<b.transactionDate?1:-1);
+    let html='<button class="exp-secondary" id="expTripBack" style="margin-bottom:.8rem">← كل الرحلات</button>';
+    html+='<div class="exp-card"><h3>'+(t.icon?t.icon+" ":"")+'✈️ '+expEsc(t.name)+'</h3>'+
+      '<div class="exp-card-hint">'+expArDate(t.startDate)+' – '+expArDate(t.endDate)+' · '+_arn(expTripDays(t))+' أيام'+(t.destination?' · '+expEsc(t.destination):'')+'</div>';
+    if(t.totalBudgetMinor!=null){
+      const cls=usage>=100?"over":usage>=75?"near":"ok";
+      html+='<div class="exp-stat-grid" style="margin-bottom:.6rem"><div class="exp-stat"><small>الميزانية</small><b>'+expMoney(t.totalBudgetMinor)+'</b></div>'+
+        '<div class="exp-stat"><small>المصروف</small><b>'+expMoney(net)+'</b></div>'+
+        '<div class="exp-stat"><small>'+(rem>=0?"المتبقي":"التجاوز")+'</small><b>'+expMoney(Math.abs(rem))+'</b></div></div>'+
+        '<div class="exp-bar"><i class="'+(cls==="ok"?"":cls)+'" style="width:'+Math.min(100,usage)+'%"></i></div><div class="exp-card-hint">نسبة الاستخدام: '+_arn(usage)+'٪</div>';
+    } else {
+      html+='<div class="exp-stat-grid" style="margin-bottom:.4rem"><div class="exp-stat"><small>المصروف حتى الآن</small><b>'+expMoney(net)+'</b></div><div class="exp-stat"><small>الاسترجاعات</small><b>'+expMoney(refunds)+'</b></div></div><button class="exp-add-line" id="expTripAddBudget">إضافة ميزانية للرحلة</button>';
+    }
+    html+='<button class="exp-primary" id="expTripAddExp" style="width:100%;margin-top:.7rem">＋ مصروف سفر</button></div>';
+    /* حسب الفئة (الميزانية اختيارية) */
+    const catKeys=Object.keys(catBk).filter(k=>catBk[k]!==0).sort((a,b)=>catBk[b]-catBk[a]);
+    if(catKeys.length){
+      html+='<div class="exp-sec-head">حسب الفئة</div><div class="exp-card" style="padding:.6rem .8rem">';
+      catKeys.forEach(k=>{ const c=expCatById(k); const alloc=expTripAllocBudget(t,k);
+        const sub= alloc!=null? expMoney(catBk[k],false)+" / "+expMoney(alloc) : expMoney(catBk[k]);
+        const pct= alloc? Math.min(100,expPct(catBk[k],alloc)) : 0; const bcls=alloc&&expPct(catBk[k],alloc)>=100?"over":alloc&&expPct(catBk[k],alloc)>=75?"near":"";
+        html+='<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+(c?expEsc(c.name):"—")+'</div><div class="exp-row-sub">'+sub+'</div>'+(alloc?'<div class="exp-bar"><i class="'+bcls+'" style="width:'+pct+'%"></i></div>':'')+'</div></div>';
+      });
+      html+='</div>';
+    }
+    /* قبل/أثناء/بعد */
+    if(period.before||period.after){
+      html+='<div class="exp-sec-head">حسب فترة الرحلة</div><div class="exp-card" style="padding:.6rem .8rem">'+
+        '<div class="exp-foot-row"><span>قبل الرحلة</span><b>'+expMoney(period.before)+'</b></div>'+
+        '<div class="exp-foot-row"><span>أثناء الرحلة</span><b>'+expMoney(period.during)+'</b></div>'+
+        '<div class="exp-foot-row"><span>بعد الرحلة</span><b>'+expMoney(period.after)+'</b></div></div>';
+    }
+    /* حسب اليوم */
+    const dayKeys=Object.keys(dayBk).sort();
+    if(dayKeys.length){
+      html+='<div class="exp-sec-head">حسب اليوم</div><div class="exp-card" style="padding:.6rem .8rem">'+
+        dayKeys.map(d=>{ const inTrip = d>=t.startDate && d<=t.endDate; const dayNum=inTrip? "اليوم "+_arn(Math.round((new Date(d+"T12:00:00")-new Date(t.startDate+"T12:00:00"))/86400000)+1)+" — " : (d<t.startDate?"قبل — ":"بعد — "); return '<div class="exp-foot-row"><span>'+dayNum+expArDateShort(d)+'</span><b>'+expMoney(dayBk[d])+'</b></div>'; }).join("")+'</div>';
+    }
+    /* صافٍ + معاملات */
+    html+='<div class="exp-sec-head">الإجمالي</div><div class="exp-card" style="padding:.6rem .8rem"><div class="exp-foot-row"><span>إجمالي المصروف</span><b>'+expMoney(gross)+'</b></div><div class="exp-foot-row"><span>الاسترجاعات</span><b>'+expMoney(-refunds)+'</b></div><div class="exp-foot-row total"><span>الصافي</span><b>'+expMoney(net)+'</b></div></div>';
+    html+='<div class="exp-sec-head">المعاملات ('+_arn(txs.length)+')</div>'+(txs.length? '<div id="expTripTxList">'+txs.map(expTxRow).join("")+'</div>':'<div class="exp-empty">لم تُسجل مصاريف لهذه الرحلة بعد.</div>');
+    body.innerHTML=html;
+    body.querySelector("#expTripBack").onclick=()=>{ expTripDetailId=null; expRenderTrips(); };
+    body.querySelector("#expTripAddExp").onclick=()=> expOpenExpenseForm(null, t.id);
+    if(body.querySelector("#expTripAddBudget")) body.querySelector("#expTripAddBudget").onclick=()=> expOpenTripForm(t.id);
+    expWireTxMenus(body);
+  }
+  function expOpenTripForm(id){
+    const t=id? expTripById(id):null;
+    const varCats=expState.categories.filter(c=>c.section==="variable" && (c.isActive||!!(t&&(t.allocations||[]).find(a=>a.categoryId===c.id))) && !c.archivedAt);
+    const allocRows=varCats.map(c=>{ const a=t&&(t.allocations||[]).find(x=>x.categoryId===c.id); return '<div class="exp-grid2" style="align-items:end;gap:.5rem"><div class="exp-field" style="margin-bottom:.4rem"><label>'+expEsc(c.name)+'</label><input class="tf-alloc" data-cat="'+c.id+'" inputmode="decimal" placeholder="بلا ميزانية" value="'+(a?(a.budgetMinor/100):"")+'"></div><div class="exp-card-hint" style="padding-bottom:.7rem">ر.س</div></div>'; }).join("");
+    expOpenForm(
+      '<div class="exp-form-head"><h3>'+(t?"تعديل رحلة":"إنشاء رحلة")+'</h3><button data-close>✕</button></div>'+
+      '<div class="exp-field"><label>اسم الرحلة *</label><input id="tfName" placeholder="مثال: رحلة البحرين" value="'+expEsc(t&&t.name||"")+'"></div>'+
+      '<div class="exp-field"><label>الوجهة (اختياري)</label><input id="tfDest" placeholder="المنامة" value="'+expEsc(t&&t.destination||"")+'"></div>'+
+      '<div class="exp-grid2"><div class="exp-field"><label>تاريخ البداية *</label><input type="date" id="tfStart" value="'+(t?t.startDate:todayStr())+'"></div>'+
+      '<div class="exp-field"><label>تاريخ النهاية *</label><input type="date" id="tfEnd" value="'+(t?t.endDate:todayStr())+'"></div></div>'+
+      '<div class="exp-err" id="tfErr"></div>'+
+      '<div class="exp-grid2"><div class="exp-field"><label>الميزانية الإجمالية (ر.س)</label><input class="amount" id="tfBudget" inputmode="decimal" style="font-size:1rem" value="'+(t&&t.totalBudgetMinor!=null?(t.totalBudgetMinor/100):"")+'"></div>'+
+      '<div class="exp-field"><label>العملة الأجنبية</label><select id="tfCur">'+expOptions(EXP_CURRENCIES, t&&t.preferredForeignCurrency)+'</select></div></div>'+
+      '<div class="exp-field"><label>احتساب مصروفات الرحلة ضمن الميزانية الأسبوعية؟</label><select id="tfWeekly"><option value="0"'+(!t||!t.includeInWeeklyBudgets?" selected":"")+'>لا، ميزانية مستقلة</option><option value="1"'+(t&&t.includeInWeeklyBudgets?" selected":"")+'>نعم، ضمن الميزانيات الأسبوعية</option></select></div>'+
+      '<div class="exp-field"><label>ملاحظة</label><input id="tfNote" placeholder="اختياري" value="'+expEsc(t&&t.note||"")+'"></div>'+
+      '<button type="button" class="exp-toggle-more" id="tfAllocToggle">ميزانيات الفئات (اختياري) ▾</button>'+
+      '<div id="tfAllocBox" hidden>'+(allocRows||'<div class="exp-card-hint">لا فئات متغيرة.</div>')+'<div class="exp-fx-out" id="tfAllocSum"></div></div>'+
+      '<button class="exp-save" id="tfSave">'+(t?"حفظ":"إنشاء")+'</button>'
+    );
+    const g=id2=>expFormBox.querySelector(id2);
+    g("#tfAllocToggle").onclick=()=>{ const x=g("#tfAllocBox"); x.hidden=!x.hidden; g("#tfAllocToggle").textContent=x.hidden?"ميزانيات الفئات (اختياري) ▾":"إخفاء ميزانيات الفئات ▴"; if(!x.hidden) allocSum(); };
+    const allocSum=()=>{ let sum=0; expFormBox.querySelectorAll(".tf-alloc").forEach(inp=>{ const v=expParseAmount(inp.value); if(!isNaN(v)&&v>0) sum+=v; }); const total=expParseAmount(g("#tfBudget").value); const out=g("#tfAllocSum"); let s="الموزع على الفئات: "+expMoney(sum); if(!isNaN(total)&&total>0){ s+=" · غير الموزع: "+expMoney(total-sum); if(sum>total) s+=" ⚠️ التوزيع يتجاوز الميزانية"; } out.textContent=s; };
+    expFormBox.querySelectorAll(".tf-alloc").forEach(inp=> inp.oninput=allocSum);
+    if(g("#tfBudget")) g("#tfBudget").oninput=()=>{ if(!g("#tfAllocBox").hidden) allocSum(); };
+    g("#tfSave").onclick=()=>{
+      if(expSaving) return;
+      const name=g("#tfName").value.trim(); const start=g("#tfStart").value, end=g("#tfEnd").value;
+      const err=g("#tfErr");
+      if(!name){ err.textContent="اسم الرحلة مطلوب."; return; }
+      if(!start||!end){ err.textContent="تاريخا البداية والنهاية مطلوبان."; return; }
+      if(end<start){ err.textContent="تاريخ النهاية لا يمكن أن يسبق البداية."; return; }
+      const budget=expParseAmount(g("#tfBudget").value);
+      if(g("#tfBudget").value.trim() && (isNaN(budget)||budget<0)){ err.textContent="الميزانية لا يمكن أن تكون سالبة."; return; }
+      const allocations=[]; let bad=false;
+      expFormBox.querySelectorAll(".tf-alloc").forEach((inp,i)=>{ if(!inp.value.trim())return; const v=expParseAmount(inp.value); if(isNaN(v)||v<0){bad=true;return;} if(v>0) allocations.push({id:newId(), categoryId:inp.dataset.cat, budgetMinor:v, sortOrder:i, createdAt:Date.now(), updatedAt:Date.now()}); });
+      if(bad){ err.textContent="ميزانية فئة غير صحيحة."; return; }
+      expSaving=true; g("#tfSave").disabled=true;
+      const payload={ name, destination:g("#tfDest").value.trim()||null, startDate:start, endDate:end,
+        totalBudgetMinor: (g("#tfBudget").value.trim() && !isNaN(budget))? budget : null,
+        preferredForeignCurrency: g("#tfCur").value||null, includeInWeeklyBudgets: g("#tfWeekly").value==="1",
+        note:g("#tfNote").value.trim()||null, allocations };
+      if(t) payload.id=t.id;
+      const saved=expUpsertTrip(payload);
+      expCloseForm();
+      if(expCurView==="trips" && expTripDetailId){ expTripDetailId=saved.id; expRenderTripDetail(); }
+      else expRefresh();
+    };
+  }
+
   /* ---------- فتح/تبويب الشاشة ---------- */
   function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; }
   function expCloseOverlay(){ expOverlay.hidden=true; document.body.style.overflow=""; }
   function expSetView(v){
     expCurView=v;
     document.getElementById("expViewDash").hidden = v!=="dash";
+    document.getElementById("expViewTrips").hidden = v!=="trips";
     document.getElementById("expViewReports").hidden = v!=="reports";
     document.getElementById("expViewSettings").hidden = v!=="settings";
     expOverlay.querySelectorAll(".exp-tabs .exp-tab[data-view]").forEach(b=> b.classList.toggle("active", b.dataset.view===v));
-    if(v==="dash") expRenderDash(); else if(v==="reports") expRenderReport(); else expRenderSettings();
+    if(v==="dash") expRenderDash();
+    else if(v==="trips"){ expTripDetailId=null; expRenderTrips(); }
+    else if(v==="reports") expRenderReport();
+    else expRenderSettings();
   }
   function expInit(){
     document.getElementById("expOpenBtn").onclick=expOpenOverlay;
