@@ -2458,7 +2458,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٧</div>
+    <div class="app-version">النسخة ٩٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -8087,11 +8087,56 @@
       raw.transactions.forEach(t=>{ if(t.tripId===undefined) t.tripId=null; if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = t.tripId? false : true; });
     }
     raw.trips.forEach(tr=>{ if(!Array.isArray(tr.allocations)) tr.allocations=[]; if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; });
+    /* حقول تصنيف الالتزام الثابت (توافق تصاعدي): مصدر ثابت للدفعات المرتبطة بمثيل */
+    raw.transactions.forEach(t=>{
+      if(t.sourceType===undefined) t.sourceType = t.fixedExpenseInstanceId ? "fixed" : null;
+      if(t.fixedTemplateId===undefined) t.fixedTemplateId = null;
+      if(t.needsReview===undefined) t.needsReview = false;
+    });
+    const repaired = expRepairMisclassified(raw);   /* إصلاح لمرّة واحدة للدفعات المصنّفة خطأً تحت فئة أسبوعية */
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
-    /* ثبّت الترحيل في التخزين مرّة واحدة عند رفع النسخة (حتى لا يتكرر الترحيل في كل تحميل) */
-    if(oldVersion < EXP_SCHEMA){ raw.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }
+    /* ثبّت الترحيل/الإصلاح في التخزين حتى لا يتكرر ويُزامَن عبر الأجهزة */
+    if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }
     return raw;
+  }
+  /* إصلاح محافظ لمرّة واحدة: دفعة التزام سُجّلت خطأً تحت فئة أسبوعية (مثل «الأكل»).
+     الشرط: الوصف يبدأ بـ«دفعة:» والاسم يطابق تمامًا اسم التزام واحد فقط، والمعاملة غير مصنّفة ثابتة بعد.
+     تطابق واحد → ربطها بالالتزام (ثابت، خارج الميزانية الأسبوعية). تطابق متعدد وتحت فئة أسبوعية → needsReview فقط. */
+  function expRepairMisclassified(d){
+    if(!Array.isArray(d.transactions) || !Array.isArray(d.fixedTemplates)) return false;
+    let changed=false;
+    d.transactions.forEach(t=>{
+      if(t.deletedAt) return;
+      if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return;   /* مصنّفة ثابتة سلفًا — تخطَّ */
+      const desc=(t.description||"").trim();
+      if(desc.indexOf("دفعة:")!==0) return;
+      const name=desc.slice(5).trim(); if(!name) return;
+      const matches=d.fixedTemplates.filter(tp=> !tp.archivedAt && (tp.name||"").trim()===name);
+      const cat=d.categories.find(c=>c.id===t.categoryId);
+      const underVariable = !!(cat && cat.section==="variable");
+      if(matches.length===1){
+        const tp=matches[0];
+        const dt=new Date(t.transactionDate+"T12:00:00"), y=dt.getFullYear(), mo=dt.getMonth()+1;
+        let inst=d.instances.find(i=>i.templateId===tp.id && i.year===y && i.month===mo);
+        if(!inst){ inst={ id:newId(), templateId:tp.id, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo),
+          paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; d.instances.push(inst); }
+        t.sourceType="fixed"; t.fixedTemplateId=tp.id; t.fixedExpenseInstanceId=inst.id;
+        t.countAgainstWeeklyBudget=false; t.categoryId=null; t.needsReview=false; t.updatedAt=Date.now();
+        changed=true;
+      } else if(matches.length>1 && underVariable && !t.needsReview){
+        t.needsReview=true; t.updatedAt=Date.now(); changed=true;   /* غموض — لا إصلاح تلقائي */
+      }
+    });
+    /* أعِد حساب المثيلات المتأثرة من المعاملات (المصدر الوحيد للحقيقة) */
+    if(changed) d.instances.forEach(inst=>{
+      const linked=d.transactions.filter(x=>!x.deletedAt && x.fixedExpenseInstanceId===inst.id);
+      let paid=0,last=null; linked.forEach(x=>{ if(x.transactionType==="expense"){ paid+=x.amountMinor; if(!last||x.transactionDate>last)last=x.transactionDate; } else if(x.transactionType==="refund") paid-=x.amountMinor; });
+      inst.paidAmountMinor=Math.max(0,paid);
+      inst.status= inst.paidAmountMinor<=0?"unpaid":(inst.paidAmountMinor>=inst.plannedAmountMinor?"paid":"partial");
+      inst.paidAt= inst.paidAmountMinor>0?last:null;
+    });
+    return changed;
   }
   /* خطّاف ترحيل دفاعي: يبحث عن قوائم مصاريف قديمة محتملة ويستوردها كفئات دون اختلاق معاملات يومية.
      التطبيق الحالي لا يحوي أي بيانات مصاريف سابقة، لذا هذا لا يفعل شيئًا اليوم — لكنه آمن للمستقبل. */
@@ -8308,11 +8353,19 @@
   function expInstById(id){ return expState.instances.find(i=>i.id===id) || null; }
   function expActiveTx(){ return expState.transactions.filter(t=>!t.deletedAt); }
   function expClassify(t){
-    if(t.fixedExpenseInstanceId) return "fixed";
+    if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return "fixed";   /* دفعة التزام = ثابت دائمًا */
     const c = expCatById(t.categoryId);
     if(c && c.section==="fixed") return "fixed";
     return "variable";
   }
+  /* قالب الالتزام المرتبط بمعاملة (عبر fixedTemplateId أو عبر المثيل) واسمه للعرض */
+  function expFixedTemplateOf(t){
+    if(t.fixedTemplateId){ const tp=expTplById(t.fixedTemplateId); if(tp) return tp; }
+    if(t.fixedExpenseInstanceId){ const i=expInstById(t.fixedExpenseInstanceId); if(i) return expTplById(i.templateId); }
+    return null;
+  }
+  function expFixedTitle(t){ const tp=expFixedTemplateOf(t); if(tp) return tp.name;
+    const d=(t.description||""); return d.indexOf("دفعة:")===0 ? (d.slice(5).trim()||"التزام شهري") : "التزام شهري"; }
   /* صافي الصرف = مصروف − استرجاع ، والتحويلات مستثناة تمامًا */
   function expNet(list){
     let s = 0;
@@ -8431,6 +8484,7 @@
     const rec = Object.assign({ id:newId(), transactionType:"expense", createdAt:now, updatedAt:now, deletedAt:null,
       description:null, subcategory:null, paymentMethod:null, purchaseMethod:null, context:null, beneficiary:null,
       fixedExpenseInstanceId:null, relatedTransactionId:null,
+      sourceType:null, fixedTemplateId:null, needsReview:false,
       tripId:null, countAgainstWeeklyBudget:true, originalAmountMinor:null, originalCurrency:null,
       exchangeRate:null, exchangeRateSource:null, merchantCountry:null }, tx);
     expState.transactions.push(rec);
@@ -8460,8 +8514,10 @@
   function expRecordPayment(instId, amountMinor, dateStr, method){
     const inst = expInstById(instId); if(!inst) return null;
     const tpl = expTplById(inst.templateId);
-    return expAddTransaction({ amountMinor, transactionDate:dateStr, categoryId: tpl?tpl.categoryId:null,
-      fixedExpenseInstanceId:instId, transactionType:"expense", paymentMethod:method||null,
+    /* دفعة التزام: مصدرها «ثابت» صراحةً، بلا فئة أسبوعية موروثة، ولا تُحتسب ضمن الميزانية الأسبوعية */
+    return expAddTransaction({ amountMinor, transactionDate:dateStr, categoryId: null,
+      sourceType:"fixed", fixedTemplateId: inst.templateId, fixedExpenseInstanceId:instId,
+      countAgainstWeeklyBudget:false, transactionType:"expense", paymentMethod:method||null,
       description:"دفعة: "+(tpl?tpl.name:"التزام") });
   }
   function expSetCategoryBudget(catId, amountMinor, fromWeekStart){
@@ -8574,8 +8630,10 @@
     const box = document.getElementById("expFixedCard");
     const d = new Date(todayStr()+"T12:00:00"), y=d.getFullYear(), m=d.getMonth()+1;
     const insts = expMonthInstances(y,m);
+    /* التزامات متوقّفة (غير نشطة وغير مؤرشفة): تبقى في القائمة بحالة «متوقف» ولا تتحوّل لفئة */
+    const pausedTpls = expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive);
     let rows = "";
-    if(!insts.length){
+    if(!insts.length && !pausedTpls.length){
       rows = '<div class="exp-empty">لا توجد التزامات شهرية بعد. أضِف التزامك الأول 👇</div>';
     } else {
       insts.forEach(inst=>{
@@ -8592,6 +8650,12 @@
           expEsc(tpl.name)+'<span class="exp-pill '+pillCls+'">'+pillTxt+'</span></div>'+
           '<div class="exp-row-sub">'+sub+'</div></div>'+
           '<button class="exp-mini" data-payinst="'+inst.id+'" title="تسجيل دفعة">💵</button>'+
+          '<button class="exp-mini" data-tplmenu="'+tpl.id+'" title="خيارات">⋯</button></div>';
+      });
+      pausedTpls.forEach(tpl=>{
+        rows += '<div class="exp-row" style="opacity:.72"><div class="exp-row-main"><div class="exp-row-name">'+
+          expEsc(tpl.name)+'<span class="exp-pill unpaid">متوقف</span></div>'+
+          '<div class="exp-row-sub">المخطط: '+expMoney(tpl.defaultAmountMinor||0)+' · موقوف مؤقتًا</div></div>'+
           '<button class="exp-mini" data-tplmenu="'+tpl.id+'" title="خيارات">⋯</button></div>';
       });
     }
@@ -8671,15 +8735,28 @@
     menu.style.left=Math.round(left)+"px"; menu.style.top=Math.round(top)+"px";
     document.addEventListener("keydown",onKey);
   }
+  function expTplLinkedTxCount(tplId){
+    const instIds = expState.instances.filter(i=>i.templateId===tplId).map(i=>i.id);
+    return expState.transactions.filter(x=>!x.deletedAt && (x.fixedTemplateId===tplId || instIds.indexOf(x.fixedExpenseInstanceId)>=0)).length;
+  }
   function expTplMenu(anchor, tplId){
     const t = expTplById(tplId); if(!t) return;
-    expActionMenu(anchor, [
+    const items=[
       {label:"✏️ تعديل", onClick:()=> expOpenFixedForm(tplId)},
       {label:"💵 تسجيل دفعة", onClick:()=>{ const d=new Date(todayStr()+"T12:00:00"); expEnsureMonth(d.getFullYear(),d.getMonth()+1); const inst=expState.instances.find(i=>i.templateId===tplId&&i.year===d.getFullYear()&&i.month===d.getMonth()+1); if(inst) expOpenPaymentForm(inst.id); }},
       {label:"🕓 سجل الدفعات", onClick:()=> expShowPaymentHistory(tplId)},
-      {label: t.isActive?"⏸ إيقاف":"▶ تفعيل", onClick:()=>{ t.isActive=!t.isActive; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }},
-      {label:"🗑 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة هذا الالتزام؟", body:"سيختفي من الشهور الجديدة ويبقى في التقارير السابقة.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ t.archivedAt=Date.now(); t.isActive=false; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }})}
-    ]);
+      /* إيقاف/استئناف: يبقى في قائمة الالتزامات الشهرية بحالة «متوقف»، ولا يتحوّل لفئة أسبوعية */
+      {label: t.isActive?"⏸ إيقاف":"▶ استئناف", onClick:()=>{ t.isActive=!t.isActive; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }},
+      {label:"🗄 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة هذا الالتزام؟", body:"سيختفي من الشهور الجديدة ويبقى في التقارير السابقة.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ t.archivedAt=Date.now(); t.isActive=false; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }})}
+    ];
+    /* حذف نهائي متاح فقط عند عدم وجود معاملات مرتبطة */
+    if(expTplLinkedTxCount(tplId)===0){
+      items.push({label:"🗑 حذف", onClick:()=> hifzShowConfirm({title:"حذف هذا الالتزام؟", body:"لا توجد معاملات مرتبطة به.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{
+        expState.fixedTemplates=expState.fixedTemplates.filter(x=>x.id!==tplId);
+        expState.instances=expState.instances.filter(i=>i.templateId!==tplId);
+        expSave(expState); expRefresh(); }})});
+    }
+    expActionMenu(anchor, items);
   }
   function expCatMenu(anchor, catId){
     const c = expCatById(catId); if(!c) return;
@@ -8817,9 +8894,10 @@
   function expShowPaymentHistory(tplId){
     const t=expTplById(tplId); const linkedInsts=expState.instances.filter(i=>i.templateId===tplId).map(i=>i.id);
     const pays=expActiveTx().filter(x=>linkedInsts.indexOf(x.fixedExpenseInstanceId)>=0).sort((a,b)=>a.transactionDate<b.transactionDate?1:-1);
-    let list = pays.length? pays.map(p=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(p.transactionType==="refund"?"استرجاع":"دفعة")+' · '+expArDate(p.transactionDate)+'</div><div class="t-sub">'+(p.paymentMethod||"")+'</div></div><div class="t-amt '+(p.transactionType==="refund"?"refund":"")+'">'+(p.transactionType==="refund"?"−":"")+expMoney(p.amountMinor,false)+'</div><button class="exp-mini" data-deltx="'+p.id+'">🗑</button></div>').join("") : '<div class="exp-empty">لا دفعات مسجّلة.</div>';
+    let list = pays.length? pays.map(p=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(p.transactionType==="refund"?"استرجاع مبلغ":"دفعة")+' · '+expArDate(p.transactionDate)+'</div><div class="t-sub">'+(p.paymentMethod||"")+'</div></div><div class="t-amt '+(p.transactionType==="refund"?"refund":"")+'">'+(p.transactionType==="refund"?"−":"")+expMoney(p.amountMinor,false)+'</div>'+(p.transactionType==="refund"?'<button class="exp-mini" data-deltx="'+p.id+'">🗑</button>':'<button class="exp-mini" data-undopay="'+p.id+'" title="تراجع عن الدفع">↩︎</button>')+'</div>').join("") : '<div class="exp-empty">لا دفعات مسجّلة.</div>';
     expOpenForm('<div class="exp-form-head"><h3>سجل دفعات — '+expEsc(t?t.name:"")+'</h3><button data-close>✕</button></div>'+list+'<button class="exp-save" data-close>إغلاق</button>');
-    expFormBox.querySelectorAll("[data-deltx]").forEach(b=> b.onclick=()=>{ expDeleteTransaction(b.dataset.deltx); expCloseForm(); expRefresh(); expShowUndo("حُذفت الدفعة", b.dataset.deltx); });
+    expFormBox.querySelectorAll("[data-undopay]").forEach(b=> b.onclick=()=>{ expCloseForm(); expUndoPayment(b.dataset.undopay); });
+    expFormBox.querySelectorAll("[data-deltx]").forEach(b=> b.onclick=()=>{ expDeleteTransaction(b.dataset.deltx); expCloseForm(); expRefresh(); expShowUndo("حُذف الاسترجاع", b.dataset.deltx); });
   }
 
   function expOpenFixedForm(tplId){
@@ -8963,30 +9041,94 @@
     if(n) n.onclick=()=>{ shift(1); expRenderReport(); };
   }
   function expTxRow(t){
+    const isFixed = expClassify(t)==="fixed";
     const c=expCatById(t.categoryId);
-    const sub=[t.subcategory, t.purchaseMethod, t.context!=="عادي"?t.context:null, t.paymentMethod, t.description].filter(Boolean).join(" · ");
+    const trip = t.tripId? expTripById(t.tripId) : null;
+    /* العنوان الرئيسي لدفعة الالتزام = اسم الالتزام، لا الفئة الأسبوعية */
+    const name = isFixed ? expFixedTitle(t) : (c?(c.icon?c.icon+" ":"")+expEsc(c.name):"—");
+    const pill = isFixed ? ' <span class="exp-pill partial">التزام شهري</span>'
+               : (trip? ' <span class="exp-pill near">✈️ '+expEsc(trip.name)+'</span>' : "");
+    const reviewPill = t.needsReview ? ' <span class="exp-pill unpaid">يحتاج مراجعة</span>' : "";
+    /* لدفعة الالتزام: أظهر «دفعة» بدل تكرار الاسم في الوصف */
+    const subParts = isFixed
+      ? [t.paymentMethod, "دفعة"]
+      : [t.subcategory, t.purchaseMethod, t.context!=="عادي"?t.context:null, t.paymentMethod, t.description];
+    const sub=subParts.filter(Boolean).join(" · ");
     const amtCls=t.transactionType==="refund"?"refund":t.transactionType==="transfer"?"transfer":"";
     const sign=t.transactionType==="refund"?"−":t.transactionType==="transfer"?"⇄ ":"";
-    const trip = t.tripId? expTripById(t.tripId) : null;
     const fx = (t.originalAmountMinor!=null && t.originalCurrency)? ' · '+expMoney(t.originalAmountMinor,false)+' '+t.originalCurrency : '';
-    return '<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(c?(c.icon?c.icon+" ":"")+expEsc(c.name):"—")+(t.fixedExpenseInstanceId?' <span class="exp-pill paid">التزام</span>':"")+(trip?' <span class="exp-pill near">✈️ '+expEsc(trip.name)+'</span>':"")+'</div><div class="t-sub">'+expEsc(sub||expArDate(t.transactionDate))+fx+'</div></div>'+
+    return '<div class="exp-txitem"><div class="t-main"><div class="t-name">'+(isFixed?expEsc(name):name)+pill+reviewPill+'</div><div class="t-sub">'+expEsc(sub||expArDate(t.transactionDate))+fx+'</div></div>'+
       '<div class="t-amt '+amtCls+'">'+sign+expMoney(t.amountMinor,false)+'</div>'+
       '<button class="exp-mini" data-txmenu="'+t.id+'">⋯</button></div>';
   }
   function expWireTxMenus(container){
     container.querySelectorAll("[data-txmenu]").forEach(b=> b.onclick=()=>{
       const id=b.dataset.txmenu, t=expState.transactions.find(x=>x.id===id);
+      const isFixed = expClassify(t)==="fixed";
       const items=[{label:"✏️ تعديل", onClick:()=> expOpenExpenseForm(id)}];
-      if(t.transactionType==="expense") items.push({label:"↩️ تسجيل استرجاع", onClick:()=> expOpenRefundForm(id)});
+      if(t.transactionType==="expense"){
+        if(isFixed){
+          /* دفعة التزام: التراجع عن الدفع (تصحيح تسجيل خاطئ) — مختلف عن استرجاع مبلغ فعلي */
+          items.push({label:"↩︎ تراجع عن الدفع", onClick:()=> expUndoPayment(id)});
+        }
+        items.push({label:"💵 استرجاع مبلغ", onClick:()=> expOpenRefundForm(id)});
+      }
+      items.push({label:"🔀 تصحيح التصنيف", onClick:()=> expOpenReclassifyForm(id)});
       items.push({label:"🗑 حذف", onClick:()=>{ expDeleteTransaction(id); expRefresh(); expShowUndo("تم حذف المعاملة", id); }});
       expActionMenu(b, items);
     });
+  }
+  /* تراجع عن الدفع: عكس دفعة سُجّلت خطأً — حذف ناعم (tombstone) يُزامَن ويعيد حساب الالتزام، غير الاسترجاع الفعلي */
+  function expUndoPayment(txId){
+    hifzShowConfirm({
+      title:"هل تريد التراجع عن هذه الدفعة؟",
+      body:"سيتم عكس أثرها من الالتزام والتقارير.",
+      okText:"تراجع عن الدفع", cancelText:"إلغاء",
+      onOk:()=>{ expDeleteTransaction(txId); expRefresh(); expShowUndo("تراجعت عن الدفعة", txId); }
+    });
+  }
+  /* تصحيح التصنيف: نقل معاملة إلى «التزام شهري» (وربطها بالتزام) أو إلى «مصروف أسبوعي» (فئة) */
+  function expOpenReclassifyForm(txId){
+    const t=expState.transactions.find(x=>x.id===txId); if(!t) return;
+    const tpls=expState.fixedTemplates.filter(tp=>!tp.archivedAt);
+    const cats=expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    const curFixed = expClassify(t)==="fixed";
+    expOpenForm(
+      '<div class="exp-form-head"><h3>تصحيح التصنيف</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">'+expMoney(t.amountMinor)+' · '+expEsc(t.description||expArDate(t.transactionDate))+'</div>'+
+      '<div class="exp-field"><label>النوع</label><select id="rcType"><option value="fixed"'+(curFixed?" selected":"")+'>التزام شهري</option><option value="variable"'+(!curFixed?" selected":"")+'>مصروف أسبوعي</option></select></div>'+
+      '<div class="exp-field" id="rcFixedWrap"><label>نقل إلى التزام شهري</label><select id="rcTpl">'+(tpls.length?tpls.map(tp=>'<option value="'+tp.id+'"'+(expFixedTemplateOf(t)&&expFixedTemplateOf(t).id===tp.id?" selected":"")+'>'+expEsc(tp.name)+'</option>').join(""):'<option value="">لا توجد التزامات</option>')+'</select></div>'+
+      '<div class="exp-field" id="rcVarWrap" hidden><label>الفئة الأسبوعية</label><select id="rcCat">'+cats.map(c=>'<option value="'+c.id+'"'+(c.id===t.categoryId?" selected":"")+'>'+expEsc(c.name)+'</option>').join("")+'</select></div>'+
+      '<div class="exp-err" id="rcErr"></div>'+
+      '<button class="exp-save" id="rcSave">حفظ التصنيف</button>'
+    );
+    const g=id=>expFormBox.querySelector(id);
+    const sync=()=>{ const fx=g("#rcType").value==="fixed"; g("#rcFixedWrap").hidden=!fx; g("#rcVarWrap").hidden=fx; };
+    g("#rcType").onchange=sync; sync();
+    g("#rcSave").onclick=()=>{
+      if(expSaving) return;
+      if(g("#rcType").value==="fixed"){
+        const tplId=g("#rcTpl").value; if(!tplId){ g("#rcErr").textContent="اختر التزامًا."; return; }
+        const dt=new Date(t.transactionDate+"T12:00:00"), y=dt.getFullYear(), mo=dt.getMonth()+1;
+        expEnsureMonth(y,mo);
+        let inst=expState.instances.find(i=>i.templateId===tplId && i.year===y && i.month===mo);
+        if(!inst){ const tp=expTplById(tplId); inst={ id:newId(), templateId:tplId, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo), paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; expState.instances.push(inst); }
+        expSaving=true;
+        expEditTransaction(t.id, { sourceType:"fixed", fixedTemplateId:tplId, fixedExpenseInstanceId:inst.id, countAgainstWeeklyBudget:false, categoryId:null, needsReview:false, description:"دفعة: "+(expTplById(tplId).name) });
+      } else {
+        const catId=g("#rcCat").value; if(!catId){ g("#rcErr").textContent="اختر فئة."; return; }
+        expSaving=true;
+        expEditTransaction(t.id, { sourceType:null, fixedTemplateId:null, fixedExpenseInstanceId:null, countAgainstWeeklyBudget:true, categoryId:catId, needsReview:false });
+      }
+      expCloseForm(); expRefresh();
+    };
   }
   function expOpenRefundForm(txId){
     const t=expState.transactions.find(x=>x.id===txId); if(!t) return;
     const refunded=expActiveTx().filter(x=>x.relatedTransactionId===txId&&x.transactionType==="refund").reduce((a,x)=>a+x.amountMinor,0);
     const remain=Math.max(0, t.amountMinor-refunded);
-    expOpenForm('<div class="exp-form-head"><h3>تسجيل استرجاع</h3><button data-close>✕</button></div>'+
+    expOpenForm('<div class="exp-form-head"><h3>استرجاع مبلغ</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">استرجاع فعلي لمبلغ أُعيد من الجهة/المتجر (يختلف عن «تراجع عن الدفع»).</div>'+
       '<div class="exp-foot" style="border:none;margin:0 0 .8rem"><div class="exp-foot-row"><span>المبلغ الأصلي</span><b>'+expMoney(t.amountMinor)+'</b></div><div class="exp-foot-row"><span>المتبقي القابل للاسترجاع</span><b>'+expMoney(remain)+'</b></div></div>'+
       '<div class="exp-field"><label>مبلغ الاسترجاع (ر.س)</label><input class="amount" id="rfAmt" inputmode="decimal" value="'+(remain/100)+'"></div>'+
       '<div class="exp-err" id="rfErr"></div><button class="exp-save" id="rfSave">تسجيل الاسترجاع</button>');
@@ -9009,8 +9151,12 @@
     /* تفصيل عادي/سفر لصرف اليوم (لا يُطرح السفر من الإجمالي — الإجمالي يمثّل المال الفعلي) */
     const travelNet=expNetInRange(r, t=> t.tripId);
     const normalNet=net-travelNet;
-    const byCat=expByCategory(r);
+    /* «حسب الفئة» للمصروفات الأسبوعية المتغيّرة فقط — دفعات الالتزامات لا تُدرج هنا */
+    const byCat=expByCategory(r, t=>expClassify(t)!=="fixed");
     const catLines=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
+    const fixedTxs = txs.filter(t=> expClassify(t)==="fixed" && t.transactionType!=="refund");
+    const refundTxs = txs.filter(t=> t.transactionType==="refund");
+    const otherTxs = txs.filter(t=> expClassify(t)!=="fixed" && t.transactionType!=="refund");
     const body=document.getElementById("expReportBody");
     body.innerHTML=expNavBar(expArDate(expRepDate))+
       '<div class="exp-stat-grid"><div class="exp-stat"><small>صافي الصرف</small><b>'+expMoney(net)+'</b></div>'+
@@ -9018,7 +9164,9 @@
       '<div class="exp-stat"><small>استرجاعات</small><b>'+expMoney(refunds)+'</b></div></div>'+
       (travelNet!==0?'<div class="exp-foot" style="border:none;margin-bottom:.5rem"><div class="exp-foot-row"><span>عادي</span><b>'+expMoney(normalNet)+'</b></div><div class="exp-foot-row"><span>✈️ سفر</span><b>'+expMoney(travelNet)+'</b></div></div>':'')+
       (catLines?'<div class="exp-sec-head">حسب الفئة</div><div class="exp-foot" style="border:none">'+catLines+'</div>':'')+
-      '<div class="exp-sec-head">المعاملات</div>'+(txs.length? txs.map(expTxRow).join(""):'<div class="exp-empty">لا معاملات في هذا اليوم.</div>');
+      (fixedTxs.length?'<div class="exp-sec-head">الالتزامات الشهرية</div>'+fixedTxs.map(expTxRow).join(""):'')+
+      (refundTxs.length?'<div class="exp-sec-head">الاسترجاعات</div>'+refundTxs.map(expTxRow).join(""):'')+
+      '<div class="exp-sec-head">المصروفات الأسبوعية</div>'+(otherTxs.length? otherTxs.map(expTxRow).join(""):'<div class="exp-empty">لا مصروفات أسبوعية في هذا اليوم.</div>');
     expWireNav(d=>{ const nd=new Date(expRepDate+"T12:00:00"); nd.setDate(nd.getDate()+d); expRepDate=fmtDate(nd); });
     expWireTxMenus(body);
   }
@@ -9063,8 +9211,14 @@
     const insts=expMonthInstances(y,m);
     const unpaid=insts.filter(i=>i.status==="unpaid").reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
     const partial=insts.filter(i=>i.status==="partial").reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
-    const byCat=expByCategory(r); const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).slice(0,6);
+    /* أعلى الفئات = المتغيّرة فقط (استبعاد دفعات الالتزامات) */
+    const byCat=expByCategory(r, t=>expClassify(t)!=="fixed"); const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).slice(0,6);
     const catLines=catKeys.map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
+    /* دفعات الالتزامات الفعلية خلال الشهر (مجمّعة حسب الالتزام) */
+    const fixedPays=expTxInRange(r, t=> expClassify(t)==="fixed" && t.transactionType==="expense");
+    const fixedByTpl={}; fixedPays.forEach(t=>{ const nm=expFixedTitle(t); fixedByTpl[nm]=(fixedByTpl[nm]||0)+t.amountMinor; });
+    const fixedLines=Object.keys(fixedByTpl).sort((a,b)=>fixedByTpl[b]-fixedByTpl[a]).map(nm=>'<div class="exp-foot-row"><span>'+expEsc(nm)+'</span><b>'+expMoney(fixedByTpl[nm])+'</b></div>').join("");
+    const pausedCount=expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive).length;
     /* حسب الأسبوع */
     let weekBars=""; let ws=expWeekRange(r.start).start; let maxW=1; const weeks=[];
     for(let i=0;i<6;i++){ const wr={start:ws, end:expWeekRange(ws).end}; const clip={start:(wr.start<r.start?r.start:wr.start), end:(wr.end>r.end?r.end:wr.end)}; const v=expNetInRange(clip); weeks.push({label:expArDateShort(clip.start), v}); if(v>maxW)maxW=v; const nd=new Date(ws+"T12:00:00"); nd.setDate(nd.getDate()+7); ws=fmtDate(nd); if(ws>r.end) break; }
@@ -9079,7 +9233,8 @@
       '<div class="exp-stat"><small>التزامات غير مدفوعة</small><b>'+expMoney(unpaid)+'</b></div>'+
       '<div class="exp-stat"><small>مدفوعة جزئيًا (متبقٍ)</small><b>'+expMoney(partial)+'</b></div></div>'+
       '<div class="exp-sec-head">الإنفاق حسب الأسبوع</div><div class="exp-barmini">'+weekBars+'</div>'+
-      '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>';
+      '<div class="exp-sec-head">الالتزامات الشهرية (الدفعات)'+(pausedCount?' · '+_arn(pausedCount)+' متوقف':'')+'</div><div class="exp-foot" style="border:none">'+(fixedLines||'<div class="exp-empty">لا دفعات التزامات هذا الشهر.</div>')+'</div>'+
+      '<div class="exp-sec-head">أعلى الفئات (المتغيّرة)</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف متغيّر.</div>')+'</div>';
     expWireNav(dd=>{ const nd=new Date(y,m-1+dd,15); expRepDate=fmtDate(nd); });
   }
   function expReportYearly(){
@@ -9098,7 +9253,7 @@
     for(let mm=1;mm<=12;mm++){ const mr={start:y+"-"+_pad2(mm)+"-01", end:y+"-"+_pad2(mm)+"-"+_pad2(expLastDayOfMonth(y,mm))}; const v=expNetInRange(mr); months.push({mm,v}); if(v>maxM)maxM=v; }
     months.forEach(mo=> monthBars+='<div class="bm" title="'+EXP_MONTHS[mo.mm-1]+': '+expMoney(mo.v)+'"><i style="height:'+Math.max(3,Math.round((Math.max(0,mo.v)/maxM)*100))+'%"></i></div>');
     const topMonths=months.slice().sort((a,b)=>b.v-a.v).filter(m=>m.v>0).slice(0,3);
-    const byCat=expByCategory(yr); const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).slice(0,6);
+    const byCat=expByCategory(yr, t=>expClassify(t)!=="fixed"); const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).slice(0,6);
     const catLines=catKeys.map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
     const activeMonths=months.filter(m=>m.v>0).length||1;
     const avg=Math.round(total/activeMonths);
