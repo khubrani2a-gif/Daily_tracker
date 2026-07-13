@@ -478,16 +478,26 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
     ok("trips list: deleted trip row not shown (no data-triprow for TR)", !(await p.$('[data-triprow="TR"]')));
     ok("trips list shows the empty-state message (no live trips left)", tBody.includes("لا توجد رحلات"));
+    /* تراجع (استعادة) على مستوى البرمجة: يستعيد الرحلة + المعاملتين بالضبط، ويُعيد حساب المثيل الثابت */
+    const restoreRes = await p.evaluate((ids)=> window.__mfkrExp.restoreTripWithExpenses("TR", ids), [res.txIds[0], res.txIds[1]]);
+    ok("restoreTripWithExpenses returns {trip:1, transactions:2}", restoreRes.trip===1 && restoreRes.transactions===2);
+    const afterRestore = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("restore: trip live again", !afterRestore.trips.find(t=>t.id==="TR").deletedAt);
+    ok("restore: VT1 and FX1 live again", !afterRestore.transactions.find(t=>t.id==="VT1").deletedAt && !afterRestore.transactions.find(t=>t.id==="FX1").deletedAt);
+    ok("restore: fixed instance recalculated back to paid=50000/status=paid", afterRestore.instances.find(i=>i.id==="INST").paidAmountMinor===50000 && afterRestore.instances.find(i=>i.id==="INST").status==="paid");
+    ok("restore: N1 unaffected throughout", !afterRestore.transactions.find(t=>t.id==="N1").deletedAt);
     await p.close();
 
-    log("  7b. UI-driven: confirm dialog wording, then action removes trip+expenses from dashboard/reports");
+    log("  7b. UI-driven: exactly two delete choices + Cancel, dialog wording, action + Undo, unrelated tx never revived");
     Object.keys(store).forEach(k=> delete store[k]);
     const data2 = baseData({
       trips:[{id:"TR2",name:"مصيف",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
       transactions:[
         mk({id:"UX1", amountMinor:15000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false}),
         mk({id:"UX2", amountMinor:25000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false}),
-        mk({id:"UK1", amountMinor:10000, categoryId:"CA", tripId:null, countAgainstWeeklyBudget:true})
+        mk({id:"UK1", amountMinor:10000, categoryId:"CA", tripId:null, countAgainstWeeklyBudget:true}),
+        /* معاملة أُخرى بنفس الرحلة لكنها محذوفة سلفًا لسببٍ مختلف (قبل هذه العملية) — يجب ألّا يُحييها التراجع لاحقًا */
+        mk({id:"UOLD", amountMinor:5000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false, deletedAt:1, updatedAt:1})
       ]});
     const p2 = await device(b);
     await p2.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data2);
@@ -496,19 +506,24 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p2.click('.exp-tab[data-view="trips"]'); await p2.waitForTimeout(200);
     /* افتح قائمة خيارات الصفّ مباشرةً (النقر على الصفّ نفسه ينتقل لصفحة التفاصيل ويُزيل زرّ القائمة) */
     await p2.click('[data-tripmenu="TR2"]'); await p2.waitForTimeout(200);
-    /* افتح قائمة خيارات الرحلة ثم زر «حذف» → نافذة الخيارات الثلاثة (أرشفة/فكّ ارتباط/حذف مع مصاريفها) */
+    /* افتح قائمة خيارات الرحلة ثم زر «حذف» → شاشة الخيارَين + إلغاء */
     const menuItems = await p2.$$(".prio-menu-item");
     let clicked=false;
     for(const it of menuItems){ const t=(await it.textContent())||""; if(t.includes("حذف")){ await it.click(); clicked=true; break; } }
-    ok("trip menu 'حذف' opened the options form", clicked);
+    ok("trip menu 'حذف' opened the delete-choice form", clicked);
     await p2.waitForTimeout(200);
-    const formTxt = await p2.$eval("#expFormBox", e=>e.textContent).catch(()=>"");
-    ok("options form shows destructive option label 'حذف الرحلة مع مصاريفها'", formTxt.includes("حذف الرحلة مع مصاريفها"));
+    const optBtns = await p2.$$eval("#expFormBox .exp-optbtn", els=> els.map(e=>e.textContent));
+    ok("exactly two delete-option buttons shown (plus the header ✕ as Cancel)", optBtns.length===2);
+    ok("choice 1 label = 'حذف الرحلة فقط'", optBtns.some(t=>t.includes("حذف الرحلة فقط")));
+    ok("choice 2 label = 'حذف الرحلة مع مصاريفها'", optBtns.some(t=>t.includes("حذف الرحلة مع مصاريفها")));
+    ok("no archive option offered in this screen (kept separate elsewhere)", !optBtns.some(t=>t.includes("أرشفة")));
+    ok("no unlink option offered — neither choice is replaced by unlink", !optBtns.some(t=>t.includes("فكّ") || t.includes("إزالة ارتباط")));
+    ok("Cancel is available via the header ✕ (data-close)", !!(await p2.$("#expFormBox [data-close]")));
     await p2.click('[data-act="deleteall"]'); await p2.waitForTimeout(200);
     const dTitle = await p2.$eval("#hifzDialogTitle", e=>e.textContent).catch(()=>"");
     const dBody = await p2.$eval("#hifzDialogBody", e=>e.textContent).catch(()=>"");
     ok("confirm dialog title = 'حذف الرحلة مع مصاريفها؟'", dTitle.includes("حذف الرحلة مع مصاريفها"));
-    ok("confirm dialog states the exact linked-expense count (2)", dBody.includes("٢") && dBody.includes("مصروفًا"));
+    ok("confirm dialog states the exact LIVE linked-expense count (2, excludes the already-deleted UOLD)", dBody.includes("٢") && dBody.includes("مصروفًا"));
     ok("confirm dialog explains it removes them from reports", dBody.includes("التقارير"));
     ok("confirm dialog is for incorrect/undesired expenses", dBody.includes("الخاطئة") || dBody.includes("غير المرغوبة"));
     const okBtnTxt = await p2.$eval("#hifzDialogOk", e=>e.textContent).catch(()=>"");
@@ -516,8 +531,14 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p2.click("#hifzDialogOk"); await p2.waitForTimeout(500);
     const s2 = await p2.evaluate(()=> window.__mfkrExp.state());
     ok("UI action: trip tombstoned", !!s2.trips.find(t=>t.id==="TR2").deletedAt);
-    ok("UI action: both linked tx tombstoned", !!s2.transactions.find(t=>t.id==="UX1").deletedAt && !!s2.transactions.find(t=>t.id==="UX2").deletedAt);
+    ok("UI action: both LIVE linked tx tombstoned", !!s2.transactions.find(t=>t.id==="UX1").deletedAt && !!s2.transactions.find(t=>t.id==="UX2").deletedAt);
     ok("UI action: unrelated UK1 untouched", !s2.transactions.find(t=>t.id==="UK1").deletedAt);
+    const uoldDeletedAtAfterDelete = s2.transactions.find(t=>t.id==="UOLD").deletedAt;
+    ok("UI action: pre-existing UOLD stays deleted (its original tombstone, untouched by this batch)", uoldDeletedAtAfterDelete===1);
+    /* شريط التراجع يظهر فورًا بعد الحذف */
+    ok("Undo snackbar is visible right after the destructive delete", !(await p2.$eval("#expUndo", e=>e.hidden)));
+    const undoTxt = await p2.$eval("#expUndoText", e=>e.textContent);
+    ok("Undo snackbar text mentions the trip+expenses deletion", undoTxt.includes("حُذفت الرحلة"));
     /* لا تظهر الرحلة/معاملاتها في أي مسار عرض بعد ذلك (شارة الإطلاق تُحدَّث مع كل expRefresh بصرف النظر عن العرض الحالي) */
     ok("launch banner: no travel banner for the deleted trip", await p2.evaluate(()=> !!document.getElementById("expLaunchBanner") && document.getElementById("expLaunchBanner").hidden));
     await p2.click('.exp-tab[data-view="reports"]'); await p2.waitForTimeout(150);
@@ -525,7 +546,64 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("daily report: no row for deleted UX1", !(await p2.$('[data-txmenu="UX1"]')));
     ok("daily report: no row for deleted UX2", !(await p2.$('[data-txmenu="UX2"]')));
     ok("daily report: unrelated UK1 still shown", !!(await p2.$('[data-txmenu="UK1"]')));
+    /* التراجع: يستعيد الرحلة وتحديدًا UX1/UX2 (دفعة هذا الحذف)، ولا يُحيي UOLD المحذوفة سلفًا لسببٍ آخر */
+    await p2.click("#expUndoBtn"); await p2.waitForTimeout(400);
+    const s3 = await p2.evaluate(()=> window.__mfkrExp.state());
+    ok("Undo: trip restored (deletedAt cleared)", !s3.trips.find(t=>t.id==="TR2").deletedAt);
+    ok("Undo: UX1 and UX2 restored (deletedAt cleared)", !s3.transactions.find(t=>t.id==="UX1").deletedAt && !s3.transactions.find(t=>t.id==="UX2").deletedAt);
+    ok("Undo: pre-existing UOLD NOT revived by this undo (still deleted, unrelated batch)", !!s3.transactions.find(t=>t.id==="UOLD").deletedAt);
+    ok("Undo: restored records got a fresh updatedAt (bumped for sync convergence)", s3.trips.find(t=>t.id==="TR2").updatedAt>1 && s3.transactions.find(t=>t.id==="UX1").updatedAt>1);
+    ok("Undo: snackbar hides itself after the action", await p2.evaluate(()=> document.getElementById("expUndo").hidden));
+    /* التقارير: الإجماليات تعود بعد التراجع */
+    await p2.click('.exp-tab[data-rep="daily"]'); await p2.waitForTimeout(200);
+    ok("Undo: daily report shows UX1 row again", !!(await p2.$('[data-txmenu="UX1"]')));
+    ok("Undo: daily report shows UX2 row again", !!(await p2.$('[data-txmenu="UX2"]')));
     await p2.close();
+  }
+  }
+
+  /* trip-only delete: transactions are never touched, and Undo restores the trip alone */
+  if(want("7c")){
+  log("\n[7c] 'حذف الرحلة فقط' (trip-only): expenses never touched, Undo restores exactly the trip");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    const data = baseData({
+      trips:[{id:"TR4",name:"جولة",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      transactions:[
+        mk({id:"PX1", amountMinor:12000, categoryId:"CA", tripId:"TR4", countAgainstWeeklyBudget:false}),
+        mk({id:"PX2", amountMinor:8000, categoryId:"CA", tripId:"TR4", countAgainstWeeklyBudget:false})
+      ]});
+    const p = await device(b);
+    await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
+    await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"7c");
+    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    await p.click('[data-tripmenu="TR4"]'); await p.waitForTimeout(200);
+    const menuItems = await p.$$(".prio-menu-item");
+    for(const it of menuItems){ const t=(await it.textContent())||""; if(t.includes("حذف")){ await it.click(); break; } }
+    await p.waitForTimeout(200);
+    await p.click('[data-act="triponly"]'); await p.waitForTimeout(200);
+    const dTitle = await p.$eval("#hifzDialogTitle", e=>e.textContent).catch(()=>"");
+    const dBody = await p.$eval("#hifzDialogBody", e=>e.textContent).catch(()=>"");
+    ok("trip-only confirm dialog title = 'حذف الرحلة فقط؟'", dTitle.includes("حذف الرحلة فقط"));
+    ok("trip-only confirm explains expenses stay in their categories/monthly reports", dBody.includes("فئاتها") && dBody.includes("تقاريرها الشهرية"));
+    await p.click("#hifzDialogOk"); await p.waitForTimeout(500);
+    const s1 = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("trip-only: trip tombstoned", !!s1.trips.find(t=>t.id==="TR4").deletedAt);
+    ok("trip-only: PX1/PX2 NEVER touched (deletedAt still null, tripId still TR4)", !s1.transactions.find(t=>t.id==="PX1").deletedAt && s1.transactions.find(t=>t.id==="PX1").tripId==="TR4" && !s1.transactions.find(t=>t.id==="PX2").deletedAt);
+    /* المصاريف تبقى في التقارير الشهرية رغم حذف الرحلة (التصنيف يعتمد على categoryId لا على حياة الرحلة) */
+    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
+    ok("trip-only: monthly net total STILL includes the 200 (12000+8000/100) from the now-deleted trip's expenses", (await stat(p,"الإجمالي الصافي"))==="٢٠٠ ر.س");
+    ok("Undo snackbar visible after trip-only delete", !(await p.$eval("#expUndo", e=>e.hidden)));
+    const undoTxt = await p.$eval("#expUndoText", e=>e.textContent);
+    ok("Undo snackbar text reflects trip-only deletion (mentions expenses were kept)", undoTxt.includes("بقيت مصاريفها"));
+    await p.click("#expUndoBtn"); await p.waitForTimeout(400);
+    const s2 = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("Undo: trip restored", !s2.trips.find(t=>t.id==="TR4").deletedAt);
+    ok("Undo: expenses still untouched (were never deleted to begin with)", !s2.transactions.find(t=>t.id==="PX1").deletedAt && !s2.transactions.find(t=>t.id==="PX2").deletedAt);
+    ok("Undo: trip got a fresh updatedAt", s2.trips.find(t=>t.id==="TR4").updatedAt>1);
+    await p.close();
   }
   }
 

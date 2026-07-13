@@ -8215,9 +8215,13 @@
         raw:()=> JSON.parse(localStorage.getItem(EXP_KEY)),
         reload:()=> expRetryLoad(),
         deleteTrip:(id)=> expDeleteTrip(id),
+        restoreDeletedTrip:(id)=> expRestoreDeletedTrip(id),
         deleteTripWithExpenses:(id)=> expDeleteTripWithExpenses(id),
+        restoreTripWithExpenses:(id,txIds)=> expRestoreTripWithExpenses(id,txIds),
         tripLinkedLiveTxCount:(id)=> expTripLinkedLiveTxCount(id),
         unlinkTrip:(id)=> expUnlinkTripTransactions(id),
+        showUndo:(text,fn)=> expShowUndoAction(text, fn),
+        deleteTripFlow:(id)=> expDeleteTripFlow(id),
         setActive:(id,on)=> expSetManualActive(id,on),
         reconcileActive:()=> { const c=expReconcileActiveTrips(expState); expSave(expState); return c; },
         activeTrips:()=> expGetActiveTrips().map(t=>t.id),
@@ -8965,25 +8969,34 @@
   /* حذف رحلة مرتبطة بمصاريف: فكّ الارتباط دون حذف المعاملات */
   function expUnlinkTripTransactions(id){ expState.transactions.forEach(t=>{ if(t.tripId===id){ t.tripId=null; t.updatedAt=Date.now(); } }); expSave(expState); }
   /* حذف الرحلة = شاهدة قبر (tombstone) لا إزالة فيزيائية: يتقارب الحذف عبر الأجهزة ولا يُحييه اتحادٌ من نسخة أقدم.
-     لا نلمس أي معاملة هنا (فكّ الارتباط يتم قبلها عند «فكّ واحذف»). */
+     لا نلمس أي معاملة هنا — هذا خيار «حذف الرحلة فقط»: تبقى مصاريفها في فئاتها وتقاريرها الشهرية كما هي. */
   function expDeleteTrip(id){
     const t=(expState.trips||[]).find(x=> x && x.id===id && !x.deletedAt); if(!t) return;
     t.deletedAt=Date.now(); t.isManuallyActivated=false; t.updatedAt=Date.now();
     if(expActiveTripId===id) expActiveTripId=null;
     expSave(expState);
   }
+  /* استعادة فورية (تراجع) لحذف «الرحلة فقط» — يعيد الرحلة تحديدًا من شاهدة القبر؛ لا يلمس أي معاملة
+     (لم تُمَسّ أصلًا بهذا الخيار). يبصم updatedAt جديدًا كي يتقارب عبر الأجهزة. */
+  function expRestoreDeletedTrip(id){
+    const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt); if(!t) return false;
+    t.deletedAt=null; t.updatedAt=Date.now();
+    expSave(expState);
+    return true;
+  }
   /* حذف مُدمَّر صراحةً بإذن المستخدم: يحذف الرحلة ويحذف كل معاملاتها الحيّة المرتبطة (شاهدة قبر لكلّ سجلّ،
      لا إزالة فيزيائية) — بخلاف «فكّ الارتباط» الذي يُبقي المعاملات. دفعات الالتزامات الثابتة المرتبطة بالرحلة
      تُحذف أيضًا هنا (سجلّها لا يزال معاملة)، وتُعاد حساب مثيلاتها المتأثرة من مصدر الحقيقة بعد الحذف.
-     كتابة واحدة مُجمَّعة (expSave مرّة واحدة) لتفادي ضجيج المزامنة. */
+     كتابة واحدة مُجمَّعة (expSave مرّة واحدة) لتفادي ضجيج المزامنة. يُعيد معرّفات المعاملات المحذوفة تحديدًا
+     في هذه الدفعة (txIds) كي يستعيد التراجع نفس المجموعة بالضبط، لا أي سجلّ آخر محذوف لسببٍ مختلف. */
   function expDeleteTripWithExpenses(id){
-    const t=(expState.trips||[]).find(x=> x && x.id===id && !x.deletedAt); if(!t) return {trip:0, transactions:0};
+    const t=(expState.trips||[]).find(x=> x && x.id===id && !x.deletedAt); if(!t) return {trip:0, transactions:0, txIds:[]};
     const now=Date.now();
     const affectedInstIds=new Set();
-    let txCount=0;
+    const txIds=[];
     (expState.transactions||[]).forEach(x=>{
       if(!x || x.deletedAt || x.tripId!==id) return;
-      x.deletedAt=now; x.updatedAt=now; txCount++;
+      x.deletedAt=now; x.updatedAt=now; txIds.push(x.id);
       if(x.fixedExpenseInstanceId) affectedInstIds.add(x.fixedExpenseInstanceId);
     });
     t.deletedAt=now; t.isManuallyActivated=false; t.updatedAt=now;
@@ -8991,7 +9004,26 @@
     /* أعِد حساب المثيلات المتأثرة فقط (المصدر الوحيد للحقيقة: المعاملات الحيّة المتبقّية) */
     affectedInstIds.forEach(instId=>{ const inst=expInstById(instId); if(inst) expRecalcInstance(inst); });
     expSave(expState);   /* كتابة واحدة مُجمَّعة للرحلة+المعاملات+المثيلات */
-    return {trip:1, transactions:txCount};
+    return {trip:1, transactions:txIds.length, txIds};
+  }
+  /* استعادة فورية (تراجع) لحذف «الرحلة مع مصاريفها» — يستعيد الرحلة تحديدًا وكل معاملة ضمن txIds المحذوفة
+     في تلك الدفعة بالذات (لا يستعيد أي معاملة أخرى بنفس tripId قد تكون محذوفة سلفًا لسببٍ مختلف).
+     يعيد حساب المثيلات المتأثرة، ويبصم updatedAt جديدًا للسجلات المستعادة كي يتقارب عبر الأجهزة. */
+  function expRestoreTripWithExpenses(id, txIds){
+    const now=Date.now();
+    const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt);
+    let restoredTrip=0, restoredTx=0;
+    if(t){ t.deletedAt=null; t.updatedAt=now; restoredTrip=1; }
+    const idSet=new Set(txIds||[]);
+    const affectedInstIds=new Set();
+    (expState.transactions||[]).forEach(x=>{
+      if(!x || !idSet.has(x.id) || !x.deletedAt) return;   /* استُعيدت سلفًا أو ليست ضمن هذه الدفعة تحديدًا */
+      x.deletedAt=null; x.updatedAt=now; restoredTx++;
+      if(x.fixedExpenseInstanceId) affectedInstIds.add(x.fixedExpenseInstanceId);
+    });
+    affectedInstIds.forEach(instId=>{ const inst=expInstById(instId); if(inst) expRecalcInstance(inst); });
+    if(restoredTrip || restoredTx>0) expSave(expState);
+    return {trip:restoredTrip, transactions:restoredTx};
   }
   /* عدد المعاملات الحيّة المرتبطة برحلة (للتحذير قبل الحذف المُدمَّر) */
   function expTripLinkedLiveTxCount(id){ return (expState.transactions||[]).filter(x=> x && !x.deletedAt && x.tripId===id).length; }
@@ -9474,14 +9506,17 @@
     expFormBox.querySelectorAll("[data-scopeval]").forEach(b=> b.onclick=()=>{ const v=b.dataset.scopeval; cb(v); });
   }
 
-  /* ---------- التراجع بعد الحذف ---------- */
-  function expShowUndo(text, txId){
+  /* ---------- التراجع بعد الحذف (شريط مؤقّت، بلا وجوب التراجع بعد انتهاء المهلة) ----------
+     خطّاف عام: نداءٌ جديد يُلغي/يُعيد تشغيل أيّ عدّاد وزرّ سابقَين نظيفًا (استبدال onclick + إعادة ضبط المؤقّت)،
+     فلا يتراكم تراجعان معًا ولا يبقى زرٌّ قديم يستعيد سجلًّا تجاوزته مهلته. */
+  function expShowUndoAction(text, restoreFn){
     const bar=document.getElementById("expUndo"); document.getElementById("expUndoText").textContent=text;
     bar.hidden=false; if(expUndoTimer) clearTimeout(expUndoTimer);
     const btn=document.getElementById("expUndoBtn");
-    btn.onclick=()=>{ expRestoreTransaction(txId); bar.hidden=true; expRefresh(); };
+    btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
     expUndoTimer=setTimeout(()=>{ bar.hidden=true; }, 6000);
   }
+  function expShowUndo(text, txId){ expShowUndoAction(text, ()=> expRestoreTransaction(txId)); }
 
   /* ---------- التقارير ---------- */
   function expRenderReport(){
@@ -9842,23 +9877,42 @@
     }
     expActionMenu(anchor, items);
   }
-  /* حذف رحلة مرتبطة بمصاريف: أرشفة / فكّ الارتباط / إلغاء — لا تُحذف المعاملات أبدًا */
+  /* حذف رحلة: لا مصاريف مرتبطة → تأكيد مباشر «حذف الرحلة فقط» (لا شيء آخر يتأثر).
+     مصاريف مرتبطة → بالضبط خياران صريحان للحذف + إلغاء (✕)؛ الأرشفة تبقى فعلًا مستقلًا في قائمة الرحلة
+     نفسها (لا تُعرض هنا)، وفكّ الارتباط لا يحلّ محلّ أيًّا من الخيارين. كل حذف يُظهر شريط تراجع فوري مؤقّت. */
   function expDeleteTripFlow(tripId){
     const linked=expState.transactions.filter(t=>t.tripId===tripId && !t.deletedAt).length;
-    if(!linked){ hifzShowConfirm({title:"حذف الرحلة؟", body:"لا مصاريف مرتبطة بها.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{ expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); return; }
-    expOpenForm('<div class="exp-form-head"><h3>هذه الرحلة مرتبطة بمصاريف مسجّلة</h3><button data-close>✕</button></div>'+
-      '<div class="exp-card-hint">لديها '+_arn(linked)+' معاملة مرتبطة. ماذا تريد أن تفعل؟</div>'+
-      '<button class="exp-optbtn" data-act="archive">🗑 أرشفة الرحلة<small>تبقى المصاريف والتقارير كما هي</small></button>'+
-      '<button class="exp-optbtn" data-act="unlink">🔗 إزالة ارتباط الرحلة من المصاريف<small>تبقى كل المعاملات بلا رحلة</small></button>'+
-      '<button class="exp-optbtn danger" data-act="deleteall" style="border-color:#dc2626;color:#dc2626">🗑️ حذف الرحلة مع مصاريفها<small>حذف نهائي من التقارير — لا رجوع إلا بالاستعادة اليدوية</small></button>');
-    expFormBox.querySelector('[data-act="archive"]').onclick=()=>{ expArchiveTrip(tripId); expCloseForm(); expTripDetailId=null; expSetView("trips"); };
-    expFormBox.querySelector('[data-act="unlink"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({title:"تأكيد إزالة الارتباط", body:"سيُزال ربط الرحلة من "+_arn(linked)+" معاملة (تبقى المعاملات). ثم تُحذف الرحلة. متابعة؟", okText:"نعم، أزل الارتباط واحذف", cancelText:"إلغاء", onOk:()=>{ expUnlinkTripTransactions(tripId); expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); };
-    /* حذف مُدمَّر بإذن صريح من المستخدم: يحذف الرحلة ومعاملاتها المرتبطة معًا (شاهدة قبر لكلٍّ منها) */
+    if(!linked){
+      hifzShowConfirm({title:"حذف الرحلة؟", body:"لا مصاريف مرتبطة بها.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{
+        expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة", ()=> expRestoreDeletedTrip(tripId));
+      }});
+      return;
+    }
+    expOpenForm('<div class="exp-form-head"><h3>حذف الرحلة</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">لديها '+_arn(linked)+' معاملة مرتبطة. اختر إحدى طريقتَي الحذف:</div>'+
+      '<button class="exp-optbtn" data-act="triponly">🗑️ حذف الرحلة فقط<small>تبقى '+_arn(linked)+' مصروفًا في فئاتها وتقاريرها الشهرية</small></button>'+
+      '<button class="exp-optbtn danger" data-act="deleteall" style="border-color:#dc2626;color:#dc2626">🗑️❌ حذف الرحلة مع مصاريفها<small>سيختفي '+_arn(linked)+' مصروفًا من التقارير</small></button>');
+    /* الخيار ١: حذف الرحلة فقط — لا تُلمَس المعاملات إطلاقًا (لا حذف، لا فكّ ارتباط) */
+    expFormBox.querySelector('[data-act="triponly"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({
+      title:"حذف الرحلة فقط؟",
+      body:"ستُحذف الرحلة نفسها فقط، وتبقى مصاريفها ("+_arn(linked)+") كما هي دون أي تغيير في فئاتها وتقاريرها الشهرية. هل تريد المتابعة؟",
+      okText:"نعم، احذف الرحلة فقط", cancelText:"إلغاء",
+      onOk:()=>{
+        expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة (بقيت مصاريفها)", ()=> expRestoreDeletedTrip(tripId));
+      }
+    }); };
+    /* الخيار ٢: حذف مُدمَّر بإذن صريح من المستخدم — يحذف الرحلة ومعاملاتها المرتبطة معًا (شاهدة قبر لكلٍّ منها) */
     expFormBox.querySelector('[data-act="deleteall"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({
       title:"حذف الرحلة مع مصاريفها؟",
-      body:"سيُزيل هذا "+_arn(linked)+" مصروفًا من التقارير الشهرية وحسب الفئة، بشكل نهائي من واجهة الاستخدام. استخدمه فقط للمصاريف الخاطئة أو غير المرغوبة. لا يمكن التراجع عن هذا إلا باستعادة يدوية لاحقة. هل أنت متأكد؟",
+      body:"سيُزيل هذا "+_arn(linked)+" مصروفًا من التقارير الشهرية وحسب الفئة. استخدمه فقط للمصاريف الخاطئة أو غير المرغوبة. يمكنك التراجع فور الحذف من الشريط الذي سيظهر أسفل الشاشة لفترة محدودة. هل أنت متأكد؟",
       okText:"نعم، احذف الرحلة والمصاريف", cancelText:"إلغاء",
-      onOk:()=>{ expDeleteTripWithExpenses(tripId); expTripDetailId=null; expSetView("trips"); expRefresh(); }
+      onOk:()=>{
+        const res=expDeleteTripWithExpenses(tripId);
+        expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة ومصاريفها ("+_arn(res.transactions)+")", ()=> expRestoreTripWithExpenses(tripId, res.txIds));
+      }
     }); };
   }
   function expOpenTripDetail(id){ expTripDetailId=id; if(expCurView!=="trips"){ expSetView("trips"); } expRenderTripDetail(); }
