@@ -30,9 +30,10 @@ const today = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getM
 /* ---- حالة تحكّم في‑الذاكرة (تُعدَّل من Node بين الخطوات) ---- */
 const store = {};
 const writeCount = {};
+const readCount = {};           // عدّاد القراءات الفيزيائية (server/default) لكل مسار
 let serverDown = false;         // إسقاط قراءات source:"server" فقط
 let writeFailPath = null;       // سلسلة جزئية: أي set على مسار يحويها يفشل
-let readDelayPath = null, readDelayMs = 0;   // إبطاء قراءات مسار (لاختبار القفل)
+let readDelayPath = null, readDelayMs = 0;   // إبطاء قراءات مسار (لاختبار الانضمام)
 
 /* بديل Firebase compat أمين يميّز مصدر القراءة ويحقن الأعطال/التأخير */
 const FAKE = `
@@ -71,7 +72,8 @@ async function device(b){
   await p.exposeBinding("__rSet",(s,path,json)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; store[path]=json; writeCount[path]=(writeCount[path]||0)+1; return false; });
   await p.exposeBinding("__rDel",(s,path)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; delete store[path]; return false; });
   await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
-  await p.exposeBinding("__rRead",(s,path,src)=>({ reject: (serverDown && src==="server"), fromCache: (src==="cache"), delay: (readDelayPath && path.indexOf(readDelayPath)>=0)? readDelayMs : 0 }));
+  await p.exposeBinding("__rRead",(s,path,src)=>{ if(src!=="cache") readCount[path]=(readCount[path]||0)+1; return { reject: (serverDown && src==="server"), fromCache: (src==="cache"), delay: (readDelayPath && path.indexOf(readDelayPath)>=0)? readDelayMs : 0 }; });
+  await p.addInitScript(()=>{ window.__MFKR_TEST__ = true; });   // enable write-capable sync test hook
   await p.addInitScript(FAKE);
   return p;
 }
@@ -139,64 +141,131 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   writeFailPath = null;
   await D.close();
 
-  console.log("4. Reconciliation write failure is VISIBLE (daily) — not reported as success");
+  console.log("4. Reconciliation write failure accounting — DAILY (blocker 2)");
   // local day newer than remote → pullRemote reconciles via pushRemote; make that write fail
   store[dayKey] = JSON.stringify({date:today(), prayers:[false,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:1000});
   const E = await device(b);
   await E.addInitScript((tk)=>{ localStorage.setItem("h2do-tracker:"+tk, JSON.stringify({date:tk, prayers:[true,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], rating:0, updatedAt:9e14})); }, today());
   writeFailPath = "/days/";   // set BEFORE load so the reconcile write never succeeds (auth pull included)
   await E.goto(fileUrl); await E.waitForTimeout(400);
-  await E.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});   // let the auth-time daily lock clear
+  await E.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});
+  const before4 = await E.evaluate(()=> window.__mfkrSync.module("daily").lastServerSuccessAt);
   const dRes = await E.evaluate(()=> window.__mfkrSync.pullAll("recon-fail", {}).then(r=> (r.results||[]).find(x=>x&&x.module==="daily")));
-  ok("daily reconcile-write failure surfaces as failed status", dRes && dRes.status==="failed" && dRes.reconWriteOk===false);
+  ok("daily reconcile-write failure → status 'failed'", dRes && dRes.status==="failed" && dRes.reconWriteOk===false);
   const mDaily = await E.evaluate(()=> window.__mfkrSync.module("daily"));
-  ok("daily module records reconWriteFailed error", mDaily && mDaily.lastError==="reconWriteFailed");
+  ok("daily lastError === 'reconWriteFailed'", mDaily && mDaily.lastError==="reconWriteFailed");
+  ok("daily lastServerSuccessAt did NOT advance on failed reconcile", mDaily.lastServerSuccessAt===before4);
+  const sum4 = await E.evaluate(()=> window.__mfkrSync.summary());
+  ok("global summary is NOT 'ok' while a module failed", sum4.state!=="ok");
   writeFailPath = null;
   await E.close();
 
-  console.log("5. Real per-module in-flight LOCK — concurrent expenses pull returns throttled");
+  console.log("4b. Reconciliation write failure accounting — EXPENSES (blocker 2)");
   store[expKey] = seedExp();
-  const F = await device(b); await F.goto(fileUrl); await F.waitForTimeout(800);
-  readDelayPath = "meta/expenses"; readDelayMs = 400;   // make the first read slow so the second overlaps
-  const lockRes = await F.evaluate(()=>{
-    const p1 = window.__mfkrSync.expPull({trigger:"lockA"});
-    const p2 = window.__mfkrSync.expPull({trigger:"lockB"});   // fired while p1 in flight
-    return Promise.all([p1, p2]).then(([r1,r2])=>({r1:r1&&r1.status, r2:r2&&r2.status}));
+  const Eb = await device(b);
+  await Eb.goto(fileUrl); await Eb.waitForTimeout(800);
+  await Eb.waitForFunction(()=> !window.__mfkrSync.inFlight("expenses"), null, {timeout:5000}).catch(()=>{});
+  const beforeSrv = await Eb.evaluate(()=> window.__mfkrSync.module("expenses").lastServerSuccessAt);
+  const beforeSync = await Eb.evaluate(()=>{ try{ return (JSON.parse(localStorage.getItem("h2do-expenses-syncmeta"))||{}).lastSyncAt||0; }catch(e){ return 0; } });
+  // server doc now missing (server-empty branch) → app pushes local; make that push fail
+  delete store[expKey];
+  writeFailPath = "meta/expenses";
+  const xRes = await Eb.evaluate(()=> window.__mfkrSync.expPull({trigger:"exp-recon-fail"}).then(r=>r));
+  ok("expenses reconcile-write failure → status 'failed'", xRes && xRes.status==="failed" && xRes.reconWriteOk===false);
+  const mExpF = await Eb.evaluate(()=> window.__mfkrSync.module("expenses"));
+  ok("expenses lastError === 'reconWriteFailed'", mExpF && mExpF.lastError==="reconWriteFailed");
+  ok("expenses lastServerSuccessAt did NOT advance", mExpF.lastServerSuccessAt===beforeSrv);
+  const afterSync = await Eb.evaluate(()=>{ try{ return (JSON.parse(localStorage.getItem("h2do-expenses-syncmeta"))||{}).lastSyncAt||0; }catch(e){ return 0; } });
+  ok("expenses visible lastSyncAt did NOT advance", afterSync===beforeSync);
+  const sum4b = await Eb.evaluate(()=> window.__mfkrSync.summary());
+  ok("global summary is NOT 'ok' after expenses reconcile failure", sum4b.state!=="ok");
+  writeFailPath = null;
+  await Eb.close();
+
+  console.log("5. JOIN under overlap (blocker 1): newer data applied, one physical read, no stuck 'syncing'");
+  // fresh remote day OLDER; we will bump it to NEWER right before the overlapping runs
+  store[dayKey] = JSON.stringify({date:today(), prayers:[false,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:1000});
+  const F = await device(b); await F.goto(fileUrl); await F.waitForTimeout(700);
+  await F.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});
+  // newer data on server; delay the daily read so run B overlaps run A
+  store[dayKey] = JSON.stringify({date:today(), prayers:[true,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:9e14});
+  readCount[dayKey] = 0;
+  readDelayPath = "/days/"; readDelayMs = 500;
+  const joinRes = await F.evaluate(()=>{
+    const rA = window.__mfkrSync.pullAll("A-owner", {});     // owns the slow real read
+    return new Promise((resolve)=> setTimeout(()=>{
+      const rB = window.__mfkrSync.pullAll("B-newer", {});   // starts while A in flight → joins A's daily promise
+      Promise.all([rA, rB]).then(([a,bb])=> resolve({
+        aDaily:(a.results||[]).find(r=>r&&r.module==="daily"),
+        bDaily:(bb.results||[]).find(r=>r&&r.module==="daily"),
+        bLatest: bb.isLatest()
+      }));
+    }, 80));
   });
-  ok("second concurrent expenses pull is throttled by the lock", lockRes.r2==="throttled");
-  ok("first concurrent expenses pull completed (success)", lockRes.r1==="success" || lockRes.r1==="cacheFallback");
   readDelayPath = null; readDelayMs = 0;
+  await F.waitForTimeout(150);
+  const ls = await F.evaluate((tk)=> JSON.parse(localStorage.getItem("h2do-tracker:"+tk)), today());
+  ok("newer server data reached local state (prayers[0]=true)", ls && ls.prayers && ls.prayers[0]===true);
+  const domChecked = await F.evaluate(()=> !!document.querySelector('#prayers .prayer.done'));
+  ok("rendered UI reflects the newer data (a prayer shows done)", domChecked);
+  ok("exactly one physical read for daily despite two overlapping runs", (readCount[dayKey]||0)===1);
+  const st5 = await F.evaluate(()=> window.__mfkrSync.state());
+  const allIdle = Object.keys(st5).every(k=> st5[k].inFlight===false);
+  ok("all module inFlight flags are false after join settles", allIdle);
+  const sum5 = await F.evaluate(()=> window.__mfkrSync.summary());
+  ok("global status is NOT left on 'syncing'", sum5.state!=="syncing");
+  ok("newer joined run reports valid daily result (not throttled)", joinRes.bDaily && joinRes.bDaily.status!=="throttled");
   await F.close();
 
-  console.log("5b. In-flight lock also protects Quran/Witr/Hifz/CustomWorship");
+  console.log("5b. JOIN generalises to a meta-doc module (Quran) — one physical read under overlap");
   store["users/U1/meta/quran"] = JSON.stringify({page:10,target:5,dayAnchor:today(),startPage:10,updatedAt:5});
-  const G = await device(b); await G.goto(fileUrl); await G.waitForTimeout(800);
-  readDelayPath = "meta/quran"; readDelayMs = 400;
-  const qLock = await G.evaluate(()=>{
-    // reach qPullRemote indirectly is not exposed; use two coordinator runs — second finds quran in-flight
-    const p1 = window.__mfkrSync.pullAll("qA", {});
-    const p2 = window.__mfkrSync.pullAll("qB", {});
-    return Promise.all([p1,p2]).then(([a,b])=>{
-      const q2 = (b.results||[]).find(r=>r&&r.module==="quran");
-      return q2 && q2.status;
-    });
-  });
-  ok("quran pull throttled when a prior run holds its lock", qLock==="throttled");
+  const qk = "users/U1/meta/quran";
+  const G = await device(b); await G.goto(fileUrl); await G.waitForTimeout(700);
+  await G.waitForFunction(()=> !window.__mfkrSync.inFlight("quran"), null, {timeout:5000}).catch(()=>{});
+  store[qk] = JSON.stringify({page:222,target:5,dayAnchor:today(),startPage:222,updatedAt:9e14});
+  readCount[qk] = 0;
+  readDelayPath = "meta/quran"; readDelayMs = 500;
+  await G.evaluate(()=>{ const rA=window.__mfkrSync.pullAll("qA",{}); return new Promise(res=> setTimeout(()=>{ const rB=window.__mfkrSync.pullAll("qB",{}); Promise.all([rA,rB]).then(()=>res()); }, 80)); });
   readDelayPath = null; readDelayMs = 0;
+  const qLocal = await G.evaluate(()=> JSON.parse(localStorage.getItem("h2do-quran")));
+  ok("newer quran data reached local state (page=222)", qLocal && qLocal.page===222);
+  ok("exactly one physical read for quran despite two overlapping runs", (readCount[qk]||0)===1);
   await G.close();
 
-  console.log("6. Run-generation guard — only the LATEST run is authoritative");
-  const H = await device(b); await H.goto(fileUrl); await H.waitForTimeout(800);
+  console.log("6. Run-generation authority — only the LATEST run writes visible status");
+  const H = await device(b); await H.goto(fileUrl); await H.waitForTimeout(700);
   const genRes = await H.evaluate(()=>{
     const g0 = window.__mfkrSync.runGen();
     const rA = window.__mfkrSync.pullAll("A", {});   // gen g0+1
     const rB = window.__mfkrSync.pullAll("B", {});   // gen g0+2 (supersedes A)
-    return Promise.all([rA, rB]).then(([a,b])=>({ g0, aGen:a.gen, bGen:b.gen, aLatest:a.isLatest(), bLatest:b.isLatest() }));
+    return Promise.all([rA, rB]).then(([a,bb])=>({ g0, aGen:a.gen, bGen:bb.gen, aLatest:a.isLatest(), bLatest:bb.isLatest() }));
   });
   ok("run generation increments per coordinator run", genRes.bGen>genRes.aGen && genRes.aGen>genRes.g0);
-  ok("older run is NOT latest (its UI update is suppressed)", genRes.aLatest===false);
+  ok("older run is NOT latest (its visible-status write is suppressed)", genRes.aLatest===false);
   ok("newest run IS latest (it refreshes visible status)", genRes.bLatest===true);
   await H.close();
+
+  console.log("7. Production hardening — write-capable hook gated behind __MFKR_TEST__ (blocker 3)");
+  const prodCtx = await b.newContext({viewport:{width:800,height:700}});
+  const P = await prodCtx.newPage(); P.on("pageerror", e=> errs.push(e.message.split("\n")[0]));
+  await P.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
+  await P.exposeBinding("__rSet",(s,path,json)=>{ store[path]=json; return false; });
+  await P.exposeBinding("__rDel",(s,path)=>{ delete store[path]; return false; });
+  await P.exposeBinding("__rColl",(s,path)=>[]);
+  await P.exposeBinding("__rRead",(s,path,src)=>({reject:false,fromCache:false,delay:0}));
+  await P.addInitScript(FAKE);   // NOTE: __MFKR_TEST__ NOT set → production hook
+  await P.goto(fileUrl); await P.waitForTimeout(600);
+  const hook = await P.evaluate(()=>({
+    hasSummary: typeof (window.__mfkrSync&&window.__mfkrSync.summary)==="function",
+    hasState: typeof (window.__mfkrSync&&window.__mfkrSync.state)==="function",
+    expPushT: typeof (window.__mfkrSync&&window.__mfkrSync.expPush),
+    pullAllT: typeof (window.__mfkrSync&&window.__mfkrSync.pullAll),
+    expPullT: typeof (window.__mfkrSync&&window.__mfkrSync.expPull)
+  }));
+  ok("production: read-only diagnostics still available (summary/state)", hook.hasSummary && hook.hasState);
+  ok("production: write-capable expPush is NOT exposed", hook.expPushT==="undefined");
+  ok("production: pullAll/expPull are NOT exposed", hook.pullAllT==="undefined" && hook.expPullT==="undefined");
+  await prodCtx.close();
 
   console.log("\nRESULT: "+PASS+" passed, "+FAIL+" failed");
   console.log("PAGE JS ERRORS:", errs.length? [...new Set(errs)] : "none");
