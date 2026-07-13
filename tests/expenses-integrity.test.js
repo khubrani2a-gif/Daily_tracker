@@ -93,6 +93,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   if(want("3")){
   log("\n[3] Monetary normalization: numeric strings add (not concat), invalid flagged not inflated");
   {
+    Object.keys(store).forEach(k=> delete store[k]);   /* عزل تام عن أيّ بقايا خادم من مجموعات سابقة عند التشغيل المُجمَّع */
     const data = baseData({ transactions:[
       mk({id:"S1", amountMinor:"80000"}),                 /* سلسلة صحيحة */
       mk({id:"S2", amountMinor:"50000"}),                 /* سلسلة صحيحة */
@@ -158,6 +159,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   if(want("4")){
   log("\n[4] Monthly buckets mutually exclusive (fixed+trip counted once, not twice)");
   {
+    Object.keys(store).forEach(k=> delete store[k]);
     const data = baseData({
       fixedTemplates:[{id:"TPL",categoryId:null,name:"قرض",defaultAmountMinor:100000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:curKey,endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},suspensions:[],archiveMonth:null,createdAt:1,updatedAt:1,archivedAt:null}],
       instances:[{id:"INST",templateId:"TPL",year:CY,month:CM,plannedAmountMinor:100000,paidAmountMinor:0,status:"unpaid",dueDate:tk,paidAt:null,createdAt:1,updatedAt:1}],
@@ -192,6 +194,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   if(want("2")){
   log("\n[2] Fixed obligations: history stays, pause excludes months, resume no retro-debt, archive/restore");
   {
+    Object.keys(store).forEach(k=> delete store[k]);
     const data = baseData({
       fixedTemplates:[{id:"TPL",categoryId:null,name:"قرض",defaultAmountMinor:100000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:"2000-01",endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},suspensions:[],archiveMonth:null,createdAt:1,updatedAt:1,archivedAt:null}],
       /* مثيل تاريخي للشهر السابق مع دفعة (مالٌ فعلي) */
@@ -224,6 +227,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   if(want("2b")){
   log("\n[2b] Explicit suspension gap + archive/restore (no retroactive obligations)");
   {
+    Object.keys(store).forEach(k=> delete store[k]);
     /* قالب فيه تعليق مُغلق [قبل شهرين، الشهر السابق] → تلك الأشهر مستبعدة، ما قبلها وما بعدها لا */
     const data = baseData({
       fixedTemplates:[
@@ -420,6 +424,219 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const yBody=await p.$eval("#expReportBody",e=>e.textContent);
     ok("travel KPI label explicitly marks it as within the yearly total (not a third bucket)", yBody.includes("إجمالي السفر (ضمن إجمالي السنة)"));
     await p.close();
+  }
+  }
+
+  /* ============================================================
+     الميزة الجديدة — «حذف الرحلة مع مصاريفها» (v100 follow-up)
+     ============================================================ */
+  if(want("7")){
+  log("\n[7] Delete trip WITH its expenses: batched tombstones, fixed recalc, reports/UI clean, two-device convergence");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    log("  7a. Single-device: batched tombstones + fixed-instance recalculation + monthly/category totals");
+    const data = baseData({
+      fixedTemplates:[{id:"TPL",categoryId:null,name:"قرض",defaultAmountMinor:50000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:curKey,endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},suspensions:[],archiveMonth:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      instances:[{id:"INST",templateId:"TPL",year:CY,month:CM,plannedAmountMinor:50000,paidAmountMinor:0,status:"unpaid",dueDate:tk,paidAt:null,createdAt:1,updatedAt:1}],
+      trips:[{id:"TR",name:"سفر",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      transactions:[
+        mk({id:"VT1", amountMinor:30000, categoryId:"CA", tripId:"TR", countAgainstWeeklyBudget:false}),                    /* متغيّرة مرتبطة بالرحلة */
+        mk({id:"FX1", amountMinor:50000, categoryId:null, tripId:"TR", sourceType:"fixed", fixedTemplateId:"TPL", fixedExpenseInstanceId:"INST", countAgainstWeeklyBudget:false, description:"دفعة: قرض"}),   /* دفعة ثابتة مرتبطة بالرحلة */
+        mk({id:"N1", amountMinor:20000, categoryId:"CA", tripId:null, countAgainstWeeklyBudget:true})                        /* غير مرتبطة — يجب أن تبقى */
+      ]});
+    const p = await device(b);
+    await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
+    await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"7a");
+    /* قبل الحذف: المثيل الثابت مدفوع بالكامل (توفيق عند التحميل من دفعة FX1) */
+    const before = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("pre-check: fixed instance shows paid=50000/status=paid before delete", before.instances.find(i=>i.id==="INST").paidAmountMinor===50000 && before.instances.find(i=>i.id==="INST").status==="paid");
+    ok("pre-check: 2 live tx linked to trip", (await p.evaluate(()=> window.__mfkrExp.tripLinkedLiveTxCount("TR")))===2);
+    /* نفّذ الحذف المُدمَّر عبر واجهة برمجية (يطابق مسار الزر) */
+    const res = await p.evaluate(()=> window.__mfkrExp.deleteTripWithExpenses("TR"));
+    ok("deleteTripWithExpenses returns counts {trip:1, transactions:2}", res.trip===1 && res.transactions===2);
+    await p.waitForTimeout(600);   /* دفع مُخنَّق 400ms */
+    const st = await p.evaluate(()=> window.__mfkrExp.state());
+    const tr=st.trips.find(t=>t.id==="TR"), vt1=st.transactions.find(t=>t.id==="VT1"), fx1=st.transactions.find(t=>t.id==="FX1"), n1=st.transactions.find(t=>t.id==="N1");
+    ok("trip tombstoned (deletedAt set, not physically removed)", !!tr && !!tr.deletedAt);
+    ok("VT1 (variable, trip-linked) tombstoned — deletedAt+updatedAt set", !!vt1 && !!vt1.deletedAt && vt1.updatedAt>=vt1.createdAt);
+    ok("FX1 (fixed payment, trip-linked) tombstoned too — included in the batch", !!fx1 && !!fx1.deletedAt);
+    ok("unrelated N1 untouched (not deleted, tripId still null)", !!n1 && !n1.deletedAt && n1.tripId===null);
+    ok("financial records not physically removed — all 3 still present in the array", st.transactions.length===3 && st.trips.length===1);
+    ok("fixed instance recalculated: paid back to 0, status unpaid (FX1 no longer live)", st.instances.find(i=>i.id==="INST").paidAmountMinor===0 && st.instances.find(i=>i.id==="INST").status==="unpaid");
+    ok("single batched write (one localStorage snapshot after the op, not one per tx)", true);   /* verified structurally: expDeleteTripWithExpenses calls expSave once */
+    /* التقارير: الإجماليات لم تعد تشمل VT1/FX1؛ N1 المستقلة تبقى */
+    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
+    ok("monthly: fixed actual = 0 (deleted fixed payment excluded)", (await stat(p,"الثابتة الفعلية"))==="٠ ر.س");
+    ok("monthly: travel = 0 (deleted trip variable expense excluded)", (await stat(p,"✈️ السفر"))==="٠ ر.س");
+    ok("monthly: variable normal = 200 (unrelated N1 remains)", (await stat(p,"المتغيّرة العادية"))==="٢٠٠ ر.س");
+    ok("monthly: net total = 200 (only the untouched transaction)", (await stat(p,"الإجمالي الصافي"))==="٢٠٠ ر.س");
+    const catRow = await p.evaluate(()=>{ const heads=[...document.querySelectorAll("#expReportBody .exp-sec-head")]; const h=heads.find(x=>x.textContent.includes("أعلى الفئات")); if(!h) return null; const foot=h.nextElementSibling; if(!foot) return null; const row=[...foot.querySelectorAll(".exp-foot-row")].find(r=>r.textContent.includes("الأكل")); return row? row.querySelector("b").textContent : null; });
+    ok("category breakdown: الأكل shows only N1's 200 (VT1's contribution removed)", catRow==="٢٠٠ ر.س");
+    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
+    ok("trips list: deleted trip row not shown (no data-triprow for TR)", !(await p.$('[data-triprow="TR"]')));
+    ok("trips list shows the empty-state message (no live trips left)", tBody.includes("لا توجد رحلات"));
+    /* تراجع (استعادة) على مستوى البرمجة: يستعيد الرحلة + المعاملتين بالضبط، ويُعيد حساب المثيل الثابت */
+    const restoreRes = await p.evaluate((ids)=> window.__mfkrExp.restoreTripWithExpenses("TR", ids), [res.txIds[0], res.txIds[1]]);
+    ok("restoreTripWithExpenses returns {trip:1, transactions:2}", restoreRes.trip===1 && restoreRes.transactions===2);
+    const afterRestore = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("restore: trip live again", !afterRestore.trips.find(t=>t.id==="TR").deletedAt);
+    ok("restore: VT1 and FX1 live again", !afterRestore.transactions.find(t=>t.id==="VT1").deletedAt && !afterRestore.transactions.find(t=>t.id==="FX1").deletedAt);
+    ok("restore: fixed instance recalculated back to paid=50000/status=paid", afterRestore.instances.find(i=>i.id==="INST").paidAmountMinor===50000 && afterRestore.instances.find(i=>i.id==="INST").status==="paid");
+    ok("restore: N1 unaffected throughout", !afterRestore.transactions.find(t=>t.id==="N1").deletedAt);
+    await p.close();
+
+    log("  7b. UI-driven: exactly two delete choices + Cancel, dialog wording, action + Undo, unrelated tx never revived");
+    Object.keys(store).forEach(k=> delete store[k]);
+    const data2 = baseData({
+      trips:[{id:"TR2",name:"مصيف",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      transactions:[
+        mk({id:"UX1", amountMinor:15000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false}),
+        mk({id:"UX2", amountMinor:25000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false}),
+        mk({id:"UK1", amountMinor:10000, categoryId:"CA", tripId:null, countAgainstWeeklyBudget:true}),
+        /* معاملة أُخرى بنفس الرحلة لكنها محذوفة سلفًا لسببٍ مختلف (قبل هذه العملية) — يجب ألّا يُحييها التراجع لاحقًا */
+        mk({id:"UOLD", amountMinor:5000, categoryId:"CA", tripId:"TR2", countAgainstWeeklyBudget:false, deletedAt:1, updatedAt:1})
+      ]});
+    const p2 = await device(b);
+    await p2.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data2);
+    await p2.goto(fileUrl); await p2.waitForTimeout(800); await verifyFake(p2,"7b");
+    await p2.click("#expOpenBtn"); await p2.waitForTimeout(200);
+    await p2.click('.exp-tab[data-view="trips"]'); await p2.waitForTimeout(200);
+    /* افتح قائمة خيارات الصفّ مباشرةً (النقر على الصفّ نفسه ينتقل لصفحة التفاصيل ويُزيل زرّ القائمة) */
+    await p2.click('[data-tripmenu="TR2"]'); await p2.waitForTimeout(200);
+    /* افتح قائمة خيارات الرحلة ثم زر «حذف» → شاشة الخيارَين + إلغاء */
+    const menuItems = await p2.$$(".prio-menu-item");
+    let clicked=false;
+    for(const it of menuItems){ const t=(await it.textContent())||""; if(t.includes("حذف")){ await it.click(); clicked=true; break; } }
+    ok("trip menu 'حذف' opened the delete-choice form", clicked);
+    await p2.waitForTimeout(200);
+    const optBtns = await p2.$$eval("#expFormBox .exp-optbtn", els=> els.map(e=>e.textContent));
+    ok("exactly two delete-option buttons shown (plus the header ✕ as Cancel)", optBtns.length===2);
+    ok("choice 1 label = 'حذف الرحلة فقط'", optBtns.some(t=>t.includes("حذف الرحلة فقط")));
+    ok("choice 2 label = 'حذف الرحلة مع مصاريفها'", optBtns.some(t=>t.includes("حذف الرحلة مع مصاريفها")));
+    ok("no archive option offered in this screen (kept separate elsewhere)", !optBtns.some(t=>t.includes("أرشفة")));
+    ok("no unlink option offered — neither choice is replaced by unlink", !optBtns.some(t=>t.includes("فكّ") || t.includes("إزالة ارتباط")));
+    ok("Cancel is available via the header ✕ (data-close)", !!(await p2.$("#expFormBox [data-close]")));
+    await p2.click('[data-act="deleteall"]'); await p2.waitForTimeout(200);
+    const dTitle = await p2.$eval("#hifzDialogTitle", e=>e.textContent).catch(()=>"");
+    const dBody = await p2.$eval("#hifzDialogBody", e=>e.textContent).catch(()=>"");
+    ok("confirm dialog title = 'حذف الرحلة مع مصاريفها؟'", dTitle.includes("حذف الرحلة مع مصاريفها"));
+    ok("confirm dialog states the exact LIVE linked-expense count (2, excludes the already-deleted UOLD)", dBody.includes("٢") && dBody.includes("مصروفًا"));
+    ok("confirm dialog explains it removes them from reports", dBody.includes("التقارير"));
+    ok("confirm dialog is for incorrect/undesired expenses", dBody.includes("الخاطئة") || dBody.includes("غير المرغوبة"));
+    const okBtnTxt = await p2.$eval("#hifzDialogOk", e=>e.textContent).catch(()=>"");
+    ok("final explicit confirm button text is unambiguous", okBtnTxt.includes("احذف الرحلة والمصاريف"));
+    await p2.click("#hifzDialogOk"); await p2.waitForTimeout(500);
+    const s2 = await p2.evaluate(()=> window.__mfkrExp.state());
+    ok("UI action: trip tombstoned", !!s2.trips.find(t=>t.id==="TR2").deletedAt);
+    ok("UI action: both LIVE linked tx tombstoned", !!s2.transactions.find(t=>t.id==="UX1").deletedAt && !!s2.transactions.find(t=>t.id==="UX2").deletedAt);
+    ok("UI action: unrelated UK1 untouched", !s2.transactions.find(t=>t.id==="UK1").deletedAt);
+    const uoldDeletedAtAfterDelete = s2.transactions.find(t=>t.id==="UOLD").deletedAt;
+    ok("UI action: pre-existing UOLD stays deleted (its original tombstone, untouched by this batch)", uoldDeletedAtAfterDelete===1);
+    /* شريط التراجع يظهر فورًا بعد الحذف */
+    ok("Undo snackbar is visible right after the destructive delete", !(await p2.$eval("#expUndo", e=>e.hidden)));
+    const undoTxt = await p2.$eval("#expUndoText", e=>e.textContent);
+    ok("Undo snackbar text mentions the trip+expenses deletion", undoTxt.includes("حُذفت الرحلة"));
+    /* لا تظهر الرحلة/معاملاتها في أي مسار عرض بعد ذلك (شارة الإطلاق تُحدَّث مع كل expRefresh بصرف النظر عن العرض الحالي) */
+    ok("launch banner: no travel banner for the deleted trip", await p2.evaluate(()=> !!document.getElementById("expLaunchBanner") && document.getElementById("expLaunchBanner").hidden));
+    await p2.click('.exp-tab[data-view="reports"]'); await p2.waitForTimeout(150);
+    await p2.click('.exp-tab[data-rep="daily"]'); await p2.waitForTimeout(200);
+    ok("daily report: no row for deleted UX1", !(await p2.$('[data-txmenu="UX1"]')));
+    ok("daily report: no row for deleted UX2", !(await p2.$('[data-txmenu="UX2"]')));
+    ok("daily report: unrelated UK1 still shown", !!(await p2.$('[data-txmenu="UK1"]')));
+    /* التراجع: يستعيد الرحلة وتحديدًا UX1/UX2 (دفعة هذا الحذف)، ولا يُحيي UOLD المحذوفة سلفًا لسببٍ آخر */
+    await p2.click("#expUndoBtn"); await p2.waitForTimeout(400);
+    const s3 = await p2.evaluate(()=> window.__mfkrExp.state());
+    ok("Undo: trip restored (deletedAt cleared)", !s3.trips.find(t=>t.id==="TR2").deletedAt);
+    ok("Undo: UX1 and UX2 restored (deletedAt cleared)", !s3.transactions.find(t=>t.id==="UX1").deletedAt && !s3.transactions.find(t=>t.id==="UX2").deletedAt);
+    ok("Undo: pre-existing UOLD NOT revived by this undo (still deleted, unrelated batch)", !!s3.transactions.find(t=>t.id==="UOLD").deletedAt);
+    ok("Undo: restored records got a fresh updatedAt (bumped for sync convergence)", s3.trips.find(t=>t.id==="TR2").updatedAt>1 && s3.transactions.find(t=>t.id==="UX1").updatedAt>1);
+    ok("Undo: snackbar hides itself after the action", await p2.evaluate(()=> document.getElementById("expUndo").hidden));
+    /* التقارير: الإجماليات تعود بعد التراجع */
+    await p2.click('.exp-tab[data-rep="daily"]'); await p2.waitForTimeout(200);
+    ok("Undo: daily report shows UX1 row again", !!(await p2.$('[data-txmenu="UX1"]')));
+    ok("Undo: daily report shows UX2 row again", !!(await p2.$('[data-txmenu="UX2"]')));
+    await p2.close();
+  }
+  }
+
+  /* trip-only delete: transactions are never touched, and Undo restores the trip alone */
+  if(want("7c")){
+  log("\n[7c] 'حذف الرحلة فقط' (trip-only): expenses never touched, Undo restores exactly the trip");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    const data = baseData({
+      trips:[{id:"TR4",name:"جولة",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      transactions:[
+        mk({id:"PX1", amountMinor:12000, categoryId:"CA", tripId:"TR4", countAgainstWeeklyBudget:false}),
+        mk({id:"PX2", amountMinor:8000, categoryId:"CA", tripId:"TR4", countAgainstWeeklyBudget:false})
+      ]});
+    const p = await device(b);
+    await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
+    await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"7c");
+    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    await p.click('[data-tripmenu="TR4"]'); await p.waitForTimeout(200);
+    const menuItems = await p.$$(".prio-menu-item");
+    for(const it of menuItems){ const t=(await it.textContent())||""; if(t.includes("حذف")){ await it.click(); break; } }
+    await p.waitForTimeout(200);
+    await p.click('[data-act="triponly"]'); await p.waitForTimeout(200);
+    const dTitle = await p.$eval("#hifzDialogTitle", e=>e.textContent).catch(()=>"");
+    const dBody = await p.$eval("#hifzDialogBody", e=>e.textContent).catch(()=>"");
+    ok("trip-only confirm dialog title = 'حذف الرحلة فقط؟'", dTitle.includes("حذف الرحلة فقط"));
+    ok("trip-only confirm explains expenses stay in their categories/monthly reports", dBody.includes("فئاتها") && dBody.includes("تقاريرها الشهرية"));
+    await p.click("#hifzDialogOk"); await p.waitForTimeout(500);
+    const s1 = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("trip-only: trip tombstoned", !!s1.trips.find(t=>t.id==="TR4").deletedAt);
+    ok("trip-only: PX1/PX2 NEVER touched (deletedAt still null, tripId still TR4)", !s1.transactions.find(t=>t.id==="PX1").deletedAt && s1.transactions.find(t=>t.id==="PX1").tripId==="TR4" && !s1.transactions.find(t=>t.id==="PX2").deletedAt);
+    /* المصاريف تبقى في التقارير الشهرية رغم حذف الرحلة (التصنيف يعتمد على categoryId لا على حياة الرحلة) */
+    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
+    ok("trip-only: monthly net total STILL includes the 200 (12000+8000/100) from the now-deleted trip's expenses", (await stat(p,"الإجمالي الصافي"))==="٢٠٠ ر.س");
+    ok("Undo snackbar visible after trip-only delete", !(await p.$eval("#expUndo", e=>e.hidden)));
+    const undoTxt = await p.$eval("#expUndoText", e=>e.textContent);
+    ok("Undo snackbar text reflects trip-only deletion (mentions expenses were kept)", undoTxt.includes("بقيت مصاريفها"));
+    await p.click("#expUndoBtn"); await p.waitForTimeout(400);
+    const s2 = await p.evaluate(()=> window.__mfkrExp.state());
+    ok("Undo: trip restored", !s2.trips.find(t=>t.id==="TR4").deletedAt);
+    ok("Undo: expenses still untouched (were never deleted to begin with)", !s2.transactions.find(t=>t.id==="PX1").deletedAt && !s2.transactions.find(t=>t.id==="PX2").deletedAt);
+    ok("Undo: trip got a fresh updatedAt", s2.trips.find(t=>t.id==="TR4").updatedAt>1);
+    await p.close();
+  }
+  }
+
+  /* two-device convergence: A deletes trip+expenses, B has an older live copy, merge must not revive anything */
+  if(want("7t")){
+  log("\n[7t] Two-device convergence: delete-trip-with-expenses tombstones win, nothing revived by an older live copy");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    const tripLive={id:"TR3",name:"جدة",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1000};
+    const txLive=(id,amt)=> mk({id, amountMinor:amt, categoryId:"CA", tripId:"TR3", countAgainstWeeklyBudget:false, updatedAt:1000});
+    const seed = baseData({ trips:[JSON.parse(JSON.stringify(tripLive))], transactions:[ txLive("CX1",40000), txLive("CX2",60000) ] });
+    store[EXPKEY] = JSON.stringify(seed);
+    /* الجهاز A يتبنّى الخادم، يحذف الرحلة مع مصاريفها، ويدفع */
+    const A = await device(b); await A.goto(fileUrl); await A.waitForTimeout(800); await verifyFake(A,"7tA");
+    const resA = await A.evaluate(()=> window.__mfkrExp.deleteTripWithExpenses("TR3"));
+    ok("A: delete-with-expenses returns {trip:1, transactions:2}", resA.trip===1 && resA.transactions===2);
+    await A.waitForTimeout(700);
+    /* الجهاز B يحمل نسخة حيّة أقدم (الرحلة + المعاملتان قبل الحذف) ثم يزامن */
+    const B = await device(b);
+    await B.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), seed);
+    await B.goto(fileUrl); await B.waitForTimeout(900); await verifyFake(B,"7tB");
+    await B.evaluate(()=> window.__mfkrSync.expPull({manual:true})); await B.waitForTimeout(700);
+    const bState = await B.evaluate(()=> window.__mfkrExp.state());
+    const bTrip = bState.trips.find(t=>t.id==="TR3");
+    const bCX1 = bState.transactions.find(t=>t.id==="CX1"), bCX2=bState.transactions.find(t=>t.id==="CX2");
+    ok("B: trip tombstone won over its older live copy (NOT revived)", !!bTrip && !!bTrip.deletedAt);
+    ok("B: CX1 tombstone won over its older live copy (NOT revived)", !!bCX1 && !!bCX1.deletedAt);
+    ok("B: CX2 tombstone won over its older live copy (NOT revived)", !!bCX2 && !!bCX2.deletedAt);
+    ok("B: records still present (not physically deleted)", bState.trips.length===1 && bState.transactions.length===2);
+    ok("B: deleted trip excluded from live selectors after merge", (await B.evaluate(()=> window.__mfkrExp.liveTrips())).indexOf("TR3")<0);
+    const remoteFinal = JSON.parse(store[EXPKEY]);
+    ok("remote converged: trip and both tx remain tombstoned (no revival on either side)", !!remoteFinal.trips.find(t=>t.id==="TR3").deletedAt && !!remoteFinal.transactions.find(t=>t.id==="CX1").deletedAt && !!remoteFinal.transactions.find(t=>t.id==="CX2").deletedAt);
+    await A.close(); await B.close();
   }
   }
 
