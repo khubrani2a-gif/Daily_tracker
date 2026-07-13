@@ -39,6 +39,20 @@ node tests/startup-hardening.test.js       # إقلاع سليم رغم بيان
 
 الاختبار يُفعّل العلم عبر `addInitScript(()=>{ window.__MFKR_TEST__=true; })` قبل التحميل.
 
+## الهرمِتيّة (Hermeticity) — اعتراض شبكة Firebase
+
+يحمّل `index.html` سكربتات Firebase compat من الشبكة:
+`https://www.gstatic.com/firebasejs/10.14.1/firebase-{app,auth,firestore}-compat.js`.
+هذه تُنفَّذ **بعد** حقن البديل (`addInitScript`) فتستبدل `window.firebase` الحقيقية لو توفّر الإنترنت،
+فتفقد الاختبارات هرمِتيّتها.
+
+لذلك **تعترض** المجموعتان القائمتان على البديل (`sync-contract`, `coordinator-containment`) — عبر
+`page.route("https://www.gstatic.com/firebasejs/**", r=> r.abort())` قبل كل `goto` — وتُجهضان تحميل
+سكربتات Firebase من CDN عمدًا، فيبقى البديل المحقون هو المُسيطر. يحمل البديل علامةً صريحة
+`firebase.__MFKR_FAKE__ = true`، وبعد كل تحميل يؤكّد الاختبار بقاءها (`fake Firebase authoritative
+after load …`) فيفشل بوضوح لو استبدلت الحقيقيةُ البديلَ. يُطبَّق هذا على كل صفحة/سياق، بما فيها
+صفحة اختبار خطّاف الإنتاج. لذا تمرّ المجموعتان سواءٌ توفّر الإنترنت أم لا.
+
 ## حدود صادقة (Honest limitations)
 
 - هذه **ليست** محاكاة Firestore حقيقية ولا ثلاثة عملاء فيزيائيين. تستخدم بديلًا

@@ -17,10 +17,15 @@ window.firebase = (function(){
   auth.GoogleAuthProvider=function(){};
   return { initializeApp:()=>({}), firestore:fs, auth:auth };
 })();
+window.firebase.__MFKR_FAKE__ = true;   /* علامة صريحة: يجب أن تبقى الحقيقية غير مُحمَّلة */
 `;
 let PASS=0,FAIL=0; const ok=(n,c)=>{ if(c){PASS++;console.log("  ✓ "+n);}else{FAIL++;console.log("  ✗ FAIL: "+n);} };
 const errs=[];
+/* هرمِتيّة: نمنع سكربتات Firebase من الشبكة (gstatic) كي لا تستبدل البديل المحقون بعد التحميل */
+async function blockFirebaseCDN(page){ await page.route("https://www.gstatic.com/firebasejs/**", r=> r.abort()); }
+async function verifyFake(page, label){ const active = await page.evaluate(()=> !!(window.firebase && window.firebase.__MFKR_FAKE__===true)); ok("fake Firebase authoritative after load ("+label+")", active); return active; }
 async function device(b){ const ctx=await b.newContext({viewport:{width:1000,height:900}}); const p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message.split("\n")[0]));
+  await blockFirebaseCDN(p);   // must run before goto so real Firebase never loads
   await p.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
   await p.exposeBinding("__rSet",(s,path,json)=>{ store[path]=json; return true; });
   await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
@@ -34,7 +39,7 @@ const dayKey="users/U1/days/"+today();
   // pre-seed remote day doc (simulating device A push)
   store[dayKey]=JSON.stringify({date:today(),prayers:[true,false,false,false,false],worship:{},water:0,intention:"",tasks:[],priorities:[],memory:"",notes:"",rating:0,updatedAt:Date.now()+50000});
   store["users/U1/meta/quran"]=JSON.stringify({page:123,target:5,dayAnchor:today(),startPage:123,updatedAt:Date.now()+50000});
-  let B=await device(b); await B.goto(fileUrl); await B.waitForTimeout(900);
+  let B=await device(b); await B.goto(fileUrl); await B.waitForTimeout(900); await verifyFake(B,"A");
   let bday=await B.evaluate((k)=>JSON.parse(localStorage.getItem(k)), "h2do-tracker:"+today());
   ok("B hydrated prayer[0]=true from remote day doc on auth", bday && bday.prayers && bday.prayers[0]===true);
   let bq=await B.evaluate(()=>JSON.parse(localStorage.getItem("h2do-quran")));
@@ -58,7 +63,7 @@ const dayKey="users/U1/days/"+today();
   console.log("B. CONTAINMENT: malformed Expenses data does NOT stop daily/quran sync");
   const B2=await device(b);
   await B2.addInitScript(()=>{ localStorage.setItem("h2do-expenses", JSON.stringify({version:2, categories:[null], transactions:[null], fixedTemplates:[null]})); });
-  await B2.goto(fileUrl); await B2.waitForTimeout(900);
+  await B2.goto(fileUrl); await B2.waitForTimeout(900); await verifyFake(B2,"B");
   const dp=await B2.$eval("#datePicker",e=>e.value).catch(()=>"");
   ok("startup completed despite malformed expenses (datePicker set)", dp===today());
   const b2day=await B2.evaluate((k)=>JSON.parse(localStorage.getItem(k)), "h2do-tracker:"+today());
@@ -74,7 +79,7 @@ const dayKey="users/U1/days/"+today();
   console.log("C. One module FAILS, others still succeed (Promise.allSettled isolation)");
   REJECT="meta/witr";  // witr pull will reject
   store[dayKey]=JSON.stringify({date:today(),prayers:[true,true,true,false,false],worship:{},water:0,tasks:[],priorities:[],updatedAt:Date.now()+120000});
-  const B3=await device(b); await B3.goto(fileUrl); await B3.waitForTimeout(1000);
+  const B3=await device(b); await B3.goto(fileUrl); await B3.waitForTimeout(1000); await verifyFake(B3,"C");
   const b3day=await B3.evaluate((k)=>JSON.parse(localStorage.getItem(k)), "h2do-tracker:"+today());
   ok("daily synced even though witr module failed", b3day && b3day.prayers[2]===true);
   const b3q=await B3.evaluate(()=>JSON.parse(localStorage.getItem("h2do-quran")));
@@ -83,7 +88,7 @@ const dayKey="users/U1/days/"+today();
   await B3.close();
 
   console.log("D. Global manual sync 'مزامنة جميع البيانات' works + per-module status");
-  const B4=await device(b); await B4.goto(fileUrl); await B4.waitForTimeout(800);
+  const B4=await device(b); await B4.goto(fileUrl); await B4.waitForTimeout(800); await verifyFake(B4,"D");
   await B4.click("#expOpenBtn"); await B4.waitForTimeout(300);
   await B4.click('.exp-tab[data-view="settings"]'); await B4.waitForTimeout(300);
   ok("global sync button present", !!(await B4.$("#expGlobalSyncBtn")));

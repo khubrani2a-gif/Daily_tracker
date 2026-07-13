@@ -5,13 +5,18 @@
  *   1. عقد Expenses كبقيّة الأقسام: خادم أولًا ثم كاش صريح، عدم تخطّي الكاش عند عدم الاتصال،
  *      expPushRemote يُعيد وعدًا، انتظار كتابة المصالحة، عدم الدفع بعد الكاش، حالة مُهيكلة،
  *      وعدم تحديث وقت آخر مزامنة خادم بعد قراءة كاش.
- *   2. أقفال in-flight حقيقية لكل قسم (تشغيلان متزامنان → الثاني throttled).
- *   3. حراسة الجيل (_syncRunGen): التشغيل الأقدم لا يُعدّ الأحدث.
- *   4. غياب الكتابة المباشرة في syncStatus من دوال الدفع (الحالة تُشتق من المنسّق).
+ *   2. أقفال ذات انضمام (JOIN): التداخل يُنتج قراءةً واحدة، ونتيجةً صالحة تصل الحالة والواجهة،
+ *      وأعلامَ inFlight تعود false، وحالةً عامّة لا تعلق على «جارٍ».
+ *   3. محاسبة فشل كتابة المصالحة (Daily+Expenses): failed، reconWriteFailed، لا تقدّم lastServerSuccessAt/lastSyncAt.
+ *   4. حراسة الجيل (_syncRunGen): للحالة المرئية فقط، لا تُسقط بيانات خادم صالحة.
+ *   5. تصليب الإنتاج: طرائق الكتابة (pullAll/expPull/expPush) خلف العلم __MFKR_TEST__ فقط.
+ *
+ * هرمِتيّة: نعترض ونُجهض كل طلبات https://www.gstatic.com/firebasejs/** قبل التحميل كي لا
+ * تستبدل سكربتات Firebase الحقيقية البديلَ المحقون؛ ونتحقّق بعد كل تحميل من بقاء العلامة __MFKR_FAKE__.
  *
  * حدود صادقة: هذه ليست محاكاة Firestore حقيقية ولا ثلاثة عملاء فيزيائيين — بل بديل
  * في‑الذاكرة أمين لواجهة compat يميّز {source:"server"} عن {source:"cache"}، ويحقن
- * أعطال الخادم/الكتابة والتأخير وعدّاد الكتابات. التقارب عبر الأجهزة مُحاكى عند حدّ الواجهة.
+ * أعطال الخادم/الكتابة والتأخير وعدّاد القراءات/الكتابات. التقارب عبر الأجهزة مُحاكى عند حدّ الواجهة.
  *
  * التشغيل:  node tests/sync-contract.test.js
  * يتطلّب Playwright (Chromium). يبحث عن الحزمة في PW_PATH ثم في مسارات شائعة.
@@ -59,15 +64,22 @@ window.firebase = (function(){
   auth.GoogleAuthProvider=function(){};
   return { initializeApp:()=>({}), firestore:fs, auth:auth };
 })();
+window.firebase.__MFKR_FAKE__ = true;   /* علامة صريحة: يجب أن تبقى الحقيقية غير مُحمَّلة */
 `;
 
 let PASS=0, FAIL=0; const errs=[];
 const ok=(n,c)=>{ if(c){PASS++;console.log("  ✓ "+n);}else{FAIL++;console.log("  ✗ FAIL: "+n);} };
 
+/* هرمِتيّة: نمنع سكربتات Firebase من الشبكة (gstatic) كي لا تستبدل البديل المحقون بعد التحميل */
+async function blockFirebaseCDN(page){ await page.route("https://www.gstatic.com/firebasejs/**", r=> r.abort()); }
+/* تأكيد أنّ البديل ما زال هو المُسيطر بعد التحميل — يفشل بوضوح إن استبدلته الحقيقية */
+async function verifyFake(page, label){ const active = await page.evaluate(()=> !!(window.firebase && window.firebase.__MFKR_FAKE__===true)); ok("fake Firebase authoritative after load ("+label+")", active); return active; }
+
 async function device(b){
   const ctx = await b.newContext({viewport:{width:1000,height:900}});
   const p = await ctx.newPage();
   p.on("pageerror", e=> errs.push(e.message.split("\n")[0]));
+  await blockFirebaseCDN(p);   // must run before goto so real Firebase never loads
   await p.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
   await p.exposeBinding("__rSet",(s,path,json)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; store[path]=json; writeCount[path]=(writeCount[path]||0)+1; return false; });
   await p.exposeBinding("__rDel",(s,path)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; delete store[path]; return false; });
@@ -92,7 +104,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
 
   console.log("1. Expenses: server-first success then CACHE FALLBACK on resume (contract parity)");
   store[expKey] = seedExp();
-  const A = await device(b); await A.goto(fileUrl); await A.waitForTimeout(900);
+  const A = await device(b); await A.goto(fileUrl); await A.waitForTimeout(900); await verifyFake(A,"1");
   let mExp = await A.evaluate(()=> window.__mfkrSync.module("expenses"));
   ok("expenses reached the coordinator (attempted)", !!mExp && (mExp.lastServerSuccessAt>0 || mExp.lastCacheFallbackAt>0));
   ok("first auth pull was a SERVER success (not cache)", mExp.lastServerSuccessAt>0 && mExp.lastServerSuccessAt>=mExp.lastCacheFallbackAt);
@@ -119,7 +131,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   const C = await device(b);
   // local has an extra transaction the server lacks → would normally contribute a reconcile push
   await C.addInitScript((k)=>{ /* placeholder */ }, expKey);
-  await C.goto(fileUrl); await C.waitForTimeout(900);
+  await C.goto(fileUrl); await C.waitForTimeout(900); await verifyFake(C,"2");
   // add a local-only transaction via the app storage, then force server-down and pull
   await C.evaluate(()=>{ const d=JSON.parse(localStorage.getItem("h2do-expenses")); d.transactions.push({id:"LOCAL1",amountMinor:9900,transactionDate:new Date().toISOString().slice(0,10),categoryId:"CA",transactionType:"expense",description:"محلي فقط",countAgainstWeeklyBudget:true,deletedAt:null,updatedAt:Date.now()}); d.settings.updatedAt=Date.now(); localStorage.setItem("h2do-expenses", JSON.stringify(d)); });
   const wBefore = writeCount[expKey]||0;
@@ -132,7 +144,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   await C.close();
 
   console.log("3. expPushRemote returns a Promise resolving {ok:true} on success, {ok:false} on failure");
-  const D = await device(b); await D.goto(fileUrl); await D.waitForTimeout(700);
+  const D = await device(b); await D.goto(fileUrl); await D.waitForTimeout(700); await verifyFake(D,"3");
   const okRes = await D.evaluate(()=> window.__mfkrSync.expPush({version:2, settings:{updatedAt:Date.now()}, categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[]}).then(r=>r).catch(e=>({thrown:String(e)})));
   ok("expPush resolves (never throws) with ok:true", okRes && okRes.ok===true);
   writeFailPath = "meta/expenses";
@@ -147,7 +159,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   const E = await device(b);
   await E.addInitScript((tk)=>{ localStorage.setItem("h2do-tracker:"+tk, JSON.stringify({date:tk, prayers:[true,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], rating:0, updatedAt:9e14})); }, today());
   writeFailPath = "/days/";   // set BEFORE load so the reconcile write never succeeds (auth pull included)
-  await E.goto(fileUrl); await E.waitForTimeout(400);
+  await E.goto(fileUrl); await E.waitForTimeout(400); await verifyFake(E,"4");
   await E.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});
   const before4 = await E.evaluate(()=> window.__mfkrSync.module("daily").lastServerSuccessAt);
   const dRes = await E.evaluate(()=> window.__mfkrSync.pullAll("recon-fail", {}).then(r=> (r.results||[]).find(x=>x&&x.module==="daily")));
@@ -163,7 +175,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   console.log("4b. Reconciliation write failure accounting — EXPENSES (blocker 2)");
   store[expKey] = seedExp();
   const Eb = await device(b);
-  await Eb.goto(fileUrl); await Eb.waitForTimeout(800);
+  await Eb.goto(fileUrl); await Eb.waitForTimeout(800); await verifyFake(Eb,"4b");
   await Eb.waitForFunction(()=> !window.__mfkrSync.inFlight("expenses"), null, {timeout:5000}).catch(()=>{});
   const beforeSrv = await Eb.evaluate(()=> window.__mfkrSync.module("expenses").lastServerSuccessAt);
   const beforeSync = await Eb.evaluate(()=>{ try{ return (JSON.parse(localStorage.getItem("h2do-expenses-syncmeta"))||{}).lastSyncAt||0; }catch(e){ return 0; } });
@@ -185,7 +197,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   console.log("5. JOIN under overlap (blocker 1): newer data applied, one physical read, no stuck 'syncing'");
   // fresh remote day OLDER; we will bump it to NEWER right before the overlapping runs
   store[dayKey] = JSON.stringify({date:today(), prayers:[false,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:1000});
-  const F = await device(b); await F.goto(fileUrl); await F.waitForTimeout(700);
+  const F = await device(b); await F.goto(fileUrl); await F.waitForTimeout(700); await verifyFake(F,"5");
   await F.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});
   // newer data on server; delay the daily read so run B overlaps run A
   store[dayKey] = JSON.stringify({date:today(), prayers:[true,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:9e14});
@@ -220,7 +232,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   console.log("5b. JOIN generalises to a meta-doc module (Quran) — one physical read under overlap");
   store["users/U1/meta/quran"] = JSON.stringify({page:10,target:5,dayAnchor:today(),startPage:10,updatedAt:5});
   const qk = "users/U1/meta/quran";
-  const G = await device(b); await G.goto(fileUrl); await G.waitForTimeout(700);
+  const G = await device(b); await G.goto(fileUrl); await G.waitForTimeout(700); await verifyFake(G,"5b");
   await G.waitForFunction(()=> !window.__mfkrSync.inFlight("quran"), null, {timeout:5000}).catch(()=>{});
   store[qk] = JSON.stringify({page:222,target:5,dayAnchor:today(),startPage:222,updatedAt:9e14});
   readCount[qk] = 0;
@@ -233,7 +245,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   await G.close();
 
   console.log("6. Run-generation authority — only the LATEST run writes visible status");
-  const H = await device(b); await H.goto(fileUrl); await H.waitForTimeout(700);
+  const H = await device(b); await H.goto(fileUrl); await H.waitForTimeout(700); await verifyFake(H,"6");
   const genRes = await H.evaluate(()=>{
     const g0 = window.__mfkrSync.runGen();
     const rA = window.__mfkrSync.pullAll("A", {});   // gen g0+1
@@ -248,6 +260,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   console.log("7. Production hardening — write-capable hook gated behind __MFKR_TEST__ (blocker 3)");
   const prodCtx = await b.newContext({viewport:{width:800,height:700}});
   const P = await prodCtx.newPage(); P.on("pageerror", e=> errs.push(e.message.split("\n")[0]));
+  await blockFirebaseCDN(P);   // production-hook page is hermetic too
   await P.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
   await P.exposeBinding("__rSet",(s,path,json)=>{ store[path]=json; return false; });
   await P.exposeBinding("__rDel",(s,path)=>{ delete store[path]; return false; });
@@ -255,6 +268,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   await P.exposeBinding("__rRead",(s,path,src)=>({reject:false,fromCache:false,delay:0}));
   await P.addInitScript(FAKE);   // NOTE: __MFKR_TEST__ NOT set → production hook
   await P.goto(fileUrl); await P.waitForTimeout(600);
+  await verifyFake(P, "prod");
   const hook = await P.evaluate(()=>({
     hasSummary: typeof (window.__mfkrSync&&window.__mfkrSync.summary)==="function",
     hasState: typeof (window.__mfkrSync&&window.__mfkrSync.state)==="function",
