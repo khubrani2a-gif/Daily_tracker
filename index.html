@@ -2528,13 +2528,17 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("customWorship");
   }
   function wCustomPushRemote(list, updatedAt){
-    if(!db || !user) return;
-    wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function wCustomPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"customWorship", skipped:true});
+    return joinOrRun("customWorship", ()=> _wCustomPullWork(trigger));
+  }
+  function _wCustomPullWork(trigger){
     syncBegin("customWorship", trigger);
     return getDocServerFirst(wCustomDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const localMeta = wCustomMeta();
@@ -2542,13 +2546,14 @@
           localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
           localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
           safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
-        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
-          wCustomPushRemote(wCustom(), localMeta.updatedAt);
+        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = wCustomPushRemote(wCustom(), localMeta.updatedAt);
         }
       }
-      syncEnd("customWorship", true, snap);
-      return {module:"customWorship", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("customWorship", true, snap); else syncEnd("customWorship", false, snap, new Error("reconWriteFailed"));
+        return {module:"customWorship", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -3004,26 +3009,57 @@
   }
 
   function pushRemote(date, data){
-    if(!db || !user) return;
-    dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; })
-      .catch(()=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; });
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    /* يُعيد نتيجة الكتابة (لا يرمي أبدًا) كي يتتبّعها المنسّق: كتابة المصالحة يجب ألّا تُعتبر نجاحًا قبل اكتمالها.
+       لا يكتب في syncStatus مباشرةً — الحالة المرئية تُشتق فقط من حالة المنسّق (SYNC_STATE) عبر syncSummary */
+    return dayRef(date).set(JSON.parse(JSON.stringify(data)))
+      .then(()=>({ok:true}))
+      .catch((e)=>({ok:false, error:(e&&e.message)||String(e)}));
   }
 
   /* ==================== منسّق مزامنة عام لكل الأقسام (سحب) ==================== */
   /* قراءة تُفضّل الخادم أولًا ثم ترجع للمخزّن المحلي عند تعذّر الشبكة — تُنهي مشكلة الكاش القديم عند العودة للمقدّمة */
-  function getDocServerFirst(ref){ try{ return ref.get({source:"server"}).catch(()=> ref.get()); }catch(e){ try{ return ref.get(); }catch(_){ return Promise.reject(e); } } }
-  function getQueryServerFirst(q){ try{ return q.get({source:"server"}).catch(()=> q.get()); }catch(e){ try{ return q.get(); }catch(_){ return Promise.reject(e); } } }
-  function _fromCache(snap){ return !!(snap && snap.metadata && snap.metadata.fromCache); }
+  /* خادم أولًا ثم كاش صراحةً (compat 10.14.1): يعلّم المصدر على اللقطة كي نميّز نجاح الخادم عن رجوع الكاش بدقّة */
+  function _tagSource(snap, src, serverErr){ try{ if(snap){ snap._srcServer = (src==="server"); snap._srcCache = (src==="cache"); if(serverErr) snap._serverErr = (serverErr&&serverErr.message)||String(serverErr); } }catch(e){} return snap; }
+  function getDocServerFirst(ref){
+    try{ return ref.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> ref.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  function getQueryServerFirst(q){
+    try{ return q.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> q.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  /* مصدر الكاش: العلامة الصريحة أولًا، ثم metadata.fromCache احتياطًا */
+  function _fromCache(snap){ return !!(snap && (snap._srcCache || (snap.metadata && snap.metadata.fromCache))); }
   /* حالة مزامنة مستقلّة لكل قسم — لا يطمس قسمٌ حالة قسم آخر */
   const SYNC_STATE = {};
-  function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, trigger:null}); }
+  function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, lastSource:null, trigger:null}); }
   function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
-  function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false; if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; } else { s.lastError=(err&&err.message)||String(err||"error"); } }
-  /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره، ولكلٍّ قفله وخنقه */
+  /* إنهاء القسم: النجاح وحده يُقدّم آخر نجاح خادم/كاش ويمسح الخطأ؛ الفشل (بما فيه فشل كتابة المصالحة) لا يُقدّم أيّ ختم نجاح،
+     ويحفظ مصدر القراءة (خادم/كاش) منفصلًا للتشخيص */
+  function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false;
+    if(snap) s.lastSource = _fromCache(snap) ? "cache" : "server";
+    if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; }
+    else { s.lastError=(err&&err.message)||String(err||"error"); }   /* لا نلمس lastServerSuccessAt/lastCacheFallbackAt عند الفشل */
+  }
+  /* أقفال ذات انضمام (JOIN): أوّل نداء يملك السحب الحقيقي، والنداءات المتزامنة تنضمّ لنفس الوعد فتحصل على نتيجته
+     (قراءة فيزيائية واحدة، ونتيجة خادم صالحة تصل الجميع) بدل ردّ throttled فوري يُهدر عمل التشغيل المالك */
+  const _inflight = {};
+  function joinOrRun(key, worker){
+    if(_inflight[key]) return _inflight[key];
+    let pr; try{ pr = Promise.resolve(worker()); }catch(e){ pr = Promise.reject(e); }
+    const wrapped = pr.then(r=>{ delete _inflight[key]; return r; }, e=>{ delete _inflight[key]; throw e; });
+    _inflight[key] = wrapped;
+    return wrapped;
+  }
+  function syncInFlight(name){ return !!_inflight[name] || !!(SYNC_STATE[name] && SYNC_STATE[name].inFlight); }
+  /* جيل تشغيل تصاعدي: يُستخدم فقط لمنع كتابة حالة مرئية متقادمة — لا يُستخدم أبدًا لإسقاط بيانات خادم صالحة */
+  let _syncRunGen = 0;
+  /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره؛ التشغيل الأحدث ينضمّ لعمل الأقدم */
   function syncPullAllModules(trigger, opts){
     opts = opts || {};
-    if(!db || !user) return Promise.resolve({trigger, skipped:true});
+    const gen = ++_syncRunGen;
+    if(!db || !user) return Promise.resolve({trigger, gen, isLatest:()=> gen===_syncRunGen, skipped:true});
     diagMark("syncAll:begin:"+trigger);
     const jobs = [
       ["daily", ()=> pullRemote(currentDate, trigger)],
@@ -3034,9 +3070,18 @@
       ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})]
     ];
     return Promise.allSettled(jobs.map(([name, fn])=>{
-      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, ok:false}; }); }
-      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, ok:false}); }
-    })).then(rs=>{ diagMark("syncAll:end:"+trigger); return {trigger, results:rs.map(r=> r.value||r.reason)}; });
+      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
+      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, status:"failed"}); }
+    })).then(rs=>{ diagMark("syncAll:end:"+trigger);
+      /* التشغيل الأحدث ينضمّ (join) لعمل الأقدم فلا يكتمل قبله؛ فعند اكتماله تكون كل الأقسام مستقرّة.
+         نحدّث الحالة المرئية إن كنّا الأحدث (أو لم يبدأ أحدثُ منّا) فلا تعلق على «جارٍ». */
+      if(gen===_syncRunGen) safeRun("syncUI", expRefreshSyncUI);
+      return {trigger, gen, isLatest:()=> gen===_syncRunGen, results:rs.map(r=> r.value||r.reason)}; });
+  }
+  /* تحديث الحالة المرئية العامّة من الحالة الحيّة — يُستدعى عند اكتمال أي تشغيل فيتعافى العرض تلقائيًا لأحدث حقيقة */
+  function expRefreshSyncUI(){
+    const gst=document.getElementById("expGlobalSyncText"); if(gst){ try{ gst.textContent = syncSummary().text; }catch(e){} }
+    const ms=document.getElementById("expModStatus"); if(ms && typeof expModStatusHtml==="function"){ try{ ms.innerHTML = expModStatusHtml(); }catch(e){} }
   }
   /* خنق عام يجمع أحداث المتصفّح المتزامنة (focus/pageshow/visibility) دون تعطيل أقفال الأقسام المستقلّة */
   let _lastGlobalPull = 0;
@@ -3045,35 +3090,59 @@
     const now = Date.now();
     if(trigger!=="manual" && now - _lastGlobalPull < 1500) return;
     _lastGlobalPull = now;
-    syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+    return syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+  }
+  /* ترشيح أحداث دورة الحياة: يجمع focus/pageshow/visibilitychange المتزامنة خلال ~400ms في نداء واحد (منفصل عن خنق الأقسام) */
+  let _lcDebounceTimer = null, _lcPendingTrigger = null;
+  function triggerGlobalForegroundSync(trigger){
+    if(!db || !user) return;
+    _lcPendingTrigger = _lcPendingTrigger || trigger || "foreground";
+    if(_lcDebounceTimer) return;
+    _lcDebounceTimer = setTimeout(()=>{ const t=_lcPendingTrigger; _lcDebounceTimer=null; _lcPendingTrigger=null; safeRun("foregroundSync", ()=> syncPullAllThrottled(t)); }, 400);
   }
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
     const names=["daily","quran","customWorship","witr","hifz","expenses"];
-    let anyFail=false, anyCache=false, anyServer=false, anyFlight=false, anyAttempt=false;
-    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s) return; anyAttempt=true; if(s.inFlight)anyFlight=true; if(s.lastError)anyFail=true; if(s.lastCacheFallbackAt>s.lastServerSuccessAt)anyCache=true; if(s.lastServerSuccessAt)anyServer=true; });
-    if(!anyAttempt) return {state:"idle", text:"—"};
-    if(anyFlight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
-    if(anyFail && anyServer) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
-    if(anyFail) return {state:"fail", text:"تعذّرت المزامنة"};
-    if(anyCache && (navigator.onLine===false)) return {state:"offline", text:"بانتظار الاتصال"};
-    return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+    let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
+    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
+      if(s.inFlight) flight=true;
+      if(s.lastError){ anyFail=true; allServer=false; }
+      const serverOk = s.lastServerSuccessAt>0 && s.lastServerSuccessAt>=s.lastCacheFallbackAt && !s.lastError;
+      if(serverOk) anyServer=true; else allServer=false;
+      if(s.lastCacheFallbackAt>0 && s.lastCacheFallbackAt>s.lastServerSuccessAt) anyCache=true;
+    });
+    if(!attempted) return {state:"idle", text:"—"};
+    if(flight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
+    if(anyFail) return anyServer ? {state:"partial", text:"تمت مزامنة بعض الأقسام"} : {state:"fail", text:"تعذّرت المزامنة"};
+    if(navigator.onLine===false) return {state:"offline", text:"بانتظار الاتصال"};
+    if(anyCache) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};   /* كاش = ليس نجاح خادم كامل */
+    if(allServer) return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+    return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
   }
   /* تسجيل مشغّلات دورة الحياة مرّة واحدة (لا تكرار عند فتح النوافذ) — يحدّث كل الأقسام */
   let _lifecycleInit = false;
   function initLifecycleSync(){
     if(_lifecycleInit) return; _lifecycleInit = true;
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") syncPullAllThrottled("foreground"); });
-    window.addEventListener("focus", ()=> syncPullAllThrottled("focus"));
-    window.addEventListener("pageshow", ()=> syncPullAllThrottled("pageshow"));
-    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); syncPullAllThrottled("online"); });
+    /* تسجيل واحد لكل حدث؛ الأحداث المتزامنة تُجمع عبر triggerGlobalForegroundSync (~400ms) */
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("foreground"); });
+    window.addEventListener("focus", ()=> triggerGlobalForegroundSync("focus"));
+    window.addEventListener("pageshow", ()=> triggerGlobalForegroundSync("pageshow"));
+    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); triggerGlobalForegroundSync("online"); });
     window.addEventListener("offline", ()=>{ safeRun("syncRowOffline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); });
   }
 
+  /* قفل ذو انضمام لكل تاريخ: نداءان متزامنان لنفس التاريخ ينضمّان لقراءة فيزيائية واحدة؛ تاريخان مختلفان مستقلّان */
   function pullRemote(date, trigger){
-    if(!db || !user) return Promise.resolve({module:"daily", skipped:true});
+    if(!db || !user) return Promise.resolve({module:"daily", date, status:"skipped", reason:"noauth"});
+    return joinOrRun("daily:"+date, ()=> _pullRemoteWork(date, trigger));
+  }
+  function _pullRemoteWork(date, trigger){
     syncBegin("daily", trigger);
     return getDocServerFirst(dayRef(date)).then(snap=>{
+      const cache = _fromCache(snap);
+      let reconcile = Promise.resolve({ok:true});
+      /* الحماية من التاريخ القديم: نطبّق نتيجة التاريخ المختار حاليًا فقط (لو غيّر المستخدم اليوم أثناء السحب).
+         نتيجة الخادم الصالحة تُطبَّق دائمًا على الحالة المحلية — لا حراسة جيل هنا */
       if(date === currentDate){
         if(snap.exists){
           const remote = snap.data();
@@ -3081,16 +3150,21 @@
             state = Object.assign(blankState(), remote);
             localStorage.setItem(storageKey(date), JSON.stringify(state));
             safeRun("pullRemote:renderAll", renderAll);   /* الرسم معزول — فشله لا يُفشل المزامنة */
-          }else if((state.updatedAt||0) > (remote.updatedAt||0)){
-            pushRemote(date, state);
+          }else if((state.updatedAt||0) > (remote.updatedAt||0) && !cache){   /* لا ندفع فوق كاش: قد يكون الخادم أحدث */
+            reconcile = pushRemote(date, state);
           }
-        }else if(state.updatedAt){
-          pushRemote(date, state);
+        }else if(state.updatedAt && !cache){
+          reconcile = pushRemote(date, state);
         }
       }
-      syncEnd("daily", true, snap);
-      return {module:"daily", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{
+        const writeOk = !(w && w.ok===false);
+        /* فشل كتابة المصالحة = فشل العملية: لا نُقدّم ختم نجاح الخادم ولا نمسح خطأً سابقًا */
+        if(writeOk) syncEnd("daily", true, snap);
+        else syncEnd("daily", false, snap, new Error("reconWriteFailed"));
+        return {module:"daily", date, status: writeOk ? (cache ? "cacheFallback" : "success") : "failed", source: cache?"cache":"server", reconWriteOk: writeOk};
+      });
+    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", date, status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3118,13 +3192,17 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("quran");
   }
   function qPushRemote(q){
-    if(!db || !user) return;
-    qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return qDocRef().set(JSON.parse(JSON.stringify(q))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function qPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"quran", skipped:true});
+    return joinOrRun("quran", ()=> _qPullWork(trigger));
+  }
+  function _qPullWork(trigger){
     syncBegin("quran", trigger);
     return getDocServerFirst(qDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const local = qLoad();
@@ -3134,13 +3212,14 @@
           localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
           safeRun("qPull:renderWorship", renderWorship);
           safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
-        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-          qPushRemote(local);
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = qPushRemote(local);
         }
       }
-      syncEnd("quran", true, snap);
-      return {module:"quran", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("quran", true, snap); else syncEnd("quran", false, snap, new Error("reconWriteFailed"));
+        return {module:"quran", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -3776,25 +3855,32 @@
   /* مزامنة سجل الاقتراحات والسور المفضّلة عبر الأجهزة */
   function witrDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("witr"); }
   function witrPushRemote(meta){
-    if(!db || !user) return;
-    witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return witrDocRef().set(JSON.parse(JSON.stringify(meta))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function witrPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"witr", skipped:true});
+    return joinOrRun("witr", ()=> _witrPullWork(trigger));
+  }
+  function _witrPullWork(trigger){
     syncBegin("witr", trigger);
     return getDocServerFirst(witrDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const local = witrMeta();
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-          witrPushRemote(local);
+          /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم) */
+          safeRun("witrPull:render", ()=>{ if(witrOverlay && !witrOverlay.hidden && typeof witrRenderAll==="function") witrRenderAll(); });
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = witrPushRemote(local);
         }
       }
-      syncEnd("witr", true, snap);
-      return {module:"witr", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("witr", true, snap); else syncEnd("witr", false, snap, new Error("reconWriteFailed"));
+        return {module:"witr", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -4913,12 +4999,12 @@
     return db.collection("users").doc(user.uid).collection("hifzSegments").doc(segmentId);
   }
   function hifzPushSegment(seg){
-    if(!db || !user) return;
-    hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzDeleteSegmentRemote(segmentId){
-    if(!db || !user) return;
-    hifzSegmentRef(segmentId).delete().catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(segmentId).delete().then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzUpsertSegment(seg){
     seg.updatedAt = Date.now();
@@ -4937,8 +5023,12 @@
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
   function hifzPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"hifz", skipped:true});
+    return joinOrRun("hifz", ()=> _hifzPullWork(trigger));
+  }
+  function _hifzPullWork(trigger){
     syncBegin("hifz", trigger);
     return getQueryServerFirst(db.collection("users").doc(user.uid).collection("hifzSegments")).then(snap=>{
+      const cache=_fromCache(snap);
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
       if(remoteSegs.length){
@@ -4953,9 +5043,9 @@
         hifzSaveLocal(data);
         safeRun("hifzPull:render", renderHifzCard);
       }
-      syncEnd("hifz", true, snap);
-      return {module:"hifz", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", ok:false}; });
+      syncEnd("hifz", true, snap);   /* الحفظ (upsert) لا يمرّ بمصالحة سحبٍ هنا؛ لا كتابة مصالحة تفشل */
+      return {module:"hifz", status: cache?"cacheFallback":"success", source: cache?"cache":"server"};
+    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
@@ -8103,6 +8193,26 @@
   function diagErr(where, err){ try{ const m=(err&&err.message)?err.message:String(err); MFKR_DIAG.errors.push({t:Date.now(), where:String(where), msg:m, stack:(err&&err.stack)?String(err.stack).split("\n").slice(0,4).join(" | "):""}); if(MFKR_DIAG.errors.length>40) MFKR_DIAG.errors.shift(); if(window.console&&console.warn) console.warn("[diag] "+where+": "+m); }catch(e){} }
   function expDiag(where, err){ diagErr(where, err); }
   try{ window.__mfkrDiag = ()=> JSON.parse(JSON.stringify(MFKR_DIAG)); }catch(e){}
+  /* خطّاف المزامنة: في الإنتاج نكشف تشخيصًا للقراءة فقط. أمّا الطرائق المُحدِثة للكتابة/المزامنة (pullAll/expPull/expPush)
+     فلا تظهر إلّا إذا فعّل الاختبار العلمَ window.__MFKR_TEST__=true عبر addInitScript قبل التحميل. */
+  try{
+    const _syncReadOnly = {
+      summary:()=> syncSummary(),
+      state:()=> JSON.parse(JSON.stringify(SYNC_STATE)),
+      module:(n)=> JSON.parse(JSON.stringify(syncModule(n))),
+      inFlight:(n)=> syncInFlight(n),
+      runGen:()=> _syncRunGen
+    };
+    if(window.__MFKR_TEST__ === true){
+      window.__mfkrSync = Object.assign({
+        pullAll:(trigger,opts)=> syncPullAllModules(trigger,opts),
+        expPull:(opts)=> expPullRemote(opts),
+        expPush:(d)=> expPushRemote(d)
+      }, _syncReadOnly);
+    } else {
+      window.__mfkrSync = _syncReadOnly;   /* إنتاج: قراءة فقط، لا كتابة */
+    }
+  }catch(e){}
   /* غلاف رسم آمن: فشل رسم قسم لا يوقف بقية الأقسام */
   function safeRun(name, fn){ try{ return fn(); }catch(e){ diagErr(name, e); return undefined; } }
 
@@ -8175,10 +8285,32 @@
     });
     let repaired=false;
     try{ repaired = expRepairMisclassified(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expRepairMisclassified", e); }
+    /* توفيق القيم المشتقّة للمثيلات مع مصدر الحقيقة (المعاملات) عند التحميل — كي لا تبقى الحالة/المدفوع متأخّرةً حتى أول تعديل أو مزامنة.
+       نحافظ على updatedAt (لا نبصمه) فلا يُحدث ضجيج مزامنة، ولا نرمي مهما كان شكل البيانات */
+    let reconInst=false;
+    try{
+      (raw.instances||[]).forEach(inst=>{
+        if(!inst || typeof inst!=="object") return;
+        let paid=0, lastDate=null;
+        (raw.transactions||[]).forEach(t=>{
+          if(!t || t.deletedAt || t.fixedExpenseInstanceId!==inst.id) return;
+          const amt = Number(t.amountMinor)||0;
+          if(t.transactionType==="refund") paid-=amt;
+          else { paid+=amt; if(typeof t.transactionDate==="string" && (!lastDate || t.transactionDate>lastDate)) lastDate=t.transactionDate; }
+        });
+        paid=Math.max(0,paid);
+        const status = paid<=0 ? "unpaid" : (paid >= (Number(inst.plannedAmountMinor)||0) ? "paid" : "partial");
+        const paidAt = paid>0 ? lastDate : null;
+        if(inst.paidAmountMinor!==paid || inst.status!==status || inst.paidAt!==paidAt){
+          inst.paidAmountMinor=paid; inst.status=status; inst.paidAt=paidAt; reconInst=true;   /* updatedAt محفوظ */
+        }
+      });
+    }catch(e){ if(typeof expDiag==="function") expDiag("expReconInstances", e); }
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
     if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    else if(reconInst){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
   /* إصلاح محافظ لمرّة واحدة: دفعة التزام سُجّلت خطأً تحت فئة أسبوعية (مثل «الأكل»).
@@ -8254,14 +8386,10 @@
      التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
   const EXP_BACKUP_KEY = "h2do-expenses-backup";
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
-  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
+  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0, expPushResolvers = [];
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
-  /* قراءة تُفضّل الخادم لتفادي البيانات المخزّنة القديمة عند العودة للمقدّمة، وترجع للمخزّن المحلي عند انقطاع الشبكة */
-  function expGetDoc(){
-    const ref = expDocRef();
-    try{ return ref.get({source:"server"}).catch(()=> ref.get()); }
-    catch(e){ return ref.get(); }
-  }
+  /* قراءة عبر المساعد العام: خادم أولًا ثم كاش صراحةً مع وسم المصدر — نفس عقد بقيّة الأقسام */
+  function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
   function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
   function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
@@ -8284,20 +8412,24 @@
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
   function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
+  /* يُعيد وعدًا بنتيجة الكتابة {ok} (لا يرمي، لا يكتب في syncStatus مباشرةً).
+     يجمّع الكتابات السريعة في دفعة واحدة؛ كل النداءات المُجمّعة تُحلّ عند اكتمال الكتابة النهائية */
   function expPushRemote(d){
-    if(!db || !user) return;
-    if(expLoadFailed) return;   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
-    /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
-    clearTimeout(expPushTimer);
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(expLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
-    expPushTimer = setTimeout(()=>{
-      try{
-        if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
-        expDocRef().set(snapshot)
-          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
-          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; expSetSyncState("error"); });
-      }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
-    }, 400);
+    clearTimeout(expPushTimer);
+    return new Promise((resolve)=>{
+      expPushResolvers.push(resolve);
+      expPushTimer = setTimeout(()=>{
+        const resolvers = expPushResolvers; expPushResolvers = [];
+        try{
+          expDocRef().set(snapshot)
+            .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); resolvers.forEach(r=> r({ok:true})); })
+            .catch((e)=>{ expSetSyncState("error"); resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); });
+        }catch(e){ resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); }
+      }, 400);
+    });
   }
   /* دمج على مستوى السجل: اتحاد حسب المعرّف الثابت + آخر تحديث يفوز (بلا فقدان، بلا تكرار، بلا جمع مبالغ) */
   function expMergeById(localArr, remoteArr, keyFn){
@@ -8356,18 +8488,38 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", skipped:true}); }
-    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", skipped:true}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
-    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return Promise.resolve({module:"expenses", offline:true}); }
+    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", status:"skipped", reason:"noauth"}); }
+    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", status:"skipped", reason:"loadFailed"}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
+    return joinOrRun("expenses", ()=> _expPullWork(opts));   /* قفل ذو انضمام: النداءات المتزامنة تنضمّ لقراءة واحدة وتحصل على نتيجتها */
+  }
+  function _expPullWork(opts){
+    /* ملاحظة: لا نتخطّى القراءة لمجرّد كوننا دون اتصال — نُجري القراءة فيرجع المساعد للكاش ويُبلَّغ cacheFallback */
     syncBegin("expenses", opts.trigger);
     expSetSyncState("syncing");
-    const done = (snap)=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); syncEnd("expenses", true, snap); };
+    /* الإنهاء يحسب الحالة من مصدر اللقطة ونجاح كتابة المصالحة:
+       - فشل الكتابة = فشل العملية: لا نُقدّم آخر مزامنة خادم (expSetLastSync) ولا ختم نجاح القسم، ونسجّل الخطأ
+       - قراءة كاش = ليست نجاح خادم كامل، ولا نبصم آخر مزامنة خادم */
+    const finish = (snap, reconWriteOk)=>{
+      const cache=_fromCache(snap);
+      const writeOk = reconWriteOk!==false;
+      if(writeOk){
+        if(!cache) expSetLastSync(Date.now());
+        syncEnd("expenses", true, snap);
+        expSetSyncState(cache ? (navigator.onLine===false?"offline":"idle") : "idle");
+      } else {
+        syncEnd("expenses", false, snap, new Error("reconWriteFailed"));   /* لا يُقدّم lastServerSuccessAt ولا يمسّ lastSyncAt */
+        expSetSyncState("error");
+      }
+      return {module:"expenses", status: writeOk?(cache?"cacheFallback":"success"):"failed", source: cache?"cache":"server", reconWriteOk:writeOk};
+    };
     return expGetDoc().then(snap=>{
+      const cache=_fromCache(snap);
       const local = expState;
       if(!snap.exists){
-        /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
-        if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
+        /* الخادم فارغ → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء — لكن ليس بناءً على قراءة كاش (قد يملك الخادم بيانات لم تصلنا) */
+        let recon = Promise.resolve({ok:true});
+        if(!cache && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) recon = expPushRemote(local);
+        return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8377,8 +8529,9 @@
         const adopt = Object.assign({}, remote);
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
-        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); safeRun("expRefresh", expRefresh);
-        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
+        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
+        safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
+        return finish(snap, true);
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -8387,11 +8540,12 @@
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
       localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      safeRun("expRefresh", expRefresh);                       /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
-      if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-      done(snap);
-      return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", ok:false}; });
+      safeRun("expRefresh", expRefresh);                       /* نتيجة خادم صالحة تُرسم دائمًا */
+      /* ادفع الاتحاد ليتقارب الطرفان — وننتظر نتيجته؛ وليس بعد قراءة كاش (قد نطمس أحدث على الخادم) */
+      let recon = Promise.resolve({ok:true});
+      if(contributed && !cache) recon = expPushRemote(merged);
+      return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
+    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* حدّ عزل: تحميل المصاريف لا يجوز أن يوقف إقلاع بقية التطبيق مهما كان شكل البيانات */
@@ -9419,8 +9573,16 @@
     if(gsb) gsb.onclick=()=>{
       if(!db||!user){ if(gst) gst.textContent="سجّل الدخول أولًا للمزامنة"; return; }
       gsb.disabled=true; if(gst) gst.textContent="جارٍ مزامنة جميع البيانات…";
-      _lastGlobalPull=0;
-      syncPullAllModules("manual", {forceServer:true}).then(()=>{ gsb.disabled=false; const su=syncSummary(); if(gst) gst.textContent=su.text; const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml(); safeRun("expRefreshLaunch", expRenderLaunch); });
+      _lastGlobalPull=0;   /* التحديث اليدوي يتجاوز الخنق لكنه يحترم أقفال الأقسام قيد التنفيذ */
+      syncPullAllModules("manual", {forceServer:true}).then((run)=>{
+        gsb.disabled=false;   /* أعِد تفعيل الزر دائمًا */
+        /* حماية الجيل الفعلية: إن تجاوز هذا التشغيلَ تشغيلٌ أحدث، فلا نكتب حالته المتقادمة —
+           التشغيل الأحدث يحدّث الحالة المرئية عبر expRefreshSyncUI (المحروس بالجيل) داخل المنسّق */
+        if(run && typeof run.isLatest==="function" && !run.isLatest()) return;
+        const su=syncSummary(); if(gst) gst.textContent=su.text;
+        const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml();
+        safeRun("expRefreshLaunch", expRenderLaunch);
+      });
     };
     body.querySelectorAll("[data-setbudget]").forEach(b=> b.onclick=()=> expOpenBudgetForm(b.dataset.setbudget));
     body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ c.archivedAt=null; c.isActive=true; c.updatedAt=Date.now(); expSave(expState); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ t.archivedAt=null; t.isActive=true; t.updatedAt=Date.now(); expSave(expState); expRefresh(); } });
