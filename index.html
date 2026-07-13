@@ -2531,8 +2531,9 @@
     if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
     return wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function wCustomPullRemote(trigger){
+  function wCustomPullRemote(trigger, gen){
     if(!db || !user) return Promise.resolve({module:"customWorship", skipped:true});
+    if(syncInFlight("customWorship")) return Promise.resolve({module:"customWorship", status:"throttled", reason:"inflight"});
     syncBegin("customWorship", trigger);
     return getDocServerFirst(wCustomDocRef()).then(snap=>{
       const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
@@ -2542,7 +2543,7 @@
         if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
           localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
           localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
-          safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
+          if(syncGenOk(gen)) safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
         }else if((localMeta.updatedAt||0) > (remote.updatedAt||0) && !cache){
           reconcile = wCustomPushRemote(wCustom(), localMeta.updatedAt);
         }
@@ -3006,10 +3007,11 @@
 
   function pushRemote(date, data){
     if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
-    /* يُعيد نتيجة الكتابة (لا يرمي أبدًا) كي يتتبّعها المنسّق: كتابة المصالحة يجب ألّا تُعتبر نجاحًا قبل اكتمالها */
+    /* يُعيد نتيجة الكتابة (لا يرمي أبدًا) كي يتتبّعها المنسّق: كتابة المصالحة يجب ألّا تُعتبر نجاحًا قبل اكتمالها.
+       لا يكتب في syncStatus مباشرةً — الحالة المرئية تُشتق فقط من حالة المنسّق (SYNC_STATE) عبر syncSummary */
     return dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; return {ok:true}; })
-      .catch((e)=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; return {ok:false, error:(e&&e.message)||String(e)}; });
+      .then(()=>({ok:true}))
+      .catch((e)=>({ok:false, error:(e&&e.message)||String(e)}));
   }
 
   /* ==================== منسّق مزامنة عام لكل الأقسام (سحب) ==================== */
@@ -3031,26 +3033,34 @@
   function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, trigger:null}); }
   function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
   function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false; if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; } else { s.lastError=(err&&err.message)||String(err||"error"); } }
-  /* جيل تشغيل تصاعدي: يحمي الحالة المرئية من تجاوز تشغيل أقدم لتشغيل أحدث */
+  /* قفل حقيقي لكل قسم: inFlight يمنع تشغيلين متزامنين للقسم نفسه (لا مجرّد وسمِ حالة) */
+  function syncInFlight(name){ return !!(SYNC_STATE[name] && SYNC_STATE[name].inFlight); }
+  /* جيل تشغيل تصاعدي: يحمي الحالة/العرض المرئي من تجاوز تشغيل أقدم لتشغيل أحدث.
+     gen==null يعني نداءً مستقلًّا خارج المنسّق (auth/goto) → يُرسم دائمًا */
   let _syncRunGen = 0;
+  function syncGenOk(gen){ return gen==null || gen===_syncRunGen; }
   /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره، ولكلٍّ قفله وخنقه */
   function syncPullAllModules(trigger, opts){
     opts = opts || {};
     const gen = ++_syncRunGen;
     if(!db || !user) return Promise.resolve({trigger, gen, skipped:true});
     diagMark("syncAll:begin:"+trigger);
+    /* يُمرَّر gen لكل قسم كي يُحرَس رسمُه وحالتُه المرئية: تشغيلٌ أقدم لا يطمس أحدث */
     const jobs = [
-      ["daily", ()=> pullRemote(currentDate, trigger)],
-      ["quran", ()=> qPullRemote(trigger)],
-      ["customWorship", ()=> wCustomPullRemote(trigger)],
-      ["witr", ()=> witrPullRemote(trigger)],
-      ["hifz", ()=> hifzPullRemote(trigger)],
-      ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})]
+      ["daily", ()=> pullRemote(currentDate, trigger, gen)],
+      ["quran", ()=> qPullRemote(trigger, gen)],
+      ["customWorship", ()=> wCustomPullRemote(trigger, gen)],
+      ["witr", ()=> witrPullRemote(trigger, gen)],
+      ["hifz", ()=> hifzPullRemote(trigger, gen)],
+      ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer, gen:gen})]
     ];
     return Promise.allSettled(jobs.map(([name, fn])=>{
       try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
       catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, status:"failed"}); }
-    })).then(rs=>{ diagMark("syncAll:end:"+trigger); safeRun("syncUI", expRefreshSyncUI); return {trigger, gen, isLatest:()=> gen===_syncRunGen, results:rs.map(r=> r.value||r.reason)}; });
+    })).then(rs=>{ diagMark("syncAll:end:"+trigger);
+      /* لا نحدّث الحالة المرئية العامّة إلّا إن كان هذا أحدث تشغيل (وإلّا فتشغيلٌ أحدث سيتكفّل بها) */
+      if(gen===_syncRunGen) safeRun("syncUI", expRefreshSyncUI);
+      return {trigger, gen, isLatest:()=> gen===_syncRunGen, results:rs.map(r=> r.value||r.reason)}; });
   }
   /* تحديث الحالة المرئية العامّة من الحالة الحيّة — يُستدعى عند اكتمال أي تشغيل فيتعافى العرض تلقائيًا لأحدث حقيقة */
   function expRefreshSyncUI(){
@@ -3106,7 +3116,7 @@
   }
 
   const _dailyLocks = {};   /* قفل لكل تاريخ: سحب تاريخ لا يفسد سحب تاريخ آخر */
-  function pullRemote(date, trigger){
+  function pullRemote(date, trigger, gen){
     if(!db || !user) return Promise.resolve({module:"daily", date, status:"skipped", reason:"noauth"});
     if(_dailyLocks[date]) return Promise.resolve({module:"daily", date, status:"throttled", reason:"inflight"});
     _dailyLocks[date] = true;
@@ -3114,8 +3124,9 @@
     return getDocServerFirst(dayRef(date)).then(snap=>{
       const cache = _fromCache(snap);
       let reconcile = Promise.resolve({ok:true});
-      /* الحماية من التاريخ القديم: لا نرسم نتيجة تاريخٍ غير المختار حاليًا (لو غيّر المستخدم اليوم أثناء السحب) */
-      if(date === currentDate){
+      /* الحماية من التاريخ القديم: لا نرسم نتيجة تاريخٍ غير المختار حاليًا (لو غيّر المستخدم اليوم أثناء السحب)
+         وحماية الجيل: لا نرسم إن تجاوزنا تشغيلٌ أحدث */
+      if(date === currentDate && syncGenOk(gen)){
         if(snap.exists){
           const remote = snap.data();
           if((remote.updatedAt||0) > (state.updatedAt||0)){
@@ -3167,8 +3178,9 @@
     if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
     return qDocRef().set(JSON.parse(JSON.stringify(q))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function qPullRemote(trigger){
+  function qPullRemote(trigger, gen){
     if(!db || !user) return Promise.resolve({module:"quran", skipped:true});
+    if(syncInFlight("quran")) return Promise.resolve({module:"quran", status:"throttled", reason:"inflight"});
     syncBegin("quran", trigger);
     return getDocServerFirst(qDocRef()).then(snap=>{
       const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
@@ -3179,8 +3191,8 @@
           const merged = Object.assign({}, remote);
           if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
           localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
-          safeRun("qPull:renderWorship", renderWorship);
-          safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
+          if(syncGenOk(gen)){ safeRun("qPull:renderWorship", renderWorship);
+            safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); }); }
         }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
           reconcile = qPushRemote(local);
         }
@@ -3826,8 +3838,9 @@
     if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
     return witrDocRef().set(JSON.parse(JSON.stringify(meta))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function witrPullRemote(trigger){
+  function witrPullRemote(trigger, gen){
     if(!db || !user) return Promise.resolve({module:"witr", skipped:true});
+    if(syncInFlight("witr")) return Promise.resolve({module:"witr", status:"throttled", reason:"inflight"});
     syncBegin("witr", trigger);
     return getDocServerFirst(witrDocRef()).then(snap=>{
       const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
@@ -3836,8 +3849,8 @@
         const local = witrMeta();
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-          /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم) */
-          safeRun("witrPull:render", ()=>{ if(witrOverlay && !witrOverlay.hidden && typeof witrRenderAll==="function") witrRenderAll(); });
+          /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم)، مع حماية الجيل */
+          if(syncGenOk(gen)) safeRun("witrPull:render", ()=>{ if(witrOverlay && !witrOverlay.hidden && typeof witrRenderAll==="function") witrRenderAll(); });
         }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
           reconcile = witrPushRemote(local);
         }
@@ -4985,10 +4998,12 @@
     hifzDeleteSegmentRemote(segmentId);
   }
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
-  function hifzPullRemote(trigger){
+  function hifzPullRemote(trigger, gen){
     if(!db || !user) return Promise.resolve({module:"hifz", skipped:true});
+    if(syncInFlight("hifz")) return Promise.resolve({module:"hifz", status:"throttled", reason:"inflight"});
     syncBegin("hifz", trigger);
     return getQueryServerFirst(db.collection("users").doc(user.uid).collection("hifzSegments")).then(snap=>{
+      const cache=_fromCache(snap);
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
       if(remoteSegs.length){
@@ -5001,11 +5016,11 @@
         });
         data.segments = Object.values(byId);
         hifzSaveLocal(data);
-        safeRun("hifzPull:render", renderHifzCard);
+        if(syncGenOk(gen)) safeRun("hifzPull:render", renderHifzCard);
       }
       syncEnd("hifz", true, snap);
-      return {module:"hifz", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", ok:false}; });
+      return {module:"hifz", status: cache?"cacheFallback":"success", source: cache?"cache":"server"};
+    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
@@ -8153,6 +8168,17 @@
   function diagErr(where, err){ try{ const m=(err&&err.message)?err.message:String(err); MFKR_DIAG.errors.push({t:Date.now(), where:String(where), msg:m, stack:(err&&err.stack)?String(err.stack).split("\n").slice(0,4).join(" | "):""}); if(MFKR_DIAG.errors.length>40) MFKR_DIAG.errors.shift(); if(window.console&&console.warn) console.warn("[diag] "+where+": "+m); }catch(e){} }
   function expDiag(where, err){ diagErr(where, err); }
   try{ window.__mfkrDiag = ()=> JSON.parse(JSON.stringify(MFKR_DIAG)); }catch(e){}
+  /* خطّاف اختبار داخلي (قراءة فقط + استدعاءات المزامنة) — لا يُخزّن بيانات المستخدم، يُستخدم لتغطية عقود المزامنة آليًا */
+  try{ window.__mfkrSync = {
+    pullAll:(trigger,opts)=> syncPullAllModules(trigger,opts),
+    expPull:(opts)=> expPullRemote(opts),
+    expPush:(d)=> expPushRemote(d),
+    summary:()=> syncSummary(),
+    state:()=> JSON.parse(JSON.stringify(SYNC_STATE)),
+    module:(n)=> JSON.parse(JSON.stringify(syncModule(n))),
+    inFlight:(n)=> syncInFlight(n),
+    runGen:()=> _syncRunGen
+  }; }catch(e){}
   /* غلاف رسم آمن: فشل رسم قسم لا يوقف بقية الأقسام */
   function safeRun(name, fn){ try{ return fn(); }catch(e){ diagErr(name, e); return undefined; } }
 
@@ -8225,10 +8251,32 @@
     });
     let repaired=false;
     try{ repaired = expRepairMisclassified(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expRepairMisclassified", e); }
+    /* توفيق القيم المشتقّة للمثيلات مع مصدر الحقيقة (المعاملات) عند التحميل — كي لا تبقى الحالة/المدفوع متأخّرةً حتى أول تعديل أو مزامنة.
+       نحافظ على updatedAt (لا نبصمه) فلا يُحدث ضجيج مزامنة، ولا نرمي مهما كان شكل البيانات */
+    let reconInst=false;
+    try{
+      (raw.instances||[]).forEach(inst=>{
+        if(!inst || typeof inst!=="object") return;
+        let paid=0, lastDate=null;
+        (raw.transactions||[]).forEach(t=>{
+          if(!t || t.deletedAt || t.fixedExpenseInstanceId!==inst.id) return;
+          const amt = Number(t.amountMinor)||0;
+          if(t.transactionType==="refund") paid-=amt;
+          else { paid+=amt; if(typeof t.transactionDate==="string" && (!lastDate || t.transactionDate>lastDate)) lastDate=t.transactionDate; }
+        });
+        paid=Math.max(0,paid);
+        const status = paid<=0 ? "unpaid" : (paid >= (Number(inst.plannedAmountMinor)||0) ? "paid" : "partial");
+        const paidAt = paid>0 ? lastDate : null;
+        if(inst.paidAmountMinor!==paid || inst.status!==status || inst.paidAt!==paidAt){
+          inst.paidAmountMinor=paid; inst.status=status; inst.paidAt=paidAt; reconInst=true;   /* updatedAt محفوظ */
+        }
+      });
+    }catch(e){ if(typeof expDiag==="function") expDiag("expReconInstances", e); }
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
     if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    else if(reconInst){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
   /* إصلاح محافظ لمرّة واحدة: دفعة التزام سُجّلت خطأً تحت فئة أسبوعية (مثل «الأكل»).
@@ -8304,14 +8352,10 @@
      التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
   const EXP_BACKUP_KEY = "h2do-expenses-backup";
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
-  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
+  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0, expPushResolvers = [];
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
-  /* قراءة تُفضّل الخادم لتفادي البيانات المخزّنة القديمة عند العودة للمقدّمة، وترجع للمخزّن المحلي عند انقطاع الشبكة */
-  function expGetDoc(){
-    const ref = expDocRef();
-    try{ return ref.get({source:"server"}).catch(()=> ref.get()); }
-    catch(e){ return ref.get(); }
-  }
+  /* قراءة عبر المساعد العام: خادم أولًا ثم كاش صراحةً مع وسم المصدر — نفس عقد بقيّة الأقسام */
+  function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
   function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
   function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
@@ -8334,20 +8378,24 @@
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
   function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
+  /* يُعيد وعدًا بنتيجة الكتابة {ok} (لا يرمي، لا يكتب في syncStatus مباشرةً).
+     يجمّع الكتابات السريعة في دفعة واحدة؛ كل النداءات المُجمّعة تُحلّ عند اكتمال الكتابة النهائية */
   function expPushRemote(d){
-    if(!db || !user) return;
-    if(expLoadFailed) return;   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
-    /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
-    clearTimeout(expPushTimer);
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(expLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
-    expPushTimer = setTimeout(()=>{
-      try{
-        if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
-        expDocRef().set(snapshot)
-          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
-          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; expSetSyncState("error"); });
-      }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
-    }, 400);
+    clearTimeout(expPushTimer);
+    return new Promise((resolve)=>{
+      expPushResolvers.push(resolve);
+      expPushTimer = setTimeout(()=>{
+        const resolvers = expPushResolvers; expPushResolvers = [];
+        try{
+          expDocRef().set(snapshot)
+            .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); resolvers.forEach(r=> r({ok:true})); })
+            .catch((e)=>{ expSetSyncState("error"); resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); });
+        }catch(e){ resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); }
+      }, 400);
+    });
   }
   /* دمج على مستوى السجل: اتحاد حسب المعرّف الثابت + آخر تحديث يفوز (بلا فقدان، بلا تكرار، بلا جمع مبالغ) */
   function expMergeById(localArr, remoteArr, keyFn){
@@ -8406,18 +8454,31 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", skipped:true}); }
-    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", skipped:true}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
-    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return Promise.resolve({module:"expenses", offline:true}); }
+    const gen = opts.gen;
+    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", status:"skipped", reason:"noauth"}); }
+    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", status:"skipped", reason:"loadFailed"}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
+    if(syncInFlight("expenses")) return Promise.resolve({module:"expenses", status:"throttled", reason:"inflight"});   /* قفل حقيقي: لا تشغيلين متزامنين */
+    /* ملاحظة: لا نتخطّى القراءة لمجرّد كوننا دون اتصال — نُجري القراءة فيرجع المساعد للكاش ويُبلَّغ cacheFallback */
     syncBegin("expenses", opts.trigger);
     expSetSyncState("syncing");
-    const done = (snap)=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); syncEnd("expenses", true, snap); };
+    /* الإنهاء يحسب الحالة من مصدر اللقطة: كاش ⇒ لا نبصم آخر مزامنة خادم ولا نُبلّغ نجاحًا كاملًا */
+    const finish = (snap, reconWriteOk)=>{
+      const cache=_fromCache(snap);
+      if(!cache) expSetLastSync(Date.now());                    /* لا نُحدّث «آخر مزامنة» بعد قراءة كاش فقط */
+      syncEnd("expenses", true, snap);
+      const writeOk = reconWriteOk!==false;
+      if(!writeOk) syncModule("expenses").lastError = "reconWriteFailed";   /* كتابة المصالحة الفاشلة تظهر ولا تُبلَّغ نجاحًا */
+      expSetSyncState(cache ? (navigator.onLine===false?"offline":"idle") : (writeOk?"idle":"error"));
+      return {module:"expenses", status: !writeOk?"failed":(cache?"cacheFallback":"success"), source: cache?"cache":"server"};
+    };
     return expGetDoc().then(snap=>{
+      const cache=_fromCache(snap);
       const local = expState;
       if(!snap.exists){
-        /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
-        if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
+        /* الخادم فارغ → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء — لكن ليس بناءً على قراءة كاش (قد يملك الخادم بيانات لم تصلنا) */
+        let recon = Promise.resolve({ok:true});
+        if(!cache && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) recon = expPushRemote(local);
+        return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8427,8 +8488,9 @@
         const adopt = Object.assign({}, remote);
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
-        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); safeRun("expRefresh", expRefresh);
-        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
+        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
+        if(syncGenOk(gen)) safeRun("expRefresh", expRefresh);   /* حماية الجيل: لا نرسم إن تجاوزنا تشغيلٌ أحدث */
+        return finish(snap, true);
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -8437,11 +8499,12 @@
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
       localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      safeRun("expRefresh", expRefresh);                       /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
-      if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-      done(snap);
-      return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", ok:false}; });
+      if(syncGenOk(gen)) safeRun("expRefresh", expRefresh);    /* حماية الجيل على العرض المرئي */
+      /* ادفع الاتحاد ليتقارب الطرفان — وننتظر نتيجته؛ وليس بعد قراءة كاش (قد نطمس أحدث على الخادم) */
+      let recon = Promise.resolve({ok:true});
+      if(contributed && !cache) recon = expPushRemote(merged);
+      return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
+    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* حدّ عزل: تحميل المصاريف لا يجوز أن يوقف إقلاع بقية التطبيق مهما كان شكل البيانات */
@@ -9470,10 +9533,12 @@
       if(!db||!user){ if(gst) gst.textContent="سجّل الدخول أولًا للمزامنة"; return; }
       gsb.disabled=true; if(gst) gst.textContent="جارٍ مزامنة جميع البيانات…";
       _lastGlobalPull=0;   /* التحديث اليدوي يتجاوز الخنق لكنه يحترم أقفال الأقسام قيد التنفيذ */
-      syncPullAllModules("manual", {forceServer:true}).then(()=>{
-        /* الحالة المرئية مشتقّة مباشرةً من الحالة الحيّة لكل قسم (syncSummary) — فهي دائمًا القيمة الحالية،
-           ولا يمكن لتشغيلٍ أقدم أن يطمس أحدث؛ وإن كان تشغيلٌ أحدث قيد التنفيذ يُظهر syncSummary «جارٍ» تلقائيًا */
-        gsb.disabled=false; const su=syncSummary(); if(gst) gst.textContent=su.text;
+      syncPullAllModules("manual", {forceServer:true}).then((run)=>{
+        gsb.disabled=false;   /* أعِد تفعيل الزر دائمًا */
+        /* حماية الجيل الفعلية: إن تجاوز هذا التشغيلَ تشغيلٌ أحدث، فلا نكتب حالته المتقادمة —
+           التشغيل الأحدث يحدّث الحالة المرئية عبر expRefreshSyncUI (المحروس بالجيل) داخل المنسّق */
+        if(run && typeof run.isLatest==="function" && !run.isLatest()) return;
+        const su=syncSummary(); if(gst) gst.textContent=su.text;
         const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml();
         safeRun("expRefreshLaunch", expRenderLaunch);
       });
