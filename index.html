@@ -2528,13 +2528,14 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("customWorship");
   }
   function wCustomPushRemote(list, updatedAt){
-    if(!db || !user) return;
-    wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function wCustomPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"customWorship", skipped:true});
     syncBegin("customWorship", trigger);
     return getDocServerFirst(wCustomDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const localMeta = wCustomMeta();
@@ -2542,13 +2543,13 @@
           localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
           localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
           safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
-        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
-          wCustomPushRemote(wCustom(), localMeta.updatedAt);
+        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = wCustomPushRemote(wCustom(), localMeta.updatedAt);
         }
       }
-      syncEnd("customWorship", true, snap);
-      return {module:"customWorship", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false); syncEnd("customWorship", true, snap); if(!writeOk) syncModule("customWorship").lastError="reconWriteFailed";
+        return {module:"customWorship", status: !writeOk?"failed":(cache?"cacheFallback":"success"), source:cache?"cache":"server"}; });
+    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -3004,26 +3005,39 @@
   }
 
   function pushRemote(date, data){
-    if(!db || !user) return;
-    dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; })
-      .catch(()=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; });
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    /* يُعيد نتيجة الكتابة (لا يرمي أبدًا) كي يتتبّعها المنسّق: كتابة المصالحة يجب ألّا تُعتبر نجاحًا قبل اكتمالها */
+    return dayRef(date).set(JSON.parse(JSON.stringify(data)))
+      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; return {ok:true}; })
+      .catch((e)=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; return {ok:false, error:(e&&e.message)||String(e)}; });
   }
 
   /* ==================== منسّق مزامنة عام لكل الأقسام (سحب) ==================== */
   /* قراءة تُفضّل الخادم أولًا ثم ترجع للمخزّن المحلي عند تعذّر الشبكة — تُنهي مشكلة الكاش القديم عند العودة للمقدّمة */
-  function getDocServerFirst(ref){ try{ return ref.get({source:"server"}).catch(()=> ref.get()); }catch(e){ try{ return ref.get(); }catch(_){ return Promise.reject(e); } } }
-  function getQueryServerFirst(q){ try{ return q.get({source:"server"}).catch(()=> q.get()); }catch(e){ try{ return q.get(); }catch(_){ return Promise.reject(e); } } }
-  function _fromCache(snap){ return !!(snap && snap.metadata && snap.metadata.fromCache); }
+  /* خادم أولًا ثم كاش صراحةً (compat 10.14.1): يعلّم المصدر على اللقطة كي نميّز نجاح الخادم عن رجوع الكاش بدقّة */
+  function _tagSource(snap, src, serverErr){ try{ if(snap){ snap._srcServer = (src==="server"); snap._srcCache = (src==="cache"); if(serverErr) snap._serverErr = (serverErr&&serverErr.message)||String(serverErr); } }catch(e){} return snap; }
+  function getDocServerFirst(ref){
+    try{ return ref.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> ref.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  function getQueryServerFirst(q){
+    try{ return q.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> q.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  /* مصدر الكاش: العلامة الصريحة أولًا، ثم metadata.fromCache احتياطًا */
+  function _fromCache(snap){ return !!(snap && (snap._srcCache || (snap.metadata && snap.metadata.fromCache))); }
   /* حالة مزامنة مستقلّة لكل قسم — لا يطمس قسمٌ حالة قسم آخر */
   const SYNC_STATE = {};
   function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, trigger:null}); }
   function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
   function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false; if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; } else { s.lastError=(err&&err.message)||String(err||"error"); } }
+  /* جيل تشغيل تصاعدي: يحمي الحالة المرئية من تجاوز تشغيل أقدم لتشغيل أحدث */
+  let _syncRunGen = 0;
   /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره، ولكلٍّ قفله وخنقه */
   function syncPullAllModules(trigger, opts){
     opts = opts || {};
-    if(!db || !user) return Promise.resolve({trigger, skipped:true});
+    const gen = ++_syncRunGen;
+    if(!db || !user) return Promise.resolve({trigger, gen, skipped:true});
     diagMark("syncAll:begin:"+trigger);
     const jobs = [
       ["daily", ()=> pullRemote(currentDate, trigger)],
@@ -3034,9 +3048,14 @@
       ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})]
     ];
     return Promise.allSettled(jobs.map(([name, fn])=>{
-      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, ok:false}; }); }
-      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, ok:false}); }
-    })).then(rs=>{ diagMark("syncAll:end:"+trigger); return {trigger, results:rs.map(r=> r.value||r.reason)}; });
+      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
+      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, status:"failed"}); }
+    })).then(rs=>{ diagMark("syncAll:end:"+trigger); safeRun("syncUI", expRefreshSyncUI); return {trigger, gen, isLatest:()=> gen===_syncRunGen, results:rs.map(r=> r.value||r.reason)}; });
+  }
+  /* تحديث الحالة المرئية العامّة من الحالة الحيّة — يُستدعى عند اكتمال أي تشغيل فيتعافى العرض تلقائيًا لأحدث حقيقة */
+  function expRefreshSyncUI(){
+    const gst=document.getElementById("expGlobalSyncText"); if(gst){ try{ gst.textContent = syncSummary().text; }catch(e){} }
+    const ms=document.getElementById("expModStatus"); if(ms && typeof expModStatusHtml==="function"){ try{ ms.innerHTML = expModStatusHtml(); }catch(e){} }
   }
   /* خنق عام يجمع أحداث المتصفّح المتزامنة (focus/pageshow/visibility) دون تعطيل أقفال الأقسام المستقلّة */
   let _lastGlobalPull = 0;
@@ -3045,35 +3064,57 @@
     const now = Date.now();
     if(trigger!=="manual" && now - _lastGlobalPull < 1500) return;
     _lastGlobalPull = now;
-    syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+    return syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+  }
+  /* ترشيح أحداث دورة الحياة: يجمع focus/pageshow/visibilitychange المتزامنة خلال ~400ms في نداء واحد (منفصل عن خنق الأقسام) */
+  let _lcDebounceTimer = null, _lcPendingTrigger = null;
+  function triggerGlobalForegroundSync(trigger){
+    if(!db || !user) return;
+    _lcPendingTrigger = _lcPendingTrigger || trigger || "foreground";
+    if(_lcDebounceTimer) return;
+    _lcDebounceTimer = setTimeout(()=>{ const t=_lcPendingTrigger; _lcDebounceTimer=null; _lcPendingTrigger=null; safeRun("foregroundSync", ()=> syncPullAllThrottled(t)); }, 400);
   }
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
     const names=["daily","quran","customWorship","witr","hifz","expenses"];
-    let anyFail=false, anyCache=false, anyServer=false, anyFlight=false, anyAttempt=false;
-    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s) return; anyAttempt=true; if(s.inFlight)anyFlight=true; if(s.lastError)anyFail=true; if(s.lastCacheFallbackAt>s.lastServerSuccessAt)anyCache=true; if(s.lastServerSuccessAt)anyServer=true; });
-    if(!anyAttempt) return {state:"idle", text:"—"};
-    if(anyFlight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
-    if(anyFail && anyServer) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
-    if(anyFail) return {state:"fail", text:"تعذّرت المزامنة"};
-    if(anyCache && (navigator.onLine===false)) return {state:"offline", text:"بانتظار الاتصال"};
-    return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+    let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
+    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
+      if(s.inFlight) flight=true;
+      if(s.lastError){ anyFail=true; allServer=false; }
+      const serverOk = s.lastServerSuccessAt>0 && s.lastServerSuccessAt>=s.lastCacheFallbackAt && !s.lastError;
+      if(serverOk) anyServer=true; else allServer=false;
+      if(s.lastCacheFallbackAt>0 && s.lastCacheFallbackAt>s.lastServerSuccessAt) anyCache=true;
+    });
+    if(!attempted) return {state:"idle", text:"—"};
+    if(flight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
+    if(anyFail) return anyServer ? {state:"partial", text:"تمت مزامنة بعض الأقسام"} : {state:"fail", text:"تعذّرت المزامنة"};
+    if(navigator.onLine===false) return {state:"offline", text:"بانتظار الاتصال"};
+    if(anyCache) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};   /* كاش = ليس نجاح خادم كامل */
+    if(allServer) return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+    return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
   }
   /* تسجيل مشغّلات دورة الحياة مرّة واحدة (لا تكرار عند فتح النوافذ) — يحدّث كل الأقسام */
   let _lifecycleInit = false;
   function initLifecycleSync(){
     if(_lifecycleInit) return; _lifecycleInit = true;
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") syncPullAllThrottled("foreground"); });
-    window.addEventListener("focus", ()=> syncPullAllThrottled("focus"));
-    window.addEventListener("pageshow", ()=> syncPullAllThrottled("pageshow"));
-    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); syncPullAllThrottled("online"); });
+    /* تسجيل واحد لكل حدث؛ الأحداث المتزامنة تُجمع عبر triggerGlobalForegroundSync (~400ms) */
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("foreground"); });
+    window.addEventListener("focus", ()=> triggerGlobalForegroundSync("focus"));
+    window.addEventListener("pageshow", ()=> triggerGlobalForegroundSync("pageshow"));
+    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); triggerGlobalForegroundSync("online"); });
     window.addEventListener("offline", ()=>{ safeRun("syncRowOffline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); });
   }
 
+  const _dailyLocks = {};   /* قفل لكل تاريخ: سحب تاريخ لا يفسد سحب تاريخ آخر */
   function pullRemote(date, trigger){
-    if(!db || !user) return Promise.resolve({module:"daily", skipped:true});
+    if(!db || !user) return Promise.resolve({module:"daily", date, status:"skipped", reason:"noauth"});
+    if(_dailyLocks[date]) return Promise.resolve({module:"daily", date, status:"throttled", reason:"inflight"});
+    _dailyLocks[date] = true;
     syncBegin("daily", trigger);
     return getDocServerFirst(dayRef(date)).then(snap=>{
+      const cache = _fromCache(snap);
+      let reconcile = Promise.resolve({ok:true});
+      /* الحماية من التاريخ القديم: لا نرسم نتيجة تاريخٍ غير المختار حاليًا (لو غيّر المستخدم اليوم أثناء السحب) */
       if(date === currentDate){
         if(snap.exists){
           const remote = snap.data();
@@ -3081,16 +3122,21 @@
             state = Object.assign(blankState(), remote);
             localStorage.setItem(storageKey(date), JSON.stringify(state));
             safeRun("pullRemote:renderAll", renderAll);   /* الرسم معزول — فشله لا يُفشل المزامنة */
-          }else if((state.updatedAt||0) > (remote.updatedAt||0)){
-            pushRemote(date, state);
+          }else if((state.updatedAt||0) > (remote.updatedAt||0) && !cache){   /* لا ندفع فوق كاش: قد يكون الخادم أحدث */
+            reconcile = pushRemote(date, state);
           }
-        }else if(state.updatedAt){
-          pushRemote(date, state);
+        }else if(state.updatedAt && !cache){
+          reconcile = pushRemote(date, state);
         }
       }
-      syncEnd("daily", true, snap);
-      return {module:"daily", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{
+        const writeOk = !(w && w.ok===false);
+        syncEnd("daily", true, snap);
+        if(!writeOk){ syncModule("daily").lastError = "reconWriteFailed"; }   /* كتابة المصالحة فشلت → ليس نجاحًا كاملًا */
+        return {module:"daily", date, status: !writeOk ? "failed" : (cache ? "cacheFallback" : "success"), source: cache?"cache":"server", reconWriteOk: writeOk};
+      });
+    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", date, status:"failed", error:(e&&e.message)||String(e)}; })
+      .then(r=>{ delete _dailyLocks[date]; return r; });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3118,13 +3164,14 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("quran");
   }
   function qPushRemote(q){
-    if(!db || !user) return;
-    qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return qDocRef().set(JSON.parse(JSON.stringify(q))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function qPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"quran", skipped:true});
     syncBegin("quran", trigger);
     return getDocServerFirst(qDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const local = qLoad();
@@ -3134,13 +3181,13 @@
           localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
           safeRun("qPull:renderWorship", renderWorship);
           safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
-        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-          qPushRemote(local);
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = qPushRemote(local);
         }
       }
-      syncEnd("quran", true, snap);
-      return {module:"quran", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false); syncEnd("quran", true, snap); if(!writeOk) syncModule("quran").lastError="reconWriteFailed";
+        return {module:"quran", status: !writeOk?"failed":(cache?"cacheFallback":"success"), source:cache?"cache":"server"}; });
+    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -3776,25 +3823,28 @@
   /* مزامنة سجل الاقتراحات والسور المفضّلة عبر الأجهزة */
   function witrDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("witr"); }
   function witrPushRemote(meta){
-    if(!db || !user) return;
-    witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return witrDocRef().set(JSON.parse(JSON.stringify(meta))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function witrPullRemote(trigger){
     if(!db || !user) return Promise.resolve({module:"witr", skipped:true});
     syncBegin("witr", trigger);
     return getDocServerFirst(witrDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
       if(snap.exists){
         const remote = snap.data();
         const local = witrMeta();
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-          witrPushRemote(local);
+          /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم) */
+          safeRun("witrPull:render", ()=>{ if(witrOverlay && !witrOverlay.hidden && typeof witrRenderAll==="function") witrRenderAll(); });
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = witrPushRemote(local);
         }
       }
-      syncEnd("witr", true, snap);
-      return {module:"witr", ok:true, fromCache:_fromCache(snap)};
-    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", ok:false}; });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false); syncEnd("witr", true, snap); if(!writeOk) syncModule("witr").lastError="reconWriteFailed";
+        return {module:"witr", status: !writeOk?"failed":(cache?"cacheFallback":"success"), source:cache?"cache":"server"}; });
+    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -4913,12 +4963,12 @@
     return db.collection("users").doc(user.uid).collection("hifzSegments").doc(segmentId);
   }
   function hifzPushSegment(seg){
-    if(!db || !user) return;
-    hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzDeleteSegmentRemote(segmentId){
-    if(!db || !user) return;
-    hifzSegmentRef(segmentId).delete().catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(segmentId).delete().then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzUpsertSegment(seg){
     seg.updatedAt = Date.now();
@@ -9419,8 +9469,14 @@
     if(gsb) gsb.onclick=()=>{
       if(!db||!user){ if(gst) gst.textContent="سجّل الدخول أولًا للمزامنة"; return; }
       gsb.disabled=true; if(gst) gst.textContent="جارٍ مزامنة جميع البيانات…";
-      _lastGlobalPull=0;
-      syncPullAllModules("manual", {forceServer:true}).then(()=>{ gsb.disabled=false; const su=syncSummary(); if(gst) gst.textContent=su.text; const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml(); safeRun("expRefreshLaunch", expRenderLaunch); });
+      _lastGlobalPull=0;   /* التحديث اليدوي يتجاوز الخنق لكنه يحترم أقفال الأقسام قيد التنفيذ */
+      syncPullAllModules("manual", {forceServer:true}).then(()=>{
+        /* الحالة المرئية مشتقّة مباشرةً من الحالة الحيّة لكل قسم (syncSummary) — فهي دائمًا القيمة الحالية،
+           ولا يمكن لتشغيلٍ أقدم أن يطمس أحدث؛ وإن كان تشغيلٌ أحدث قيد التنفيذ يُظهر syncSummary «جارٍ» تلقائيًا */
+        gsb.disabled=false; const su=syncSummary(); if(gst) gst.textContent=su.text;
+        const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml();
+        safeRun("expRefreshLaunch", expRenderLaunch);
+      });
     };
     body.querySelectorAll("[data-setbudget]").forEach(b=> b.onclick=()=> expOpenBudgetForm(b.dataset.setbudget));
     body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ c.archivedAt=null; c.isActive=true; c.updatedAt=Date.now(); expSave(expState); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ t.archivedAt=null; t.isActive=true; t.updatedAt=Date.now(); expSave(expState); expRefresh(); } });
