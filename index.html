@@ -8228,7 +8228,8 @@
         genActive:(id,y,m)=> { const t=expTplById(id); return t? expTplGenActive(t,y,m):null; },
         toMinor:(v)=> expToMinor(v),
         minorParse:(v)=> expMinorParse(v),
-        merge:(a,b)=> expMerge(a,b)
+        merge:(a,b)=> expMerge(a,b),
+        openExpenseForm:(id,pre)=> expOpenExpenseForm(id,pre)
       };
     } else {
       window.__mfkrSync = _syncReadOnly;   /* إنتاج: قراءة فقط، لا كتابة */
@@ -8480,16 +8481,23 @@
     });
   }
   /* دمج على مستوى السجل: اتحاد حسب المعرّف الثابت + آخر تحديث يفوز (بلا فقدان، بلا تكرار، بلا جمع مبالغ) */
-  function expMergeById(localArr, remoteArr, keyFn){
+  /* اتحاد حسب المعرّف: الأحدث updatedAt يفوز. عند تعادل updatedAt يُستخدم tie(l,ex) لحسمٍ حتمي
+     (لا يعتمد على أيّهما «المحلي») إن مُرِّر؛ وإلّا تبقى القاعدة العامّة (المحلي) دون إضعافٍ للسجلات الأخرى. */
+  function expMergeById(localArr, remoteArr, keyFn, tie){
     const map = new Map();
     (remoteArr||[]).forEach(r=>{ const k=r&&keyFn(r); if(k!=null) map.set(k, r); });
     (localArr||[]).forEach(l=>{ const k=l&&keyFn(l); if(k==null) return;
       const ex = map.get(k);
-      if(!ex) map.set(k, l);
-      else map.set(k, (l.updatedAt||0) >= (ex.updatedAt||0) ? l : ex);
+      if(!ex){ map.set(k, l); return; }
+      const lu=(l.updatedAt||0), eu=(ex.updatedAt||0);
+      let win;
+      if(lu>eu) win=l; else if(eu>lu) win=ex; else win = tie ? tie(l, ex) : l;
+      map.set(k, win);
     });
     return [...map.values()].map(r=> Object.assign({}, r));   /* مراجع جديدة (حالة غير قابلة للطفر) */
   }
+  /* حسم تعادل الرحلات حتميًا: عند تساوي updatedAt تفوز الشاهدة على الحيّة (لا إحياء)، وإلّا ترتيب مستقر بالمعرّف */
+  function expTripTie(a, b){ const ad=!!(a&&a.deletedAt), bd=!!(b&&b.deletedAt); if(ad!==bd) return ad?a:b; return (String(a.id) <= String(b.id)) ? a : b; }
   function expMerge(localD, remoteD){
     localD = localD||{}; remoteD = remoteD||{};
     const out = { version: Math.max(localD.version||1, remoteD.version||1) };
@@ -8498,7 +8506,7 @@
     out.categories = expMergeById(localD.categories, remoteD.categories, c=>c.id);
     out.fixedTemplates = expMergeById(localD.fixedTemplates, remoteD.fixedTemplates, t=>t.id);
     out.transactions = expMergeById(localD.transactions, remoteD.transactions, t=>t.id);  /* الحذف الناعم محفوظ كـ tombstone */
-    out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id);
+    out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id, expTripTie);   /* عند التعادل: الشاهدة تفوز حتميًا */
     /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
     out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
     /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
@@ -8639,17 +8647,17 @@
 
   /* ---------- تطبيع الوحدة الصغرى (مصدر واحد آمن لكل جمع/إعادة حساب) ----------
      amountMinor يجب أن يكون عددًا صحيحًا للوحدة الصغرى. القيم القديمة قد تكون سلاسل رقمية
-     ("80000") فتتسلسل مع + بدل الجمع، أو قيمًا مشوّهة (null/NaN/"oops") فتُنتج NaN.
-     expMinorParse: يقرأ قيمة خام ويعيد {ok, minor}. سلسلة رقمية منتهية = صالحة (تُطبَّع لعدد صحيح).
-     expToMinor: مُحوِّل آمن للحساب — القيمة غير الصالحة تُعامَل كصفر (لا تُضخّم ولا تُسلسل ولا تُنتج NaN)؛
-                 السجل نفسه يُوسَم amountInvalid/needsReview عند التحميل فلا يُعرض كأنه مال صحيح. */
+     صحيحة ("80000") فتتسلسل مع + بدل الجمع، أو قيمًا مشوّهة (null/NaN/"oops")، أو كسورًا (12.5/"12.5").
+     صرامة: نقبل الأعداد الصحيحة المنتهية فقط (Number.isInteger)؛ فالسلسلة الصحيحة "80000" صالحة،
+     أمّا الكسر عددًا أو سلسلةً فيُعدّ مشوّهًا (لا يُقرّب صامتًا فيبدو صالحًا) — يبقى amountInvalid ويُسهم بصفر.
+     expToMinor: مُحوِّل آمن للحساب — غير الصالح صفرٌ (لا تضخيم ولا تسلسل ولا NaN)؛ السجل يُوسَم needsReview. */
   function expMinorParse(v){
-    if(typeof v === "number"){ return isFinite(v) ? {ok:true, minor:Math.round(v)} : {ok:false}; }
+    if(typeof v === "number"){ return Number.isInteger(v) ? {ok:true, minor:v} : {ok:false}; }
     if(typeof v === "string"){
       const s = v.trim();
       if(s === "") return {ok:false};
-      const n = Number(s);              /* السلسلة كاملةً عددٌ منتهٍ فقط (Number("1a")=NaN) */
-      return isFinite(n) ? {ok:true, minor:Math.round(n)} : {ok:false};
+      const n = Number(s);              /* السلسلة كاملةً عددًا فقط (Number("1a")=NaN)، والصحيح فقط يُقبَل */
+      return Number.isInteger(n) ? {ok:true, minor:n} : {ok:false};
     }
     return {ok:false};
   }
@@ -9207,10 +9215,15 @@
     /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
     const active = expPreferredActiveTrip();
     let curTrip = tx? (tx.tripId||"") : (preTripId!=null? preTripId : (active? active.id : ""));
-    /* قائمة الرحلات المتاحة للاختيار: غير المؤرشفة + رحلة المعاملة الحالية إن كانت مؤرشفة (للتعديل) */
-    const tripPool = (expState.trips||[]).filter(t=> !t.archivedAt || (tx && t.id===tx.tripId));
-    const tripOpts = '<option value="">بدون رحلة</option>' + tripPool.map(t=>{ const st=expTripStatus(t); const tag=st==="active"?" ✈️":st==="planned"?" (قادمة)":st==="completed"?" (مكتملة)":st==="archived"?" (مؤرشفة)":""; return '<option value="'+t.id+'"'+(t.id===curTrip?' selected':'')+'>'+expEsc(t.name)+tag+'</option>'; }).join("");
-    const showTripField = tripPool.length>0 || !!active;
+    /* قائمة الرحلات المتاحة للاختيار: الحيّة فقط (تُستبعد المحذوفة/الشواهد) + رحلة المعاملة إن كانت مؤرشفة (للتعديل).
+       إن كانت رحلة المعاملة محذوفةً (شاهدة) لا نعرضها كخيار حيّ، بل خيارًا واحدًا مُوسومًا «محذوفة (محفوظة)»
+       يحمل معرّفها الأصلي كي لا يُفكّ الارتباط صامتًا عند الحفظ؛ ويظلّ للمستخدم اختيار «بدون رحلة» صراحةً. */
+    const tripPool = expLiveTrips().filter(t=> !t.archivedAt || (tx && t.id===tx.tripId));
+    const curTripDeleted = !!(curTrip && !tripPool.some(t=>t.id===curTrip));
+    const tripOpts = '<option value="">بدون رحلة</option>'
+      + (curTripDeleted? '<option value="'+expEsc(curTrip)+'" selected>↳ رحلة محذوفة (محفوظة)</option>' : '')
+      + tripPool.map(t=>{ const st=expTripStatus(t); const tag=st==="active"?" ✈️":st==="planned"?" (قادمة)":st==="completed"?" (مكتملة)":st==="archived"?" (مؤرشفة)":""; return '<option value="'+t.id+'"'+(t.id===curTrip?' selected':'')+'>'+expEsc(t.name)+tag+'</option>'; }).join("");
+    const showTripField = tripPool.length>0 || !!active || curTripDeleted;
     const initCount = tx? (tx.countAgainstWeeklyBudget!==false) : (curTrip? !!(expTripById(curTrip)||{}).includeInWeeklyBudgets : true);
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(tx?"تعديل مصروف":"إضافة مصروف")+'</h3><button data-close>✕</button></div>'+
@@ -9665,10 +9678,12 @@
     const fixedActual=expNetInRange(yr, t=>expClassify(t)==="fixed");
     const varActual=expNetInRange(yr, t=>expClassify(t)==="variable");
     const total=fixedActual+varActual; const refunds=expRefundsInRange(yr);
-    /* مقاييس السفر السنوية — مشتقّة من tripId فقط، بلا إجماليات مُدخلة يدويًا */
-    const yTrips=(expState.trips||[]).filter(t=> expGetTripTransactions(t.id).some(x=> x.transactionDate>=yr.start && x.transactionDate<=yr.end));
+    /* مقاييس السفر السنوية — من الرحلات الحيّة فقط (الشواهد المحذوفة تُتجاهَل فلا تعود كبند رحلة) */
+    const yTrips=expLiveTrips().filter(t=> expGetTripTransactions(t.id).some(x=> x.transactionDate>=yr.start && x.transactionDate<=yr.end));
     const tripSpends=yTrips.map(t=>({t, v:expNetInRange(yr, x=> x.tripId===t.id)})).filter(o=>o.v!==0).sort((a,b)=>b.v-a.v);
-    const travelTotal=expNetInRange(yr, t=> t.tripId);
+    /* «إجمالي السفر» متداخل ضمن إجمالي السنة (يظهر عبر الثابت/المتغيّر) — لا يُجمع كدلوٍ ثالث.
+       يُقصر على معاملات الرحلات الحيّة كي يتّسق مع قائمة الرحلات ويتجاهل الشواهد. */
+    const travelTotal=expNetInRange(yr, t=> t.tripId && !!expTripById(t.tripId));
     const tripCount=tripSpends.length;
     const avgTrip=tripCount? Math.round(travelTotal/tripCount):0;
     let monthBars=""; let maxM=1; const months=[];
@@ -9693,7 +9708,7 @@
       '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>'+
       (travelTotal!==0?
         '<div class="exp-sec-head">✈️ السفر</div>'+
-        '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السفر</small><b>'+expMoney(travelTotal)+'</b></div>'+
+        '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السفر (ضمن إجمالي السنة)</small><b>'+expMoney(travelTotal)+'</b></div>'+
         '<div class="exp-stat"><small>عدد الرحلات</small><b>'+_arn(tripCount)+'</b></div>'+
         '<div class="exp-stat"><small>متوسط الرحلة</small><b>'+expMoney(avgTrip)+'</b></div></div>'+
         '<div class="exp-foot" style="border:none">'+tripSpends.map(o=>'<div class="exp-foot-row"><span>'+(o===tripSpends[0]?'🏆 ':'')+expEsc(o.t.name)+'</span><b>'+expMoney(o.v)+'</b></div>').join("")+'</div>'
@@ -9771,7 +9786,7 @@
   }
   function expRenderTrips(){
     const body=document.getElementById("expTripsBody");
-    const trips=(expState.trips||[]);
+    const trips=expLiveTrips();   /* الشواهد (المحذوفة) لا تظهر في قوائم الرحلات */
     const groups={ active:[], planned:[], completed:[], archived:[] };
     trips.forEach(t=> groups[expTripStatus(t)].push(t));
     Object.keys(groups).forEach(k=> groups[k].sort((a,b)=> a.startDate<b.startDate?1:-1));

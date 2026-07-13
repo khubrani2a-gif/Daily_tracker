@@ -94,12 +94,14 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   log("\n[3] Monetary normalization: numeric strings add (not concat), invalid flagged not inflated");
   {
     const data = baseData({ transactions:[
-      mk({id:"S1", amountMinor:"80000"}),                 /* سلسلة رقمية */
-      mk({id:"S2", amountMinor:"50000"}),                 /* سلسلة رقمية */
-      mk({id:"N1", amountMinor:30000}),                   /* عدد */
+      mk({id:"S1", amountMinor:"80000"}),                 /* سلسلة صحيحة */
+      mk({id:"S2", amountMinor:"50000"}),                 /* سلسلة صحيحة */
+      mk({id:"N1", amountMinor:30000}),                   /* عدد صحيح */
       mk({id:"BAD1", amountMinor:"oops"}),                /* مشوّه */
       mk({id:"BAD2", amountMinor:null}),                  /* مشوّه */
       mk({id:"BAD3", amountMinor:"NaN"}),                 /* مشوّه */
+      mk({id:"FRN", amountMinor:12.5}),                   /* كسر عددًا → لا يُقرّب صامتًا */
+      mk({id:"FRS", amountMinor:"12.5"}),                 /* كسر سلسلةً → لا يُقرّب صامتًا */
       mk({id:"RF", amountMinor:"20000", transactionType:"refund", relatedTransactionId:"S1"})
     ]});
     const p = await device(b);
@@ -113,31 +115,39 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("invalid 'oops' → amountMinor 0, amountInvalid, needsReview, raw preserved", byId.BAD1.amountMinor===0 && byId.BAD1.amountInvalid===true && byId.BAD1.needsReview===true && byId.BAD1.amountRaw==="oops");
     ok("invalid null → flagged, raw preserved (null)", byId.BAD2.amountMinor===0 && byId.BAD2.amountInvalid===true && byId.BAD2.amountRaw===null);
     ok("invalid 'NaN' string → flagged", byId.BAD3.amountMinor===0 && byId.BAD3.amountInvalid===true);
-    /* الإجمالي الدقيق عبر التقرير اليومي: 80000+50000+30000+0+0 - 20000 = 140000 (لا تسلسل، لا NaN) */
+    /* صرامة: كسر عددًا لا يُقرّب — يبقى مشوّهًا ويحفظ الخام 12.5 ويُسهم بصفر */
+    ok("fractional NUMBER 12.5 → invalid, raw=12.5, amountMinor 0 (NOT rounded to 13)", byId.FRN.amountMinor===0 && byId.FRN.amountInvalid===true && byId.FRN.needsReview===true && byId.FRN.amountRaw===12.5);
+    /* صرامة: كسر سلسلةً لا يُقرّب — يبقى مشوّهًا ويحفظ الخام "12.5" ويُسهم بصفر */
+    ok("fractional STRING '12.5' → invalid, raw='12.5', amountMinor 0 (NOT rounded)", byId.FRS.amountMinor===0 && byId.FRS.amountInvalid===true && byId.FRS.amountRaw==="12.5");
+    /* الإجمالي الدقيق عبر التقرير اليومي: 80000+50000+30000+0+0+0+0 - 20000 = 140000 (لا تسلسل، لا NaN، لا تقريب) */
     await p.click("#expOpenBtn"); await p.waitForTimeout(250);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="daily"]'); await p.waitForTimeout(200);
-    ok("exact daily net = 1400 (strings summed, invalid as 0, refund subtracted)", (await stat(p,"صافي الصرف"))==="١٬٤٠٠ ر.س");
-    /* minorParse وحدة */
+    ok("exact daily net = 1400 (strings summed, invalid/fractional as 0, refund subtracted)", (await stat(p,"صافي الصرف"))==="١٬٤٠٠ ر.س");
+    /* minorParse وحدة — الصحيح فقط يُقبل */
     const mp = await p.evaluate(()=>({
       a: window.__mfkrExp.minorParse("1500"), b: window.__mfkrExp.minorParse("12.5"),
       c: window.__mfkrExp.minorParse("1a"), d: window.__mfkrExp.minorParse(""),
       e: window.__mfkrExp.minorParse(null), f: window.__mfkrExp.minorParse(1500),
-      g: window.__mfkrExp.minorParse(Infinity)
+      g: window.__mfkrExp.minorParse(Infinity), h: window.__mfkrExp.minorParse(12.5), i: window.__mfkrExp.minorParse("80000")
     }));
     ok("minorParse('1500')=ok 1500", mp.a.ok===true && mp.a.minor===1500);
-    ok("minorParse('12.5')=ok 13 (rounded)", mp.b.ok===true && mp.b.minor===13);
+    ok("minorParse('12.5')=INVALID (no silent round)", mp.b.ok===false);
+    ok("minorParse(12.5 number)=INVALID (no silent round)", mp.h.ok===false);
+    ok("minorParse('80000')=ok 80000 (integer string valid)", mp.i.ok===true && mp.i.minor===80000);
     ok("minorParse('1a')=invalid", mp.c.ok===false);
     ok("minorParse('')=invalid", mp.d.ok===false);
     ok("minorParse(null)=invalid", mp.e.ok===false);
     ok("minorParse(Infinity)=invalid", mp.g.ok===false);
-    /* إدمبوتنسي: إعادة تحميل لا تبصم settings.updatedAt ولا تُغيّر القيم */
+    /* إدمبوتنسي: إعادة تحميل لا تبصم settings.updatedAt ولا تُغيّر القيم (بما فيها ثبات وسم الكسور) */
     const u1 = raw.settings.updatedAt;
     await p.evaluate(()=> window.__mfkrExp.reload());
     await p.waitForTimeout(150);
     const raw2 = await p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-expenses")));
+    const b2 = Object.fromEntries(raw2.transactions.map(t=>[t.id,t]));
     ok("migration idempotent: settings.updatedAt unchanged on reload (no sync churn)", raw2.settings.updatedAt===u1);
-    ok("idempotent: S1 stays 80000, BAD1 stays flagged 0", raw2.transactions.find(t=>t.id==="S1").amountMinor===80000 && raw2.transactions.find(t=>t.id==="BAD1").amountInvalid===true);
+    ok("idempotent: S1 stays 80000, BAD1 stays flagged 0", b2.S1.amountMinor===80000 && b2.BAD1.amountInvalid===true);
+    ok("reload sticky: fractional FRN/FRS stay invalid, raw preserved, 0", b2.FRN.amountInvalid===true && b2.FRN.amountRaw===12.5 && b2.FRN.amountMinor===0 && b2.FRS.amountInvalid===true && b2.FRS.amountRaw==="12.5");
     await p.close();
   }
   }
@@ -292,6 +302,68 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
   }
   }
 
+  /* deleted trip that still has a retained linked transaction must not leak into lists/forms/reports */
+  if(want("1b")){
+  log("\n[1b] Deleted trip with retained linked transaction: ignored by list/form/yearly, tx preserved");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    const mkTrip=(id,del)=>({id,name:id==="DT"?"رحلة محذوفة":"رحلة حيّة",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:del,createdAt:1,updatedAt:1});
+    const data = baseData({
+      trips:[ mkTrip("LT",null), mkTrip("DT",5000) ],   /* DT شاهدة قبر لكن معاملتها ما زالت مرتبطة */
+      transactions:[
+        mk({id:"TXL", amountMinor:40000, categoryId:"CA", tripId:"LT", countAgainstWeeklyBudget:false}),
+        mk({id:"TXD", amountMinor:90000, categoryId:"CA", tripId:"DT", countAgainstWeeklyBudget:false})
+      ]});
+    const p = await device(b);
+    await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
+    await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"1b");
+    ok("liveTrips excludes the deleted trip", (await p.evaluate(()=> window.__mfkrExp.liveTrips())).indexOf("DT")<0);
+    /* التقرير السنوي: DT لا تظهر كبند رحلة، والعدّاد يستثنيها */
+    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
+    ok("yearly trip count = 1 (deleted trip excluded)", (await stat(p,"عدد الرحلات"))==="١");
+    ok("yearly travel KPI = 400 (only the live trip, deleted trip's retained tx excluded)", (await stat(p,"إجمالي السفر (ضمن إجمالي السنة)"))==="٤٠٠ ر.س");
+    const yBody=await p.$eval("#expReportBody",e=>e.textContent);
+    ok("yearly report does not render the deleted trip's name", !yBody.includes("رحلة محذوفة"));
+    /* قائمة الرحلات: DT غير معروضة */
+    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
+    ok("trips list shows the live trip, not the deleted trip", tBody.includes("رحلة حيّة") && !tBody.includes("رحلة محذوفة"));
+    /* نموذج تعديل TXD: DT لا تُعرض كخيار حيّ، بل «محذوفة (محفوظة)» تحمل معرّفها فلا يُفكّ الارتباط صامتًا */
+    await p.evaluate(()=> window.__mfkrExp.openExpenseForm("TXD")); await p.waitForTimeout(200);
+    const opts = await p.$$eval("#efTrip option", els=> els.map(o=>({v:o.value, t:o.textContent, sel:o.selected})));
+    ok("form: no LIVE option equals the deleted trip id", !opts.some(o=>o.v==="DT" && o.t.indexOf("محذوفة")<0));
+    ok("form: retained link shown as non-live historical note carrying its id, selected", opts.some(o=>o.v==="DT" && o.t.indexOf("محذوفة")>=0 && o.sel));
+    /* البيانات: tripId على TXD ما زال DT (لم يُفكّ) */
+    const txd = await p.evaluate(()=> window.__mfkrExp.state().transactions.find(t=>t.id==="TXD"));
+    ok("data: TXD.tripId still 'DT' (history preserved, not silently unlinked)", txd.tripId==="DT");
+    await p.close();
+  }
+  }
+
+  /* deterministic tombstone-wins at equal updatedAt, regardless of which side is local */
+  if(want("1t")){
+  log("\n[1t] Equal-timestamp merge tie: tombstone wins deterministically (reversed local/remote both converge)");
+  {
+    const p = await device(b);
+    await p.addInitScript(()=> localStorage.clear());
+    await p.goto(fileUrl); await p.waitForTimeout(700); await verifyFake(p,"1t");
+    const res = await p.evaluate(()=>{
+      const liveT = {id:"TR",name:"x",deletedAt:null,updatedAt:2000,isManuallyActivated:false,archivedAt:null,allocations:[]};
+      const deadT = {id:"TR",name:"x",deletedAt:2000,updatedAt:2000,isManuallyActivated:false,archivedAt:null,allocations:[]};
+      const m1 = window.__mfkrExp.merge({trips:[deadT]}, {trips:[liveT]});   /* local=tombstone, remote=live */
+      const m2 = window.__mfkrExp.merge({trips:[liveT]}, {trips:[deadT]});   /* local=live, remote=tombstone */
+      const g=(m)=> (m.trips.find(t=>t.id==="TR")||{}).deletedAt;
+      return { d1:g(m1), d2:g(m2), n1:m1.trips.length, n2:m2.trips.length };
+    });
+    ok("equal-ts tie, local=tombstone: tombstone wins", !!res.d1);
+    ok("equal-ts tie, local=live (reversed): tombstone STILL wins (deterministic, no revival)", !!res.d2);
+    ok("no duplicate trip records after tie merge", res.n1===1 && res.n2===1);
+    await p.close();
+  }
+  }
+
   /* ============================================================
      العطل 5 — تعدّد الرحلات النشطة يدويًا بعد الدمج
      ============================================================ */
@@ -320,6 +392,34 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const activeAfter = (await B.evaluate(()=> window.__mfkrExp.activeTrips()));
     ok("still exactly one active after re-pull idempotence", (st.trips.filter(t=>!t.deletedAt && t.isManuallyActivated).length)===1);
     await B.close();
+  }
+  }
+
+  /* ============================================================
+     يارلي KPI متداخل: «إجمالي السفر (ضمن إجمالي السنة)» غير مضاف كدلوٍ ثالث
+     ============================================================ */
+  if(want("6")){
+  log("\n[6] Yearly travel KPI labelled overlapping (within yearly total), not added twice");
+  {
+    Object.keys(store).forEach(k=> delete store[k]);
+    const data = baseData({
+      trips:[{id:"TR",name:"سفر",destination:null,startDate:tk,endDate:tk,totalBudgetMinor:null,includeInWeeklyBudgets:false,baseCurrency:"SAR",preferredForeignCurrency:null,note:null,icon:null,isManuallyActivated:false,allocations:[],deletedAt:null,createdAt:1,updatedAt:1,archivedAt:null}],
+      transactions:[
+        mk({id:"VN", amountMinor:30000, categoryId:"CA", tripId:null, countAgainstWeeklyBudget:true}),
+        mk({id:"VT", amountMinor:50000, categoryId:"CA", tripId:"TR", countAgainstWeeklyBudget:false})
+      ]});
+    const p = await device(b);
+    await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
+    await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"6");
+    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
+    /* الإجمالي = 300 (عادي) + 500 (سفر متغيّر) = 800، والسفر متداخل ضمنه لا يُضاف ثالثًا */
+    ok("yearly total = 800 (travel already inside via fixed/variable, not added again)", (await stat(p,"إجمالي السنة"))==="٨٠٠ ر.س");
+    ok("travel KPI = 500 shown", (await stat(p,"إجمالي السفر (ضمن إجمالي السنة)"))==="٥٠٠ ر.س");
+    const yBody=await p.$eval("#expReportBody",e=>e.textContent);
+    ok("travel KPI label explicitly marks it as within the yearly total (not a third bucket)", yBody.includes("إجمالي السفر (ضمن إجمالي السنة)"));
+    await p.close();
   }
   }
 
