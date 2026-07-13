@@ -2458,7 +2458,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٨</div>
+    <div class="app-version">النسخة ٩٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2531,20 +2531,24 @@
     if(!db || !user) return;
     wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
   }
-  function wCustomPullRemote(){
-    if(!db || !user) return;
-    wCustomDocRef().get().then(snap=>{
-      if(!snap.exists) return;
-      const remote = snap.data();
-      const localMeta = wCustomMeta();
-      if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
-        localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
-        localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
-        renderWorship(); renderProgress();
-      }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
-        wCustomPushRemote(wCustom(), localMeta.updatedAt);
+  function wCustomPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"customWorship", skipped:true});
+    syncBegin("customWorship", trigger);
+    return getDocServerFirst(wCustomDocRef()).then(snap=>{
+      if(snap.exists){
+        const remote = snap.data();
+        const localMeta = wCustomMeta();
+        if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
+          localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
+          localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
+          safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
+        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
+          wCustomPushRemote(wCustom(), localMeta.updatedAt);
+        }
       }
-    }).catch(()=>{});
+      syncEnd("customWorship", true, snap);
+      return {module:"customWorship", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", ok:false}; });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -2986,12 +2990,8 @@
       if(u){
         syncBtn.textContent = "تسجيل الخروج";
         syncStatus.textContent = "☁️ المزامنة مفعّلة — "+(u.displayName||u.email||"");
-        pullRemote(currentDate);
-        qPullRemote();
-        wCustomPullRemote();
-        witrPullRemote();
-        hifzPullRemote();
-        expPullRemote();
+        /* إقلاع بارد مُصادَق: اسحب كل الأقسام من الخادم أولًا عبر المنسّق العام (كلٌّ مستقل) */
+        safeRun("auth:syncAll", ()=> syncPullAllModules("auth"));
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
         syncStatus.textContent = "";
@@ -3010,23 +3010,87 @@
       .catch(()=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; });
   }
 
-  function pullRemote(date){
+  /* ==================== منسّق مزامنة عام لكل الأقسام (سحب) ==================== */
+  /* قراءة تُفضّل الخادم أولًا ثم ترجع للمخزّن المحلي عند تعذّر الشبكة — تُنهي مشكلة الكاش القديم عند العودة للمقدّمة */
+  function getDocServerFirst(ref){ try{ return ref.get({source:"server"}).catch(()=> ref.get()); }catch(e){ try{ return ref.get(); }catch(_){ return Promise.reject(e); } } }
+  function getQueryServerFirst(q){ try{ return q.get({source:"server"}).catch(()=> q.get()); }catch(e){ try{ return q.get(); }catch(_){ return Promise.reject(e); } } }
+  function _fromCache(snap){ return !!(snap && snap.metadata && snap.metadata.fromCache); }
+  /* حالة مزامنة مستقلّة لكل قسم — لا يطمس قسمٌ حالة قسم آخر */
+  const SYNC_STATE = {};
+  function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, trigger:null}); }
+  function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
+  function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false; if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; } else { s.lastError=(err&&err.message)||String(err||"error"); } }
+  /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره، ولكلٍّ قفله وخنقه */
+  function syncPullAllModules(trigger, opts){
+    opts = opts || {};
+    if(!db || !user) return Promise.resolve({trigger, skipped:true});
+    diagMark("syncAll:begin:"+trigger);
+    const jobs = [
+      ["daily", ()=> pullRemote(currentDate, trigger)],
+      ["quran", ()=> qPullRemote(trigger)],
+      ["customWorship", ()=> wCustomPullRemote(trigger)],
+      ["witr", ()=> witrPullRemote(trigger)],
+      ["hifz", ()=> hifzPullRemote(trigger)],
+      ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})]
+    ];
+    return Promise.allSettled(jobs.map(([name, fn])=>{
+      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, ok:false}; }); }
+      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, ok:false}); }
+    })).then(rs=>{ diagMark("syncAll:end:"+trigger); return {trigger, results:rs.map(r=> r.value||r.reason)}; });
+  }
+  /* خنق عام يجمع أحداث المتصفّح المتزامنة (focus/pageshow/visibility) دون تعطيل أقفال الأقسام المستقلّة */
+  let _lastGlobalPull = 0;
+  function syncPullAllThrottled(trigger){
     if(!db || !user) return;
-    dayRef(date).get().then(snap=>{
-      if(date !== currentDate) return;
-      if(snap.exists){
-        const remote = snap.data();
-        if((remote.updatedAt||0) > (state.updatedAt||0)){
-          state = Object.assign(blankState(), remote);
-          localStorage.setItem(storageKey(date), JSON.stringify(state));
-          renderAll();
-        }else if((state.updatedAt||0) > (remote.updatedAt||0)){
+    const now = Date.now();
+    if(trigger!=="manual" && now - _lastGlobalPull < 1500) return;
+    _lastGlobalPull = now;
+    syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+  }
+  /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
+  function syncSummary(){
+    const names=["daily","quran","customWorship","witr","hifz","expenses"];
+    let anyFail=false, anyCache=false, anyServer=false, anyFlight=false, anyAttempt=false;
+    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s) return; anyAttempt=true; if(s.inFlight)anyFlight=true; if(s.lastError)anyFail=true; if(s.lastCacheFallbackAt>s.lastServerSuccessAt)anyCache=true; if(s.lastServerSuccessAt)anyServer=true; });
+    if(!anyAttempt) return {state:"idle", text:"—"};
+    if(anyFlight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
+    if(anyFail && anyServer) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
+    if(anyFail) return {state:"fail", text:"تعذّرت المزامنة"};
+    if(anyCache && (navigator.onLine===false)) return {state:"offline", text:"بانتظار الاتصال"};
+    return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+  }
+  /* تسجيل مشغّلات دورة الحياة مرّة واحدة (لا تكرار عند فتح النوافذ) — يحدّث كل الأقسام */
+  let _lifecycleInit = false;
+  function initLifecycleSync(){
+    if(_lifecycleInit) return; _lifecycleInit = true;
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") syncPullAllThrottled("foreground"); });
+    window.addEventListener("focus", ()=> syncPullAllThrottled("focus"));
+    window.addEventListener("pageshow", ()=> syncPullAllThrottled("pageshow"));
+    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); syncPullAllThrottled("online"); });
+    window.addEventListener("offline", ()=>{ safeRun("syncRowOffline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); });
+  }
+
+  function pullRemote(date, trigger){
+    if(!db || !user) return Promise.resolve({module:"daily", skipped:true});
+    syncBegin("daily", trigger);
+    return getDocServerFirst(dayRef(date)).then(snap=>{
+      if(date === currentDate){
+        if(snap.exists){
+          const remote = snap.data();
+          if((remote.updatedAt||0) > (state.updatedAt||0)){
+            state = Object.assign(blankState(), remote);
+            localStorage.setItem(storageKey(date), JSON.stringify(state));
+            safeRun("pullRemote:renderAll", renderAll);   /* الرسم معزول — فشله لا يُفشل المزامنة */
+          }else if((state.updatedAt||0) > (remote.updatedAt||0)){
+            pushRemote(date, state);
+          }
+        }else if(state.updatedAt){
           pushRemote(date, state);
         }
-      }else if(state.updatedAt){
-        pushRemote(date, state);
       }
-    }).catch(()=>{});
+      syncEnd("daily", true, snap);
+      return {module:"daily", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", ok:false}; });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3057,22 +3121,26 @@
     if(!db || !user) return;
     qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
   }
-  function qPullRemote(){
-    if(!db || !user) return;
-    qDocRef().get().then(snap=>{
-      if(!snap.exists) return;
-      const remote = snap.data();
-      const local = qLoad();
-      if((remote.updatedAt||0) > (local.updatedAt||0)){
-        const merged = Object.assign({}, remote);
-        if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
-        localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
-        renderWorship();
-        if(!quranOverlay.hidden) qRenderOverlay();
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-        qPushRemote(local);
+  function qPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"quran", skipped:true});
+    syncBegin("quran", trigger);
+    return getDocServerFirst(qDocRef()).then(snap=>{
+      if(snap.exists){
+        const remote = snap.data();
+        const local = qLoad();
+        if((remote.updatedAt||0) > (local.updatedAt||0)){
+          const merged = Object.assign({}, remote);
+          if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
+          localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
+          safeRun("qPull:renderWorship", renderWorship);
+          safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
+        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+          qPushRemote(local);
+        }
       }
-    }).catch(()=>{});
+      syncEnd("quran", true, snap);
+      return {module:"quran", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", ok:false}; });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -3711,18 +3779,22 @@
     if(!db || !user) return;
     witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
   }
-  function witrPullRemote(){
-    if(!db || !user) return;
-    witrDocRef().get().then(snap=>{
-      if(!snap.exists) return;
-      const remote = snap.data();
-      const local = witrMeta();
-      if((remote.updatedAt||0) > (local.updatedAt||0)){
-        localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
-        witrPushRemote(local);
+  function witrPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"witr", skipped:true});
+    syncBegin("witr", trigger);
+    return getDocServerFirst(witrDocRef()).then(snap=>{
+      if(snap.exists){
+        const remote = snap.data();
+        const local = witrMeta();
+        if((remote.updatedAt||0) > (local.updatedAt||0)){
+          localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
+        }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+          witrPushRemote(local);
+        }
       }
-    }).catch(()=>{});
+      syncEnd("witr", true, snap);
+      return {module:"witr", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", ok:false}; });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -4863,23 +4935,27 @@
     hifzDeleteSegmentRemote(segmentId);
   }
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
-  function hifzPullRemote(){
-    if(!db || !user) return;
-    db.collection("users").doc(user.uid).collection("hifzSegments").get().then(snap=>{
+  function hifzPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"hifz", skipped:true});
+    syncBegin("hifz", trigger);
+    return getQueryServerFirst(db.collection("users").doc(user.uid).collection("hifzSegments")).then(snap=>{
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
-      if(!remoteSegs.length) return;
-      const data = hifzData();
-      const byId = {};
-      data.segments.forEach(s=> byId[s.id] = s);
-      remoteSegs.forEach(rs=>{
-        const ls = byId[rs.id];
-        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
-      });
-      data.segments = Object.values(byId);
-      hifzSaveLocal(data);
-      renderHifzCard();
-    }).catch(()=>{});
+      if(remoteSegs.length){
+        const data = hifzData();
+        const byId = {};
+        data.segments.forEach(s=> byId[s.id] = s);
+        remoteSegs.forEach(rs=>{
+          const ls = byId[rs.id];
+          if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
+        });
+        data.segments = Object.values(byId);
+        hifzSaveLocal(data);
+        safeRun("hifzPull:render", renderHifzCard);
+      }
+      syncEnd("hifz", true, snap);
+      return {module:"hifz", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", ok:false}; });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
@@ -7544,22 +7620,21 @@
 
   function renderAll(){
     /* ترحيل معرّفات + تنظيف روابط مكسورة مرّة واحدة لأي حالة وصلت (تحميل قديم/مزامنة) ثم حفظها لتثبيتها */
-    let migrated = ensureIds(state);
-    if(validateLinks(state)) migrated = true;
-    if(migrated) save();
-    renderHijri(currentDate);
-    renderPrayers();
-    renderWorship();
-    renderWater();
-    renderSport();
-    renderHealth();
-    renderTaskLists();
-    bindTextarea("intention","intention");
-    bindTextarea("memory","memory");
-    bindTextarea("notes","notes");
-    renderStars();
-    renderProgress();
-    if(typeof expRenderLaunch === "function") expRenderLaunch();
+    safeRun("renderAll:migrate", ()=>{ let migrated = ensureIds(state); if(validateLinks(state)) migrated = true; if(migrated) save(); });
+    /* عزل رسم كل قسم: فشل قسم واحد (مثل بطاقة المصاريف) لا يوقف رسم بقية الأقسام */
+    safeRun("renderHijri", ()=> renderHijri(currentDate));
+    safeRun("renderPrayers", renderPrayers);
+    safeRun("renderWorship", renderWorship);
+    safeRun("renderWater", renderWater);
+    safeRun("renderSport", renderSport);
+    safeRun("renderHealth", renderHealth);
+    safeRun("renderTaskLists", renderTaskLists);
+    safeRun("bindIntention", ()=> bindTextarea("intention","intention"));
+    safeRun("bindMemory", ()=> bindTextarea("memory","memory"));
+    safeRun("bindNotes", ()=> bindTextarea("notes","notes"));
+    safeRun("renderStars", renderStars);
+    safeRun("renderProgress", renderProgress);
+    safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
   }
 
   /* ---------- Date navigation ---------- */
@@ -7567,13 +7642,14 @@
 
   function goto(dateStr){
     currentDate = dateStr;
-    picker.value = dateStr;
-    const existed = load(dateStr);
-    if(!existed) carryOver(dateStr);
-    renderQuote(dateStr);
-    renderAll();
-    fetchTimes(dateStr);
-    pullRemote(dateStr);
+    /* المزامنة لا تعتمد على نجاح الرسم: كل خطوة معزولة، والسحب يعمل دائمًا حتى لو فشل الرسم */
+    safeRun("goto:picker", ()=>{ picker.value = dateStr; });
+    const existed = safeRun("goto:load", ()=> load(dateStr));
+    if(!existed) safeRun("goto:carryOver", ()=> carryOver(dateStr));
+    safeRun("goto:quote", ()=> renderQuote(dateStr));
+    safeRun("goto:renderAll", renderAll);
+    safeRun("goto:fetchTimes", ()=> fetchTimes(dateStr));
+    safeRun("goto:pullDay", ()=> pullRemote(dateStr));   /* سحب مستند اليوم مستقلّ عن الرسم */
   }
 
   function shiftDay(delta){
@@ -8021,6 +8097,15 @@
   /* ======================  وحدة المصاريف (المصاريف)  =================== */
   /* تخزين مستقل عالمي (عبر الأيام) — لا يمسّ حالة اليوم ولا أي ميزة قائمة.
      المصدر الوحيد للحقيقة للصرف الفعلي هو سجل المعاملات (transactions). */
+  /* ---------- تشخيص خفيف (بلا أي محتوى شخصي: موضع + رسالة الخطأ فقط) ---------- */
+  const MFKR_DIAG = { marks:[], errors:[] };
+  function diagMark(name){ try{ MFKR_DIAG.marks.push({t:Date.now(), name:String(name)}); if(MFKR_DIAG.marks.length>80) MFKR_DIAG.marks.shift(); }catch(e){} }
+  function diagErr(where, err){ try{ const m=(err&&err.message)?err.message:String(err); MFKR_DIAG.errors.push({t:Date.now(), where:String(where), msg:m, stack:(err&&err.stack)?String(err.stack).split("\n").slice(0,4).join(" | "):""}); if(MFKR_DIAG.errors.length>40) MFKR_DIAG.errors.shift(); if(window.console&&console.warn) console.warn("[diag] "+where+": "+m); }catch(e){} }
+  function expDiag(where, err){ diagErr(where, err); }
+  try{ window.__mfkrDiag = ()=> JSON.parse(JSON.stringify(MFKR_DIAG)); }catch(e){}
+  /* غلاف رسم آمن: فشل رسم قسم لا يوقف بقية الأقسام */
+  function safeRun(name, fn){ try{ return fn(); }catch(e){ diagErr(name, e); return undefined; } }
+
   const EXP_KEY = "h2do-expenses";
   const EXP_SCHEMA = 2;   /* v2: ميزة السفر (trips + حقول تحويل عملة + countAgainstWeeklyBudget) */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
@@ -8061,43 +8146,39 @@
       localStorage.setItem(EXP_KEY, JSON.stringify(d));
       return d;
     }
-    /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) */
+    /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) — دالة كليّة لا ترمي مهما كان شكل البيانات */
     raw.settings = Object.assign({ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG",
-      defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() }, raw.settings||{});
-    raw.categories = Array.isArray(raw.categories)? raw.categories : [];
-    raw.fixedTemplates = Array.isArray(raw.fixedTemplates)? raw.fixedTemplates : [];
-    raw.instances = Array.isArray(raw.instances)? raw.instances : [];
-    raw.transactions = Array.isArray(raw.transactions)? raw.transactions : [];
-    raw.categories.forEach(c=>{ if(!Array.isArray(c.budgets)) c.budgets=[]; if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
-    /* ترحيل v2 (السفر): إضافة مجموعة الرحلات + حقول المعاملات الجديدة دون تغيير أي قيمة قائمة.
-       المعاملات القديمة تحتفظ بسلوك الميزانية الأسبوعية كما كان: countAgainstWeeklyBudget=true. */
-    if(!Array.isArray(raw.trips)) raw.trips = [];
-    if((raw.version||1) < 2){
-      raw.transactions.forEach(t=>{
-        if(t.tripId===undefined) t.tripId = null;
-        if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = true;
-        if(t.originalAmountMinor===undefined) t.originalAmountMinor = null;
-        if(t.originalCurrency===undefined) t.originalCurrency = null;
-        if(t.exchangeRate===undefined) t.exchangeRate = null;
-        if(t.exchangeRateSource===undefined) t.exchangeRateSource = null;
-        if(t.merchantCountry===undefined) t.merchantCountry = null;
-      });
-    } else {
-      /* توافق تصاعدي لأي معاملة تنقصها الحقول */
-      raw.transactions.forEach(t=>{ if(t.tripId===undefined) t.tripId=null; if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = t.tripId? false : true; });
-    }
-    raw.trips.forEach(tr=>{ if(!Array.isArray(tr.allocations)) tr.allocations=[]; if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; });
-    /* حقول تصنيف الالتزام الثابت (توافق تصاعدي): مصدر ثابت للدفعات المرتبطة بمثيل */
+      defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() },
+      (raw.settings && typeof raw.settings==="object") ? raw.settings : {});
+    /* أزِل عناصر القمامة (null/غير كائن) فقط — لا نحذف أي سجلّ حقيقي */
+    const objArr = a => (Array.isArray(a)? a : []).filter(x=> x && typeof x==="object");
+    raw.categories = objArr(raw.categories);
+    raw.fixedTemplates = objArr(raw.fixedTemplates);
+    raw.instances = objArr(raw.instances);
+    raw.transactions = objArr(raw.transactions);
+    raw.trips = objArr(raw.trips);
+    raw.categories.forEach(c=>{ c.budgets = objArr(c.budgets); if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
+    raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; });
+    /* ترحيل v2 (السفر) + حقول تصنيف الالتزام — على كائنات مضمونة فقط، بلا رمي */
+    const was = raw.version||1;
     raw.transactions.forEach(t=>{
+      if(t.tripId===undefined) t.tripId = null;
+      if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = (was<2) ? true : (t.tripId? false : true);
+      if(t.originalAmountMinor===undefined) t.originalAmountMinor = null;
+      if(t.originalCurrency===undefined) t.originalCurrency = null;
+      if(t.exchangeRate===undefined) t.exchangeRate = null;
+      if(t.exchangeRateSource===undefined) t.exchangeRateSource = null;
+      if(t.merchantCountry===undefined) t.merchantCountry = null;
       if(t.sourceType===undefined) t.sourceType = t.fixedExpenseInstanceId ? "fixed" : null;
       if(t.fixedTemplateId===undefined) t.fixedTemplateId = null;
       if(t.needsReview===undefined) t.needsReview = false;
     });
-    const repaired = expRepairMisclassified(raw);   /* إصلاح لمرّة واحدة للدفعات المصنّفة خطأً تحت فئة أسبوعية */
+    let repaired=false;
+    try{ repaired = expRepairMisclassified(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expRepairMisclassified", e); }
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
-    /* ثبّت الترحيل/الإصلاح في التخزين حتى لا يتكرر ويُزامَن عبر الأجهزة */
-    if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }
+    /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
+    if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
     return raw;
   }
   /* إصلاح محافظ لمرّة واحدة: دفعة التزام سُجّلت خطأً تحت فئة أسبوعية (مثل «الأكل»).
@@ -8105,37 +8186,46 @@
      تطابق واحد → ربطها بالالتزام (ثابت، خارج الميزانية الأسبوعية). تطابق متعدد وتحت فئة أسبوعية → needsReview فقط. */
   function expRepairMisclassified(d){
     if(!Array.isArray(d.transactions) || !Array.isArray(d.fixedTemplates)) return false;
+    if(!Array.isArray(d.categories)) d.categories=[];
+    if(!Array.isArray(d.instances)) d.instances=[];
     let changed=false;
     d.transactions.forEach(t=>{
-      if(t.deletedAt) return;
-      if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return;   /* مصنّفة ثابتة سلفًا — تخطَّ */
-      const desc=(t.description||"").trim();
-      if(desc.indexOf("دفعة:")!==0) return;
-      const name=desc.slice(5).trim(); if(!name) return;
-      const matches=d.fixedTemplates.filter(tp=> !tp.archivedAt && (tp.name||"").trim()===name);
-      const cat=d.categories.find(c=>c.id===t.categoryId);
-      const underVariable = !!(cat && cat.section==="variable");
-      if(matches.length===1){
-        const tp=matches[0];
-        const dt=new Date(t.transactionDate+"T12:00:00"), y=dt.getFullYear(), mo=dt.getMonth()+1;
-        let inst=d.instances.find(i=>i.templateId===tp.id && i.year===y && i.month===mo);
-        if(!inst){ inst={ id:newId(), templateId:tp.id, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo),
-          paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; d.instances.push(inst); }
-        t.sourceType="fixed"; t.fixedTemplateId=tp.id; t.fixedExpenseInstanceId=inst.id;
-        t.countAgainstWeeklyBudget=false; t.categoryId=null; t.needsReview=false; t.updatedAt=Date.now();
-        changed=true;
-      } else if(matches.length>1 && underVariable && !t.needsReview){
-        t.needsReview=true; t.updatedAt=Date.now(); changed=true;   /* غموض — لا إصلاح تلقائي */
-      }
+      try{
+        if(!t || typeof t!=="object") return;
+        if(t.deletedAt) return;
+        if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return;   /* مصنّفة ثابتة سلفًا — تخطَّ */
+        const desc = (typeof t.description==="string") ? t.description.trim() : "";   /* تحقّق النوع قبل أي عملية نصّية */
+        if(desc.indexOf("دفعة:")!==0) return;
+        const name=desc.slice(5).trim(); if(!name) return;
+        const matches=d.fixedTemplates.filter(tp=> tp && !tp.archivedAt && typeof tp.name==="string" && tp.name.trim()===name);
+        const cat=d.categories.find(c=> c && c.id===t.categoryId);
+        const underVariable = !!(cat && cat.section==="variable");
+        if(matches.length===1){
+          const tp=matches[0];
+          const tds = (typeof t.transactionDate==="string") ? t.transactionDate : "";
+          const dt=new Date(tds+"T12:00:00");
+          if(isNaN(dt.getTime())) return;   /* تاريخ غير صالح — لا إصلاح تلقائي */
+          const y=dt.getFullYear(), mo=dt.getMonth()+1;
+          let inst=d.instances.find(i=> i && i.templateId===tp.id && i.year===y && i.month===mo);
+          if(!inst){ inst={ id:newId(), templateId:tp.id, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo),
+            paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; d.instances.push(inst); }
+          t.sourceType="fixed"; t.fixedTemplateId=tp.id; t.fixedExpenseInstanceId=inst.id;
+          t.countAgainstWeeklyBudget=false; t.categoryId=null; t.needsReview=false; t.updatedAt=Date.now();
+          changed=true;
+        } else if(matches.length>1 && underVariable && !t.needsReview){
+          t.needsReview=true; t.updatedAt=Date.now(); changed=true;   /* غموض — لا إصلاح تلقائي */
+        }
+      }catch(e){ /* معاملة واحدة معطوبة لا توقف إصلاح البقية */ if(typeof expDiag==="function") expDiag("repairTx", e); }
     });
     /* أعِد حساب المثيلات المتأثرة من المعاملات (المصدر الوحيد للحقيقة) */
-    if(changed) d.instances.forEach(inst=>{
-      const linked=d.transactions.filter(x=>!x.deletedAt && x.fixedExpenseInstanceId===inst.id);
-      let paid=0,last=null; linked.forEach(x=>{ if(x.transactionType==="expense"){ paid+=x.amountMinor; if(!last||x.transactionDate>last)last=x.transactionDate; } else if(x.transactionType==="refund") paid-=x.amountMinor; });
+    if(changed) d.instances.forEach(inst=>{ try{
+      if(!inst || typeof inst!=="object") return;
+      const linked=d.transactions.filter(x=> x && !x.deletedAt && x.fixedExpenseInstanceId===inst.id);
+      let paid=0,last=null; linked.forEach(x=>{ const amt=(typeof x.amountMinor==="number" && isFinite(x.amountMinor))?x.amountMinor:0; if(x.transactionType==="expense"){ paid+=amt; if(!last||x.transactionDate>last)last=x.transactionDate; } else if(x.transactionType==="refund") paid-=amt; });
       inst.paidAmountMinor=Math.max(0,paid);
-      inst.status= inst.paidAmountMinor<=0?"unpaid":(inst.paidAmountMinor>=inst.plannedAmountMinor?"paid":"partial");
+      inst.status= inst.paidAmountMinor<=0?"unpaid":(inst.paidAmountMinor>=(inst.plannedAmountMinor||0)?"paid":"partial");
       inst.paidAt= inst.paidAmountMinor>0?last:null;
-    });
+    }catch(e){} });
     return changed;
   }
   /* خطّاف ترحيل دفاعي: يبحث عن قوائم مصاريف قديمة محتملة ويستوردها كفئات دون اختلاق معاملات يومية.
@@ -8196,6 +8286,7 @@
   function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
   function expPushRemote(d){
     if(!db || !user) return;
+    if(expLoadFailed) return;   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
     /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
     clearTimeout(expPushTimer);
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
@@ -8265,16 +8356,18 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return; }
-    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return; }
+    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", skipped:true}); }
+    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", skipped:true}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
+    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return Promise.resolve({module:"expenses", offline:true}); }
+    syncBegin("expenses", opts.trigger);
     expSetSyncState("syncing");
-    const done = ()=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); };
-    expGetDoc().then(snap=>{
+    const done = (snap)=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); syncEnd("expenses", true, snap); };
+    return expGetDoc().then(snap=>{
       const local = expState;
       if(!snap.exists){
         /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
         if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        done(); return;
+        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8284,8 +8377,8 @@
         const adopt = Object.assign({}, remote);
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
-        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
-        done(); return;
+        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); safeRun("expRefresh", expRefresh);
+        done(snap); return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -8294,13 +8387,29 @@
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
       localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
+      safeRun("expRefresh", expRefresh);                       /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
       if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-      done();
-    }).catch(()=>{ expSetSyncState("error"); });
+      done(snap);
+      return {module:"expenses", ok:true, fromCache:_fromCache(snap)};
+    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", ok:false}; });
   }
 
-  let expState = expData();
+  /* حدّ عزل: تحميل المصاريف لا يجوز أن يوقف إقلاع بقية التطبيق مهما كان شكل البيانات */
+  let expLoadFailed = false;
+  let expState;
+  diagMark("expData:begin");
+  try{ expState = expData(); diagMark("expData:end"); }
+  catch(e){
+    expLoadFailed = true; diagErr("expData:init", e);
+    /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
+    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
+      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[] };
+  }
+  /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
+  function expRetryLoad(){
+    try{ expState = expData(); expLoadFailed = false; diagMark("expData:retry-ok"); safeRun("expRefresh", ()=>{ if(typeof expRefresh==="function") expRefresh(); }); }
+    catch(e){ expLoadFailed = true; diagErr("expData:retry", e); }
+  }
 
   /* ---------- أدوات النقود (وحدة صغرى صحيحة — بلا أخطاء عائمة) ---------- */
   function expParseAmount(str){
@@ -8598,6 +8707,12 @@
   }
   function expRenderLaunch(){
     const box = document.getElementById("expLaunchSummary"); if(!box) return;
+    if(expLoadFailed){
+      box.innerHTML = '<div class="exp-empty" style="grid-column:1/-1">تعذّر تحميل المصاريف. بياناتك محفوظة ولم تُمس. <button class="exp-sync-btn" id="expReloadBtn">إعادة المحاولة</button></div>';
+      const rb=document.getElementById("expReloadBtn"); if(rb) rb.onclick=expRetryLoad;
+      const bn=document.getElementById("expLaunchBanner"); if(bn){ bn.hidden=true; bn.innerHTML=""; }
+      return;
+    }
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
     expRenderTravelBanner("expLaunchBanner");
@@ -9291,9 +9406,22 @@
       '<div class="exp-card-hint">العملة: ريال سعودي (ر.س) · الأرقام: عربية</div>'+
       '</div>'+
       (legacyCats.length? '<div class="exp-card" style="margin-top:1rem"><h3>📥 مراجعة الاستيراد</h3><div class="exp-card-hint">فئات مستوردة تحتاج تحديد ميزانية أسبوعية (القيم القديمة كانت إجماليات شهرية ولم تُحسب تلقائيًا).</div>'+legacyCats.map(c=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(c.name)+'</div><div class="exp-row-sub">إجمالي قديم: '+expMoney(c.legacyMonthlySnapshotMinor||0)+'</div></div><button class="exp-mini" data-setbudget="'+c.id+'">💰</button></div>').join("")+'</div>':'')+
-      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 الفئات المؤرشفة</h3>'+expArchivedList()+'</div>';
+      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 الفئات المؤرشفة</h3>'+expArchivedList()+'</div>'+
+      /* مزامنة عامّة لكل الأقسام + حالة كل قسم (منطقة مزامنة/تشخيص) */
+      '<div class="exp-card" style="margin-top:1rem"><h3>🔄 المزامنة</h3>'+
+        '<div class="exp-sync-text" id="expGlobalSyncText" style="margin-bottom:.6rem">'+expEsc(syncSummary().text)+'</div>'+
+        '<button class="exp-primary" id="expGlobalSyncBtn" style="width:100%">🔄 مزامنة جميع البيانات</button>'+
+        '<div id="expModStatus" style="margin-top:.7rem">'+expModStatusHtml()+'</div>'+
+      '</div>';
     body.querySelector("#stWeek").onchange=e=>{ s.weekStartDay=parseInt(e.target.value,10); expSave(expState); expRefresh(); };
     body.querySelector("#stPay").onchange=e=>{ s.defaultPaymentMethod=e.target.value||null; expSave(expState); };
+    const gsb=body.querySelector("#expGlobalSyncBtn"), gst=body.querySelector("#expGlobalSyncText");
+    if(gsb) gsb.onclick=()=>{
+      if(!db||!user){ if(gst) gst.textContent="سجّل الدخول أولًا للمزامنة"; return; }
+      gsb.disabled=true; if(gst) gst.textContent="جارٍ مزامنة جميع البيانات…";
+      _lastGlobalPull=0;
+      syncPullAllModules("manual", {forceServer:true}).then(()=>{ gsb.disabled=false; const su=syncSummary(); if(gst) gst.textContent=su.text; const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml(); safeRun("expRefreshLaunch", expRenderLaunch); });
+    };
     body.querySelectorAll("[data-setbudget]").forEach(b=> b.onclick=()=> expOpenBudgetForm(b.dataset.setbudget));
     body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ c.archivedAt=null; c.isActive=true; c.updatedAt=Date.now(); expSave(expState); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ t.archivedAt=null; t.isActive=true; t.updatedAt=Date.now(); expSave(expState); expRefresh(); } });
   }
@@ -9301,6 +9429,18 @@
     const cats=expState.categories.filter(c=>c.archivedAt), tpls=expState.fixedTemplates.filter(t=>t.archivedAt);
     if(!cats.length && !tpls.length) return '<div class="exp-empty">لا عناصر مؤرشفة.</div>';
     return cats.concat(tpls).map(x=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(x.name)+'</div><div class="exp-row-sub">'+(x.section?"فئة أسبوعية":"التزام شهري")+'</div></div><button class="exp-mini" data-restore="'+x.id+'" title="استعادة">↩️</button></div>').join("");
+  }
+  /* حالة مزامنة كل قسم (مشتقّة من SYNC_STATE — دقيقة، لا تُظهر نجاحًا كاملًا إن نجح قسم واحد) */
+  function expModStatusHtml(){
+    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف"};
+    return Object.keys(labels).map(n=>{ const s=SYNC_STATE[n]; let tag,cls;
+      if(!s || (!s.lastServerSuccessAt && !s.lastCacheFallbackAt && !s.lastError && !s.inFlight)){ tag="—"; cls="partial"; }
+      else if(s.inFlight){ tag="جارٍ"; cls="near"; }
+      else if(s.lastError){ tag="تعذّرت"; cls="unpaid"; }
+      else if((s.lastCacheFallbackAt||0) > (s.lastServerSuccessAt||0)){ tag="من الكاش"; cls="near"; }
+      else { tag="من الخادم"; cls="ok"; }
+      return '<div class="exp-foot-row"><span>'+labels[n]+'</span><span class="exp-pill '+cls+'">'+tag+'</span></div>';
+    }).join("");
   }
 
   /* ==================== واجهة الرحلات ==================== */
@@ -9485,16 +9625,10 @@
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
     expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
-    /* زرّ التحديث اليدوي (يتجاوز الخنق ويقرأ من الخادم مباشرة) */
+    /* زرّ التحديث اليدوي داخل المصاريف: يزامن كل الأقسام من الخادم (لا المصاريف وحدها) */
     const syncBtnEl = document.getElementById("expSyncBtn");
-    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({manual:true}); };
-    /* مشغّلات السحب التلقائية — نفس نمط السحب القائم، بلا آلية جديدة ولا onSnapshot:
-       رجوع التطبيق للمقدّمة / ظهور التبويب / استعادة الصفحة من ذاكرة السفاري / عودة الشبكة */
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") expTriggerPull(); });
-    window.addEventListener("focus", ()=> expTriggerPull());
-    window.addEventListener("pageshow", ()=> expTriggerPull());   /* مهمّ لسفاري iOS عند الرجوع من الخلفية (bfcache) */
-    window.addEventListener("online", ()=>{ expRenderSyncRow(); expTriggerPull(); });
-    window.addEventListener("offline", ()=> expRenderSyncRow());
+    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); _lastGlobalPull = 0; syncPullAllThrottled("manual"); expSetSyncState("syncing"); };
+    /* لا نُسجّل مشغّلات المقدّمة هنا — تُدار عالميًا عبر initLifecycleSync لكل الأقسام دفعة واحدة */
     expRenderLaunch();
     expRenderSyncRow();
   }
@@ -9530,10 +9664,12 @@
   }
 
   /* ---------- Init ---------- */
-  initFirebase();
-  goto(todayStr());
-  renderHifzCard();
-  expInit();
+  diagMark("script:end");
+  safeRun("initFirebase", initFirebase);
+  safeRun("goto:init", ()=> goto(todayStr()));
+  safeRun("renderHifzCard:init", renderHifzCard);
+  safeRun("expInit", expInit);
+  safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();
 </script>
 </body>
