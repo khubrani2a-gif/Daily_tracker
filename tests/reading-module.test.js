@@ -152,7 +152,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   let sessAfterDel = await rdSessions(p);
   ok("session soft-deleted (tombstoned, not hard-removed)", sessAfterDel.length===1 && !!sessAfterDel[0].deletedAt);
   ok("position preserved (unaffected) since currentUnit did not equal the deleted session's endUnit", (await rdItems(p))[0].currentUnit===0);
-  await p.reload(); await p.waitForTimeout(500);
+  await p.reload(); await p.waitForFunction(()=> document.getElementById("datePicker") && document.getElementById("datePicker").value, {timeout:8000}); await p.waitForTimeout(150);
   let c3 = await rdCache(p);
   ok("no resurrection after reload", !c3.byDate[today()] || c3.byDate[today()].sessionCount===0);
   await p.close();
@@ -228,7 +228,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("reading overlay opened on 'اليوم' after starting timer", await p.evaluate(()=> !document.getElementById("rdOverlay").hidden));
   // simulate elapsed time by rewriting the draft's startedAt into the past, then reload (survives reload / duration derived from timestamps, not a running counter)
   await p.evaluate(()=>{ const d=JSON.parse(localStorage.getItem("h2do-reading-active-session")); d.startedAt = Date.now() - 65*1000; localStorage.setItem("h2do-reading-active-session", JSON.stringify(d)); });
-  await p.reload(); await p.waitForTimeout(500);
+  await p.reload(); await p.waitForFunction(()=> document.getElementById("datePicker") && document.getElementById("datePicker").value, {timeout:8000}); await p.waitForTimeout(150);
   await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#rdTimerClock"); // draft already active for same item -> reopens overlay (does not restart)
   await p.waitForTimeout(200);
   const clockTxt = await p.$eval("#rdTimerClock", e=> e.textContent);
