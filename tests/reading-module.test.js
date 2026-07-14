@@ -384,6 +384,70 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("Reading's Arabic label 'القراءة' present in per-module status", statusHtml.includes("القراءة"));
   await p.close();
 
+  console.log("L. Derived stats cache: no repeated full-history rebuild on normal renderAll/goto; rebuild only when the cache is actually invalid, and it then matches direct totals");
+  p = await page(b);
+  // ملاحظة: هذا القسم يُعيد تحميل الصفحة لاحقًا (لاختبار إعادة البناء بعد إفساد الكاش)، وaddInitScript يُعاد
+  // تشغيله مع كل تحميل — بذرة لمرّة واحدة فقط كي لا يُمحى ما فعلته الواجهة/الاختبار قبل إعادة التحميل
+  await p.addInitScript((tk)=>{
+    window.__MFKR_TEST__ = true;   /* يجب أن يُضبط في كل تحميل (بما فيها إعادة التحميل)، لا مرّة واحدة فقط */
+    if(localStorage.getItem("__seeded__")) return;
+    localStorage.clear();
+    window.__MFKR_TEST__ = true;
+    const now = Date.now();
+    localStorage.setItem("h2do-reading-items", JSON.stringify([{schemaVersion:1,id:"IT1",title:"كتاب كبير",author:null,materialType:"book",progressUnit:"page",totalUnits:10000,currentUnit:0,status:"active",startedAt:now,completedAt:null,createdAt:now,updatedAt:now,deletedAt:null}]));
+    localStorage.setItem("h2do-reading-settings", JSON.stringify({schemaVersion:1,focusItemId:"IT1",dailyGoal:null,createdAt:now,updatedAt:now}));
+    // ٦٠ جلسة تاريخية مسبقة الوجود (بلا كاش إحصائي محفوظ بعد) — تُجبر إعادة بناء واحدة فقط عند أوّل تحميل
+    const sessions = [];
+    for(let i=0;i<60;i++){
+      const d = new Date(now - i*86400000);
+      const dk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+      sessions.push({schemaVersion:1,id:"S"+i,itemId:"IT1",dateKey:dk,source:"manual",startedAt:now-i*86400000,endedAt:now-i*86400000,durationSeconds:300,startUnit:i,endUnit:i+2,unitsRead:2,createdAt:now,updatedAt:now,syncUpdatedAt:null,deletedAt:null});
+    }
+    localStorage.setItem("h2do-reading-sessions", JSON.stringify(sessions));
+    // لا h2do-reading-stats-cache مخزَّن بعد → إعادة بناء واحدة إلزامية عند أوّل قراءة للذاكرة المشتقّة
+    localStorage.setItem("__seeded__", "1");
+  }, today());
+  await p.goto(fileUrl); await p.waitForTimeout(700);
+  let rebuildCount = await p.evaluate(()=> window.__mfkrSync.rdRebuildCount());
+  ok("exactly ONE full rebuild happened for the missing/first-ever cache at startup (not zero, not more)", rebuildCount===1);
+
+  // تصفّح التاريخ (goto()->renderAll()->renderReadingCard) عدّة مرّات — يجب ألّا يُحفّز أي إعادة بناء كاملة إضافية
+  for(let i=0;i<8;i++){ await p.click("#prevDay"); await p.waitForTimeout(100); }
+  for(let i=0;i<8;i++){ await p.click("#nextDay"); await p.waitForTimeout(100); }
+  rebuildCount = await p.evaluate(()=> window.__mfkrSync.rdRebuildCount());
+  ok("16 date navigations (each a full goto()->renderAll()->renderReadingCard cycle) triggered ZERO additional full rebuilds (still exactly 1)", rebuildCount===1);
+
+  // إضافة جلسة فعلية عاديّة عبر الواجهة — تُحدَّث الذاكرة تفاضليًا لا بإعادة بناء كاملة
+  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.fill("#qlMins", "5");
+  await p.click("#qlSave"); await p.waitForTimeout(300);
+  rebuildCount = await p.evaluate(()=> window.__mfkrSync.rdRebuildCount());
+  ok("a normal single session add updates the cache incrementally, NOT via a full rebuild (still exactly 1)", rebuildCount===1);
+  let cacheAfterAdd = await rdCache(p);
+  ok("the cache correctly reflects the newly added session without a rebuild (61 total sessions worth of contributions tracked)", Object.keys(cacheAfterAdd.byDate||{}).length >= 60);
+
+  // إفساد الكاش عمدًا (مثل تلف تخزين حقيقي) ثم إعادة التحميل — يجب أن تُحفَّز إعادة بناء واحدة جديدة بالضبط،
+  // وأن تُنتج نفس الإجماليات المباشرة المحسوبة من الجلسات الخام (لا فقدان، لا ازدواج)
+  const directTotalBefore = await p.evaluate(()=>{
+    const sessions = JSON.parse(localStorage.getItem("h2do-reading-sessions"))||[];
+    let dur=0, units=0, cnt=0;
+    sessions.forEach(s=>{ if(!s.deletedAt){ dur+=s.durationSeconds||0; units+=s.unitsRead||0; cnt++; } });
+    return { dur, units, cnt };
+  });
+  await p.evaluate(()=>{ localStorage.setItem("h2do-reading-stats-cache", "{not valid json at all"); });
+  await p.reload();
+  await p.waitForFunction(()=> document.getElementById("datePicker") && document.getElementById("datePicker").value, {timeout:8000});
+  await p.waitForTimeout(200);
+  rebuildCount = await p.evaluate(()=> window.__mfkrSync.rdRebuildCount());
+  ok("corrupting the cache and reloading triggers exactly ONE fresh rebuild (the mechanism activates when actually needed, not dead code)", rebuildCount===1); // عدّاد جديد بعد إعادة التحميل الكاملة (سياق JS جديد) — يبدأ من صفر ويصل ١
+  const cacheAfterCorruptReload = await rdCache(p);
+  let directDurAfter=0, directUnitsAfter=0, directCntAfter=0;
+  Object.keys(cacheAfterCorruptReload.byDate||{}).forEach(dk=>{ const a=cacheAfterCorruptReload.byDate[dk]; directDurAfter+=a.durationSeconds; directCntAfter+=a.sessionCount; Object.values(a.unitsByUnit||{}).forEach(v=> directUnitsAfter+=v); });
+  ok("rebuilt cache duration total matches the direct sum computed from raw (non-deleted) sessions", directDurAfter === directTotalBefore.dur);
+  ok("rebuilt cache session count total matches the direct count from raw sessions", directCntAfter === directTotalBefore.cnt);
+  ok("rebuilt cache units total matches the direct sum from raw sessions", directUnitsAfter === directTotalBefore.units);
+  await p.close();
+
   console.log("K. Zero page errors / unhandled rejections across the full flow above");
   ok("no uncaught JS errors or console.error across all scenarios", errs.length===0);
   if(errs.length) console.log("ERRORS:", [...new Set(errs)].slice(0,10));

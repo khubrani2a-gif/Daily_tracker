@@ -10346,7 +10346,8 @@
       state:()=> JSON.parse(JSON.stringify(SYNC_STATE)),
       module:(n)=> JSON.parse(JSON.stringify(syncModule(n))),
       inFlight:(n)=> syncInFlight(n),
-      runGen:()=> _syncRunGen
+      runGen:()=> _syncRunGen,
+      rdRebuildCount:()=> _rdRebuildCount   /* عدّاد قراءة فقط لإعادة بناء الذاكرة المشتقّة الكاملة — لا يكشف بيانات، ولا يُستخدم للكتابة */
     };
     if(window.__MFKR_TEST__ === true){
       window.__mfkrSync = Object.assign({
@@ -12514,6 +12515,8 @@
   function rdEmptyItemAgg(){ return { durationSeconds:0, sessionCount:0, unitsByUnit:{}, lastSessionAt:0 }; }
   function rdStatsCacheDefault(){ return { schemaVersion: RD_CACHE_SCHEMA_VERSION, revision:0, byDate:{}, byItem:{} }; }
   let _rdStatsCache = null;
+  /* عدّاد قراءة فقط لإعادة البناء الكاملة (لا يؤثر في أي سلوك) — يكشف عبر خطّاف الاختبار __mfkrSync الحالي فقط */
+  let _rdRebuildCount = 0;
   function rdStatsCacheValid(c){
     return !!(c && typeof c === "object" && c.schemaVersion === RD_CACHE_SCHEMA_VERSION
       && typeof c.revision === "number" && c.byDate && typeof c.byDate === "object" && c.byItem && typeof c.byItem === "object");
@@ -12537,6 +12540,7 @@
     if(sign > 0) bAgg.lastSessionAt = Math.max(bAgg.lastSessionAt || 0, sess.endedAt || sess.startedAt || 0);
   }
   function rdRebuildStatsCache(){
+    _rdRebuildCount++;
     const cache = rdStatsCacheDefault();
     rdSessions().forEach(s=> rdApplySessionDelta(cache, s, +1));
     cache.revision = 1;
