@@ -237,8 +237,8 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   sessions = await rdSessions(p);
   ok("finishing timer creates a timer-source session with plausible duration", sessions.length===1 && sessions[0].source==="timer" && sessions[0].durationSeconds>=60);
   ok("active draft cleared after finish", await p.evaluate(()=> localStorage.getItem("h2do-reading-active-session")===null));
-  await p.evaluate(()=>{ if(typeof rdCloseOverlay==="function") rdCloseOverlay(); });
-  await p.waitForTimeout(150);
+  await p.click("#rdClose"); await p.waitForTimeout(200);
+  ok("overlay closed via close button", await p.evaluate(()=> document.getElementById("rdOverlay").hidden===true));
 
   // historical date guard: navigate to yesterday, attempt to start a session -> must NOT create a draft, must prompt to return to today
   await p.click("#prevDay"); await p.waitForTimeout(400);
