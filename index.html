@@ -1311,6 +1311,17 @@
   .exp-save:hover{filter:brightness(1.06)}
   .exp-save:disabled{opacity:.55;cursor:default}
   .exp-toggle-more{border:none;background:transparent;color:var(--accent);font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;padding:.3rem 0;margin-bottom:.5rem}
+  /* ---------- وحدة القراءة ---------- */
+  .rd-focus-block{cursor:pointer;border-radius:14px;padding:.2rem 0;transition:.15s}
+  .rd-focus-title{font-weight:700;color:var(--ink);font-size:1rem;overflow-wrap:anywhere}
+  .rd-author{color:var(--muted);font-weight:400;font-size:.85rem}
+  .rd-pos,.rd-today,.rd-goal{color:var(--muted);font-size:.85rem;margin-top:.25rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .rd-goal{color:var(--accent);font-weight:600}
+  .rd-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+  .rd-actions button{flex:1;min-width:120px}
+  .rd-focus-card{background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;padding:.6rem .8rem;margin-bottom:.7rem}
+  .rd-timer-box{text-align:center;background:var(--accent-soft);border-radius:16px;padding:1rem;margin-bottom:.7rem}
+  .rd-timer-clock{font-size:2.1rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;margin-bottom:.6rem;direction:ltr}
   /* تقارير */
   .exp-rep-nav{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.8rem}
   .exp-rep-nav button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;width:38px;height:38px;font-size:1rem;cursor:pointer}
@@ -2345,17 +2356,14 @@
         </div>
       </div>
 
-      <div class="card" id="learningCard">
+      <div class="card" id="readingCard">
         <div class="ib-head">
-          <div><h2 class="ib-title"><span class="ico">📚</span> العلم والقراءة</h2><div class="ib-sub">خطوات صغيرة نحو معرفة أعمق</div></div>
-          <div class="ib-head-actions"><button class="ib-cal-btn" id="learningGoalBtn">🎯 الهدف</button><button class="ib-cal-btn" id="learningAddBtn">＋ إضافة</button></div>
+          <div>
+            <h2 class="ib-title"><span class="ico">📚</span> القراءة</h2>
+            <div class="ib-sub" id="rdCardSub"></div>
+          </div>
         </div>
-        <div class="learning-summary">
-          <div><b id="learningTodayValue">٠ دقيقة</b><small id="learningGoalText">هدف اليوم: ٢٠ دقيقة</small><div class="learning-progress"><i id="learningFill"></i></div></div>
-          <button type="button" class="dhikr-count-btn" id="learningQuickBtn" style="width:auto;margin:0;padding:.55rem .7rem;font-size:.78rem">＋١٠ د</button>
-        </div>
-        <div class="learning-list" id="learningList"></div>
-        <div class="learning-empty" id="learningEmpty">أضف كتابًا أو دورة أو مادة تريد متابعتها.</div>
+        <div id="rdCardBody"></div>
       </div>
 
       <div class="card" id="sportCard">
@@ -3144,6 +3152,27 @@
     <div class="exp-form" id="expFormBox"></div>
   </div>
 
+  <!-- وحدة القراءة: شاشة كاملة (اليوم/مكتبتي/الإحصائيات) — تُعيد استخدام نموذج المصاريف العام للحوارات -->
+  <div class="adhkar-overlay" id="rdOverlay" hidden>
+    <div class="adhkar-sheet">
+      <div class="adhkar-top">
+        <div class="adhkar-head">
+          <button class="ad-btn ad-close" id="rdClose" title="إغلاق">✕ إغلاق</button>
+          <h2>📚 القراءة</h2>
+          <span></span>
+        </div>
+      </div>
+      <div class="exp-tabs">
+        <button class="exp-tab active" data-rdview="today">اليوم</button>
+        <button class="exp-tab" data-rdview="library">مكتبتي</button>
+        <button class="exp-tab" data-rdview="stats">الإحصائيات</button>
+      </div>
+      <div class="exp-view" id="rdViewToday"></div>
+      <div class="exp-view" id="rdViewLibrary" hidden></div>
+      <div class="exp-view" id="rdViewStats" hidden></div>
+    </div>
+  </div>
+
   <!-- شريط التراجع بعد الحذف -->
   <div class="exp-undo" id="expUndo" hidden>
     <span id="expUndoText">تم الحذف</span>
@@ -3233,7 +3262,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١١٢</div>
+    <div class="app-version">النسخة ١٠٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -3335,9 +3364,13 @@
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
   }
   function wHiddenSave(list){ localStorage.setItem(HIDDEN_WORSHIP_KEY, JSON.stringify(list)); }
-  function wAllItems(){
+  /* توافق الإصدار ١٠٠: بند «صفحة قراءة» القديم داخل العبادات يبقى ظاهرًا ومحسوبًا للتواريخ التاريخية قبل تاريخ الإطلاق فقط؛
+     من تاريخ الإطلاق فصاعدًا يُخفى ويُستبعد من الإجماليات الجديدة لصالح وحدة «📚 القراءة» المستقلة — دون حذف أي بيانات تاريخية */
+  function wAllItems(date){
+    date = date || currentDate;
     const hidden = wHidden();
-    return WORSHIP.filter(w=>hidden.indexOf(w.id) === -1).concat(wCustom());
+    const showLegacyReading = date < READING_LAUNCH_DATE;
+    return WORSHIP.filter(w=> hidden.indexOf(w.id) === -1 && (w.id !== "reading" || showLegacyReading)).concat(wCustom());
   }
   const HABIT_DAY_NAMES=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   function habitScheduledOn(item,dateStr){
@@ -3348,61 +3381,8 @@
   }
   function wAllItemsForDate(dateStr){ return wAllItems().filter(item=>habitScheduledOn(item,dateStr)); }
   /* بنود بطاقة «العبادات» فقط (أذكار/صلاة/أوراد عادية) — الورد اليومي وقراءة السور المخصّصة لها بطاقة «القرآن» المستقلة */
-  function ibOnlyItems(dateStr){
-    return wAllItemsForDate(dateStr||currentDate).filter(w=> w.id !== "werd" && w.kind !== "quran");
-  }
-  function habitStateForDate(dateStr){
-    if(dateStr===currentDate&&state) return state;
-    try{ return JSON.parse(localStorage.getItem(storageKey(dateStr))||"null"); }catch(e){ return null; }
-  }
-  function habitCompletedOn(item,dateStr){
-    const saved=habitStateForDate(dateStr);
-    return !!(saved&&saved.worship&&saved.worship[item.id]);
-  }
-  function habitPeriodRange(item,dateStr){
-    const date=new Date((dateStr||currentDate)+"T12:00:00"), start=new Date(date), end=new Date(date);
-    if(item.goalPeriod==="monthly"){ start.setDate(1); end.setMonth(end.getMonth()+1,0); }
-    else{ start.setDate(start.getDate()-start.getDay()); end.setDate(start.getDate()+6); }
-    return {start:fmtDate(start),end:fmtDate(end)};
-  }
-  function habitPeriodProgress(item,dateStr){
-    if(item.goalPeriod!=="weekly"&&item.goalPeriod!=="monthly") return null;
-    const range=habitPeriodRange(item,dateStr||currentDate), cursor=new Date(range.start+"T12:00:00"), stop=new Date(range.end+"T12:00:00");
-    let done=0,scheduled=0;
-    while(cursor<=stop){
-      const key=fmtDate(cursor);
-      if(habitScheduledOn(item,key)){ scheduled++; if(habitCompletedOn(item,key)) done++; }
-      cursor.setDate(cursor.getDate()+1);
-    }
-    const target=Math.max(1,Math.min(99,+item.goalTarget||scheduled||1));
-    return {done,target,period:item.goalPeriod};
-  }
-  function habitStreak(item,dateStr){
-    const cursor=new Date((dateStr||currentDate)+"T12:00:00"), selected=fmtDate(cursor), isCurrentToday=selected===todayStr();
-    let streak=0,scheduledSeen=0;
-    for(let i=0;i<730;i++){
-      const key=fmtDate(cursor);
-      if(habitScheduledOn(item,key)){
-        scheduledSeen++;
-        if(habitCompletedOn(item,key)) streak++;
-        else if(!(isCurrentToday&&key===selected)){ break; }
-      }
-      cursor.setDate(cursor.getDate()-1);
-    }
-    return streak;
-  }
-  function habitDaysText(item){
-    const days=Array.isArray(item.scheduleDays)?item.scheduleDays.map(Number).filter(n=>n>=0&&n<=6):[];
-    if(!days.length||days.length===7) return "يوميًا";
-    return days.map(day=>HABIT_DAY_NAMES[day]).join("، ");
-  }
-  function habitRowMeta(item){
-    if(!item||!item.custom) return null;
-    const progress=habitPeriodProgress(item,currentDate), streak=habitStreak(item,currentDate), chip=document.createElement("span");
-    chip.className="habit-progress-chip";
-    chip.textContent=(streak?"🔥 "+streak.toLocaleString("ar-EG"):"بداية جديدة")+(progress?" · "+progress.done.toLocaleString("ar-EG")+"/"+progress.target.toLocaleString("ar-EG"):"");
-    chip.title="السلسلة الحالية"+(progress?" · تقدم الهدف "+(progress.period==="weekly"?"الأسبوعي":"الشهري"):"");
-    return chip;
+  function ibOnlyItems(date){
+    return wAllItems(date).filter(w=> w.id !== "werd" && w.kind !== "quran");
   }
   /* حذف بند: مخصّص يُزال نهائيًا، أصلي في مجموعة الأوراد يُخفى فقط (قابل لإرجاعه مستقبلًا لو احتجنا) */
   function ibRemoveItem(w){
@@ -4097,7 +4077,7 @@
       ["witr", ()=> witrPullRemote(trigger)],
       ["hifz", ()=> hifzPullRemote(trigger)],
       ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})],
-      ["weeklyGoals", ()=> wgPullRemote(trigger)]
+      ["reading", ()=> rdPullRemote(trigger)]
     ];
     return Promise.allSettled(jobs.map(([name, fn])=>{
       try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
@@ -4134,7 +4114,7 @@
   }
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
-    const names=["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"];
+    const names=["daily","quran","customWorship","witr","hifz","expenses","reading"];
     let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
     names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
       if(s.inFlight) flight=true;
@@ -7790,15 +7770,15 @@
     IB_GROUPS.forEach(g=>{
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
-      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd").forEach(w=> ibRenderItem(g==="adhkar"?Object.assign({},w,{label:dhikrDisplayLabel(w)}):w, ul));
-      custom.filter(w=>w.group === g && !w.hidden && w.kind !== "quran" && habitScheduledOn(w,currentDate)).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd" && (w.id !== "reading" || currentDate < READING_LAUNCH_DATE)).forEach(w=> ibRenderItem(w, ul));
+      custom.filter(w=>w.group === g && w.kind !== "quran").forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
     });
 
     renderQuranCard();
     renderDhikrCounter();
 
     /* إحصائيات البطاقة: الحلقة + العدّاد + المتبقي (الورد اليومي وقراءة السور المخصّصة لهما بطاقة مستقلة) */
-    const all = ibOnlyItems();
+    const all = ibOnlyItems(currentDate);
     const done = all.filter(w=>!!state.worship[w.id]);
     const total = all.length;
     const pct = total ? Math.round(done.length/total*100) : 0;
@@ -8818,7 +8798,7 @@
   function renderProgress(){
     let total = 0, done = 0;
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
-    const ibItems = wAllItems();
+    const ibItems = wAllItems(currentDate);
     total += ibItems.length; done += ibItems.filter(w=>!!state.worship[w.id]).length;
     total += 1; if(state.water >= waterGoal()) done += 1;
     total += 1; if(sportDone(state)) done += 1;
@@ -8975,12 +8955,12 @@
   }
 
   /* ---------- الإحصائيات وشبكة السنة ---------- */
-  function dayPct(s,dateStr){
+  function dayPct(s, date){
     let total = 0, done = 0;
     const pr = s.prayers || [];
     total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
     const wsh = s.worship || {};
-    const ibAll = wAllItemsForDate(dateStr||currentDate);
+    const ibAll = wAllItems(date);
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= waterGoal()) done += 1;
     total += 1; if(sportDone(s)) done += 1;
@@ -9573,7 +9553,7 @@
       const dt = new Date(d+"T12:00:00");
       const ws = new Date(dt); ws.setDate(ws.getDate() - ws.getDay());
       const wk = fmtDate(ws);
-      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d],d));
+      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d], d));
     }
     let bestWk = null, bestAvg = 0;
     for(const wk in weeks){
@@ -9621,7 +9601,7 @@
       const cell = document.createElement("span");
       cell.className = "hm-cell";
       if(days[key]){
-        const pct = dayPct(days[key],key);
+        const pct = dayPct(days[key], key);
         const lvl = pct === 0 ? 0 : pct <= 25 ? 1 : pct <= 50 ? 2 : pct <= 75 ? 3 : 4;
         if(lvl) cell.classList.add("p"+lvl);
         cell.title = key+" — "+arn(pct)+"٪";
@@ -9794,6 +9774,7 @@
     safeRun("renderStars", renderStars);
     safeRun("renderProgress", renderProgress);
     safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
+    safeRun("renderReadingCard", ()=>{ if(typeof renderReadingCard === "function") renderReadingCard(); });
   }
 
   /* ---------- Date navigation ---------- */
@@ -9905,105 +9886,51 @@
         try{ const parsed=JSON.parse(localStorage.getItem(key)); if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)) invalidDaily++; }catch(e){ invalidDaily++; }
       }
     }
-    try{ const expenses=localStorage.getItem("h2do-expenses"); if(expenses){ const parsed=JSON.parse(expenses); if(!parsed||typeof parsed!=="object") invalidExpenses++; } }catch(e){ invalidExpenses++; }
-    const backups=dataLoadBackups().length, size=dataFormatBytes(dataSnapshotStats(dataBuildSnapshot("فحص سلامة")).size||0);
-    const problems=invalidDaily+invalidExpenses;
-    alert(problems?"اكتمل الفحص: وُجدت "+problems.toLocaleString("ar-EG")+" بيانات تحتاج مراجعة. أنشئ نسخة JSON قبل أي استعادة أو تعديل.\n\nالأيام السليمة: "+(daily-invalidDaily).toLocaleString("ar-EG")+" · النسخ المحلية: "+backups.toLocaleString("ar-EG")+" · الحجم التقريبي: "+size:"اكتمل الفحص بنجاح ✓\n\nالأيام المحفوظة: "+daily.toLocaleString("ar-EG")+" · النسخ المحلية: "+backups.toLocaleString("ar-EG")+" · الحجم التقريبي: "+size);
-  }
-  function dataApplySnapshot(snapshot){
-    const entries=(snapshot&&snapshot.entries)||{}, remove=[];
-    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!Object.prototype.hasOwnProperty.call(entries,key)) remove.push(key); }
-    remove.forEach(key=>localStorage.removeItem(key));
-    Object.keys(entries).forEach(key=>{ if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) localStorage.setItem(key,String(entries[key])); });
-  }
-  function dataRestoreBackup(id){
-    const record=dataLoadBackups().find(item=>item.id===id); if(!record) return;
-    if(!confirm("استعادة «"+record.reason+"»؟ ستُستبدل بيانات التطبيق الحالية، وستُنشأ نسخة أمان منها أولًا.")) return;
-    const safety=dataSaveBackup("قبل استعادة "+record.reason,true);
-    if(!safety){ alert("تعذّر إنشاء نسخة الأمان، لذلك أُلغيت الاستعادة حفاظًا على بياناتك."); return; }
-    try{ dataApplySnapshot(record.snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
-  }
-  function dataDeleteBackup(id){
-    const record=dataLoadBackups().find(item=>item.id===id); if(!record||!confirm("حذف النسخة «"+record.reason+"» من هذا الجهاز؟")) return;
-    dataStoreBackups(dataLoadBackups().filter(item=>item.id!==id)); dataRenderCenter();
-  }
-  function dataXml(value){ return String(value==null?"":value).replace(/[<>&'"]/g,char=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[char])); }
-  function dataExcelCell(value,type){ return '<Cell><Data ss:Type="'+(type||"String")+'">'+dataXml(value)+'</Data></Cell>'; }
-  function dataExportExcel(){
-    const days=allDays(), dailyRows=[["التاريخ","الصلوات المكتملة","المهام المكتملة","إجمالي المهام","الماء","دقائق الرياضة","الملاحظات","الذكريات"]];
-    Object.keys(days).sort().forEach(date=>{ const day=days[date]||{}, tasks=(day.tasks||[]).filter(itemFilled); dailyRows.push([date,(day.prayers||[]).filter(isPrayed).length,tasks.filter(item=>item.done).length,tasks.length,day.water||0,(day.sport&&day.sport.mins)||0,day.notes||"",day.memory||""]); });
-    const expenseRows=[["التاريخ","الفئة","النوع","المبلغ ر.س","التفصيل","الملاحظة"]];
-    expActiveTx().sort((a,b)=>(a.transactionDate||"").localeCompare(b.transactionDate||"")).forEach(tx=>expenseRows.push([tx.transactionDate||"",(expCatById(tx.categoryId)||{}).name||"غير مصنف",tx.transactionType||"expense",(expToMinor(tx.amountMinor)/100),tx.subcategory||"",tx.description||""]));
-    const sheet=(name,rows)=>'<Worksheet ss:Name="'+dataXml(name)+'"><Table>'+rows.map((row,rowIndex)=>'<Row>'+row.map((cell,index)=>dataExcelCell(cell,rowIndex>0&&[1,2,3,4,5].includes(index)&&typeof cell==="number"?"Number":"String")).join("")+'</Row>').join("")+'</Table></Worksheet>';
-    const xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+sheet("اليوميات",dailyRows)+sheet("المصاريف",expenseRows)+'</Workbook>';
-    dataDownload("\ufeff"+xml,"application/vnd.ms-excel;charset=utf-8","daily-tracker-"+todayStr()+".xls");
-  }
-  function dataEsc(value){ return String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char])); }
-  function dataExportPdf(){
-    const days=allDays(), dates=Object.keys(days).sort().reverse(), tx=expActiveTx(), tasks=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(itemFilled).length,0), done=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(item=>itemFilled(item)&&item.done).length,0);
-    const dayRows=dates.slice(0,60).map(date=>{ const day=days[date]||{}, list=(day.tasks||[]).filter(itemFilled); return "<tr><td>"+dataEsc(date)+"</td><td>"+list.filter(item=>item.done).length+" / "+list.length+"</td><td>"+(day.prayers||[]).filter(isPrayed).length+" / "+PRAYERS.length+"</td><td>"+dataEsc(day.notes||"")+"</td></tr>"; }).join("");
-    const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير مفكرتي اليومية</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#173d38;line-height:1.6}h1{font-size:22px}h2{font-size:16px;margin-top:24px}.meta{color:#667}.cards{display:flex;gap:8px}.card{border:1px solid #ccd9d6;border-radius:8px;padding:10px;flex:1}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d9e2e0;padding:5px;text-align:right;vertical-align:top}th{background:#edf6f4}</style></head><body><h1>مفكرتي اليومية — تقرير البيانات</h1><p class="meta">تاريخ الإنشاء: '+dataEsc(new Date().toLocaleString("ar-SA"))+'</p><div class="cards"><div class="card">الأيام المحفوظة<br><b>'+dates.length+'</b></div><div class="card">المهام المكتملة<br><b>'+done+" / "+tasks+'</b></div><div class="card">المعاملات المالية<br><b>'+tx.length+'</b></div></div><h2>آخر الأيام</h2><table><thead><tr><th>التاريخ</th><th>المهام</th><th>الصلوات</th><th>الملاحظات</th></tr></thead><tbody>'+dayRows+'</tbody></table></body></html>';
-    const printWindow=window.open("","_blank"); if(!printWindow){ alert("اسمح بالنوافذ المنبثقة لإعداد ملف PDF."); return; }
-    printWindow.document.open(); printWindow.document.write(html); printWindow.document.close(); setTimeout(()=>{ printWindow.focus(); printWindow.print(); },300);
-  }
-  function dataBaselineLoad(){ const value=dataLoadJson(DATA_BASELINE_KEY,{}); return value&&typeof value==="object"?value:{}; }
-  function dataBaselineId(module,key){ return module+"|"+(key||"all"); }
-  function dataChangedFields(local,remote){
-    const labels={prayers:"الصلاة",worship:"العبادات والعادات",water:"الماء",tasks:"المهام",priorities:"الأولويات",notes:"الملاحظات",memory:"الذكريات",sport:"الرياضة",rating:"التقييم",page:"صفحة القرآن",items:"العناصر",favorites:"المفضلة",history:"السجل"};
-    return [...new Set(Object.keys(Object.assign({},local||{},remote||{})).filter(key=>key!=="updatedAt"&&JSON.stringify(local&&local[key])!==JSON.stringify(remote&&remote[key])).map(key=>labels[key]||key))].slice(0,8);
-  }
-  function dataConflictLoad(){ const list=dataLoadJson(DATA_CONFLICT_KEY,[]); return Array.isArray(list)?list:[]; }
-  function dataRecordConflict(module,key,localTs,remoteTs,fields,resolution){
-    const list=dataConflictLoad(), signature=[module,key,localTs,remoteTs,(fields||[]).join(",")].join("|");
-    if(list.some(item=>item.signature===signature)) return;
-    dataSaveBackup("قبل دمج تعارض",true);
-    list.unshift({id:"conf_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,5),signature,module,key:key||"",createdAt:Date.now(),localUpdatedAt:localTs,remoteUpdatedAt:remoteTs,fields:fields||[],resolution:resolution||"اعتماد الأحدث",reviewed:false});
-    localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.slice(0,50)));
-    if(typeof dataRenderCenter==="function"&&!document.getElementById("dataOverlay").hidden) dataRenderCenter();
-  }
-  function dataDetectConflict(module,key,local,remote,resolution){
-    const localTs=+(local&&local.updatedAt)||0, remoteTs=+(remote&&remote.updatedAt)||0, baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id];
-    if(baseline!==undefined&&localTs>baseline&&remoteTs>baseline&&JSON.stringify(local)!==JSON.stringify(remote)){
-      dataRecordConflict(module,key,localTs,remoteTs,dataChangedFields(local,remote),resolution||((remoteTs>localTs)?"اعتماد نسخة السحابة الأحدث":"اعتماد نسخة الجهاز الأحدث"));
-    }
-    baselines[id]=Math.max(+baseline||0,localTs,remoteTs); localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
-  }
-  function dataDetectCollectionConflicts(module,key,localRows,remoteRows,resolution){
-    const baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id], localMap=new Map((localRows||[]).filter(Boolean).map(row=>[String(row.id||""),row])), conflicts=[], times=[];
-    const maxUpdatedAt=rows=>Math.max(0,...(rows||[]).map(row=>(+(row&&row.updatedAt)||0)));
-    (localRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0)); (remoteRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0));
-    (remoteRows||[]).forEach(remote=>{ const local=localMap.get(String(remote&&remote.id||"")); if(local&&baseline!==undefined&&(local.updatedAt||0)>baseline&&(remote.updatedAt||0)>baseline&&JSON.stringify(local)!==JSON.stringify(remote)) conflicts.push(String(remote.id||"سجل")); });
-    const next=Math.max(+baseline||0,...times,0);
-    if(conflicts.length) dataRecordConflict(module,key,maxUpdatedAt(localRows),maxUpdatedAt(remoteRows),["سجلات: "+conflicts.slice(0,6).join("، ")],resolution||"دمج كل سجل حسب آخر تحديث");
-    baselines[id]=next; localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
-  }
-  function dataReviewConflict(id){ const list=dataConflictLoad(), item=list.find(entry=>entry.id===id); if(item){ item.reviewed=true; localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list)); dataRenderCenter(); } }
-  function dataClearReviewed(){ const list=dataConflictLoad(), reviewed=list.filter(item=>item.reviewed).length; if(!reviewed){ alert("لا توجد تعارضات مراجَعة لمسحها."); return; } localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.filter(item=>!item.reviewed))); dataRenderCenter(); }
-  const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية"};
-  function dataFormatBytes(bytes){ if(bytes<1024) return bytes+" ب"; if(bytes<1048576) return (bytes/1024).toFixed(1)+" ك.ب"; return (bytes/1048576).toFixed(1)+" م.ب"; }
-  function dataRenderCenter(){
-    const backups=dataLoadBackups(), conflicts=dataConflictLoad(), unresolved=conflicts.filter(item=>!item.reviewed), days=Object.keys(allDays()).length;
-    document.getElementById("dataDaysCount").textContent=days.toLocaleString("ar-EG"); document.getElementById("dataBackupsCount").textContent=backups.length.toLocaleString("ar-EG"); document.getElementById("dataConflictsCount").textContent=unresolved.length.toLocaleString("ar-EG");
-    const backupHost=document.getElementById("dataBackupList"); backupHost.innerHTML="";
-    if(!backups.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد نسخ محلية بعد. أنشئ أول نسخة قبل أي تغيير كبير."; backupHost.appendChild(empty); }
-    backups.forEach(record=>{ const row=document.createElement("div"); row.className="data-row"; const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=record.reason; const small=document.createElement("small"); const stats=record.stats||dataSnapshotStats(record.snapshot); small.textContent=new Date(record.createdAt).toLocaleString("ar-SA")+" · "+stats.days.toLocaleString("ar-EG")+" يوم · "+stats.expenses.toLocaleString("ar-EG")+" معاملة · "+dataFormatBytes(stats.size||0); copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions";
-      const restore=document.createElement("button"); restore.type="button"; restore.className="restore"; restore.textContent="استعادة"; restore.onclick=()=>dataRestoreBackup(record.id);
-      const download=document.createElement("button"); download.type="button"; download.textContent="تنزيل"; download.onclick=()=>dataExportJson(record.snapshot);
-      const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="حذف"; del.onclick=()=>dataDeleteBackup(record.id); actions.append(restore,download,del); row.append(copy,actions); backupHost.appendChild(row); });
-    const conflictHost=document.getElementById("dataConflictList"); conflictHost.innerHTML="";
-    if(!conflicts.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد تعارضات مسجّلة. عند تعديل البيانات نفسها على جهازين دون مزامنة، سيظهر التنبيه هنا قبل الدمج."; conflictHost.appendChild(empty); }
-    conflicts.forEach(item=>{ const row=document.createElement("div"); row.className="data-row data-conflict-row"+(item.reviewed?" reviewed":""); const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=(DATA_MODULE_LABELS[item.module]||item.module)+(item.key?" — "+item.key:""); if(!item.reviewed){ const badge=document.createElement("span"); badge.className="data-conflict-badge"; badge.textContent="يحتاج مراجعة"; title.appendChild(badge); } const small=document.createElement("small"); small.textContent=new Date(item.createdAt).toLocaleString("ar-SA")+" · "+(item.fields||[]).join("، ")+" · "+item.resolution; copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions"; if(!item.reviewed){ const review=document.createElement("button"); review.type="button"; review.className="restore"; review.textContent="تمت المراجعة"; review.onclick=()=>dataReviewConflict(item.id); actions.appendChild(review); } row.append(copy,actions); conflictHost.appendChild(row); });
-  }
-  function dataOpen(){ dataRenderCenter(); document.getElementById("dataOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("dataClose").focus(); }
-  function dataClose(){ document.getElementById("dataOverlay").hidden=true; document.body.style.overflow=""; document.getElementById("dataManageBtn").focus(); }
+    /* غلاف متوافق مع النُسخ القديمة (كائن أيام مباشر بلا صيغة): v2 يضيف صيغة/إصدار ووحدة القراءة دون كسر الاستيراد القديم */
+    const payload = { format:"mufakkirati-backup", version:2, exportedAt:Date.now(), days:data,
+      modules:{ reading: (typeof rdExportPayload==="function") ? rdExportPayload() : {settings:null, items:[], sessions:[]} } };
+    const blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "daily-tracker-backup-"+todayStr()+".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const importFile = document.getElementById("importFile");
   function dataImportSelected(){
     const f = importFile.files[0];
     if(!f) return;
     if(f.size>DATA_MAX_IMPORT_BYTES){ alert("حجم النسخة أكبر من ٥ م.ب. اختر نسخة JSON أصغر لحماية مساحة التطبيق."); importFile.value=""; return; }
     f.text().then(txt=>{
-      const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
-    }).catch(error=> alert(error&&error.message==="newer backup"?"هذه النسخة من إصدار أحدث من التطبيق، حدّث التطبيق أولًا ثم أعد المحاولة.":"الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
+      const raw = JSON.parse(txt);
+      /* توافق النُسخ القديمة: بلا "format" → كائن أيام مباشر كما كان دائمًا */
+      const isEnvelope = raw && typeof raw === "object" && raw.format === "mufakkirati-backup";
+      const data = isEnvelope ? (raw.days || {}) : raw;
+      let n = 0;
+      for(const date in data){
+        const incoming = data[date];
+        if(!incoming || typeof incoming !== "object") continue;
+        let write = true;
+        const existingRaw = localStorage.getItem(storageKey(date));
+        if(existingRaw){
+          try{
+            const existing = JSON.parse(existingRaw);
+            if((existing.updatedAt||0) >= (incoming.updatedAt||0)) write = false;
+          }catch(e){}
+        }
+        if(write){ localStorage.setItem(storageKey(date), JSON.stringify(incoming)); n++; }
+      }
+      let readingMsg = "";
+      if(isEnvelope && raw.modules && raw.modules.reading && typeof rdImportModule === "function"){
+        safeRun("rdImport", ()=> rdImportModule(raw.modules.reading));
+        readingMsg = " وبيانات وحدة القراءة";
+        safeRun("rdImport:render", ()=>{ renderReadingCard(); if(typeof rdOverlay!=="undefined" && rdOverlay && !rdOverlay.hidden) rdRenderCurrentView(); });
+      }
+      alert("تم استيراد بيانات "+n+" يوم"+readingMsg+" (الأحدث على هذا الجهاز لم يُستبدل)");
+      load(currentDate);
+      renderAll();
+    }).catch(()=> alert("الملف غير صالح — اختر ملف نسخة احتياطية صحيحًا"));
     importFile.value = "";
   }
   function dataInit(){
@@ -10423,7 +10350,8 @@
       window.__mfkrSync = Object.assign({
         pullAll:(trigger,opts)=> syncPullAllModules(trigger,opts),
         expPull:(opts)=> expPullRemote(opts),
-        expPush:(d)=> expPushRemote(d)
+        expPush:(d)=> expPushRemote(d),
+        rdPull:(trigger)=> rdPullRemote(trigger)
       }, _syncReadOnly);
       /* واجهة اختبار مصاريف (محصورة خلف __MFKR_TEST__): تقود الطفرات وتقرأ الحالة للاختبارات الحتمية */
       window.__mfkrExp = {
@@ -12235,7 +12163,7 @@
   }
   /* حالة مزامنة كل قسم (مشتقّة من SYNC_STATE — دقيقة، لا تُظهر نجاحًا كاملًا إن نجح قسم واحد) */
   function expModStatusHtml(){
-    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف"};
+    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",reading:"القراءة"};
     return Object.keys(labels).map(n=>{ const s=SYNC_STATE[n]; let tag,cls;
       if(!s || (!s.lastServerSuccessAt && !s.lastCacheFallbackAt && !s.lastError && !s.inFlight)){ tag="—"; cls="partial"; }
       else if(s.inFlight){ tag="جارٍ"; cls="near"; }
@@ -12465,148 +12393,972 @@
     expRenderSyncRow();
   }
 
-  /* ---------- تخصيص بطاقات الصفحة ---------- */
-  const CARD_PREF_KEY = "h2do-card-layout-v1";
-  const CARD_DEFS = [
-    {id:"prayerCard",icon:"🕌",label:"الصلاة"},
-    {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
-    {id:"quranCard",icon:"📖",label:"القرآن"},
-    {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
-    {id:"learningCard",icon:"📚",label:"العلم والقراءة"},
-    {id:"sportCard",icon:"🏃",label:"الرياضة"},
-    {id:"healthCard",icon:"⚖️",label:"الصحة"},
-    {id:"waterCard",icon:"💧",label:"شرب الماء"},
-    {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
-    {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
-    {id:"prioritiesCard",icon:"⭐",label:"الأولويات"},
-    {id:"memoryCard",icon:"📌",label:"ذكرى اليوم"},
-    {id:"notesCard",icon:"🗒️",label:"الملاحظات"},
-    {id:"ratingCard",icon:"🌟",label:"تقييم اليوم"}
-  ];
-  function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[]}; }
-  function personalizeLoad(){
-    let raw={};
-    try{ raw=JSON.parse(localStorage.getItem(CARD_PREF_KEY)||"{}"); }catch(e){}
-    const valid=new Set(CARD_DEFS.map(d=>d.id)), seen=new Set();
-    const order=(Array.isArray(raw.order)?raw.order:[]).filter(id=>valid.has(id)&&!seen.has(id)&&seen.add(id));
-    CARD_DEFS.forEach(d=>{ if(!seen.has(d.id)) order.push(d.id); });
-    const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
-    return {order,hidden};
+
+  /* ==================================================================
+     وحدة القراءة (v100) — كتب/مقالات/بحوث/مواد دراسية/تقارير
+     مستقلة تمامًا عن القرآن والحفظ؛ لا تشارك سجلات معهما.
+     تخزين محلي أولًا (rd- بادئة) + مزامنة اختيارية كوحدة سابعة مستقلة.
+     ================================================================== */
+  const RD_SETTINGS_KEY = "h2do-reading-settings";
+  const RD_ITEMS_KEY = "h2do-reading-items";
+  const RD_SESSIONS_KEY = "h2do-reading-sessions";
+  const RD_ACTIVE_KEY = "h2do-reading-active-session";
+  const RD_SYNCMETA_KEY = "h2do-reading-syncmeta";
+  const RD_STATS_CACHE_KEY = "h2do-reading-stats-cache";
+  const RD_SCHEMA_VERSION = 1;
+  const RD_CACHE_SCHEMA_VERSION = 1;
+  /* تاريخ إطلاق الوحدة: يفصل بين نطاق التسجيل القديم (صفحة قراءة ضمن العبادات) والوحدة الجديدة */
+  const READING_LAUNCH_DATE = "2026-07-14";
+  const RD_MATERIAL_TYPES = ["book","article","research","study","report","other"];
+  const RD_UNITS = ["page","chapter","section","percent","time"];
+  const RD_STATUSES = ["queued","active","paused","completed","abandoned"];
+  const RD_MATERIAL_LABELS = {book:"📘 كتاب",article:"📰 مقال",research:"🔬 بحث",study:"📑 مادة دراسية",report:"📊 تقرير",other:"📄 أخرى"};
+  const RD_UNIT_LABELS = {page:"صفحة",chapter:"فصل",section:"قسم",percent:"٪",time:"وقت فقط"};
+  const RD_STATUS_LABELS = {queued:"قائمة الانتظار",active:"نشطة",paused:"متوقفة",completed:"مكتملة",abandoned:"مهجورة"};
+
+  /* ---------- تطبيع دفاعي: يتحمّل JSON فاسدًا/قيمًا فارغة/أوّليّة/حقولًا ناقصة، ولا يرمي أبدًا ---------- */
+  function rdDefaultSettings(){ return {schemaVersion:RD_SCHEMA_VERSION, focusItemId:null, dailyGoal:null, createdAt:Date.now(), updatedAt:0}; }
+  function rdNormalizeSettings(raw){
+    const s = rdDefaultSettings();
+    if(!raw || typeof raw !== "object") return s;
+    s.focusItemId = (typeof raw.focusItemId === "string" && raw.focusItemId) ? raw.focusItemId : null;
+    if(raw.dailyGoal && typeof raw.dailyGoal === "object"){
+      const g = raw.dailyGoal;
+      if((g.mode === "minutes" || g.mode === "focusUnits") && typeof g.value === "number" && isFinite(g.value) && g.value > 0){
+        s.dailyGoal = { mode:g.mode, value:g.value,
+          itemId: (g.mode === "focusUnits" && typeof g.itemId === "string") ? g.itemId : null,
+          unit: (g.mode === "focusUnits" && RD_UNITS.indexOf(g.unit) !== -1) ? g.unit : null };
+      }
+    }
+    s.createdAt = (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now();
+    s.updatedAt = (typeof raw.updatedAt === "number" && isFinite(raw.updatedAt)) ? raw.updatedAt : 0;
+    return s;
   }
-  let cardPrefs=personalizeLoad(), customizeDragId=null;
-  function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
-  function personalizeApply(){
-    const host=document.querySelector(".grid .col");
-    if(!host) return;
-    const hidden=new Set(cardPrefs.hidden);
-    cardPrefs.order.forEach(id=>{ const card=document.getElementById(id); if(card){ card.hidden=hidden.has(id); host.appendChild(card); } });
-    document.querySelectorAll("[data-app-view]").forEach(link=>{ link.hidden=false; });
-    if(typeof appViewApply==="function") appViewApply();
+  function rdNormalizeItem(raw){
+    if(!raw || typeof raw !== "object" || typeof raw.id !== "string" || !raw.id) return null;
+    const progressUnit = RD_UNITS.indexOf(raw.progressUnit) !== -1 ? raw.progressUnit : "page";
+    let totalUnits = (typeof raw.totalUnits === "number" && isFinite(raw.totalUnits) && raw.totalUnits > 0) ? raw.totalUnits : null;
+    let currentUnit = (typeof raw.currentUnit === "number" && isFinite(raw.currentUnit) && raw.currentUnit >= 0) ? raw.currentUnit : null;
+    if(progressUnit === "time"){ totalUnits = null; currentUnit = null; }
+    if(progressUnit === "percent" && currentUnit != null) currentUnit = Math.max(0, Math.min(100, currentUnit));
+    const status = RD_STATUSES.indexOf(raw.status) !== -1 ? raw.status : "queued";
+    return {
+      schemaVersion: RD_SCHEMA_VERSION,
+      id: raw.id,
+      title: (typeof raw.title === "string" && raw.title.trim()) ? raw.title.trim().slice(0,300) : "بلا عنوان",
+      author: (typeof raw.author === "string" && raw.author.trim()) ? raw.author.trim().slice(0,200) : null,
+      materialType: RD_MATERIAL_TYPES.indexOf(raw.materialType) !== -1 ? raw.materialType : "other",
+      progressUnit, totalUnits, currentUnit, status,
+      startedAt: (typeof raw.startedAt === "number" && isFinite(raw.startedAt)) ? raw.startedAt : null,
+      completedAt: (typeof raw.completedAt === "number" && isFinite(raw.completedAt)) ? raw.completedAt : null,
+      createdAt: (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now(),
+      updatedAt: (typeof raw.updatedAt === "number" && isFinite(raw.updatedAt)) ? raw.updatedAt : 0,
+      deletedAt: (typeof raw.deletedAt === "number" && isFinite(raw.deletedAt)) ? raw.deletedAt : null
+    };
   }
-  function personalizeCommit(){ personalizeSave(); personalizeApply(); personalizeRenderList(); }
-  function personalizeMove(id,delta){
-    const from=cardPrefs.order.indexOf(id), to=from+delta;
-    if(from<0||to<0||to>=cardPrefs.order.length) return;
-    cardPrefs.order.splice(from,1); cardPrefs.order.splice(to,0,id); personalizeCommit();
-  }
-  function personalizeDrop(source,target){
-    if(!source||source===target||!cardPrefs.order.includes(source)||!cardPrefs.order.includes(target)) return;
-    const next=cardPrefs.order.filter(id=>id!==source), at=next.indexOf(target);
-    next.splice(at,0,source); cardPrefs.order=next; personalizeCommit();
-  }
-  function personalizeRenderList(){
-    const list=document.getElementById("customizeList");
-    if(!list) return;
-    list.innerHTML="";
-    const hidden=new Set(cardPrefs.hidden);
-    cardPrefs.order.forEach((id,index)=>{
-      const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
-      const row=document.createElement("div");
-      row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
-      const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
-      const name=document.createElement("span"); name.className="customize-name"; name.textContent=def.icon+" "+def.label;
-      const controls=document.createElement("div"); controls.className="customize-controls";
-      const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
-      const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
-      const toggle=document.createElement("label"); toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة";
-      const input=document.createElement("input"); input.type="checkbox"; input.checked=!hidden.has(id); input.setAttribute("aria-label","إظهار بطاقة "+def.label);
-      const track=document.createElement("i"); toggle.append(input,track);
-      input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
-      controls.append(up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
-      row.ondragstart=e=>{ customizeDragId=id; row.classList.add("dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); } };
-      row.ondragover=e=>{ e.preventDefault(); row.classList.add("drag-over"); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; };
-      row.ondragleave=()=>row.classList.remove("drag-over");
-      row.ondrop=e=>{ e.preventDefault(); row.classList.remove("drag-over"); personalizeDrop(customizeDragId||(e.dataTransfer&&e.dataTransfer.getData("text/plain")),id); };
-      row.ondragend=()=>{ customizeDragId=null; list.querySelectorAll(".dragging,.drag-over").forEach(x=>x.classList.remove("dragging","drag-over")); };
-    });
-  }
-  const customizeOverlay=document.getElementById("customizeOverlay");
-  function personalizeOpen(){ personalizeRenderList(); customizeOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("customizeClose").focus(); }
-  function personalizeClose(){ customizeOverlay.hidden=true; document.body.style.overflow=""; document.getElementById("customizeBtn").focus(); }
-  function personalizeInit(){
-    personalizeApply();
-    document.getElementById("customizeBtn").onclick=personalizeOpen;
-    document.getElementById("customizeClose").onclick=personalizeClose;
-    document.getElementById("customizeDone").onclick=personalizeClose;
-    document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
-    document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
-    document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
-    customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
-    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
+  function rdNormalizeSession(raw){
+    if(!raw || typeof raw !== "object" || typeof raw.id !== "string" || !raw.id || typeof raw.itemId !== "string" || !raw.itemId) return null;
+    const startedAt = (typeof raw.startedAt === "number" && isFinite(raw.startedAt)) ? raw.startedAt : null;
+    let dateKey = (typeof raw.dateKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.dateKey)) ? raw.dateKey : null;
+    if(!dateKey && startedAt) { try{ dateKey = fmtDate(new Date(startedAt)); }catch(e){ dateKey = null; } }
+    if(!dateKey) return null; /* جلسة بلا تاريخ صالح غير قابلة للاسترداد إحصائيًا */
+    const durationSeconds = (typeof raw.durationSeconds === "number" && isFinite(raw.durationSeconds) && raw.durationSeconds >= 0) ? Math.round(raw.durationSeconds) : 0;
+    const startUnit = (typeof raw.startUnit === "number" && isFinite(raw.startUnit)) ? raw.startUnit : null;
+    const endUnit = (typeof raw.endUnit === "number" && isFinite(raw.endUnit)) ? raw.endUnit : null;
+    let unitsRead = (typeof raw.unitsRead === "number" && isFinite(raw.unitsRead) && raw.unitsRead >= 0) ? raw.unitsRead : null;
+    if(unitsRead == null && startUnit != null && endUnit != null && endUnit >= startUnit) unitsRead = endUnit - startUnit;
+    return {
+      schemaVersion: RD_SCHEMA_VERSION, id: raw.id, itemId: raw.itemId, dateKey,
+      source: (raw.source === "timer" || raw.source === "manual") ? raw.source : "manual",
+      startedAt, endedAt: (typeof raw.endedAt === "number" && isFinite(raw.endedAt)) ? raw.endedAt : null,
+      durationSeconds, startUnit, endUnit, unitsRead,
+      createdAt: (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now(),
+      updatedAt: (typeof raw.updatedAt === "number" && isFinite(raw.updatedAt)) ? raw.updatedAt : 0,
+      syncUpdatedAt: raw.syncUpdatedAt || null,
+      deletedAt: (typeof raw.deletedAt === "number" && isFinite(raw.deletedAt)) ? raw.deletedAt : null
+    };
   }
 
-  /* ---------- إعداد البداية والأهداف اليومية ---------- */
-  const ONBOARD_KEY="h2do-onboarding-v1";
-  const onboardOverlay=document.getElementById("onboardOverlay");
-  function onboardRenderModules(){
-    const host=document.getElementById("onboardModules"), hidden=new Set(cardPrefs.hidden); host.innerHTML="";
-    CARD_DEFS.forEach(def=>{
-      const label=document.createElement("label"); label.className="onboard-module";
-      const input=document.createElement("input"); input.type="checkbox"; input.value=def.id; input.checked=!hidden.has(def.id);
-      const text=document.createElement("span"); text.textContent=def.icon+" "+def.label; label.append(input,text); host.appendChild(label);
-    });
+  /* ---------- تخزين محلي أولًا — لا يرمي أبدًا في التهيئة الأعلى؛ يحافظ على السجلات القابلة للاسترداد ---------- */
+  function rdReadJSON(key){ try{ return JSON.parse(localStorage.getItem(key)); }catch(e){ return null; } }
+  function rdLoadSettings(){ return rdNormalizeSettings(rdReadJSON(RD_SETTINGS_KEY)); }
+  function rdLoadItems(){ const raw = rdReadJSON(RD_ITEMS_KEY); const arr = Array.isArray(raw) ? raw : []; return arr.map(rdNormalizeItem).filter(Boolean); }
+  function rdLoadSessions(){ const raw = rdReadJSON(RD_SESSIONS_KEY); const arr = Array.isArray(raw) ? raw : []; return arr.map(rdNormalizeSession).filter(Boolean); }
+
+  let rdLoadFailed = false;
+  let rdState = null;
+  function rdInitLocal(){
+    try{ rdState = { settings: rdLoadSettings(), items: rdLoadItems(), sessions: rdLoadSessions() }; rdLoadFailed = false; }
+    catch(e){ rdLoadFailed = true; diagErr("rdInitLocal", e); rdState = { settings: rdDefaultSettings(), items: [], sessions: [] }; }
   }
-  function onboardOpen(firstRun){
-    onboardRenderModules();
-    document.getElementById("onboardWater").value=waterGoal(); document.getElementById("onboardSport").value=sportGoal(); document.getElementById("onboardQuran").value=qLoad().target;
-    document.getElementById("onboardCancel").hidden=!!firstRun; onboardOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("onboardSave").focus();
-  }
-  function onboardClose(){ onboardOverlay.hidden=true; document.body.style.overflow=""; localStorage.setItem(ONBOARD_KEY,"1"); }
-  function onboardSave(){
-    const selected=new Set([...document.querySelectorAll("#onboardModules input:checked")].map(input=>input.value));
-    cardPrefs.hidden=CARD_DEFS.map(def=>def.id).filter(id=>!selected.has(id)); personalizeSave();
-    const water=Math.max(4,Math.min(16,parseInt(document.getElementById("onboardWater").value,10)||N_CUPS_DEFAULT));
-    const sport=Math.max(5,Math.min(180,parseInt(document.getElementById("onboardSport").value,10)||30));
-    const quran=Math.max(1,Math.min(100,parseInt(document.getElementById("onboardQuran").value,10)||5));
-    localStorage.setItem(WATER_GOAL_KEY,String(water)); localStorage.setItem(SPORT_GOAL_KEY,String(sport)); const q=qLoad(); q.target=quran; qSave(q);
-    onboardClose(); personalizeApply(); renderWater(); renderSport(); renderProgress();
-  }
-  function onboardHasExistingData(){
-    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i)||""; if(key.startsWith("h2do-tracker:")||[QURAN_KEY,"h2do-expenses","h2do-hifz"].includes(key)) return true; }
-    return false;
-  }
-  function onboardInit(){
-    document.getElementById("onboardSave").onclick=onboardSave; document.getElementById("onboardCancel").onclick=onboardClose;
-    onboardOverlay.onclick=e=>{ if(e.target===onboardOverlay&&!document.getElementById("onboardCancel").hidden) onboardClose(); };
-    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!onboardOverlay.hidden&&!document.getElementById("onboardCancel").hidden) onboardClose(); });
-    if(!localStorage.getItem(ONBOARD_KEY)){ if(onboardHasExistingData()) localStorage.setItem(ONBOARD_KEY,"1"); else onboardOpen(true); }
+  function rdEnsure(){ if(!rdState) rdInitLocal(); return rdState; }
+  function rdSettings(){ return rdEnsure().settings; }
+  function rdItems(){ return rdEnsure().items; }
+  function rdSessions(){ return rdEnsure().sessions; }
+  function rdSaveSettingsLocal(s){ rdEnsure().settings = s; try{ localStorage.setItem(RD_SETTINGS_KEY, JSON.stringify(s)); }catch(e){} }
+  function rdSaveItemsLocal(arr){ rdEnsure().items = arr; try{ localStorage.setItem(RD_ITEMS_KEY, JSON.stringify(arr)); }catch(e){} }
+  function rdSaveSessionsLocal(arr){ rdEnsure().sessions = arr; try{ localStorage.setItem(RD_SESSIONS_KEY, JSON.stringify(arr)); }catch(e){} }
+  function rdRetryLoad(){
+    try{ rdInitLocal(); safeRun("rdRefresh", ()=>{ renderReadingCard(); if(typeof rdOverlay!=="undefined" && rdOverlay && !rdOverlay.hidden) rdRenderCurrentView(); }); }
+    catch(e){ rdLoadFailed = true; diagErr("rdInitLocal:retry", e); }
   }
 
-  /* ---------- تنقل الجوال بخمس وجهات ---------- */
-  const APP_VIEW_KEY="h2do-mobile-view";
-  const APP_VIEW_GROUPS={
-    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["learningCard","intentionCard","memoryCard","notesCard","ratingCard"]
-  };
-  let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
-  function appViewApply(){
-    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(APP_VIEW_GROUPS[appView]||APP_VIEW_GROUPS.today);
-    Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
-    document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
+  function rdItemById(id){ return rdItems().find(it=> it.id === id && !it.deletedAt) || null; }
+  function rdFocusItem(){ const id = rdSettings().focusItemId; return id ? rdItemById(id) : null; }
+
+  /* ==================== ذاكرة إحصائية مشتقّة (محلية فقط، غير قابلة للمزامنة/التصدير) ====================
+     الجلسات مصدر الحقيقة الوحيد؛ هذه الذاكرة قابلة لإعادة البناء دائمًا وتُحدَّث تفاضليًا. */
+  function rdEmptyDateAgg(){ return { durationSeconds:0, sessionCount:0, unitsByUnit:{}, items:{} }; }
+  function rdEmptyItemAgg(){ return { durationSeconds:0, sessionCount:0, unitsByUnit:{}, lastSessionAt:0 }; }
+  function rdStatsCacheDefault(){ return { schemaVersion: RD_CACHE_SCHEMA_VERSION, revision:0, byDate:{}, byItem:{} }; }
+  let _rdStatsCache = null;
+  function rdStatsCacheValid(c){
+    return !!(c && typeof c === "object" && c.schemaVersion === RD_CACHE_SCHEMA_VERSION
+      && typeof c.revision === "number" && c.byDate && typeof c.byDate === "object" && c.byItem && typeof c.byItem === "object");
   }
-  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById(APP_VIEW_GROUPS[view][0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
-  function appViewInit(){
-    document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
-    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); appViewApply();
+  function rdApplySessionDelta(cache, sess, sign){
+    if(!sess || sess.deletedAt || !sess.dateKey) return;
+    const item = rdItemById(sess.itemId);
+    const unit = item ? item.progressUnit : null;
+    const dAgg = cache.byDate[sess.dateKey] || (cache.byDate[sess.dateKey] = rdEmptyDateAgg());
+    dAgg.durationSeconds += sign * (sess.durationSeconds || 0);
+    dAgg.sessionCount += sign;
+    if(unit && sess.unitsRead) dAgg.unitsByUnit[unit] = (dAgg.unitsByUnit[unit] || 0) + sign * sess.unitsRead;
+    const iAgg = dAgg.items[sess.itemId] || (dAgg.items[sess.itemId] = { durationSeconds:0, sessionCount:0, unitsByUnit:{} });
+    iAgg.durationSeconds += sign * (sess.durationSeconds || 0);
+    iAgg.sessionCount += sign;
+    if(unit && sess.unitsRead) iAgg.unitsByUnit[unit] = (iAgg.unitsByUnit[unit] || 0) + sign * sess.unitsRead;
+    const bAgg = cache.byItem[sess.itemId] || (cache.byItem[sess.itemId] = rdEmptyItemAgg());
+    bAgg.durationSeconds += sign * (sess.durationSeconds || 0);
+    bAgg.sessionCount += sign;
+    if(unit && sess.unitsRead) bAgg.unitsByUnit[unit] = (bAgg.unitsByUnit[unit] || 0) + sign * sess.unitsRead;
+    if(sign > 0) bAgg.lastSessionAt = Math.max(bAgg.lastSessionAt || 0, sess.endedAt || sess.startedAt || 0);
+  }
+  function rdRebuildStatsCache(){
+    const cache = rdStatsCacheDefault();
+    rdSessions().forEach(s=> rdApplySessionDelta(cache, s, +1));
+    cache.revision = 1;
+    _rdStatsCache = cache;
+    rdSaveStatsCache();
+    return cache;
+  }
+  function rdLoadStatsCache(){
+    let raw = null;
+    try{ raw = JSON.parse(localStorage.getItem(RD_STATS_CACHE_KEY)); }catch(e){ raw = null; }
+    if(!rdStatsCacheValid(raw)) return rdRebuildStatsCache(); /* كاش مفقود/فاسد/إصدار مختلف → إعادة بناء كاملة مرة واحدة */
+    _rdStatsCache = raw;
+    return raw;
+  }
+  function rdStats(){ if(!_rdStatsCache) rdLoadStatsCache(); return _rdStatsCache; }
+  function rdSaveStatsCache(){ try{ localStorage.setItem(RD_STATS_CACHE_KEY, JSON.stringify(_rdStatsCache)); }catch(e){} }
+  /* تُستدعى مرّة واحدة بالضبط لكل تغيير: تُزيل مساهمة السابق (إن وُجد) ثم تُضيف مساهمة اللاحق (إن وُجد) */
+  function rdCacheOnSessionChange(before, after){
+    const cache = rdStats();
+    if(before) rdApplySessionDelta(cache, before, -1);
+    if(after) rdApplySessionDelta(cache, after, +1);
+    cache.revision = (cache.revision || 0) + 1;
+    rdSaveStatsCache();
+  }
+  /* ---------- استعلامات محلية O(1) تقريبًا اعتمادًا على الذاكرة المشتقّة (لا تمسح كل السجل) ---------- */
+  function rdDateAgg(dateKey){ return rdStats().byDate[dateKey] || null; }
+  function rdItemAgg(itemId){ return rdStats().byItem[itemId] || null; }
+  function rdTodayLoggedSeconds(dateKey){ const a = rdDateAgg(dateKey); return a ? a.durationSeconds : 0; }
+  function rdTodaySessionsForItem(dateKey, itemId){ const a = rdDateAgg(dateKey); return (a && a.items[itemId]) ? a.items[itemId] : null; }
+
+  /* ---------- بنود القراءة: إضافة/تعديل/تركيز/حالة/تصحيح الموضع ---------- */
+  function rdTouchAndSave(it){
+    it.updatedAt = Date.now();
+    const list = rdItems();
+    const idx = list.findIndex(x=> x.id === it.id);
+    if(idx === -1) list.push(it); else list[idx] = it;
+    rdSaveItemsLocal(list);
+    rdPushItemRemote(it);
+    return it;
+  }
+  function rdAddItem(fields){
+    const it = rdNormalizeItem(Object.assign({ id: "rdi_" + newId(), createdAt: Date.now(), updatedAt: 0 }, fields || {}));
+    rdTouchAndSave(it);
+    return it;
+  }
+  function rdEditItem(id, fields){
+    const it = rdItemById(id); if(!it) return null;
+    const hasSessions = !!(rdItemAgg(id) && rdItemAgg(id).sessionCount > 0);
+    const patch = Object.assign({}, fields || {});
+    if(hasSessions) delete patch.progressUnit; /* منع فساد الذاكرة المشتقّة بعد تغيير وحدة القياس لمادة لها جلسات */
+    const merged = rdNormalizeItem(Object.assign({}, it, patch, { id: it.id }));
+    return rdTouchAndSave(merged);
+  }
+  function rdSetFocus(id){
+    const s = rdSettings();
+    s.focusItemId = id || null;
+    s.updatedAt = Date.now();
+    rdSaveSettingsLocal(s);
+    rdPushSettingsRemote(s);
+  }
+  function rdSetStatus(id, status){
+    const it = rdItemById(id); if(!it) return null;
+    it.status = status;
+    if(status === "active" && !it.startedAt) it.startedAt = Date.now();
+    if(status === "completed") it.completedAt = Date.now();
+    else if(it.completedAt && status !== "completed") it.completedAt = null;
+    return rdTouchAndSave(it);
+  }
+  /* تصحيح الموضع: على البند فقط — لا جلسة، لا رصيد قراءة، ويسمح بالتراجع للخلف عمدًا (خطأ إدخال/إعادة قراءة) */
+  function rdCorrectPosition(id, newUnit){
+    const it = rdItemById(id); if(!it) return null;
+    if(it.progressUnit === "time") return it;
+    let v = Number(newUnit);
+    if(!isFinite(v) || v < 0) return it;
+    if(it.progressUnit === "percent") v = Math.max(0, Math.min(100, v));
+    if(it.totalUnits != null) v = Math.min(v, it.totalUnits);
+    it.currentUnit = v;
+    return rdTouchAndSave(it);
+  }
+  function rdItemMeetsCompletion(item){
+    if(!item || item.status === "completed" || item.status === "abandoned") return false;
+    if(item.progressUnit === "time") return false;
+    if(item.progressUnit === "percent") return item.currentUnit != null && item.currentUnit >= 100;
+    if(item.totalUnits == null) return false;
+    return item.currentUnit != null && item.currentUnit >= item.totalUnits;
+  }
+  /* لا يُخفّض الموضع تلقائيًا أبدًا لو كان متقدّمًا فعلًا — يُستخدم فقط من مسارات الجلسات (مؤقّت/تسجيل)، وليس من التصحيح اليدوي */
+  function rdApplyPositionFromSession(item, endUnit){
+    if(!item || endUnit == null) return;
+    let v = endUnit;
+    if(item.progressUnit === "percent") v = Math.max(0, Math.min(100, v));
+    if(item.currentUnit == null || v > item.currentUnit) item.currentUnit = v;
+  }
+
+  /* ---------- الجلسات: إضافة/تعديل/تراجع (شاهد قبر) ---------- */
+  function rdComputeUnits(startUnit, endUnit){
+    if(startUnit == null || endUnit == null) return null;
+    if(endUnit < startUnit) return null;
+    return endUnit - startUnit;
+  }
+  function rdSessionById(id){ return rdSessions().find(s=> s.id === id) || null; }
+  function rdSaveSessionRecord(sess){
+    const list = rdSessions();
+    const idx = list.findIndex(s=> s.id === sess.id);
+    if(idx === -1) list.push(sess); else list[idx] = sess;
+    rdSaveSessionsLocal(list);
+    rdPushSessionRemote(sess);
+  }
+  /* opts: {itemId, dateKey, source, startedAt, endedAt, durationSeconds, startUnit, endUnit, updatePosition} */
+  function rdAddSession(opts){
+    const item = rdItemById(opts.itemId); if(!item) return null;
+    const durationSeconds = Math.max(0, Math.round(opts.durationSeconds || 0));
+    const unitsRead = rdComputeUnits(opts.startUnit != null ? opts.startUnit : null, opts.endUnit != null ? opts.endUnit : null);
+    const now = Date.now();
+    const sess = rdNormalizeSession({
+      id: "rds_" + newId(), itemId: opts.itemId, dateKey: opts.dateKey,
+      source: opts.source === "timer" ? "timer" : "manual",
+      startedAt: opts.startedAt || null, endedAt: opts.endedAt || now,
+      durationSeconds, startUnit: opts.startUnit != null ? opts.startUnit : null, endUnit: opts.endUnit != null ? opts.endUnit : null,
+      unitsRead, createdAt: now, updatedAt: now
+    });
+    if(!sess) return null;
+    rdSaveSessionRecord(sess);
+    rdCacheOnSessionChange(null, sess);
+    if(opts.updatePosition && sess.endUnit != null){ rdApplyPositionFromSession(item, sess.endUnit); rdTouchAndSave(item); }
+    if(item.status === "queued") rdSetStatus(item.id, "active");
+    return sess;
+  }
+  /* تعديل جلسة: يستبدل مساهمتها الإحصائية مرّة واحدة بالضبط، ولا يمسّ موضع البند الحالي (لا إعادة كتابة رجعية للموضع) */
+  function rdEditSession(id, patch){
+    const before = rdSessionById(id); if(!before || before.deletedAt) return null;
+    const merged = rdNormalizeSession(Object.assign({}, before, patch, { id: before.id, itemId: before.itemId, updatedAt: Date.now() }));
+    if(!merged) return null;
+    rdSaveSessionRecord(merged);
+    rdCacheOnSessionChange(before, merged);
+    return merged;
+  }
+  /* تراجع/حذف: شاهد قبر + إزالة المساهمة مرّة واحدة؛ يُعيد موضع البند فقط ضمن الشروط الثلاثة المطلوبة */
+  function rdTombstoneSession(id){
+    const before = rdSessionById(id); if(!before || before.deletedAt) return null;
+    const now = Date.now();
+    const after = Object.assign({}, before, { deletedAt: now, updatedAt: now });
+    rdSaveSessionRecord(after);
+    rdCacheOnSessionChange(before, null);
+    const item = rdItemById(before.itemId);
+    if(item && before.endUnit != null && item.currentUnit === before.endUnit){
+      const laterExists = rdSessions().some(s=> s.itemId === before.itemId && !s.deletedAt && s.id !== id
+        && (s.endedAt || s.startedAt || 0) > (before.endedAt || before.startedAt || 0));
+      if(!laterExists){
+        const priors = rdSessions().filter(s=> s.itemId === before.itemId && !s.deletedAt && s.id !== id && s.endUnit != null
+          && (s.endedAt || s.startedAt || 0) <= (before.endedAt || before.startedAt || 0));
+        priors.sort((a,b)=> (b.endedAt||b.startedAt||0) - (a.endedAt||a.startedAt||0));
+        item.currentUnit = priors.length ? priors[0].endUnit : null;
+        rdTouchAndSave(item);
+      }
+    }
+    return after;
+  }
+
+  /* ==================== المؤقّت الحيّ (مسوّدة محلية فقط — لا تُزامَن ولا تُصدَّر) ==================== */
+  const RD_MAX_PLAUSIBLE_SECONDS = 12 * 3600; /* أكثر من ١٢ ساعة يُعتبر غير معقول */
+  const RD_STALE_DRAFT_MS = 3 * 3600 * 1000;  /* مسوّدة أقدم من ٣ ساعات تُعتبر قديمة (نافذة/خلفية طويلة) */
+  function rdActiveDraft(){ return rdReadJSON(RD_ACTIVE_KEY); }
+  function rdSaveDraft(d){ try{ localStorage.setItem(RD_ACTIVE_KEY, JSON.stringify(d)); }catch(e){} }
+  function rdClearDraft(){ try{ localStorage.removeItem(RD_ACTIVE_KEY); }catch(e){} }
+  function rdTimerElapsedSeconds(draft){
+    if(!draft || !draft.startedAt) return 0;
+    const raw = Math.floor((Date.now() - draft.startedAt) / 1000);
+    if(!isFinite(raw) || raw < 0) return 0; /* ساعة النظام تراجعت — لا مدّة سالبة */
+    return Math.min(raw, RD_MAX_PLAUSIBLE_SECONDS);
+  }
+  function rdDraftIsStale(draft){ return !!(draft && draft.startedAt && (Date.now() - draft.startedAt) > RD_STALE_DRAFT_MS); }
+  /* مؤقّت واحد فقط لكل جهاز — بدء جديد يستبدل أي مسوّدة قديمة صراحة (بعد تأكيد المستخدم في الواجهة) */
+  function rdStartTimer(itemId){
+    const item = rdItemById(itemId); if(!item) return null;
+    const draft = { draftId: "rdd_" + newId(), itemId, startedAt: Date.now(), startUnit: item.currentUnit };
+    rdSaveDraft(draft);
+    return draft;
+  }
+  function rdDiscardTimer(){ rdClearDraft(); }
+  /* إنهاء المؤقّت: يحسب المدّة من الطوابع الزمنية (يعمل رغم إعادة التحميل/الخلفية)، يحفظ محليًا أولًا، ثم يُزامن، ثم يزيل المسوّدة */
+  function rdFinishTimer(opts){
+    const draft = rdActiveDraft(); if(!draft) return null;
+    opts = opts || {};
+    const elapsed = rdTimerElapsedSeconds(draft);
+    const dateKey = opts.dateKey || todayStr();
+    const sess = rdAddSession({
+      itemId: draft.itemId, dateKey, source:"timer",
+      startedAt: draft.startedAt, endedAt: Date.now(), durationSeconds: elapsed,
+      startUnit: draft.startUnit, endUnit: (opts.updatePosition === false) ? null : (opts.endUnit != null ? opts.endUnit : null),
+      updatePosition: opts.updatePosition !== false && opts.endUnit != null
+    });
+    rdClearDraft(); /* تُزال المسوّدة فقط بعد نجاح الحفظ المحلي الآمن أعلاه */
+    return sess;
+  }
+
+  /* ==================== الأهداف اليومية ==================== */
+  function rdSetGoal(goal){
+    const s = rdSettings();
+    s.dailyGoal = goal || null;
+    s.updatedAt = Date.now();
+    rdSaveSettingsLocal(s);
+    rdPushSettingsRemote(s);
+  }
+  /* يُستدعى عند تغيير التركيز: لو كان هدف مرتبط بوحدات البند القديم، اطلب من الواجهة سؤال المستخدم (إعادة ربط/تحويل لدقائق) */
+  function rdFocusChangeAffectsGoal(newItemId){
+    const s = rdSettings();
+    return !!(s.dailyGoal && s.dailyGoal.mode === "focusUnits" && s.dailyGoal.itemId && s.dailyGoal.itemId !== newItemId);
+  }
+  function rdGoalProgressToday(){
+    const s = rdSettings();
+    if(!s.dailyGoal) return null;
+    const today = todayStr();
+    if(s.dailyGoal.mode === "minutes"){
+      const secs = rdTodayLoggedSeconds(today);
+      return { mode:"minutes", value:s.dailyGoal.value, current: Math.floor(secs/60), pct: Math.min(100, Math.round((secs/60)/s.dailyGoal.value*100)) };
+    }
+    const per = rdTodaySessionsForItem(today, s.dailyGoal.itemId);
+    const current = (per && per.unitsByUnit && s.dailyGoal.unit) ? (per.unitsByUnit[s.dailyGoal.unit] || 0) : 0;
+    return { mode:"focusUnits", value:s.dailyGoal.value, current, unit:s.dailyGoal.unit, pct: Math.min(100, Math.round(current/s.dailyGoal.value*100)) };
+  }
+
+  /* ==================================================================
+     المزامنة السحابية — وحدة سابعة مستقلّة عن السحب/الملخّص/الحالة
+     users/{uid}/meta/reading (إعدادات) + readingItems + readingSessions (مجموعتان مستقلّتان)
+     ================================================================== */
+  function rdSettingsRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("reading"); }
+  function rdItemsCollRef(){ return db.collection("users").doc(user.uid).collection("readingItems"); }
+  function rdSessionsCollRef(){ return db.collection("users").doc(user.uid).collection("readingSessions"); }
+  function rdPushSettingsRemote(s){
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(rdLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});
+    return rdSettingsRef().set(JSON.parse(JSON.stringify(s))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
+  }
+  function rdPushItemRemote(it){
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(rdLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});
+    return rdItemsCollRef().doc(it.id).set(JSON.parse(JSON.stringify(it))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
+  }
+  /* كل كتابة إنشاء/تعديل/شاهد قبر للجلسة تحمل syncUpdatedAt=serverTimestamp — أساس المؤشّر التفاضلي */
+  function rdPushSessionRemote(sess){
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(rdLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});
+    const payload = JSON.parse(JSON.stringify(sess));
+    try{ payload.syncUpdatedAt = firebase.firestore.FieldValue.serverTimestamp(); }catch(e){}
+    return rdSessionsCollRef().doc(sess.id).set(payload).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
+  }
+  function rdSyncMeta(){ const m = rdReadJSON(RD_SYNCMETA_KEY); return (m && typeof m === "object") ? m : {}; }
+  function rdSetSyncMeta(patch){ const m = rdSyncMeta(); Object.assign(m, patch); try{ localStorage.setItem(RD_SYNCMETA_KEY, JSON.stringify(m)); }catch(e){} }
+  function rdTimestampMillis(v){
+    if(v == null) return 0;
+    if(typeof v === "number") return v;
+    if(typeof v.toMillis === "function") { try{ return v.toMillis(); }catch(e){ return 0; } }
+    if(typeof v.seconds === "number") return v.seconds*1000 + Math.floor((v.nanoseconds||0)/1e6);
+    return 0;
+  }
+  const RD_CURSOR_OVERLAP_MS = 60000;
+  /* دمج بنود بمعرّف ثابت + آخر تحديث يفوز؛ شاهد القبر يفوز عند التعادل */
+  function rdMergeItemsIn(remoteList){
+    if(!remoteList || !remoteList.length) return false;
+    const local = rdItems(); const byId = {}; local.forEach(it=> byId[it.id]=it);
+    let changed = false;
+    remoteList.forEach(r=>{
+      const norm = rdNormalizeItem(r); if(!norm) return;
+      const ex = byId[norm.id];
+      if(!ex){ byId[norm.id]=norm; changed=true; return; }
+      const exU=ex.updatedAt||0, rU=norm.updatedAt||0;
+      if(rU>exU || (rU===exU && norm.deletedAt && !ex.deletedAt)){ byId[norm.id]=norm; changed=true; }
+    });
+    if(changed) rdSaveItemsLocal(Object.values(byId));
+    return changed;
+  }
+  /* دمج جلسات بمعرّف ثابت + آخر تحديث يفوز (شاهد القبر يفوز عند التعادل)؛ يحدّث الذاكرة المشتقّة مرّة واحدة بالضبط لكل تغيير فعلي */
+  function rdMergeSessionsIn(remoteList){
+    if(!remoteList || !remoteList.length) return false;
+    const local = rdSessions(); const byId = {}; local.forEach(s=> byId[s.id]=s);
+    let changed = false;
+    remoteList.forEach(r=>{
+      const norm = rdNormalizeSession(r); if(!norm) return;
+      const ex = byId[norm.id];
+      if(!ex){ byId[norm.id]=norm; changed=true; rdCacheOnSessionChange(null, norm.deletedAt?null:norm); return; }
+      const exU=ex.updatedAt||0, rU=norm.updatedAt||0;
+      let winner = null;
+      if(rU>exU) winner=norm; else if(rU===exU && norm.deletedAt && !ex.deletedAt) winner=norm;
+      if(winner){ byId[norm.id]=winner; changed=true; rdCacheOnSessionChange(ex.deletedAt?null:ex, winner.deletedAt?null:winner); }
+    });
+    if(changed) rdSaveSessionsLocal(Object.values(byId));
+    return changed;
+  }
+  /* سحب الجلسات: أوّل مزامنة ناجحة تحمل كل السجل، وما بعدها استعلام تفاضلي فوق مؤشّر syncUpdatedAt المخزَّن (بتراكب صغير) */
+  function _rdPullSessions(){
+    const meta = rdSyncMeta();
+    const cursorMs = meta.sessionsCursor || 0;
+    let q = rdSessionsCollRef();
+    if(cursorMs > 0){
+      try{
+        const since = firebase.firestore.Timestamp.fromMillis(Math.max(0, cursorMs - RD_CURSOR_OVERLAP_MS));
+        q = q.where("syncUpdatedAt", ">", since);
+      }catch(e){}
+    }
+    return getQueryServerFirst(q).then(snap=>{
+      const cache = _fromCache(snap);
+      const remote = []; let maxSeen = cursorMs;
+      snap.forEach(d=>{ const data = d.data(); remote.push(data); const ms = rdTimestampMillis(data.syncUpdatedAt); if(ms>maxSeen) maxSeen = ms; });
+      return { remote, cache, maxSeen };
+    });
+  }
+  function rdPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"reading", skipped:true});
+    return joinOrRun("reading", ()=> _rdPullWork(trigger));
+  }
+  function _rdPullWork(trigger){
+    syncBegin("reading", trigger);
+    const settingsP = getDocServerFirst(rdSettingsRef()).then(snap=>({ok:true, snap})).catch(e=>({ok:false, err:e}));
+    const itemsP = getQueryServerFirst(rdItemsCollRef()).then(snap=>({ok:true, snap})).catch(e=>({ok:false, err:e}));
+    const sessionsP = _rdPullSessions().then(r=>({ok:true, r})).catch(e=>({ok:false, err:e}));
+    return Promise.allSettled([settingsP, itemsP, sessionsP]).then(([sRes,iRes,seRes])=>{
+      let anyCache=false, anySuccess=false, anyFail=false;
+      const recon = [];
+      if(sRes.status==="fulfilled" && sRes.value.ok){
+        const snap=sRes.value.snap, cache=_fromCache(snap); if(cache) anyCache=true; anySuccess=true;
+        if(snap.exists){
+          const remote = rdNormalizeSettings(snap.data());
+          const local = rdSettings();
+          if((remote.updatedAt||0) > (local.updatedAt||0)) rdSaveSettingsLocal(remote);
+          else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache) recon.push(rdPushSettingsRemote(local));
+        } else if(!cache && rdSettings().updatedAt>0){ recon.push(rdPushSettingsRemote(rdSettings())); }
+      } else { anyFail = true; }
+      if(iRes.status==="fulfilled" && iRes.value.ok){
+        const snap=iRes.value.snap, cache=_fromCache(snap); if(cache) anyCache=true; anySuccess=true;
+        const remoteItems=[]; snap.forEach(d=> remoteItems.push(d.data()));
+        rdMergeItemsIn(remoteItems);
+      } else { anyFail = true; }
+      if(seRes.status==="fulfilled" && seRes.value.ok){
+        const {remote, cache, maxSeen} = seRes.value.r; if(cache) anyCache=true; anySuccess=true;
+        rdMergeSessionsIn(remote);
+        if(!cache) rdSetSyncMeta({sessionsCursor: maxSeen}); /* المؤشّر يتقدّم فقط بعد نجاح خادم كامل، لا كاش ولا فشل جزئي */
+      } else { anyFail = true; }
+      safeRun("rdPull:render", ()=>{ renderReadingCard(); if(typeof rdOverlay!=="undefined" && rdOverlay && !rdOverlay.hidden) rdRenderCurrentView(); });
+      return Promise.allSettled(recon).then(()=>{
+        const status = anyFail ? (anySuccess ? "partial" : "failed") : (anyCache ? "cacheFallback" : "success");
+        if(status==="failed") syncEnd("reading", false, null, new Error("subreadFailed"));
+        else syncEnd("reading", true, {metadata:{fromCache:anyCache}});
+        return {module:"reading", status, source: anyCache?"cache":"server"};
+      });
+    }).catch(e=>{ diagErr("rdPullRemote", e); syncEnd("reading", false, null, e); return {module:"reading", status:"failed", error:(e&&e.message)||String(e)}; });
+  }
+
+  /* ==================== النسخ الاحتياطي (تصدير/استيراد) ==================== */
+  function rdExportPayload(){ return { settings: rdSettings(), items: rdItems().slice(), sessions: rdSessions().slice() }; }
+  /* استيراد وحدة القراءة من نسخة احتياطية v2: دمج الإعدادات بأحدث تحديث، والبنود/الجلسات بالمعرّف+أحدث تحديث (شاهد القبر يفوز عند التعادل).
+     يتجاهل السجلات الفاسدة بأمان دون إفشال استيراد الأيام. */
+  function rdImportModule(mod){
+    if(!mod || typeof mod !== "object") return;
+    try{
+      if(mod.settings && typeof mod.settings === "object"){
+        const remote = rdNormalizeSettings(mod.settings);
+        const local = rdSettings();
+        if((remote.updatedAt||0) > (local.updatedAt||0)) rdSaveSettingsLocal(remote);
+      }
+    }catch(e){ diagErr("rdImport:settings", e); }
+    try{ if(Array.isArray(mod.items)) rdMergeItemsIn(mod.items); }catch(e){ diagErr("rdImport:items", e); }
+    try{ if(Array.isArray(mod.sessions)) rdMergeSessionsIn(mod.sessions); }catch(e){ diagErr("rdImport:sessions", e); }
+  }
+
+  /* ==================================================================
+     الواجهة — البطاقة اليومية المختصرة
+     ================================================================== */
+  function rdFmtDuration(totalSeconds){
+    totalSeconds = Math.max(0, Math.round(totalSeconds||0));
+    const h=Math.floor(totalSeconds/3600), m=Math.floor((totalSeconds%3600)/60), s=Math.floor(totalSeconds%60);
+    const p=n=> String(n).padStart(2,"0");
+    return h>0 ? (p(h)+":"+p(m)+":"+p(s)) : (p(m)+":"+p(s));
+  }
+  function rdPosLine(item){
+    if(!item) return "—";
+    if(item.progressUnit === "time") return "بلا موضع محدّد (وقت فقط)";
+    if(item.currentUnit == null) return "لم يبدأ بعد";
+    return RD_UNIT_LABELS[item.progressUnit]+" "+_arn(item.currentUnit)+(item.totalUnits!=null? " / "+_arn(item.totalUnits) : "");
+  }
+  function renderReadingCard(){
+    const sub = document.getElementById("rdCardSub");
+    const body = document.getElementById("rdCardBody");
+    if(!body) return;
+    const isToday = currentDate === todayStr();
+    const items = rdItems().filter(it=> !it.deletedAt);
+    const focus = rdFocusItem();
+    if(!items.length){
+      if(sub) sub.textContent = "";
+      body.innerHTML = '<div class="exp-empty">ابدأ رحلتك مع مادة جديدة'
+        + '<div class="rd-actions" style="justify-content:center;margin-top:.6rem">'
+        + '<button class="exp-primary" id="rdEmptyAdd">➕ إضافة مادة</button>'
+        + '<button class="exp-secondary" id="rdEmptyPick">📚 اختيار من مكتبتي</button></div></div>';
+      document.getElementById("rdEmptyAdd").onclick = ()=>{ rdOpenOverlay("library"); rdOpenItemForm(null); };
+      document.getElementById("rdEmptyPick").onclick = ()=> rdOpenOverlay("library");
+      return;
+    }
+    if(sub) sub.textContent = focus ? RD_MATERIAL_LABELS[focus.materialType] : "اختر مادة تركيزك";
+    if(!focus){
+      body.innerHTML = '<div class="exp-empty">اختر مادة تركيزك من مكتبتك<br>'
+        + '<button class="exp-secondary" id="rdPickFocus" style="margin-top:.5rem">📚 اختيار من مكتبتي</button></div>';
+      document.getElementById("rdPickFocus").onclick = ()=> rdOpenOverlay("library");
+      return;
+    }
+    const dayAgg = rdDateAgg(currentDate);
+    const perItem = dayAgg ? dayAgg.items[focus.id] : null;
+    const sessionsToday = perItem ? perItem.sessionCount : 0;
+    const minsToday = perItem ? Math.round(perItem.durationSeconds/60) : 0;
+    const goal = isToday ? rdGoalProgressToday() : null;
+    let html = '<div class="rd-focus-block" id="rdFocusBlock">';
+    html += '<div class="rd-focus-title">'+expEsc(focus.title)+(focus.author?'<span class="rd-author"> — '+expEsc(focus.author)+'</span>':'')+'</div>';
+    html += '<div class="rd-pos">📍 '+rdPosLine(focus)+'</div>';
+    html += '<div class="rd-today">🕮 '+(isToday?"اليوم":currentDate)+': '+_arn(sessionsToday)+' جلسة · '+_arn(minsToday)+' دقيقة</div>';
+    if(goal) html += '<div class="rd-goal">🎯 '+ (goal.mode==="minutes"? (_arn(goal.current)+" / "+_arn(goal.value)+" دقيقة") : (_arn(goal.current)+" / "+_arn(goal.value)+" "+RD_UNIT_LABELS[goal.unit])) +'</div>';
+    html += '</div>';
+    html += '<div class="rd-actions"><button class="exp-primary" id="rdStartBtn">▶ ابدأ جلسة</button><button class="exp-secondary" id="rdQuickBtn">⚡ تسجيل سريع</button></div>';
+    body.innerHTML = html;
+    document.getElementById("rdFocusBlock").onclick = ()=> rdOpenOverlay("today");
+    document.getElementById("rdStartBtn").onclick = (e)=>{ e.stopPropagation(); rdHandleStartClick(focus.id); };
+    document.getElementById("rdQuickBtn").onclick = (e)=>{ e.stopPropagation(); rdOpenQuickLogForm(focus.id); };
+  }
+
+  /* ==================================================================
+     الواجهة — الشاشة الكاملة (اليوم / مكتبتي / الإحصائيات)
+     ================================================================== */
+  const rdOverlay = document.getElementById("rdOverlay");
+  let rdCurView = "today";
+  let rdTimerTickHandle = null;
+  function rdOpenOverlay(view){
+    rdOverlay.hidden = false;
+    document.body.style.overflow = "hidden";
+    rdSetView(view || "today");
+    safeRun("rdOverlayPull", ()=> rdPullRemote("overlayOpen"));
+  }
+  function rdCloseOverlay(){
+    rdOverlay.hidden = true;
+    document.body.style.overflow = "";
+    clearInterval(rdTimerTickHandle);
+  }
+  function rdSetView(v){
+    rdCurView = v;
+    rdOverlay.querySelectorAll(".exp-tab[data-rdview]").forEach(b=> b.classList.toggle("active", b.dataset.rdview === v));
+    document.getElementById("rdViewToday").hidden = v !== "today";
+    document.getElementById("rdViewLibrary").hidden = v !== "library";
+    document.getElementById("rdViewStats").hidden = v !== "stats";
+    rdRenderCurrentView();
+  }
+  function rdRenderCurrentView(){
+    if(rdCurView === "library") rdRenderLibrary();
+    else if(rdCurView === "stats") rdRenderStats();
+    else rdRenderToday();
+  }
+
+  function rdHandleStartClick(itemId){
+    if(currentDate !== todayStr()){
+      hifzShowConfirm({ title:"جلسة القراءة تبدأ اليوم فقط", body:"أنت تتصفّح تاريخًا سابقًا. عد لليوم لبدء جلسة حيّة، أو استخدم «تسجيل سريع» لتسجيل قراءة على هذا التاريخ.",
+        okText:"العودة لليوم", cancelText:"إلغاء", onOk:()=>{ goto(todayStr()); rdOpenOverlay("today"); } });
+      return;
+    }
+    const draft = rdActiveDraft();
+    if(draft){
+      if(rdDraftIsStale(draft)){ rdOpenStaleDraftPrompt(draft); return; }
+      if(draft.itemId === itemId){ rdOpenOverlay("today"); return; }
+      hifzShowConfirm({ title:"لديك جلسة قراءة مفتوحة", body:"يوجد مؤقّت يعمل لمادة أخرى. أنهِ الجلسة الحالية أولًا قبل بدء جلسة جديدة.",
+        okText:"فتح الجلسة الحالية", cancelText:"إلغاء", onOk:()=> rdOpenOverlay("today") });
+      return;
+    }
+    rdStartTimer(itemId);
+    rdOpenOverlay("today");
+  }
+  function rdOpenStaleDraftPrompt(draft){
+    const item = rdItemById(draft.itemId);
+    expOpenForm(
+      '<div class="exp-form-head"><h3>جلسة قراءة سابقة</h3><button data-close>✕</button></div>'
+      + '<div class="exp-card-hint">وجدنا مؤقّتًا لم يُغلق لمادة «'+expEsc(item?item.title:"")+'» منذ فترة طويلة. ماذا تريد أن تفعل؟</div>'
+      + '<button class="exp-optbtn" data-act="resume">▶ متابعة الجلسة<small>إكمال العدّ من حيث توقّف</small></button>'
+      + '<button class="exp-optbtn" data-act="finish">⏹ إنهاؤها الآن<small>حفظها بالمدّة المحسوبة حتى الآن</small></button>'
+      + '<button class="exp-optbtn" data-act="discard">🗑 تجاهلها<small>لا تُحتسب أي مدّة</small></button>'
+    );
+    expFormBox.querySelector('[data-act="resume"]').onclick = ()=>{ expCloseForm(); rdOpenOverlay("today"); };
+    expFormBox.querySelector('[data-act="finish"]').onclick = ()=>{ expCloseForm(); rdOpenOverlay("today"); rdOpenTimerEndForm(); };
+    expFormBox.querySelector('[data-act="discard"]').onclick = ()=>{ expCloseForm(); rdDiscardTimer(); renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView(); };
+  }
+
+  function rdSessionRowHtml(s){
+    const mins = Math.round(s.durationSeconds/60);
+    const unitsTxt = s.unitsRead != null ? (" · +"+_arn(Math.round(s.unitsRead*100)/100)) : "";
+    const timeTxt = s.startedAt ? new Date(s.startedAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "";
+    return '<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+(s.source==="timer"?"⏱":"✏️")+' '+_arn(mins)+' د'+unitsTxt+'</div>'
+      + '<div class="exp-row-sub">'+timeTxt+'</div></div>'
+      + '<button class="exp-mini" data-rdsess-edit="'+s.id+'">✏️</button><button class="exp-mini" data-rdsess-del="'+s.id+'">🗑</button></div>';
+  }
+  function rdRenderToday(){
+    clearInterval(rdTimerTickHandle);
+    const box = document.getElementById("rdViewToday");
+    const items = rdItems().filter(it=> !it.deletedAt);
+    if(!items.length){
+      box.innerHTML = '<div class="exp-empty">ابدأ رحلتك مع مادة جديدة<br><br><button class="exp-primary" id="rdTodayAdd">➕ إضافة مادة</button></div>';
+      document.getElementById("rdTodayAdd").onclick = ()=> rdOpenItemForm(null);
+      return;
+    }
+    const focus = rdFocusItem();
+    if(!focus){
+      box.innerHTML = '<div class="exp-empty">اختر مادة تركيزك<br><br><button class="exp-secondary" id="rdTodayPick">📚 اختيار من مكتبتي</button></div>';
+      document.getElementById("rdTodayPick").onclick = ()=> rdSetView("library");
+      return;
+    }
+    const isToday = currentDate === todayStr();
+    const draft = rdActiveDraft();
+    let html = "";
+    if(!isToday) html += '<div class="exp-card-hint">تتصفّح تاريخ '+currentDate+' — الجلسات أدناه لهذا التاريخ. لبدء جلسة حيّة عُد لليوم. <button class="exp-secondary" id="rdBackToday">اليوم</button></div>';
+    html += '<div class="rd-focus-card"><div class="rd-focus-title">'+expEsc(focus.title)+'</div>';
+    if(focus.author) html += '<div class="rd-author">'+expEsc(focus.author)+'</div>';
+    html += '<div class="rd-pos">📍 '+rdPosLine(focus)+(focus.progressUnit!=="time"?' <button class="exp-mini" id="rdCorrectBtn">تصحيح</button>':'')+'</div></div>';
+    if(isToday && draft && draft.itemId === focus.id){
+      html += '<div class="rd-timer-box"><div class="rd-timer-clock" id="rdTimerClock">00:00</div>'
+        + '<div class="rd-actions"><button class="exp-primary" id="rdTimerFinish">⏹ إنهاء الجلسة</button><button class="exp-secondary" id="rdTimerDiscard">تجاهل</button></div></div>';
+    } else if(isToday && draft && draft.itemId !== focus.id){
+      const other = rdItemById(draft.itemId);
+      html += '<div class="exp-card-hint">مؤقّت يعمل حاليًا لمادة أخرى («'+expEsc(other?other.title:"")+'»). أنهِه أولًا من مكتبتك.</div>';
+    } else if(isToday){
+      html += '<div class="rd-actions"><button class="exp-primary" id="rdStartBtn2">▶ ابدأ جلسة</button><button class="exp-secondary" id="rdQuickBtn2">⚡ تسجيل سريع</button></div>';
+    } else {
+      html += '<div class="rd-actions"><button class="exp-secondary" id="rdQuickBtn2">⚡ تسجيل سريع (لهذا التاريخ)</button></div>';
+    }
+    if(isToday) html += '<button class="witr-change-btn" id="rdGoalBtn">🎯 الهدف اليومي</button>';
+    const goal = isToday ? rdGoalProgressToday() : null;
+    if(goal) html += '<div class="rd-goal">🎯 '+ (goal.mode==="minutes"? (_arn(goal.current)+" / "+_arn(goal.value)+" دقيقة") : (_arn(goal.current)+" / "+_arn(goal.value)+" "+RD_UNIT_LABELS[goal.unit])) +' — '+_arn(goal.pct)+'٪</div>';
+    const sessions = rdSessions().filter(s=> !s.deletedAt && s.itemId===focus.id && s.dateKey===currentDate)
+      .sort((a,b)=> (b.endedAt||b.startedAt||0)-(a.endedAt||a.startedAt||0));
+    html += '<div class="exp-sec-head">جلسات '+(isToday?"اليوم":currentDate)+' ('+_arn(sessions.length)+')</div>';
+    html += sessions.length ? ('<div class="exp-card" style="padding:.3rem .7rem">'+sessions.map(rdSessionRowHtml).join("")+'</div>')
+      : '<div class="exp-empty">لا جلسات مسجّلة بعد لهذا التاريخ</div>';
+    box.innerHTML = html;
+    const g = sel=> box.querySelector(sel);
+    if(g("#rdBackToday")) g("#rdBackToday").onclick = ()=>{ goto(todayStr()); rdSetView("today"); };
+    if(g("#rdCorrectBtn")) g("#rdCorrectBtn").onclick = ()=> rdOpenCorrectionForm(focus.id);
+    if(g("#rdStartBtn2")) g("#rdStartBtn2").onclick = ()=> rdHandleStartClick(focus.id);
+    if(g("#rdQuickBtn2")) g("#rdQuickBtn2").onclick = ()=> rdOpenQuickLogForm(focus.id);
+    if(g("#rdGoalBtn")) g("#rdGoalBtn").onclick = ()=> rdOpenGoalForm();
+    if(g("#rdTimerFinish")) g("#rdTimerFinish").onclick = ()=> rdOpenTimerEndForm();
+    if(g("#rdTimerDiscard")) g("#rdTimerDiscard").onclick = ()=> hifzShowConfirm({title:"تجاهل الجلسة؟", body:"لن تُحتسب أي مدّة قراءة.", okText:"تجاهل", cancelText:"إلغاء", onOk:()=>{ rdDiscardTimer(); rdRenderToday(); renderReadingCard(); }});
+    box.querySelectorAll("[data-rdsess-edit]").forEach(b=> b.onclick = ()=> rdOpenQuickLogForm(focus.id, b.dataset.rdsessEdit));
+    box.querySelectorAll("[data-rdsess-del]").forEach(b=> b.onclick = ()=> hifzShowConfirm({title:"حذف الجلسة؟", body:"سيُزال رصيدها من الإحصائيات، وقد يُعاد ضبط الموضع إن كانت آخر جلسة مؤثّرة.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{ rdTombstoneSession(b.dataset.rdsessDel); rdRenderToday(); renderReadingCard(); }}));
+    if(isToday && draft && draft.itemId === focus.id){
+      const tick = ()=>{ const el=document.getElementById("rdTimerClock"); if(el) el.textContent = rdFmtDuration(rdTimerElapsedSeconds(draft)); };
+      tick();
+      rdTimerTickHandle = setInterval(tick, 1000);
+    }
+  }
+
+  function rdMaybeOfferCompletion(itemId){
+    const item = rdItemById(itemId);
+    if(!rdItemMeetsCompletion(item)) return;
+    hifzShowConfirm({ title:"🎉 يبدو أنك أتممت هذه المادة", body: expEsc(item.title), okText:"نعم، أتممتها", cancelText:"ليس الآن",
+      onOk:()=>{ rdSetStatus(item.id, "completed"); renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView(); rdOfferNextFocus(); } });
+  }
+  function rdOfferNextFocus(){
+    const candidates = rdItems().filter(it=> !it.deletedAt && it.status!=="completed" && it.status!=="abandoned" && it.id !== rdSettings().focusItemId);
+    if(!candidates.length) return;
+    hifzShowConfirm({ title:"اختيار مادة تركيز جديدة؟", body:"يمكنك اختيار مادة أخرى من مكتبتك الآن أو لاحقًا.", okText:"اختيار الآن", cancelText:"لاحقًا",
+      onOk:()=> rdOpenOverlay("library") });
+  }
+
+  function rdOpenTimerEndForm(){
+    const draft = rdActiveDraft(); if(!draft) return;
+    const item = rdItemById(draft.itemId); if(!item) return;
+    const elapsed = rdTimerElapsedSeconds(draft);
+    const needsUnit = item.progressUnit !== "time";
+    expOpenForm(
+      '<div class="exp-form-head"><h3>إنهاء جلسة القراءة</h3><button data-close>✕</button></div>'
+      + '<div class="exp-card-hint">المدّة المحسوبة من بدء الجلسة: '+rdFmtDuration(elapsed)+'</div>'
+      + (needsUnit ? ('<div class="exp-field"><label>الموضع الآن ('+RD_UNIT_LABELS[item.progressUnit]+')</label><input id="rfEndUnit" inputmode="numeric" placeholder="اختياري" value="'+(item.currentUnit!=null?item.currentUnit:"")+'"></div>'
+        + '<label class="exp-check"><input type="checkbox" id="rfNoUpdate"> لا تُحدّث موضع التوقّف</label>') : '')
+      + '<div class="exp-err" id="rfErr"></div>'
+      + '<button class="exp-save" id="rfSave">حفظ الجلسة</button>'
+    );
+    const g = sel=> expFormBox.querySelector(sel);
+    let saving=false;
+    g("#rfSave").onclick = ()=>{
+      if(saving) return;
+      let endUnit=null, updatePosition=false;
+      if(needsUnit && !(g("#rfNoUpdate") && g("#rfNoUpdate").checked)){
+        const raw = g("#rfEndUnit") ? g("#rfEndUnit").value.trim() : "";
+        if(raw !== ""){
+          const v = parseFloat(raw);
+          if(!isFinite(v) || v < 0){ g("#rfErr").textContent = "أدخل موضعًا صحيحًا."; return; }
+          endUnit = v; updatePosition = true;
+        }
+      }
+      saving = true; g("#rfSave").disabled = true;
+      const sess = rdFinishTimer({ dateKey: todayStr(), endUnit, updatePosition });
+      expCloseForm();
+      renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView();
+      if(sess) rdMaybeOfferCompletion(item.id);
+    };
+  }
+
+  function rdOpenQuickLogForm(itemId, editId){
+    const item = rdItemById(itemId); if(!item) return;
+    const editing = editId ? rdSessionById(editId) : null;
+    const needsUnit = item.progressUnit !== "time";
+    const dateVal = editing ? editing.dateKey : currentDate;
+    expOpenForm(
+      '<div class="exp-form-head"><h3>'+(editing?"تعديل جلسة":"تسجيل سريع")+'</h3><button data-close>✕</button></div>'
+      + '<div class="exp-card-hint">'+expEsc(item.title)+'</div>'
+      + '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="qlDate" value="'+dateVal+'" max="'+todayStr()+'"></div>'
+      + '<div class="exp-field"><label>المدّة (دقائق)</label><input id="qlMins" inputmode="numeric" value="'+(editing?Math.round(editing.durationSeconds/60):"")+'"></div></div>'
+      + (needsUnit ? ('<div class="exp-grid2"><div class="exp-field"><label>من ('+RD_UNIT_LABELS[item.progressUnit]+')</label><input id="qlStart" inputmode="numeric" value="'+(editing&&editing.startUnit!=null?editing.startUnit:(!editing&&item.currentUnit!=null?item.currentUnit:""))+'"></div>'
+          + '<div class="exp-field"><label>إلى</label><input id="qlEnd" inputmode="numeric" value="'+(editing&&editing.endUnit!=null?editing.endUnit:"")+'"></div></div>'
+          + '<label class="exp-check"><input type="checkbox" id="qlUpdatePos"'+(!editing?" checked":"")+'> تحديث موضع التوقّف بهذه القراءة</label>') : '')
+      + '<div class="exp-err" id="qlErr"></div>'
+      + '<button class="exp-save" id="qlSave">'+(editing?"حفظ التعديل":"حفظ")+'</button>'
+    );
+    const g = sel=> expFormBox.querySelector(sel);
+    let saving=false;
+    g("#qlSave").onclick = ()=>{
+      if(saving) return;
+      const date = g("#qlDate").value;
+      if(!date || date > todayStr()){ g("#qlErr").textContent = "اختر تاريخًا صحيحًا (لا يتجاوز اليوم)."; return; }
+      const mins = parseFloat(g("#qlMins").value);
+      if(!isFinite(mins) || mins < 0){ g("#qlErr").textContent = "أدخل مدّة صحيحة."; return; }
+      let startUnit=null, endUnit=null;
+      if(needsUnit){
+        const sv = g("#qlStart") ? g("#qlStart").value.trim() : "";
+        const ev = g("#qlEnd") ? g("#qlEnd").value.trim() : "";
+        if(sv !== ""){ startUnit = parseFloat(sv); if(!isFinite(startUnit) || startUnit < 0){ g("#qlErr").textContent = "موضع البداية غير صحيح."; return; } }
+        if(ev !== ""){ endUnit = parseFloat(ev); if(!isFinite(endUnit) || endUnit < 0){ g("#qlErr").textContent = "موضع النهاية غير صحيح."; return; } }
+        if(startUnit != null && endUnit != null && endUnit < startUnit){ g("#qlErr").textContent = "موضع النهاية يجب ألا يقل عن البداية."; return; }
+      }
+      const updatePosition = needsUnit && g("#qlUpdatePos") ? g("#qlUpdatePos").checked : false;
+      saving = true; g("#qlSave").disabled = true;
+      let sess;
+      if(editing) sess = rdEditSession(editing.id, { dateKey:date, durationSeconds: Math.round(mins*60), startUnit, endUnit, unitsRead: rdComputeUnits(startUnit, endUnit) });
+      else sess = rdAddSession({ itemId:item.id, dateKey:date, source:"manual", startedAt:null, endedAt:Date.now(), durationSeconds: Math.round(mins*60), startUnit, endUnit, updatePosition });
+      expCloseForm();
+      renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView();
+      if(!editing && updatePosition && sess) rdMaybeOfferCompletion(item.id);
+    };
+  }
+
+  function rdOpenCorrectionForm(itemId){
+    const item = rdItemById(itemId); if(!item || item.progressUnit === "time") return;
+    expOpenForm(
+      '<div class="exp-form-head"><h3>تصحيح الموضع</h3><button data-close>✕</button></div>'
+      + '<div class="exp-card-hint">تصحيح الموضع لا يُضيف رصيد قراءة ولا ينشئ جلسة — لتصحيح خطأ إدخال فقط.</div>'
+      + '<div class="exp-field"><label>الموضع الصحيح ('+RD_UNIT_LABELS[item.progressUnit]+')</label><input id="cpVal" inputmode="numeric" value="'+(item.currentUnit!=null?item.currentUnit:"")+'"></div>'
+      + '<div class="exp-err" id="cpErr"></div>'
+      + '<button class="exp-save" id="cpSave">حفظ</button>'
+    );
+    const g = sel=> expFormBox.querySelector(sel);
+    g("#cpSave").onclick = ()=>{
+      const v = parseFloat(g("#cpVal").value);
+      if(!isFinite(v) || v < 0){ g("#cpErr").textContent = "أدخل قيمة صحيحة."; return; }
+      rdCorrectPosition(item.id, v);
+      expCloseForm(); renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView();
+    };
+  }
+
+  function rdOpenGoalForm(){
+    const s = rdSettings(); const focus = rdFocusItem(); const cur = s.dailyGoal;
+    expOpenForm(
+      '<div class="exp-form-head"><h3>الهدف اليومي</h3><button data-close>✕</button></div>'
+      + '<div class="exp-field"><label>نوع الهدف</label><select id="glMode">'
+        + '<option value="minutes"'+(!cur||cur.mode==="minutes"?" selected":"")+'>دقائق قراءة (كل المواد)</option>'
+        + (focus && focus.progressUnit!=="time" ? ('<option value="focusUnits"'+(cur&&cur.mode==="focusUnits"?" selected":"")+'>وحدات مادة التركيز ('+RD_UNIT_LABELS[focus.progressUnit]+')</option>') : '')
+      + '</select></div>'
+      + '<div class="exp-field"><label>القيمة</label><input id="glValue" inputmode="numeric" value="'+(cur?cur.value:"")+'"></div>'
+      + '<div class="exp-err" id="glErr"></div>'
+      + '<button class="exp-save" id="glSave">حفظ</button>'
+      + (cur ? '<button class="exp-secondary" id="glClear" style="width:100%;margin-top:.5rem">إزالة الهدف</button>' : '')
+    );
+    const g = sel=> expFormBox.querySelector(sel);
+    g("#glSave").onclick = ()=>{
+      const mode = g("#glMode").value; const v = parseFloat(g("#glValue").value);
+      if(!isFinite(v) || v <= 0){ g("#glErr").textContent = "أدخل قيمة أكبر من صفر."; return; }
+      if(mode === "focusUnits" && !focus){ g("#glErr").textContent = "اختر مادة تركيز أولًا."; return; }
+      rdSetGoal(mode==="minutes" ? {mode:"minutes", value:v, itemId:null, unit:null} : {mode:"focusUnits", value:v, itemId:focus.id, unit:focus.progressUnit});
+      expCloseForm(); renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView();
+    };
+    if(g("#glClear")) g("#glClear").onclick = ()=>{ rdSetGoal(null); expCloseForm(); renderReadingCard(); if(!rdOverlay.hidden) rdRenderCurrentView(); };
+  }
+
+  /* ---------- مكتبتي ---------- */
+  function rdItemRowHtml(it){
+    const isFocus = rdSettings().focusItemId === it.id;
+    const pos = it.progressUnit==="time" ? "" : (" · "+rdPosLine(it));
+    return '<div class="exp-row" data-rditem="'+it.id+'"><div class="exp-row-main"><div class="exp-row-name">'+(isFocus?"⭐ ":"")+expEsc(it.title)+'</div>'
+      + '<div class="exp-row-sub">'+RD_MATERIAL_LABELS[it.materialType]+pos+'</div></div><button class="exp-mini" data-rdmenu="'+it.id+'">⋯</button></div>';
+  }
+  function rdRenderLibrary(){
+    const box = document.getElementById("rdViewLibrary");
+    const items = rdItems().filter(it=> !it.deletedAt);
+    let html = '<button class="exp-primary" id="rdLibAdd" style="width:100%;margin-bottom:1rem">＋ إضافة مادة</button>';
+    if(!items.length){ html += '<div class="exp-empty">ابدأ رحلتك مع مادة جديدة</div>'; box.innerHTML = html; document.getElementById("rdLibAdd").onclick = ()=> rdOpenItemForm(null); return; }
+    const groups = { active:[], paused:[], queued:[], completed:[], abandoned:[] };
+    items.forEach(it=> (groups[it.status] || groups.queued).push(it));
+    [["active","نشطة"],["paused","متوقفة مؤقتًا"],["queued","قائمة الانتظار"],["completed","مكتملة"],["abandoned","مهجورة"]].forEach(([key,label])=>{
+      const arr = groups[key]; if(!arr.length) return;
+      html += '<div class="exp-sec-head">'+label+' ('+_arn(arr.length)+')</div><div class="exp-card" style="padding:.3rem .7rem">'+arr.map(rdItemRowHtml).join("")+'</div>';
+    });
+    box.innerHTML = html;
+    document.getElementById("rdLibAdd").onclick = ()=> rdOpenItemForm(null);
+    box.querySelectorAll("[data-rditem]").forEach(r=> r.onclick = (e)=>{ if(e.target.closest("[data-rdmenu]")) return; rdOpenItemForm(r.dataset.rditem); });
+    box.querySelectorAll("[data-rdmenu]").forEach(b=> b.onclick = (e)=>{ e.stopPropagation(); rdItemMenu(b, b.dataset.rdmenu); });
+  }
+  function rdHandleSetFocus(id){
+    if(rdFocusChangeAffectsGoal(id)){
+      const s = rdSettings();
+      expOpenForm(
+        '<div class="exp-form-head"><h3>تغيير مادة التركيز</h3><button data-close>✕</button></div>'
+        + '<div class="exp-card-hint">لديك هدف يومي مرتبط بوحدات مادة التركيز الحالية. ماذا تريد أن تفعل بالهدف؟</div>'
+        + '<button class="exp-optbtn" data-act="rebind">🔗 إعادة ربط الهدف بالمادة الجديدة<small>نفس القيمة، بوحدة المادة الجديدة</small></button>'
+        + '<button class="exp-optbtn" data-act="minutes">⏱ تحويل الهدف لدقائق<small>يبقى الهدف صالحًا لكل المواد</small></button>'
+        + '<button class="exp-optbtn" data-act="clear">🗑 إزالة الهدف</button>'
+      );
+      expFormBox.querySelector('[data-act="rebind"]').onclick = ()=>{ const it=rdItemById(id); rdSetGoal({mode:"focusUnits", value:s.dailyGoal.value, itemId:id, unit: it?it.progressUnit:s.dailyGoal.unit}); rdSetFocus(id); expCloseForm(); rdRenderLibrary(); renderReadingCard(); };
+      expFormBox.querySelector('[data-act="minutes"]').onclick = ()=>{ rdSetGoal({mode:"minutes", value:s.dailyGoal.value, itemId:null, unit:null}); rdSetFocus(id); expCloseForm(); rdRenderLibrary(); renderReadingCard(); };
+      expFormBox.querySelector('[data-act="clear"]').onclick = ()=>{ rdSetGoal(null); rdSetFocus(id); expCloseForm(); rdRenderLibrary(); renderReadingCard(); };
+      return;
+    }
+    rdSetFocus(id); rdRenderLibrary(); renderReadingCard();
+  }
+  function rdItemMenu(anchor, id){
+    const it = rdItemById(id); if(!it) return;
+    const items = [{label:"✏️ تعديل", onClick:()=> rdOpenItemForm(id)}];
+    if(rdSettings().focusItemId !== id) items.push({label:"⭐ تعيين كمادة تركيز", onClick:()=> rdHandleSetFocus(id)});
+    if(it.status === "active") items.push({label:"⏸ إيقاف مؤقّت", onClick:()=>{ rdSetStatus(id,"paused"); rdRenderLibrary(); renderReadingCard(); }});
+    if(it.status === "paused" || it.status === "queued") items.push({label:"▶ استئناف/بدء", onClick:()=>{ rdSetStatus(id,"active"); rdRenderLibrary(); renderReadingCard(); }});
+    if(it.status !== "completed") items.push({label:"✅ إكمال", onClick:()=>{ rdSetStatus(id,"completed"); rdRenderLibrary(); renderReadingCard(); }});
+    if(it.status !== "abandoned" && it.status !== "completed") items.push({label:"🚫 هجر", onClick:()=> hifzShowConfirm({title:"هجر هذه المادة؟", body:"تبقى في مكتبتك مع كل جلساتها المسجَّلة.", okText:"هجر", cancelText:"إلغاء", onOk:()=>{ rdSetStatus(id,"abandoned"); rdRenderLibrary(); renderReadingCard(); }})});
+    expActionMenu(anchor, items);
+  }
+  function rdOpenItemForm(editId){
+    const it = editId ? rdItemById(editId) : null;
+    const agg = it ? rdItemAgg(it.id) : null;
+    const hasSessions = !!(agg && agg.sessionCount > 0);
+    const typeOpts = RD_MATERIAL_TYPES.map(t=> '<option value="'+t+'"'+(it&&it.materialType===t?" selected":"")+'>'+RD_MATERIAL_LABELS[t]+'</option>').join("");
+    const unitOpts = RD_UNITS.map(u=> '<option value="'+u+'"'+((it?it.progressUnit:"page")===u?" selected":"")+'>'+RD_UNIT_LABELS[u]+'</option>').join("");
+    expOpenForm(
+      '<div class="exp-form-head"><h3>'+(it?"تعديل مادة":"إضافة مادة")+'</h3><button data-close>✕</button></div>'
+      + '<div class="exp-field"><label>العنوان</label><input id="itTitle" value="'+expEsc(it?it.title:"")+'" placeholder="عنوان الكتاب/المقال…"></div>'
+      + '<div class="exp-field"><label>المؤلف (اختياري)</label><input id="itAuthor" value="'+expEsc(it&&it.author||"")+'"></div>'
+      + '<div class="exp-grid2"><div class="exp-field"><label>النوع</label><select id="itType">'+typeOpts+'</select></div>'
+      + '<div class="exp-field"><label>وحدة التقدّم</label><select id="itUnit"'+(hasSessions?" disabled":"")+'>'+unitOpts+'</select></div></div>'
+      + (hasSessions ? '<div class="hint">لا يمكن تغيير وحدة التقدّم بعد وجود جلسات مسجَّلة لهذه المادة.</div>' : '')
+      + '<div class="exp-grid2" id="itTotalWrap"><div class="exp-field"><label>إجمالي الوحدات (اختياري)</label><input id="itTotal" inputmode="numeric" value="'+(it&&it.totalUnits!=null?it.totalUnits:"")+'"></div>'
+      + '<div class="exp-field"><label>الموضع الحالي (اختياري)</label><input id="itCurrent" inputmode="numeric" value="'+(it&&it.currentUnit!=null?it.currentUnit:"")+'"></div></div>'
+      + '<div class="exp-err" id="itErr"></div>'
+      + '<button class="exp-save" id="itSave">'+(it?"حفظ التعديل":"إضافة")+'</button>'
+    );
+    const g = sel=> expFormBox.querySelector(sel);
+    const syncTotalVisibility = ()=>{ const u=g("#itUnit").value; g("#itTotalWrap").style.display = (u==="time") ? "none" : "grid"; };
+    syncTotalVisibility();
+    if(!hasSessions) g("#itUnit").onchange = syncTotalVisibility;
+    g("#itSave").onclick = ()=>{
+      const title = g("#itTitle").value.trim();
+      if(!title){ g("#itErr").textContent = "أدخل عنوانًا."; return; }
+      const unit = g("#itUnit").value;
+      let total=null, cur=null;
+      if(unit !== "time"){
+        const totalRaw = g("#itTotal") ? g("#itTotal").value.trim() : "";
+        const curRaw = g("#itCurrent") ? g("#itCurrent").value.trim() : "";
+        if(totalRaw !== "" && unit !== "percent"){ total = parseFloat(totalRaw); if(!isFinite(total) || total <= 0){ g("#itErr").textContent = "إجمالي الوحدات يجب أن يكون أكبر من صفر."; return; } }
+        if(curRaw !== ""){
+          cur = parseFloat(curRaw);
+          if(!isFinite(cur) || cur < 0){ g("#itErr").textContent = "الموضع الحالي غير صحيح."; return; }
+          if(unit === "percent") cur = Math.max(0, Math.min(100, cur));
+          if(total != null && cur > total){ g("#itErr").textContent = "الموضع الحالي أكبر من الإجمالي."; return; }
+        }
+      }
+      const fields = { title, author: g("#itAuthor").value.trim()||null, materialType: g("#itType").value, progressUnit: unit, totalUnits: total, currentUnit: cur };
+      let saved;
+      if(it) saved = rdEditItem(it.id, fields);
+      else { saved = rdAddItem(fields); if(!rdSettings().focusItemId) rdSetFocus(saved.id); }
+      expCloseForm(); rdRenderLibrary(); renderReadingCard();
+    };
+    setTimeout(()=>{ const a=g("#itTitle"); if(a) a.focus(); }, 50);
+  }
+
+  /* ---------- الإحصائيات (كسولة عند الطلب — لا تُحسب أثناء الرسم العادي) ---------- */
+  function rdWindowDates(n){
+    const out = []; const t = new Date(todayStr()+"T12:00:00");
+    for(let i=0;i<n;i++){ const d=new Date(t); d.setDate(d.getDate()-i); out.push(fmtDate(d)); }
+    return out;
+  }
+  function rdWindowAgg(dates){
+    const out = { durationSeconds:0, sessionCount:0, unitsByUnit:{}, activeDays:0 };
+    dates.forEach(dk=>{ const a=rdDateAgg(dk); if(a){ out.durationSeconds+=a.durationSeconds; out.sessionCount+=a.sessionCount; if(a.sessionCount>0) out.activeDays++;
+      Object.keys(a.unitsByUnit).forEach(u=> out.unitsByUnit[u]=(out.unitsByUnit[u]||0)+a.unitsByUnit[u]); } });
+    return out;
+  }
+  function rdUnitsLine(map){
+    const keys = Object.keys(map); if(!keys.length) return "—";
+    return keys.map(u=> _arn(Math.round(map[u]*100)/100)+" "+RD_UNIT_LABELS[u]).join(" · ");
+  }
+  function rdRenderStats(){
+    const box = document.getElementById("rdViewStats");
+    const today = rdWindowAgg([todayStr()]);
+    const week = rdWindowAgg(rdWindowDates(7));
+    const last30 = rdWindowAgg(rdWindowDates(30));
+    const completedRecent = rdItems().filter(it=> !it.deletedAt && it.status==="completed" && it.completedAt && it.completedAt >= Date.now()-30*86400000);
+    const recentDays = rdWindowDates(30).filter(dk=>{ const a=rdDateAgg(dk); return a && a.sessionCount>0; });
+    let html = '<div class="exp-sumgrid">'
+      + '<div class="exp-sumcard"><small>اليوم</small><b>'+_arn(Math.round(today.durationSeconds/60))+' د</b></div>'
+      + '<div class="exp-sumcard"><small>هذا الأسبوع</small><b>'+_arn(Math.round(week.durationSeconds/60))+' د</b></div>'
+      + '<div class="exp-sumcard"><small>آخر ٣٠ يومًا</small><b>'+_arn(Math.round(last30.durationSeconds/60))+' د</b></div>'
+      + '<div class="exp-sumcard"><small>الجلسات (٣٠ يومًا)</small><b>'+_arn(last30.sessionCount)+'</b></div>'
+      + '</div>';
+    html += '<div class="exp-sec-head">عدد الجلسات</div><div class="exp-card-hint">اليوم: '+_arn(today.sessionCount)+' · الأسبوع: '+_arn(week.sessionCount)+' · ٣٠ يومًا: '+_arn(last30.sessionCount)+'</div>';
+    html += '<div class="exp-sec-head">الوحدات المقروءة (٣٠ يومًا، مجمّعة حسب الوحدة المتوافقة)</div><div class="exp-card-hint">'+rdUnitsLine(last30.unitsByUnit)+'</div>';
+    html += '<div class="exp-sec-head">مواد أُتمّت مؤخّرًا ('+_arn(completedRecent.length)+')</div>';
+    html += completedRecent.length ? ('<div class="exp-card" style="padding:.3rem .7rem">'+completedRecent.map(it=> '<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">✅ '+expEsc(it.title)+'</div></div></div>').join("")+'</div>')
+      : '<div class="exp-card-hint">لا مواد مكتملة في آخر ٣٠ يومًا</div>';
+    html += '<div class="exp-sec-head">أيام قراءة حديثة ('+_arn(recentDays.length)+' من ٣٠)</div>';
+    box.innerHTML = html;
+  }
+
+  /* ---------- التهيئة والربط ---------- */
+  function rdInit(){
+    const closeBtn = document.getElementById("rdClose");
+    if(closeBtn) closeBtn.onclick = rdCloseOverlay;
+    rdOverlay.querySelectorAll(".exp-tab[data-rdview]").forEach(b=> b.onclick = ()=> rdSetView(b.dataset.rdview));
+    rdOverlay.addEventListener("click", (e)=>{ if(e.target === rdOverlay) rdCloseOverlay(); });
   }
 
   /* ---------- Theme (light/dark) ---------- */
@@ -12663,9 +13415,7 @@
   safeRun("goto:init", ()=> goto(initialDay));
   deferNonCriticalRender("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
-  safeRun("smartTools:init", smartInit);
-  safeRun("tomorrowPanel:init", renderTomorrowPanel);
-  safeRun("onboardInit", onboardInit);
+  safeRun("rdInit", rdInit);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();
 </script>
