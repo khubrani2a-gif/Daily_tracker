@@ -92,7 +92,7 @@ const dayKey="users/U1/days/"+today();
   await B4.click("#expOpenBtn"); await B4.waitForTimeout(300);
   await B4.click('.exp-tab[data-view="settings"]'); await B4.waitForTimeout(300);
   ok("global sync button present", !!(await B4.$("#expGlobalSyncBtn")));
-  ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===6);
+  ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===7);
   store[dayKey]=JSON.stringify({date:today(),prayers:[true,true,true,true,false],worship:{},water:0,tasks:[],priorities:[],updatedAt:Date.now()+150000});
   await B4.click("#expGlobalSyncBtn"); await B4.waitForTimeout(1000);
   const gst=await B4.$eval("#expGlobalSyncText",e=>e.textContent).catch(()=>"");
