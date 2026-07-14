@@ -376,6 +376,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   const readingModuleState = await p.evaluate(()=> window.__mfkrSync.module("reading"));
   ok("reading module reachable via the same read-only coordinator diagnostics as other modules", readingModuleState && typeof readingModuleState.inFlight === "boolean");
   await p.click("#expOpenBtn"); await p.waitForTimeout(300);
+  await p.click('.exp-tab[data-view="settings"]'); await p.waitForTimeout(300);
   const rowCount = (await p.$$("#expModStatus .exp-foot-row")).length;
   ok("per-module status list shows exactly 7 rows (Reading added as the 7th)", rowCount===7);
   const statusHtml = await p.$eval("#expModStatus", e=> e.textContent);
