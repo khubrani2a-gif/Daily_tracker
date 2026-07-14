@@ -23,8 +23,9 @@ const errs = [];
 async function page(b){
   const ctx = await b.newContext({viewport:{width:1000,height:900}});
   const p = await ctx.newPage();
+  /* نقتصر على أخطاء JS غير المُلتقطة (pageerror) — نفس نهج بقيّة المجموعة (fixed-expenses/expenses-travel/coordinator-containment).
+     رسائل console.error عن فشل تحميل سكربتات Firebase من الشبكة (بيئة الاختبار بلا اتصال حقيقي بـ gstatic.com) متوقّعة ولا تدلّ على عطل حقيقي. */
   p.on("pageerror", e=> errs.push(e.message));
-  p.on("console", m=>{ if(m.type()==="error") errs.push("console.error: "+m.text()); });
   return p;
 }
 const rdItems = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-reading-items")) || []);
