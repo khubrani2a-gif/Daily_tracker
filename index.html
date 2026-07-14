@@ -176,7 +176,7 @@
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
   @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
   @media(max-width:620px){.grid{grid-template-columns:1fr}}
-  .col{display:flex;flex-direction:column;gap:1.2rem}
+  .col{display:flex;flex-direction:column;gap:1.2rem;min-width:0}
 
   .card{
     background:var(--paper);
@@ -890,9 +890,11 @@
   .exp-save:disabled{opacity:.55;cursor:default}
   .exp-toggle-more{border:none;background:transparent;color:var(--accent);font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;padding:.3rem 0;margin-bottom:.5rem}
   /* ---------- وحدة القراءة ---------- */
-  .rd-focus-block{cursor:pointer;border-radius:14px;padding:.2rem 0;transition:.15s}
-  .rd-focus-title{font-weight:700;color:var(--ink);font-size:1rem;overflow-wrap:anywhere}
-  .rd-author{color:var(--muted);font-weight:400;font-size:.85rem}
+  #readingCard{min-width:0}
+  #rdCardBody{min-width:0}
+  .rd-focus-block{cursor:pointer;border-radius:14px;padding:.2rem 0;transition:.15s;min-width:0;max-width:100%}
+  .rd-focus-title{font-weight:700;color:var(--ink);font-size:1rem;overflow-wrap:anywhere;word-break:break-word;min-width:0;max-width:100%}
+  .rd-author{color:var(--muted);font-weight:400;font-size:.85rem;overflow-wrap:anywhere;word-break:break-word}
   .rd-pos,.rd-today,.rd-goal{color:var(--muted);font-size:.85rem;margin-top:.25rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .rd-goal{color:var(--accent);font-weight:600}
   .rd-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
