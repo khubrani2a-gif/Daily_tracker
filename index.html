@@ -172,11 +172,122 @@
   .motto .b1{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.18rem;font-weight:600;color:#fff}
   .motto .b2{font-size:.85rem;color:rgba(255,255,255,.8);margin-top:.35rem}
 
+  /* ===== ملخص اليوم والتنقل السريع ===== */
+  html{scroll-behavior:smooth;scroll-padding-top:76px}
+  .today-overview{
+    background:linear-gradient(135deg,var(--paper),var(--accent-soft));
+    border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;
+    margin-bottom:.75rem;box-shadow:var(--shadow-sm)
+  }
+  .today-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+  .today-overview-title{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.12rem}
+  .today-overview-date{display:block;color:var(--muted);font-size:.72rem;font-weight:400;margin-top:.1rem}
+  .today-focus{max-width:52%;font-size:.8rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:.45rem .7rem;line-height:1.5}
+  .today-focus b{color:var(--accent)}
+  .today-customize{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:10px;width:36px;height:36px;cursor:pointer;flex-shrink:0}
+  .today-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+  .today-metric{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:.65rem .75rem}
+  .today-metric-top{display:flex;align-items:center;justify-content:space-between;gap:.4rem;font-size:.76rem;color:var(--muted)}
+  .today-metric-top b{font-size:.9rem;color:var(--ink)}
+  .today-metric-bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:.45rem}
+  .today-metric-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .3s}
+  .weekly-goal-banner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.7rem;margin-top:.7rem;padding:.65rem .75rem;background:var(--paper);border:1px solid var(--line);border-radius:13px}
+  .weekly-goal-banner[hidden]{display:none}
+  .weekly-goal-ico{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--accent-soft);font-size:1rem}
+  .weekly-goal-copy{min-width:0}
+  .weekly-goal-copy small{display:block;color:var(--muted);font-size:.66rem;margin-bottom:.12rem}
+  .weekly-goal-copy b{display:block;color:var(--ink);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .weekly-goal-banner.done .weekly-goal-copy b{text-decoration:line-through;color:var(--muted)}
+  .weekly-goal-action{border:1px solid var(--accent);background:var(--paper);color:var(--accent);border-radius:10px;padding:.45rem .65rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .weekly-goal-action[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .weekly-goal-action:disabled{border-color:var(--line);color:var(--muted);cursor:default}
+  .weekly-goal-steps{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:.4rem}
+  .weekly-goal-steps:empty{display:none}
+  .weekly-goal-step{display:flex;align-items:center;gap:.35rem;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:9px;padding:.36rem .55rem;font-family:inherit;font-size:.7rem;cursor:pointer;max-width:100%}
+  .weekly-goal-step-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .weekly-goal-step-day{margin-right:.15rem;padding:.08rem .35rem;border-radius:99px;background:var(--paper);color:var(--muted);font-size:.6rem;white-space:nowrap}
+  .weekly-goal-step.today{border-color:var(--gold);box-shadow:0 0 0 2px rgba(195,154,43,.12)}
+  .weekly-goal-step.today .weekly-goal-step-day{background:rgba(195,154,43,.15);color:var(--gold);font-weight:700}
+  .weekly-goal-step[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-2);color:var(--accent)}
+  .weekly-goal-step:disabled{cursor:default;opacity:.8}
+  .today-priority-strip{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.7rem}
+  .today-priority-label{font-size:.7rem;font-weight:700;color:var(--muted)}
+  #todayPriorityItems{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .today-priority-chip{max-width:220px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:.3rem .55rem;font-size:.7rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .today-remaining{margin-right:auto;font-size:.7rem;color:var(--accent);font-weight:700}
+  .quick-nav{
+    position:sticky;top:.4rem;z-index:80;display:flex;align-items:center;justify-content:center;gap:.35rem;
+    width:max-content;max-width:100%;margin:0 auto 1rem;padding:.35rem;background:color-mix(in srgb,var(--paper) 92%,transparent);
+    border:1px solid var(--line);border-radius:99px;box-shadow:var(--shadow-sm);backdrop-filter:blur(12px)
+  }
+  .quick-nav a,.quick-nav button{color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:600;padding:.42rem .7rem;border-radius:99px;white-space:nowrap;transition:.15s;border:0;background:none;font-family:inherit;cursor:pointer}
+  .quick-nav a:hover,.quick-nav a:focus-visible,.quick-nav button:hover,.quick-nav button:focus-visible{color:var(--accent);background:var(--accent-soft);outline:none}
+  .quick-nav a.active{color:#fff;background:var(--accent)}
+  .quick-nav [hidden]{display:none}
+  .mobile-view-hidden{display:none!important}
+  #prayerCard,#ibadahCard,#quranCard,#hifzCard,#sportCard,#tasksCard,#prioritiesCard,#expensesCard{scroll-margin-top:76px}
+  @media(max-width:700px){
+    body{padding-bottom:5.4rem}
+    .today-overview-head{display:grid;grid-template-columns:1fr auto}.today-focus{grid-column:1/-1;max-width:none;margin-top:.55rem}.today-customize{grid-column:2;grid-row:1}
+    .today-metrics{grid-template-columns:1fr 1fr}
+    .weekly-goal-banner{grid-template-columns:auto 1fr}.weekly-goal-action{grid-column:1/-1;width:100%}.weekly-goal-steps{grid-column:1/-1;flex-direction:column}.weekly-goal-step{width:100%}
+    .quick-nav{position:fixed;top:auto;right:.65rem;left:.65rem;bottom:.65rem;width:auto;max-width:none;margin:0;justify-content:space-around;border-radius:18px;z-index:900;padding:.4rem .25rem}
+    .quick-nav a,.quick-nav button{display:flex;flex-direction:column;align-items:center;gap:.08rem;font-size:.64rem;padding:.35rem .32rem}
+    .quick-nav a span,.quick-nav button span{font-size:1.05rem}
+    .today-priority-chip{max-width:150px}.today-remaining{width:100%;margin:0}
+  }
+
+  /* ===== الإعداد الأولي ===== */
+  .onboard-overlay{position:fixed;inset:0;z-index:1500;background:rgba(20,17,12,.62);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
+  .onboard-overlay[hidden]{display:none}
+  .onboard-sheet{width:min(620px,100%);max-height:92vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:1.2rem;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+  .onboard-sheet h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.35rem;margin-bottom:.35rem}
+  .onboard-sheet>p{color:var(--muted);font-size:.8rem;line-height:1.7;margin-bottom:1rem}
+  .onboard-title{font-size:.78rem;font-weight:700;color:var(--ink);margin:.9rem 0 .45rem}
+  .onboard-modules{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem}
+  .onboard-module{display:flex;align-items:center;gap:.55rem;background:var(--chip-bg);border:1px solid var(--line);border-radius:12px;padding:.6rem .7rem;font-size:.78rem;color:var(--ink)}
+  .onboard-module input{accent-color:var(--accent);width:18px;height:18px}
+  .onboard-goals{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+  .onboard-goals label{font-size:.7rem;color:var(--muted)}
+  .onboard-goals input{width:100%;margin-top:.25rem;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:10px;padding:.55rem;font-family:inherit}
+  .onboard-actions{display:flex;gap:.5rem;margin-top:1rem}
+  .onboard-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}
+  .onboard-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  @media(max-width:520px){.onboard-modules,.onboard-goals{grid-template-columns:1fr}.onboard-sheet{border-radius:19px}}
+
   /* ===== Grid layout ===== */
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
   @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
   @media(max-width:620px){.grid{grid-template-columns:1fr}}
-  .col{display:flex;flex-direction:column;gap:1.2rem}
+  .col{display:contents}
+
+  /* ===== تخصيص البطاقات ===== */
+  .customize-overlay{position:fixed;inset:0;z-index:1300;background:rgba(20,17,12,.5);display:flex;align-items:flex-end;justify-content:center;padding:1rem;backdrop-filter:blur(3px)}
+  .customize-overlay[hidden]{display:none}
+  .customize-sheet{width:min(560px,100%);max-height:min(760px,88vh);display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+  .customize-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;border-bottom:1px solid var(--line)}
+  .customize-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.15rem}
+  .customize-close{border:0;background:var(--chip-bg);color:var(--muted);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:1rem}
+  .customize-hint{font-size:.76rem;color:var(--muted);padding:.75rem 1.1rem 0;line-height:1.6}
+  .customize-list{overflow-y:auto;padding:.75rem 1rem;display:flex;flex-direction:column;gap:.45rem}
+  .customize-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.65rem;border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.55rem .65rem;transition:.15s}
+  .customize-row.dragging{opacity:.4}.customize-row.drag-over{border-color:var(--accent);background:var(--accent-soft)}
+  .customize-row.is-hidden .customize-name{opacity:.5;text-decoration:line-through}
+  .customize-drag{font-size:1.05rem;color:var(--muted);cursor:grab;user-select:none;padding:.2rem}
+  .customize-name{font-size:.9rem;font-weight:600;color:var(--ink)}
+  .customize-controls{display:flex;align-items:center;gap:.25rem}
+  .customize-move{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:.8rem}
+  .customize-move:disabled{opacity:.3;cursor:default}
+  .customize-toggle{position:relative;width:40px;height:23px;display:inline-block;margin-right:.25rem}
+  .customize-toggle input{position:absolute;opacity:0;pointer-events:none}
+  .customize-toggle i{position:absolute;inset:0;border-radius:99px;background:var(--line);cursor:pointer;transition:.18s}
+  .customize-toggle i::after{content:"";position:absolute;width:17px;height:17px;right:3px;top:3px;border-radius:50%;background:var(--paper);box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.18s}
+  .customize-toggle input:checked+i{background:var(--accent)}
+  .customize-toggle input:checked+i::after{transform:translateX(-17px)}
+  .customize-toggle input:focus-visible+i{outline:2px solid var(--accent-2);outline-offset:2px}
+  .customize-actions{display:flex;gap:.5rem;flex-wrap:wrap;padding:.85rem 1rem 1rem;border-top:1px solid var(--line)}
+  .customize-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.6rem;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+  .customize-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
 
   .card{
     background:var(--paper);
@@ -206,7 +317,7 @@
   .prayer{
     text-align:center;padding:.7rem .2rem;border-radius:13px;
     border:1.5px solid var(--line);cursor:pointer;user-select:none;
-    transition:.18s;font-size:.86rem;font-weight:500;background:var(--chip-bg);
+    transition:.18s;font-size:.86rem;font-weight:500;background:var(--chip-bg);color:var(--ink);width:100%;
   }
   .prayer:hover{border-color:var(--accent-2)}
   .prayer .pmark{font-size:1.2rem;display:block;margin-bottom:.25rem;color:var(--chk-border);transition:.18s}
@@ -276,7 +387,7 @@
   .chk{
     min-width:22px;height:22px;border-radius:7px;border:2px solid var(--chk-border);
     background:var(--chk-bg);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
-    transition:.15s;flex-shrink:0;font-size:.8rem;color:transparent;
+    transition:.15s;flex-shrink:0;font-size:.8rem;color:transparent;padding:0;font-family:inherit;
   }
   .chk:hover{border-color:var(--accent-2)}
   .chk.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}
@@ -448,7 +559,7 @@
     width:34px;height:44px;cursor:pointer;position:relative;
     border:2px solid #9db8d4;border-top:none;border-radius:0 0 10px 10px;
     background:linear-gradient(to top,#cfe3f7 0%,#cfe3f7 var(--fill,0%),transparent var(--fill,0%));
-    transition:.2s;
+    transition:.2s;padding:0;
   }
   .cup::before{content:"";position:absolute;top:-4px;right:-2px;left:-2px;height:4px;border-radius:4px;background:#9db8d4}
   .cup.full{background:linear-gradient(to top,#7fb3e8,#b9d7f5);box-shadow:0 2px 6px rgba(127,179,232,.4)}
@@ -647,7 +758,12 @@
 
   /* ===== Tasks ===== */
   /* واجهة رقمية أنيقة للمهام/الأولويات (قائمتان مستقلّتان تمامًا) */
-  .task-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;padding:.15rem 0;transition:opacity .15s}
+  .task-card-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .task-card-head h2{margin:0}
+  .task-history-btn,.task-meta-btn{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;font-family:inherit;cursor:pointer}
+  .task-history-btn{padding:.35rem .55rem;font-size:.75rem}
+  .task-meta-btn{width:31px;height:31px;font-size:1rem;flex-shrink:0}
+  .task-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;padding:.15rem 0;transition:opacity .15s;flex-wrap:wrap}
   .task-row.done{opacity:.83}                       /* شعور هادئ بالإنجاز — واضح ومقروء، دون شطب */
   .task-input{
     flex:1;min-width:0;border:none;border-bottom:1.5px solid transparent;
@@ -656,6 +772,24 @@
   }
   .task-input:focus{border-bottom-color:var(--accent)}
   .task-input::placeholder{color:var(--muted);opacity:.6}
+  .task-meta-line{width:100%;padding-inline-start:2.4rem;margin-top:-.25rem;display:flex;gap:.3rem;flex-wrap:wrap;font-size:.68rem;color:var(--muted)}
+  .task-meta-chip{background:var(--chip-bg);border-radius:99px;padding:.13rem .42rem}
+  .task-sheet-overlay{position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:10030;display:flex;align-items:flex-end;justify-content:center;padding:1rem}
+  .task-sheet-overlay[hidden]{display:none}
+  .task-sheet{width:min(560px,100%);background:var(--paper);color:var(--ink);border-radius:22px 22px 14px 14px;padding:1rem;box-shadow:0 24px 70px rgba(0,0,0,.3);max-height:88vh;overflow:auto}
+  .task-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.8rem}
+  .task-sheet-head h3{margin:0;font-size:1.05rem}
+  .task-sheet-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:9px;width:34px;height:34px;cursor:pointer}
+  .task-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+  .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
+  .task-fields input,.task-fields select,.task-history-search{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none}
+  .task-sheet-save{width:100%;border:0;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:.8rem}
+  .task-history-search{width:100%;box-sizing:border-box;margin-bottom:.65rem}
+  .task-history-list{display:flex;flex-direction:column;gap:.4rem}
+  .task-history-item{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.6rem .7rem;text-align:right;font-family:inherit;cursor:pointer}
+  .task-history-item small{display:block;color:var(--muted);margin-top:.15rem}
+  .task-history-empty{text-align:center;color:var(--muted);padding:1rem}
+  @media(max-width:520px){.task-fields{grid-template-columns:1fr}}
   /* مؤشّر الأولوية: شارة لونية خفيفة، ثانوية، منزاحة قليلًا للداخل فتبدو ملتصقة بالصفّ */
   .task-flag{width:5px;height:20px;border-radius:99px;flex-shrink:0;opacity:.8;margin-inline-end:.35rem}
   /* صفّ الإدخال المؤقّت: حقل النصّ وحده — يُخفى المربّع والشارة مع الحفاظ على المحاذاة */
@@ -723,7 +857,7 @@
 
   /* ===== Stars ===== */
   .stars{display:flex;justify-content:center;gap:.4rem;font-size:2rem;cursor:pointer}
-  .star{color:var(--star-off);transition:transform .15s, color .15s;user-select:none}
+  .star{color:var(--star-off);transition:transform .15s, color .15s;user-select:none;border:0;background:none;padding:0;font-size:inherit;line-height:1;cursor:pointer}
   .star:hover{transform:scale(1.15)}
   .star.lit{color:var(--gold);text-shadow:0 2px 6px rgba(195,154,43,.5)}
   .rate-label{text-align:center;font-size:.82rem;color:var(--muted);margin-top:.45rem;min-height:1.2em;font-weight:500}
@@ -808,6 +942,67 @@
   .pbar i.on{background:linear-gradient(90deg,var(--accent),var(--accent-2))}
   .pbar i.lt{background:var(--gold)}
   .pbar-pct{min-width:46px;text-align:left;color:var(--muted);font-size:.78rem;font-weight:600}
+  .stats-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding-bottom:.65rem;margin-bottom:.8rem}
+  .stats-head h2{border:0;padding:0;margin:0}
+  .stats-close{border:1px solid var(--line);background:var(--chip-bg);color:var(--muted);border-radius:10px;width:34px;height:34px;cursor:pointer}
+  .stats-period-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;background:var(--chip-bg);padding:.3rem;border:1px solid var(--line);border-radius:13px;margin-bottom:.8rem}
+  .stats-period-tabs button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:.5rem;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+  .stats-period-tabs button.active{background:var(--paper);color:var(--accent);box-shadow:var(--shadow-sm)}
+  .stats-range{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;color:var(--muted);font-size:.76rem;margin-bottom:.7rem}
+  .stats-compare{font-weight:700;border-radius:99px;padding:.2rem .55rem;background:var(--accent-soft);color:var(--accent)}
+  .stats-compare.down{background:rgba(195,154,43,.15);color:var(--gold)}
+  .stats-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem}
+  .stats-kpi{background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;padding:.7rem;text-align:center}
+  .stats-kpi b{display:block;font-size:1.25rem;color:var(--accent);line-height:1.25}
+  .stats-kpi small{display:block;font-size:.68rem;color:var(--muted);margin-top:.2rem}
+  .stats-panel{border:1px solid var(--line);border-radius:15px;padding:.8rem;margin-top:.75rem;background:var(--paper)}
+  .stats-panel-title{font-size:.88rem;font-weight:700;color:var(--ink)}
+  .stats-panel-sub{font-size:.68rem;color:var(--muted);margin-top:.1rem}
+  .stats-trend-wrap{overflow-x:auto;padding:.45rem 0 .15rem}
+  .stats-trend{display:grid;align-items:end;gap:.28rem;height:150px;min-width:100%;padding-top:1rem}
+  .stats-trend.week{grid-template-columns:repeat(7,minmax(34px,1fr))}
+  .stats-trend.month{grid-template-columns:repeat(30,minmax(18px,1fr));min-width:720px}
+  .stats-day{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:.25rem;min-width:0}
+  .stats-day-bar{width:70%;max-width:28px;min-height:4px;background:var(--accent);border-radius:6px 6px 3px 3px;position:relative;transition:height .3s}
+  .stats-day-bar::after{content:attr(data-v);position:absolute;bottom:calc(100% + 2px);right:50%;transform:translateX(50%);font-size:.58rem;color:var(--muted);white-space:nowrap}
+  .stats-day.empty .stats-day-bar{height:4px!important;background:var(--line)}
+  .stats-day.empty .stats-day-bar::after{content:"—"}
+  .stats-day-label{font-size:.58rem;color:var(--muted);white-space:nowrap}
+  .stats-breakdown{display:flex;flex-direction:column;gap:.55rem;margin-top:.75rem}
+  .stats-break-row{display:grid;grid-template-columns:minmax(95px,1fr) 3fr 42px;align-items:center;gap:.55rem;font-size:.78rem}
+  .stats-break-name{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stats-break-bar{height:9px;background:var(--line);border-radius:99px;overflow:hidden}
+  .stats-break-bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+  .stats-break-pct{text-align:left;color:var(--muted);font-weight:700}
+  .stats-insight{margin-top:.75rem;background:var(--accent-soft);border-radius:14px;padding:.75rem .9rem;font-size:.8rem;line-height:1.7;color:var(--ink)}
+  .stats-insight b{color:var(--accent)}
+  .stats-review{margin-top:.75rem;border:1px solid var(--line);border-radius:15px;padding:.85rem;background:var(--paper)}
+  .stats-review[hidden]{display:none}
+  .stats-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.7rem}
+  .stats-review-head b{font-size:.9rem;color:var(--ink)}
+  .stats-review-head small{display:block;color:var(--muted);font-size:.68rem;margin-top:.15rem}
+  .stats-review-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem;margin-bottom:.7rem}
+  .stats-review-note{background:var(--chip-bg);border-radius:12px;padding:.65rem .7rem;font-size:.76rem;line-height:1.65;color:var(--ink)}
+  .stats-review-note strong{display:block;color:var(--accent);font-size:.7rem;margin-bottom:.15rem}
+  .stats-goal-label{display:block;font-size:.74rem;font-weight:700;color:var(--ink);margin-bottom:.35rem}
+  .stats-goal-row{display:flex;align-items:stretch;gap:.45rem}
+  .stats-goal-row input{flex:1;min-width:0;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:11px;padding:.65rem .75rem;font-family:inherit;font-size:.82rem;outline:none}
+  .stats-goal-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .stats-goal-row button{border:0;background:var(--accent);color:#fff;border-radius:11px;padding:.55rem .85rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  .stats-goal-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin:.55rem 0}
+  .stats-goal-step-plan{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.3rem}
+  .stats-goal-steps input,.stats-goal-steps select{min-width:0;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:10px;padding:.55rem .65rem;font-family:inherit;font-size:.74rem;outline:none}
+  .stats-goal-steps select{padding-inline:.45rem;max-width:88px}
+  .stats-goal-steps input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .stats-goal-status{min-height:1.2em;margin-top:.35rem;color:var(--muted);font-size:.67rem}
+  #statsYearView[hidden],#statsUnifiedView[hidden]{display:none}
+  @media(max-width:620px){
+    .stats-kpis{grid-template-columns:repeat(2,1fr)}
+    .stats-break-row{grid-template-columns:90px 1fr 38px;gap:.4rem}
+    .stats-review-grid{grid-template-columns:1fr}
+    .stats-goal-row{flex-direction:column}
+    .stats-goal-steps{grid-template-columns:1fr}
+  }
 
   /* ===== المصاريف ===== */
   .exp-launch h2{font-size:1.16rem}
@@ -1569,14 +1764,35 @@
     transition:.15s;
   }
   .sync-btn:hover{background:rgba(255,255,255,.3)}
+  .sync-btn:disabled{opacity:.5;cursor:not-allowed}
   .sync-status{font-size:.74rem;color:rgba(255,255,255,.9);margin-top:.3rem}
+  .sync-meta{display:flex;align-items:center;justify-content:flex-start;gap:.4rem;flex-wrap:wrap;margin-top:.35rem}
+  .sync-meta[hidden]{display:none}
+  .sync-mode{font-size:.68rem;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.24);border-radius:99px;padding:.18rem .5rem}
+  .sync-last{font-size:.68rem;color:rgba(255,255,255,.78)}
+  .sync-retry{border:0;background:#fff;color:var(--accent);border-radius:99px;padding:.2rem .55rem;font-family:inherit;font-size:.68rem;font-weight:700;cursor:pointer}
+  .sync-retry:disabled{opacity:.55;cursor:not-allowed}
+  :focus-visible{outline:3px solid var(--accent-2);outline-offset:3px}
+  .skip-link{position:fixed;top:.5rem;right:.5rem;z-index:20000;background:var(--paper);color:var(--ink);padding:.55rem .8rem;border-radius:10px;transform:translateY(-150%);transition:.15s}
+  .skip-link:focus{transform:translateY(0)}
+  .exp-budget-alert{border:1px solid #f59e0b;background:rgba(245,158,11,.12);color:var(--ink);border-radius:12px;padding:.55rem .7rem;margin:.25rem 0 .65rem;font-size:.8rem;font-weight:600}
+  .exp-report-tools{display:flex;gap:.5rem;margin:.7rem 0}
+  .exp-report-tools input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.55rem .65rem;font-family:inherit}
+  .exp-report-tools button{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  @media(max-width:620px){
+    .header-top>div:last-child{width:100%;min-width:0}
+    .date-nav{justify-content:center;flex-wrap:wrap}
+    .hijri,.sync-box{text-align:center}
+    .sync-meta{justify-content:center}
+  }
 </style>
 </head>
 <body>
-<div class="page">
+<a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
+<div class="page" id="mainContent">
 
   <!-- ===== Header ===== -->
-  <header>
+  <header id="appHeader">
     <div class="header-top">
       <div class="brand">
         <div class="logo">🌙</div>
@@ -1600,7 +1816,7 @@
       </div>
       <div>
         <div class="date-nav">
-          <button id="statsBtn" title="الإحصائيات وشبكة السنة">📊</button>
+          <button id="statsBtn" title="إحصائيات الأسبوع والشهر والسنة" aria-label="فتح إحصائيات الأسبوع والشهر والسنة">📊</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
           <span class="date-pill">
@@ -1612,7 +1828,13 @@
         <div class="hijri" id="hijriDate"></div>
         <div class="sync-box">
           <button class="sync-btn" id="syncBtn" hidden></button>
-          <div class="sync-status" id="syncStatus"></div>
+          <button class="sync-btn" id="syncAllBtn" hidden>مزامنة جميع البيانات</button>
+          <div class="sync-status" id="syncStatus" aria-live="polite"></div>
+          <div class="sync-meta" id="syncMeta">
+            <span class="sync-mode" id="syncMode">📱 محلي على هذا الجهاز</span>
+            <span class="sync-last" id="syncLast">بياناتك محفوظة تلقائيًا</span>
+            <button type="button" class="sync-retry" id="syncRetry" hidden>إعادة المحاولة</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1622,11 +1844,94 @@
     </div>
   </header>
 
+  <section class="today-overview" aria-labelledby="todayOverviewTitle">
+    <div class="today-overview-head">
+      <div class="today-overview-title" id="todayOverviewTitle">ملخص اليوم
+        <span class="today-overview-date" id="todayOverviewDate"></span>
+      </div>
+      <div class="today-focus" id="todayFocus" aria-live="polite"></div>
+      <button type="button" class="today-customize" id="customizeBtn" aria-label="تخصيص بطاقات الصفحة">⚙️</button>
+    </div>
+    <div class="today-metrics">
+      <div class="today-metric">
+        <div class="today-metric-top"><span>🕌 الصلوات</span><b id="todayPrayerValue">٠ / ٦</b></div>
+        <div class="today-metric-bar"><i id="todayPrayerBar"></i></div>
+      </div>
+      <div class="today-metric">
+        <div class="today-metric-top"><span>✅ المهام</span><b id="todayTaskValue">٠ / ٠</b></div>
+        <div class="today-metric-bar"><i id="todayTaskBar"></i></div>
+      </div>
+      <div class="today-metric">
+        <div class="today-metric-top"><span>📖 القرآن</span><b id="todayQuranValue">٠ / ٥</b></div>
+        <div class="today-metric-bar"><i id="todayQuranBar"></i></div>
+      </div>
+      <div class="today-metric">
+        <div class="today-metric-top"><span>💧 الماء</span><b id="todayWaterValue">٠ / ٨</b></div>
+        <div class="today-metric-bar"><i id="todayWaterBar"></i></div>
+      </div>
+    </div>
+    <div class="today-priority-strip" id="todayPriorityStrip">
+      <span class="today-priority-label">أهم الأولويات</span>
+      <span id="todayPriorityItems"></span>
+      <span class="today-remaining" id="todayRemaining"></span>
+    </div>
+    <div class="weekly-goal-banner" id="weeklyGoalBanner" hidden>
+      <span class="weekly-goal-ico" aria-hidden="true">🎯</span>
+      <div class="weekly-goal-copy"><small id="weeklyGoalLabel">هدف هذا الأسبوع</small><b id="weeklyGoalText"></b></div>
+      <button type="button" class="weekly-goal-action" id="weeklyGoalDone" aria-pressed="false">تحديد كمكتمل</button>
+      <div class="weekly-goal-steps" id="weeklyGoalSteps" aria-label="خطوات هدف الأسبوع"></div>
+    </div>
+  </section>
+
+  <nav class="quick-nav" aria-label="التنقل الرئيسي">
+    <a href="#prayerCard" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
+    <a href="#quranCard" data-app-view="quran"><span>📖</span>القرآن</a>
+    <a href="#sportCard" data-app-view="sport"><span>🏃</span>الرياضة</a>
+    <a href="#expensesCard" data-app-view="expenses"><span>💰</span>المصاريف</a>
+    <a href="#intentionCard" data-app-view="more"><span>•••</span>المزيد</a>
+  </nav>
+
+  <div class="customize-overlay" id="customizeOverlay" hidden>
+    <section class="customize-sheet" role="dialog" aria-modal="true" aria-labelledby="customizeTitle">
+      <div class="customize-head">
+        <h2 id="customizeTitle">⚙️ تخصيص بطاقاتك</h2>
+        <button type="button" class="customize-close" id="customizeClose" aria-label="إغلاق">✕</button>
+      </div>
+      <p class="customize-hint">أظهر ما تحتاجه فقط، ورتّب البطاقات بالسحب أو بالأسهم. تُحفظ اختياراتك تلقائيًا على هذا الجهاز.</p>
+      <div class="customize-list" id="customizeList"></div>
+      <div class="customize-actions">
+        <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
+        <button type="button" id="customizeShowAll">إظهار الكل</button>
+        <button type="button" id="customizeReset">الترتيب الافتراضي</button>
+        <button type="button" class="primary" id="customizeDone">تم</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="onboard-overlay" id="onboardOverlay" hidden>
+    <section class="onboard-sheet" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
+      <h2 id="onboardTitle">مرحبًا بك في مفكرتك 🌙</h2>
+      <p>اختر الوحدات التي تهمك وحدد أهدافك اليومية. تستطيع تغيير كل شيء لاحقًا من زر التخصيص.</p>
+      <div class="onboard-title">الوحدات الظاهرة في الرئيسية</div>
+      <div class="onboard-modules" id="onboardModules"></div>
+      <div class="onboard-title">أهدافك اليومية</div>
+      <div class="onboard-goals">
+        <label>أكواب الماء<input type="number" id="onboardWater" min="4" max="16" value="8"></label>
+        <label>دقائق الرياضة<input type="number" id="onboardSport" min="5" max="180" value="30"></label>
+        <label>صفحات القرآن<input type="number" id="onboardQuran" min="1" max="100" value="5"></label>
+      </div>
+      <div class="onboard-actions">
+        <button type="button" id="onboardCancel">إلغاء</button>
+        <button type="button" class="primary" id="onboardSave">ابدأ بهذه الإعدادات</button>
+      </div>
+    </section>
+  </div>
+
   <div class="grid">
 
     <!-- ===== Column 1: prayers + worship ===== -->
     <div class="col">
-      <div class="card">
+      <div class="card" id="prayerCard">
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
         <div class="prayers" id="prayers"></div>
@@ -1813,7 +2118,7 @@
         </details>
       </div>
 
-      <div class="card">
+      <div class="card" id="healthCard">
         <h2><span class="ico">⚖️</span> صحتك اليوم</h2>
         <div class="health-row">
           <label>الوزن (كجم)<input id="weightIn" type="number" min="0" step="0.1" placeholder="—"></label>
@@ -1822,28 +2127,28 @@
         <div class="health-note" id="healthNote"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="waterCard">
         <h2><span class="ico">💧</span> شرب الماء</h2>
         <div class="water" id="water"></div>
-        <div class="water-note">« ثلثٌ لطعامك وثلثٌ لشرابك وثلثٌ لنفَسك » — <span id="waterCount">0</span>/8 أكواب</div>
+        <div class="water-note">« ثلثٌ لطعامك وثلثٌ لشرابك وثلثٌ لنفَسك » — <span id="waterCount">0</span>/<span id="waterGoalCount">8</span> أكواب</div>
       </div>
     </div>
 
     <!-- ===== Column 2: intention + tasks + priorities ===== -->
     <div class="col">
-      <div class="card">
+      <div class="card" id="intentionCard">
         <h2><span class="ico">🤍</span> النية / أفعال حسنة</h2>
         <div class="hint">«إنما الأعمال بالنيات» — اكتب نيتك الصالحة لهذا اليوم</div>
         <textarea class="plain" id="intention" rows="3" placeholder="نويتُ اليوم أن..."></textarea>
       </div>
 
-      <div class="card task-card">
-        <h2><span class="ico">📝</span> مهام اليوم</h2>
+      <div class="card task-card" id="tasksCard">
+        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div>
         <div class="task-summary" id="tasksSummary" hidden></div>
         <div id="tasks"></div>
       </div>
 
-      <div class="card task-card">
+      <div class="card task-card" id="prioritiesCard">
         <h2><span class="ico">⭐</span> الأولويات</h2>
         <div class="task-summary" id="prioritiesSummary" hidden></div>
         <div id="priorities"></div>
@@ -1852,17 +2157,17 @@
 
     <!-- ===== Column 3: memory + notes + rating ===== -->
     <div class="col">
-      <div class="card">
+      <div class="card" id="memoryCard">
         <h2><span class="ico">📌</span> ذكرى اليوم</h2>
         <textarea class="plain" id="memory" rows="3" placeholder="لحظة جميلة، فائدة، موقف لا تريد نسيانه..."></textarea>
       </div>
 
-      <div class="card">
+      <div class="card" id="notesCard">
         <h2><span class="ico">🗒️</span> ملاحظات</h2>
         <textarea id="notes" rows="5" placeholder=""></textarea>
       </div>
 
-      <div class="card">
+      <div class="card" id="ratingCard">
         <h2><span class="ico">🌟</span> قيّم يومك</h2>
         <div class="stars" id="stars"></div>
         <div class="rate-label" id="rateLabel"></div>
@@ -1877,6 +2182,7 @@
     <h2><span class="ico">💰</span> المصاريف</h2>
     <div class="hint">تابع صرفك اليومي والالتزامات الشهرية والميزانيات الأسبوعية</div>
     <div class="exp-sumgrid" id="expLaunchSummary"></div>
+    <div class="exp-budget-alert" id="expBudgetAlert" hidden></div>
     <div id="expLaunchBanner" hidden></div>
     <div class="exp-launch-actions">
       <button class="exp-primary" id="expQuickAdd">＋ إضافة مصروف</button>
@@ -1884,21 +2190,69 @@
     </div>
   </section>
 
-  <!-- ===== الإحصائيات وشبكة السنة ===== -->
+  <!-- ===== الإحصائيات الموحدة ===== -->
   <section class="card stats-card" id="statsSection" hidden>
-    <h2><span class="ico">📊</span> إحصائياتك</h2>
-    <div class="stat-tiles" id="statTiles"></div>
-    <h3 class="stats-sub">شبكة السنة — كل مربع يومٌ يتلوّن حسب إنجازك</h3>
-    <div class="heatmap-wrap">
-      <div class="hm-months" id="hmMonths"></div>
-      <div id="heatmap"></div>
+    <div class="stats-head">
+      <h2><span class="ico">📊</span> إحصائياتك</h2>
+      <button type="button" class="stats-close" id="statsClose" aria-label="إغلاق الإحصائيات">✕</button>
     </div>
-    <div class="heat-legend">أقل <span class="hl l0"></span><span class="hl l1"></span><span class="hl l2"></span><span class="hl l3"></span><span class="hl l4"></span> أكثر</div>
-    <h3 class="stats-sub">نسبة الالتزام بكل صلاة</h3>
-    <div id="prayerBars"></div>
-    <h3 class="stats-sub">الرياضة والصحة</h3>
-    <div class="stat-tiles" id="sportTiles"></div>
-    <div id="weightSpark"></div>
+    <div class="stats-period-tabs" role="tablist" aria-label="فترة الإحصائيات">
+      <button type="button" class="active" role="tab" aria-selected="true" data-stats-period="week">الأسبوع</button>
+      <button type="button" role="tab" aria-selected="false" data-stats-period="month">الشهر</button>
+      <button type="button" role="tab" aria-selected="false" data-stats-period="year">السنة</button>
+    </div>
+
+    <div id="statsUnifiedView">
+      <div class="stats-range"><span id="statsRangeLabel"></span><span class="stats-compare" id="statsCompare"></span></div>
+      <div class="stats-kpis" id="statsUnifiedKpis"></div>
+      <div class="stats-panel">
+        <div class="stats-panel-title">اتجاه الإنجاز اليومي</div>
+        <div class="stats-panel-sub" id="statsTrendSubtitle"></div>
+        <div class="stats-trend-wrap"><div class="stats-trend week" id="statsTrend"></div></div>
+      </div>
+      <div class="stats-panel">
+        <div class="stats-panel-title">الالتزام حسب المجال</div>
+        <div class="stats-panel-sub">النسبة من الأهداف أو العناصر المسجلة خلال الفترة</div>
+        <div class="stats-breakdown" id="statsBreakdown"></div>
+      </div>
+      <div class="stats-insight" id="statsInsight"></div>
+      <div class="stats-review" id="statsWeeklyReview">
+        <div class="stats-review-head">
+          <div><b>مراجعة الأسبوع</b><small>حوّل الأرقام إلى خطوة واضحة للأسبوع القادم</small></div>
+          <span aria-hidden="true">📝</span>
+        </div>
+        <div class="stats-review-grid">
+          <div class="stats-review-note"><strong>أبرز إنجاز</strong><span id="statsWeeklyWin"></span></div>
+          <div class="stats-review-note"><strong>فرصة التحسين</strong><span id="statsWeeklyImprove"></span></div>
+        </div>
+        <label class="stats-goal-label" for="statsNextGoal">هدفي للأسبوع القادم</label>
+        <div class="stats-goal-row">
+          <input id="statsNextGoal" maxlength="120" placeholder="مثال: المشي ٣ مرات وإكمال ورد القرآن يوميًا">
+          <button type="button" id="statsGoalSave">حفظ الهدف</button>
+        </div>
+        <div class="stats-goal-steps" aria-label="خطوات تنفيذ الهدف">
+          <div class="stats-goal-step-plan"><input id="statsGoalStep1" class="stats-goal-step-input" maxlength="80" aria-label="خطوة التنفيذ الأولى" placeholder="الخطوة الأولى"><select id="statsGoalDay1" class="stats-goal-day" aria-label="يوم الخطوة الأولى"><option value="">أي يوم</option><option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option><option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option><option value="6">السبت</option></select></div>
+          <div class="stats-goal-step-plan"><input id="statsGoalStep2" class="stats-goal-step-input" maxlength="80" aria-label="خطوة التنفيذ الثانية" placeholder="الخطوة الثانية"><select id="statsGoalDay2" class="stats-goal-day" aria-label="يوم الخطوة الثانية"><option value="">أي يوم</option><option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option><option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option><option value="6">السبت</option></select></div>
+          <div class="stats-goal-step-plan"><input id="statsGoalStep3" class="stats-goal-step-input" maxlength="80" aria-label="خطوة التنفيذ الثالثة" placeholder="الخطوة الثالثة"><select id="statsGoalDay3" class="stats-goal-day" aria-label="يوم الخطوة الثالثة"><option value="">أي يوم</option><option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option><option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option><option value="6">السبت</option></select></div>
+        </div>
+        <div class="stats-goal-status" id="statsGoalStatus" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div id="statsYearView" hidden>
+      <div class="stat-tiles" id="statTiles"></div>
+      <h3 class="stats-sub">شبكة السنة — كل مربع يومٌ يتلوّن حسب إنجازك</h3>
+      <div class="heatmap-wrap">
+        <div class="hm-months" id="hmMonths"></div>
+        <div id="heatmap"></div>
+      </div>
+      <div class="heat-legend">أقل <span class="hl l0"></span><span class="hl l1"></span><span class="hl l2"></span><span class="hl l3"></span><span class="hl l4"></span> أكثر</div>
+      <h3 class="stats-sub">نسبة الالتزام بكل صلاة</h3>
+      <div id="prayerBars"></div>
+      <h3 class="stats-sub">الرياضة والصحة</h3>
+      <div class="stat-tiles" id="sportTiles"></div>
+      <div id="weightSpark"></div>
+    </div>
   </section>
 
   <!-- ===== شاشة الأذكار ===== -->
@@ -2356,6 +2710,7 @@
           <button class="exp-tab" data-rep="monthly">شهري</button>
           <button class="exp-tab" data-rep="yearly">سنوي</button>
         </div>
+        <div class="exp-report-tools"><input type="search" id="expSearch" placeholder="ابحث في المعاملات أو الفئات…" aria-label="البحث في المعاملات"><button type="button" id="expExportCsv">تصدير CSV</button></div>
         <div id="expReportBody"></div>
       </div>
       <div class="exp-view" id="expViewSettings" hidden>
@@ -2458,7 +2813,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ٩٨</div>
+    <div class="app-version">النسخة ٩٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -2471,6 +2826,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="sync-core.js"></script>
 <script>
 (function(){
   "use strict";
@@ -2531,20 +2887,25 @@
     if(!db || !user) return;
     wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
   }
-  function wCustomPullRemote(){
-    if(!db || !user) return;
-    wCustomDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function wCustomPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("customWorship","signedOut");
+    return syncCoordinator.runModule("customWorship","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(wCustomDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const localMeta = wCustomMeta();
+      let changed=false;
       if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
         localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
         localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
         renderWorship(); renderProgress();
-      }else if((localMeta.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (localMeta.updatedAt||0) > (remote.updatedAt||0)){
         wCustomPushRemote(wCustom(), localMeta.updatedAt);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -2599,7 +2960,9 @@
   }
 
   const TASK_COLORS = ["#0f766e","#c9a227","#b3563e","#5b7fa6","#7c6aa6","#4e8d5b"];
-  const N_TASKS = 6, N_PRIORITIES = 3, N_CUPS = 8;
+  const N_TASKS = 6, N_PRIORITIES = 3, N_CUPS_DEFAULT = 8;
+  const WATER_GOAL_KEY = "h2do-water-goal";
+  function waterGoal(){ const n=parseInt(localStorage.getItem(WATER_GOAL_KEY),10); return n>=4&&n<=16?n:N_CUPS_DEFAULT; }
 
   const RATE_LABELS = ["","يوم صعب.. غدًا أفضل بإذن الله","لا بأس، حاول أكثر","يوم جيد والحمد لله","يوم مميز ما شاء الله","يوم رائع! تقبّل الله منك 🌙"];
 
@@ -2928,7 +3291,7 @@
     const n = pendingTasks.length + pendingPr.length;
     if(!n) return;
     if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
-      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {id:newId(), text:t.text, done:false}; });
+      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {id:newId(), text:t.text, done:false, dueDate:dateStr, dueTime:t.dueTime||"", repeat:t.repeat||"none", category:t.category||"", recurrenceRootId:t.recurrenceRootId||t.id}; });
       pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {id:newId(), text:t.text, done:false}; });
     }
     ensureIds(state);   /* ضمان معرّف لكلّ عنصر قبل الحفظ */
@@ -2948,7 +3311,180 @@
   /* ---------- Firebase sync ---------- */
   let db = null, user = null;
   const syncBtn = document.getElementById("syncBtn");
+  const syncAllBtn = document.getElementById("syncAllBtn");
   const syncStatus = document.getElementById("syncStatus");
+  const syncMeta = document.getElementById("syncMeta");
+  const syncMode = document.getElementById("syncMode");
+  const syncLast = document.getElementById("syncLast");
+  const syncRetry = document.getElementById("syncRetry");
+  const GLOBAL_SYNC_AT_KEY = "h2do-last-global-sync";
+  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"];
+  const syncCoordinator = MufSyncCore.createCoordinator({moduleNames:SYNC_MODULES, debounceMs:350, throttleMs:1000});
+
+  /* أهداف أسبوعية مستقلة عن اليوم: تبقى ظاهرة طوال الأسبوع وتندمج بأحدث تعديل لكل أسبوع. */
+  const WEEKLY_GOALS_KEY = "h2do-weekly-goals-v1";
+  const WG_DAY_NAMES = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  function wgWeekStart(dateStr,offset){
+    const d=new Date(dateStr+"T12:00:00"); d.setDate(d.getDate()-d.getDay()+((offset||0)*7)); return fmtDate(d);
+  }
+  function wgNormalize(raw){
+    const out={items:{},updatedAt:+(raw&&raw.updatedAt)||0};
+    const items=raw&&raw.items&&typeof raw.items==="object"?raw.items:{};
+    Object.keys(items).forEach(key=>{
+      const item=items[key];
+      if(/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"){
+        const steps=(Array.isArray(item.steps)?item.steps:[]).slice(0,3).map((step,index)=>({
+          id:String(step&&step.id||("step"+(index+1))),text:String(step&&step.text||"").trim().slice(0,80),done:!!(step&&step.done),
+          day:step&&step.day!==""&&step.day!==null&&Number.isInteger(+step.day)&&+step.day>=0&&+step.day<=6?+step.day:null
+        })).filter(step=>step.text);
+        out.items[key]={goal:String(item.goal||"").slice(0,120),steps,done:steps.length?steps.every(step=>step.done):!!item.done,updatedAt:+item.updatedAt||0};
+      }
+    });
+    return out;
+  }
+  function wgLoad(){
+    try{ return wgNormalize(JSON.parse(localStorage.getItem(WEEKLY_GOALS_KEY)||"null")); }catch(e){ return wgNormalize(null); }
+  }
+  function wgMerge(local,remote){
+    const a=wgNormalize(local), b=wgNormalize(remote), merged={items:{},updatedAt:Math.max(a.updatedAt,b.updatedAt)};
+    new Set(Object.keys(a.items).concat(Object.keys(b.items))).forEach(key=>{
+      const left=a.items[key], right=b.items[key];
+      merged.items[key]=!right||(left&&(left.updatedAt||0)>=(right.updatedAt||0))?left:right;
+    });
+    return merged;
+  }
+  function wgDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("weeklyGoals"); }
+  function wgPushRemote(data){ if(db&&user) wgDocRef().set(JSON.parse(JSON.stringify(data))).catch(error=>{ syncCoordinator.states.weeklyGoals.lastError=error; }); }
+  function wgSave(data){
+    const normalized=wgNormalize(data); normalized.updatedAt=Date.now();
+    localStorage.setItem(WEEKLY_GOALS_KEY,JSON.stringify(normalized)); wgPushRemote(normalized);
+    if(typeof renderTodayOverview==="function") renderTodayOverview();
+    return normalized;
+  }
+  function wgSetGoal(weekStart,goal,stepPlans){
+    const data=wgLoad(), previous=data.items[weekStart]||{};
+    const cleanGoal=String(goal||"").trim().slice(0,120), oldSteps=previous.steps||[];
+    const steps=cleanGoal?(stepPlans||[]).map(plan=>({text:String(plan&&plan.text||"").trim().slice(0,80),day:plan&&plan.day!==""&&Number.isInteger(+plan.day)&&+plan.day>=0&&+plan.day<=6?+plan.day:null})).filter(plan=>plan.text).slice(0,3).map((plan,index)=>{
+      const text=plan.text;
+      const old=oldSteps.find(step=>step.text===text);
+      return {id:old?old.id:("step_"+Date.now().toString(36)+"_"+index),text,day:plan.day,done:!!(old&&old.done)};
+    }):[];
+    data.items[weekStart]={goal:cleanGoal,steps,done:steps.length?steps.every(step=>step.done):false,updatedAt:Date.now()};
+    if(!steps.length&&previous.goal===cleanGoal) data.items[weekStart].done=!!previous.done;
+    return wgSave(data);
+  }
+  function wgToggleDone(weekStart){
+    const data=wgLoad(), item=data.items[weekStart]; if(!item||!item.goal) return;
+    const done=!item.done; item.done=done; if(item.steps&&item.steps.length) item.steps.forEach(step=>{ step.done=done; });
+    item.updatedAt=Date.now(); wgSave(data);
+  }
+  function wgToggleStep(weekStart,stepId){
+    const data=wgLoad(), item=data.items[weekStart]; if(!item||!item.goal) return;
+    const step=(item.steps||[]).find(entry=>entry.id===stepId); if(!step) return;
+    step.done=!step.done; item.done=item.steps.length>0&&item.steps.every(entry=>entry.done); item.updatedAt=Date.now(); wgSave(data);
+  }
+  function wgPullRemote(options){
+    options=options||{};
+    if(!db||!user) return syncSkipped("weeklyGoals","signedOut");
+    return syncCoordinator.runModule("weeklyGoals","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(wgDocRef()), snap=read.snapshot, local=wgLoad();
+      if(!snap.exists){ if(read.source==="server"&&local.updatedAt) wgPushRemote(local); return {status:syncReadStatus(read),source:read.source,changed:false}; }
+      const remote=wgNormalize(snap.data()), merged=wgMerge(local,remote);
+      const changed=JSON.stringify(local.items)!==JSON.stringify(merged.items);
+      const remoteNeedsUpdate=JSON.stringify(remote.items)!==JSON.stringify(merged.items);
+      if(changed) localStorage.setItem(WEEKLY_GOALS_KEY,JSON.stringify(merged));
+      if(read.source==="server"&&remoteNeedsUpdate) wgPushRemote(merged);
+      if(changed&&typeof renderTodayOverview==="function") renderTodayOverview();
+      if(changed&&!document.getElementById("statsSection").hidden&&statsPeriod==="week") renderUnifiedStats("week");
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
+  }
+
+  /* قراءات Firestore: الخادم أولًا، ثم مخزّن IndexedDB المحلي عند تعذّر الشبكة فقط. */
+  async function getDocServerFirst(ref){
+    try{ return {snapshot:await ref.get({source:"server"}), source:"server"}; }
+    catch(serverError){
+      try{ return {snapshot:await ref.get({source:"cache"}), source:"cache", serverError}; }
+      catch(cacheError){ const error=new Error("Firestore document read failed"); error.serverError=serverError; error.cacheError=cacheError; throw error; }
+    }
+  }
+  async function getQueryServerFirst(query){
+    try{ return {snapshot:await query.get({source:"server"}), source:"server"}; }
+    catch(serverError){
+      try{ return {snapshot:await query.get({source:"cache"}), source:"cache", serverError}; }
+      catch(cacheError){ const error=new Error("Firestore query read failed"); error.serverError=serverError; error.cacheError=cacheError; throw error; }
+    }
+  }
+  function syncReadStatus(read){ return read.source==="cache" ? "cacheFallback" : "success"; }
+  function syncSkipped(module, reason){ return Promise.resolve({module,status:"skipped",reason,changed:false}); }
+  function globalSyncTime(){ return +(localStorage.getItem(GLOBAL_SYNC_AT_KEY)||0); }
+  function formatGlobalSyncTime(ts){
+    if(!ts) return "";
+    const d=new Date(ts), now=new Date();
+    const sameDay=d.toDateString()===now.toDateString();
+    return d.toLocaleString("ar-SA",sameDay?{hour:"numeric",minute:"2-digit"}:{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+  }
+  function renderSyncDetails(summary,running){
+    if(!syncMeta) return;
+    syncMeta.hidden=false;
+    const online=navigator.onLine!==false;
+    syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
+    if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
+    else if(!online) syncLast.textContent="تغييراتك محفوظة وستُزامن عند عودة الإنترنت";
+    else if(user&&globalSyncTime()) syncLast.textContent="آخر مزامنة سحابية: "+formatGlobalSyncTime(globalSyncTime());
+    else if(user) syncLast.textContent="لم تكتمل مزامنة سحابية بعد";
+    else syncLast.textContent="بياناتك محفوظة تلقائيًا على هذا الجهاز";
+    const retryable=!!(user&&summary&&["failed","partial","cacheFallback"].includes(summary.status));
+    syncRetry.hidden=!retryable; syncRetry.disabled=!online||running;
+    if(user) syncAllBtn.disabled=!!running;
+  }
+  function renderGlobalSyncStatus(summary, running){
+    if(!syncStatus) return;
+    if(summary&&summary.status==="success"&&navigator.onLine!==false) localStorage.setItem(GLOBAL_SYNC_AT_KEY,String(Date.now()));
+    renderSyncDetails(summary,running);
+    if(!user){ syncStatus.textContent="الحفظ المحلي مفعّل — سجّل الدخول للمزامنة بين أجهزتك"; return; }
+    if(running){ syncStatus.textContent="🔄 جارٍ مزامنة جميع البيانات"; return; }
+    if(navigator.onLine===false && (!summary || summary.status!=="success")){
+      syncStatus.textContent="📴 بانتظار الاتصال"; return;
+    }
+    if(!summary){ syncStatus.textContent="☁️ المزامنة مفعّلة — "+(user.displayName||user.email||""); return; }
+    if(summary.status==="success") syncStatus.textContent="☁️ تمت مزامنة جميع البيانات";
+    else if(summary.status==="partial" || summary.status==="cacheFallback") syncStatus.textContent="⚠️ تمت مزامنة بعض الأقسام";
+    else if(summary.status==="failed") syncStatus.textContent="⚠️ تعذّرت المزامنة";
+    else syncStatus.textContent="☁️ لا توجد تحديثات جديدة";
+  }
+
+  function syncPullAllModules(trigger, options){
+    options=Object.assign({forceServer:true},options||{});
+    if(!db || !user) return Promise.resolve(syncCoordinator.summarize(SYNC_MODULES.map(m=>({module:m,status:"skipped",reason:"signedOut"}))));
+    renderGlobalSyncStatus(null,true);
+    const pullers={
+      daily:o=>pullRemote(currentDate,Object.assign({},o,{trigger})),
+      quran:o=>qPullRemote(Object.assign({},o,{trigger})),
+      customWorship:o=>wCustomPullRemote(Object.assign({},o,{trigger})),
+      witr:o=>witrPullRemote(Object.assign({},o,{trigger})),
+      hifz:o=>hifzPullRemote(Object.assign({},o,{trigger})),
+      expenses:o=>expPullRemote(Object.assign({},o,{trigger})),
+      weeklyGoals:o=>wgPullRemote(Object.assign({},o,{trigger}))
+    };
+    return syncCoordinator.syncAll(trigger,options,pullers).then(summary=>{
+      renderGlobalSyncStatus(summary,false);
+      if(summary.status==="failed" || summary.status==="partial") console.warn("Mufakkirati sync summary",summary);
+      return summary;
+    }).catch(error=>{
+      const summary={status:"failed",error,results:[]}; renderGlobalSyncStatus(summary,false); return summary;
+    });
+  }
+  function triggerGlobalForegroundSync(trigger){
+    return syncCoordinator.triggerDebounced(trigger,t=>syncPullAllModules(t,{forceServer:true}));
+  }
+  function registerGlobalSyncLifecycle(){
+    document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("visibilitychange"); });
+    window.addEventListener("focus",()=>triggerGlobalForegroundSync("focus"));
+    window.addEventListener("pageshow",()=>triggerGlobalForegroundSync("pageshow"));
+    window.addEventListener("online",()=>{ expRenderSyncRow(); triggerGlobalForegroundSync("online"); });
+    window.addEventListener("offline",()=>{ expRenderSyncRow(); renderGlobalSyncStatus(null,false); });
+  }
 
   function initFirebase(){
     if(!FIREBASE_CONFIG.apiKey || typeof firebase === "undefined") return;
@@ -2973,6 +3509,7 @@
       try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(_){}
     }
     syncBtn.hidden = false;
+    syncAllBtn.hidden = false;
     syncBtn.onclick = ()=>{
       if(user){
         firebase.auth().signOut();
@@ -2981,20 +3518,19 @@
           .catch(e=>alert("تعذر تسجيل الدخول: "+e.message));
       }
     };
+    syncAllBtn.onclick = ()=> syncPullAllModules("manual",{forceServer:true,bypassThrottle:true});
+    syncRetry.onclick = ()=> syncPullAllModules("retry",{forceServer:true,bypassThrottle:true});
     firebase.auth().onAuthStateChanged(u=>{
       user = u;
       if(u){
         syncBtn.textContent = "تسجيل الخروج";
-        syncStatus.textContent = "☁️ المزامنة مفعّلة — "+(u.displayName||u.email||"");
-        pullRemote(currentDate);
-        qPullRemote();
-        wCustomPullRemote();
-        witrPullRemote();
-        hifzPullRemote();
-        expPullRemote();
+        syncAllBtn.disabled = false;
+        renderGlobalSyncStatus(null,false);
+        syncPullAllModules("auth",{forceServer:true,bypassThrottle:true});
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
-        syncStatus.textContent = "";
+        syncAllBtn.disabled = true;
+        renderGlobalSyncStatus(null,false);
       }
     });
   }
@@ -3006,27 +3542,31 @@
   function pushRemote(date, data){
     if(!db || !user) return;
     dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .then(()=>{ syncStatus.textContent = "☁️ تمت المزامنة"; })
-      .catch(()=>{ syncStatus.textContent = "⚠️ تعذرت المزامنة (تحقق من الاتصال)"; });
+      .catch(error=>{ syncCoordinator.states.daily.lastError=error; });
   }
 
-  function pullRemote(date){
-    if(!db || !user) return;
-    dayRef(date).get().then(snap=>{
-      if(date !== currentDate) return;
+  function pullRemote(date, options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("daily","signedOut");
+    return syncCoordinator.runModule("daily",date,options.trigger,options,async()=>{
+      const read=await getDocServerFirst(dayRef(date)), snap=read.snapshot;
+      if(date !== currentDate) return {status:syncReadStatus(read),source:read.source,changed:false,reason:"dateChanged"};
+      let changed=false;
       if(snap.exists){
         const remote = snap.data();
         if((remote.updatedAt||0) > (state.updatedAt||0)){
           state = Object.assign(blankState(), remote);
           localStorage.setItem(storageKey(date), JSON.stringify(state));
           renderAll();
-        }else if((state.updatedAt||0) > (remote.updatedAt||0)){
+          changed=true;
+        }else if(read.source==="server" && (state.updatedAt||0) > (remote.updatedAt||0)){
           pushRemote(date, state);
         }
-      }else if(state.updatedAt){
+      }else if(read.source==="server" && state.updatedAt){
         pushRemote(date, state);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3046,6 +3586,7 @@
     q.updatedAt = Date.now();
     localStorage.setItem(QURAN_KEY, JSON.stringify(q));
     qPushRemote(q);
+    if(typeof renderTodayOverview === "function") renderTodayOverview();
   }
   function qPageUrl(n){
     return "https://qurangharhira.com/qy/qghhahp"+String(n).padStart(3,"0")+".html";
@@ -3057,22 +3598,28 @@
     if(!db || !user) return;
     qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
   }
-  function qPullRemote(){
-    if(!db || !user) return;
-    qDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function qPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("quran","signedOut");
+    return syncCoordinator.runModule("quran","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(qDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const local = qLoad();
+      let changed=false;
       if((remote.updatedAt||0) > (local.updatedAt||0)){
         const merged = Object.assign({}, remote);
         if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
         localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
         renderWorship();
+        renderTodayOverview();
         if(!quranOverlay.hidden) qRenderOverlay();
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
         qPushRemote(local);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -3711,18 +4258,23 @@
     if(!db || !user) return;
     witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
   }
-  function witrPullRemote(){
-    if(!db || !user) return;
-    witrDocRef().get().then(snap=>{
-      if(!snap.exists) return;
+  function witrPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("witr","signedOut");
+    return syncCoordinator.runModule("witr","default",options.trigger,options,async()=>{
+      const read=await getDocServerFirst(witrDocRef()), snap=read.snapshot;
+      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
       const remote = snap.data();
       const local = witrMeta();
+      let changed=false;
       if((remote.updatedAt||0) > (local.updatedAt||0)){
         localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-      }else if((local.updatedAt||0) > (remote.updatedAt||0)){
+        changed=true;
+      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
         witrPushRemote(local);
       }
-    }).catch(()=>{});
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -4863,32 +5415,39 @@
     hifzDeleteSegmentRemote(segmentId);
   }
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
-  function hifzPullRemote(){
-    if(!db || !user) return;
-    db.collection("users").doc(user.uid).collection("hifzSegments").get().then(snap=>{
+  function hifzPullRemote(options){
+    options=options||{};
+    if(!db || !user) return syncSkipped("hifz","signedOut");
+    return syncCoordinator.runModule("hifz","default",options.trigger,options,async()=>{
+      const query=db.collection("users").doc(user.uid).collection("hifzSegments");
+      const read=await getQueryServerFirst(query), snap=read.snapshot;
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
-      if(!remoteSegs.length) return;
+      if(!remoteSegs.length) return {status:syncReadStatus(read),source:read.source,changed:false};
       const data = hifzData();
       const byId = {};
       data.segments.forEach(s=> byId[s.id] = s);
+      let changed=false;
       remoteSegs.forEach(rs=>{
         const ls = byId[rs.id];
-        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
+        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)){ byId[rs.id] = rs; changed=true; }
       });
-      data.segments = Object.values(byId);
-      hifzSaveLocal(data);
-      renderHifzCard();
-    }).catch(()=>{});
+      if(changed){
+        data.segments = Object.values(byId);
+        localStorage.setItem(HIFZ_KEY, JSON.stringify(data));
+        renderHifzCard();
+      }
+      return {status:syncReadStatus(read),source:read.source,changed};
+    });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
   function hifzFetchDueTodayFromFirestore(){
     if(!db || !user) return Promise.resolve([]);
-    return db.collection("users").doc(user.uid).collection("hifzSegments")
-      .where("nextReviewDate", "<=", hifzToday())
-      .get()
-      .then(snap=>{ const out=[]; snap.forEach(d=> out.push(d.data())); return out; })
+    const query=db.collection("users").doc(user.uid).collection("hifzSegments")
+      .where("nextReviewDate", "<=", hifzToday());
+    return getQueryServerFirst(query)
+      .then(read=>{ const out=[]; read.snapshot.forEach(d=> out.push(d.data())); return out; })
       .catch(()=> []);
   }
 
@@ -6302,13 +6861,16 @@
     box.innerHTML = "";
     PRAYERS.forEach((name,i)=>{
       const v = pval(state.prayers[i]);
-      const div = document.createElement("div");
+      const div = document.createElement("button");
+      div.type = "button";
       div.className = "prayer" + PSTATE[v].cls;
       if(nextKey && PRAYER_KEYS[i] === nextKey && !v) div.classList.add("next");
       const t = getTime(PRAYER_KEYS[i]);
       div.innerHTML = '<span class="pmark">'+PSTATE[v].mark+'</span>'+name
         + (t ? '<span class="ptime">'+fmt12(t)+'</span>' : '');
       div.title = v==="ontime" ? "في وقتها" : v==="late" ? "متأخرة" : v==="missed" ? "فاتت" : "اضغط للتسجيل";
+      div.setAttribute("aria-label", name+": "+div.title);
+      div.setAttribute("aria-pressed", isPrayed(v) ? "true" : "false");
       div.onclick = ()=>{
         const next = PCYCLE[(PCYCLE.indexOf(v)+1) % PCYCLE.length];
         state.prayers[i] = next === "" ? false : next;
@@ -6872,10 +7434,14 @@
   function renderWater(){
     const box = document.getElementById("water");
     box.innerHTML = "";
-    for(let i=0;i<N_CUPS;i++){
-      const cup = document.createElement("div");
+    const goal=waterGoal();
+    for(let i=0;i<goal;i++){
+      const cup = document.createElement("button");
+      cup.type = "button";
       cup.className = "cup"+(i<state.water?" full":"");
       cup.title = "كوب "+(i+1);
+      cup.setAttribute("aria-label", "تسجيل "+cup.title);
+      cup.setAttribute("aria-pressed", i<state.water ? "true" : "false");
       cup.onclick = ()=>{
         state.water = (i+1===state.water) ? i : i+1;
         save(); renderWater(); renderProgress();
@@ -6883,6 +7449,7 @@
       box.appendChild(cup);
     }
     document.getElementById("waterCount").textContent = state.water;
+    document.getElementById("waterGoalCount").textContent = goal;
   }
 
   /* وضع «إضافة صفّ» المؤقّت لكل قائمة (لا يُخزَّن) — القائمتان مستقلّتان تمامًا بلا أي مزامنة */
@@ -6943,6 +7510,57 @@
     menu.style.left = Math.round(left) + "px";
     menu.style.top = Math.round(top) + "px";
     document.addEventListener("keydown", onKey);
+  }
+  const TASK_CATEGORIES = ["شخصي","عمل","عبادة","صحة","تعلم","منزل","أخرى"];
+  function taskMetaText(item){
+    const parts=[];
+    if(item.dueDate) parts.push("📅 "+item.dueDate);
+    if(item.dueTime) parts.push("🕐 "+item.dueTime);
+    if(item.repeat==="daily") parts.push("↻ يوميًا");
+    if(item.repeat==="weekly") parts.push("↻ أسبوعيًا");
+    if(item.category) parts.push("# "+item.category);
+    return parts;
+  }
+  function taskSheet(title, bodyHtml){
+    const over=document.createElement("div"); over.className="task-sheet-overlay"; over.setAttribute("role","dialog"); over.setAttribute("aria-modal","true"); over.setAttribute("aria-label",title);
+    over.innerHTML='<div class="task-sheet"><div class="task-sheet-head"><h3>'+title+'</h3><button type="button" class="task-sheet-close" aria-label="إغلاق">✕</button></div>'+bodyHtml+'</div>';
+    const close=()=>{ document.removeEventListener("keydown",key); over.remove(); };
+    const key=e=>{ if(e.key==="Escape") close(); };
+    over.querySelector(".task-sheet-close").onclick=close;
+    over.onclick=e=>{ if(e.target===over) close(); };
+    document.addEventListener("keydown",key); document.body.appendChild(over);
+    return {over,close};
+  }
+  function taskOpenMeta(item, rerender){
+    const cats=TASK_CATEGORIES.map(c=>'<option value="'+c+'"'+(item.category===c?' selected':'')+'>'+c+'</option>').join("");
+    const sheet=taskSheet("تفاصيل المهمة",'<div class="task-fields"><label>التاريخ<input id="tmDate" type="date" value="'+(item.dueDate||"")+'"></label><label>الوقت<input id="tmTime" type="time" value="'+(item.dueTime||"")+'"></label><label>التكرار<select id="tmRepeat"><option value="none">بدون تكرار</option><option value="daily"'+(item.repeat==="daily"?' selected':'')+'>يومي</option><option value="weekly"'+(item.repeat==="weekly"?' selected':'')+'>أسبوعي</option></select></label><label>التصنيف<select id="tmCategory"><option value="">بدون تصنيف</option>'+cats+'</select></label></div><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
+    sheet.over.querySelector("#tmSave").onclick=()=>{
+      item.dueDate=sheet.over.querySelector("#tmDate").value||""; item.dueTime=sheet.over.querySelector("#tmTime").value||"";
+      item.repeat=sheet.over.querySelector("#tmRepeat").value; item.category=sheet.over.querySelector("#tmCategory").value||"";
+      if(item.repeat==="none") delete item.recurrenceRootId;
+      save(); sheet.close(); rerender();
+    };
+    sheet.over.querySelector("#tmDate").focus();
+  }
+  function taskHistoryOpen(){
+    const sheet=taskSheet("البحث في المهام السابقة",'<input class="task-history-search" id="taskHistorySearch" type="search" placeholder="اكتب اسم المهمة أو التصنيف…"><div class="task-history-list" id="taskHistoryList"></div>');
+    const rows=[];
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i)||""; if(!key.startsWith("h2do-tracker:")) continue;
+      try{ const day=JSON.parse(localStorage.getItem(key)); (day.tasks||[]).filter(itemFilled).forEach(t=>rows.push({date:key.slice("h2do-tracker:".length),text:t.text||"",category:t.category||"",done:!!t.done})); }catch(e){}
+    }
+    rows.sort((a,b)=>a.date<b.date?1:-1);
+    const input=sheet.over.querySelector("#taskHistorySearch"), list=sheet.over.querySelector("#taskHistoryList");
+    const render=()=>{ const q=input.value.trim().toLowerCase(); const found=rows.filter(r=>!q||(r.text+" "+r.category+" "+r.date).toLowerCase().includes(q)).slice(0,80); list.innerHTML=found.length?found.map(r=>'<button type="button" class="task-history-item" data-date="'+r.date+'">'+(r.done?'✅ ':'○ ')+expEsc(r.text)+'<small>'+r.date+(r.category?' · '+expEsc(r.category):'')+'</small></button>').join(""):'<div class="task-history-empty">لا توجد نتائج.</div>'; list.querySelectorAll("[data-date]").forEach(b=>b.onclick=()=>{ const d=b.dataset.date; sheet.close(); goto(d); }); };
+    input.oninput=render; render(); input.focus();
+  }
+  function seedRecurringTasks(dateStr){
+    const candidates=[];
+    const addFrom=(days,kind)=>{ const d=new Date(dateStr+"T12:00:00"); d.setDate(d.getDate()-days); try{ const old=JSON.parse(localStorage.getItem(storageKey(fmtDate(d)))||"null"); (old&&old.tasks||[]).filter(t=>itemFilled(t)&&t.repeat===kind).forEach(t=>candidates.push(t)); }catch(e){} };
+    addFrom(1,"daily"); addFrom(7,"weekly");
+    let changed=false;
+    candidates.forEach(src=>{ const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,dueDate:dateStr,dueTime:src.dueTime||"",repeat:src.repeat,category:src.category||"",recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
+    if(changed) localStorage.setItem(storageKey(dateStr),JSON.stringify(state));
   }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
@@ -7016,9 +7634,11 @@
       row.className = "task-row"+(item.done?" done":"");
       row.dataset.idx = String(idx);
       const handle = mkHandle();
-      const chk = document.createElement("span");
+      const chk = document.createElement("button");
+      chk.type = "button";
       chk.className = "chk"+(item.done?" on":"");
       chk.textContent = "✔";
+      chk.setAttribute("aria-label",item.done?"إعادة فتح المهمة":"إكمال المهمة"); chk.setAttribute("aria-pressed",String(!!item.done));
       chk.onclick = ()=>{ item.done = !item.done; save(); rerender(); };  /* المهام: rerender=القائمتان معًا لتحديث الأولويات المرتبطة */
       const input = document.createElement("input");
       input.type = "text";
@@ -7055,8 +7675,10 @@
       const flag = document.createElement("span");
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
-      if(handle){ row.append(handle, chk, input, flag); wireDrag(handle, row); }
-      else row.append(chk, input, flag);
+      const metaBtn=document.createElement("button"); metaBtn.type="button"; metaBtn.className="task-meta-btn"; metaBtn.textContent="⋯"; metaBtn.title="تاريخ ووقت وتكرار وتصنيف"; metaBtn.setAttribute("aria-label","تفاصيل المهمة"); metaBtn.onclick=()=>taskOpenMeta(item,rerender);
+      if(handle){ row.append(handle, chk, input, metaBtn, flag); wireDrag(handle, row); }
+      else row.append(chk, input, metaBtn, flag);
+      const metaParts=taskMetaText(item); if(metaParts.length){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join(""); row.appendChild(meta); }
       box.appendChild(row);
     };
     /* صفّ أولوية مرتبطة مبسّط: ☐ العنوان 🔗 — النقر على 🔗 يفكّ الربط بعد تأكيد خفيف؛
@@ -7069,9 +7691,11 @@
       row.className = "task-row linked"+(done?" done":"");
       row.dataset.idx = String(idx);
       const handle = mkHandle();
-      const chk = document.createElement("span");
+      const chk = document.createElement("button");
+      chk.type = "button";
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
+      chk.setAttribute("aria-label",done?"إعادة فتح المهمة المرتبطة":"إكمال المهمة المرتبطة"); chk.setAttribute("aria-pressed",String(done));
       chk.onclick = ()=>{ if(src){ src.done = !src.done; } else { item.done = !item.done; } save(); rerenderBoth(); };  /* إكمال الأولوية المرتبطة يُبدّل حالة المهمة الأصلية */
       const wrap = document.createElement("div");
       wrap.className = "task-linkwrap";
@@ -7232,13 +7856,92 @@
     const box = document.getElementById("stars");
     box.innerHTML = "";
     for(let i=1;i<=5;i++){
-      const s = document.createElement("span");
+      const s = document.createElement("button");
+      s.type = "button";
       s.className = "star"+(i<=state.rating?" lit":"");
       s.textContent = "★";
+      s.setAttribute("aria-label", "تقييم اليوم "+i+" من 5");
+      s.setAttribute("aria-pressed", state.rating===i ? "true" : "false");
       s.onclick = ()=>{ state.rating = (state.rating===i)?0:i; save(); renderStars(); };
       box.appendChild(s);
     }
     document.getElementById("rateLabel").textContent = RATE_LABELS[state.rating]||"";
+  }
+
+  function renderWeeklyGoalBanner(){
+    const banner=document.getElementById("weeklyGoalBanner"); if(!banner) return;
+    const data=wgLoad(), currentKey=wgWeekStart(currentDate,0), nextKey=wgWeekStart(currentDate,1);
+    const current=data.items[currentKey], next=data.items[nextKey];
+    const viewingCurrentWeek=currentKey===wgWeekStart(todayStr(),0);
+    const item=current&&current.goal?current:(viewingCurrentWeek&&next&&next.goal?next:null);
+    const stepsBox=document.getElementById("weeklyGoalSteps"); stepsBox.innerHTML="";
+    if(!item){ banner.hidden=true; return; }
+    const preview=item===next, label=document.getElementById("weeklyGoalLabel"), button=document.getElementById("weeklyGoalDone"), steps=item.steps||[];
+    banner.hidden=false; banner.classList.toggle("done",!preview&&item.done);
+    document.getElementById("weeklyGoalText").textContent=item.goal;
+    steps.forEach(step=>{
+      const control=document.createElement("button"); control.type="button"; control.className="weekly-goal-step"; control.disabled=preview;
+      const matchesSelectedDay=!preview&&step.day===new Date(currentDate+"T12:00:00").getDay(), dueToday=matchesSelectedDay&&currentDate===todayStr();
+      if(matchesSelectedDay) control.classList.add("today");
+      const dayLabel=Number.isInteger(step.day)?(matchesSelectedDay?(dueToday?"اليوم":"هذا اليوم"):WG_DAY_NAMES[step.day]):"";
+      control.setAttribute("aria-pressed",step.done?"true":"false"); control.setAttribute("aria-label",step.text+(dayLabel?" — "+dayLabel:"")+(step.done?" — مكتملة":" — غير مكتملة"));
+      const mark=document.createElement("span"); mark.textContent=step.done?"✓":"○";
+      const text=document.createElement("span"); text.className="weekly-goal-step-text"; text.textContent=step.text; control.append(mark,text);
+      if(dayLabel){ const day=document.createElement("span"); day.className="weekly-goal-step-day"; day.textContent=dayLabel; control.appendChild(day); }
+      if(!preview) control.onclick=()=>wgToggleStep(currentKey,step.id);
+      stepsBox.appendChild(control);
+    });
+    const doneSteps=steps.filter(step=>step.done).length, progress=steps.length?" · "+doneSteps.toLocaleString("ar-EG")+" / "+steps.length.toLocaleString("ar-EG")+" خطوات":"";
+    if(preview){
+      const starts=new Date(nextKey+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"short"});
+      label.textContent="هدف الأسبوع القادم · يبدأ "+starts+progress; button.textContent="يبدأ الأسبوع القادم"; button.disabled=true; button.setAttribute("aria-pressed","false"); button.onclick=null;
+    }else{
+      label.textContent=(item.done?"هدف هذا الأسبوع · مكتمل":"هدف هذا الأسبوع")+progress;
+      button.disabled=false; button.textContent=item.done?"إعادة فتح الهدف":(steps.length?"إكمال كل الخطوات":"تحديد كمكتمل"); button.setAttribute("aria-pressed",item.done?"true":"false"); button.onclick=()=>wgToggleDone(currentKey);
+    }
+  }
+
+  function renderTodayOverview(){
+    if(!state || !document.getElementById("todayOverviewTitle")) return;
+    const ar = n=>Number(n||0).toLocaleString("ar-EG");
+    const pct = (part,total)=> total ? Math.min(100,Math.round(part/total*100)) : 0;
+    const setMetric = (name,part,total)=>{
+      document.getElementById("today"+name+"Value").textContent = ar(part)+" / "+ar(total);
+      document.getElementById("today"+name+"Bar").style.width = pct(part,total)+"%";
+    };
+
+    const prayerDone = state.prayers.filter(isPrayed).length;
+    const tasks = (state.tasks||[]).filter(itemFilled);
+    const priorities = (state.priorities||[]).filter(itemFilled);
+    const taskDone = tasks.filter(t=>itemDone(t)).length + priorities.filter(p=>itemDone(p)).length;
+    const taskTotal = tasks.length + priorities.length;
+    const q = qLoad();
+    const qRead = Math.max(0,q.page-q.startPage);
+    setMetric("Prayer",prayerDone,PRAYERS.length);
+    setMetric("Task",taskDone,taskTotal);
+    setMetric("Quran",qRead,q.target);
+    setMetric("Water",state.water,waterGoal());
+
+    const viewingToday = currentDate === todayStr();
+    document.getElementById("todayOverviewTitle").firstChild.nodeValue = viewingToday ? "ملخص اليوم " : "ملخص اليوم المحدد ";
+    document.getElementById("todayOverviewDate").textContent = new Date(currentDate+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
+    const focus = document.getElementById("todayFocus");
+    const pendingPriority = priorities.find(p=>!itemDone(p));
+    const nextPrayerIndex = state.prayers.findIndex(v=>!isPrayed(v));
+    if(pendingPriority) focus.textContent = "🎯 تركيزك التالي: "+itemText(pendingPriority);
+    else if(nextPrayerIndex>=0) focus.textContent = "🕌 التالي: تسجيل صلاة "+PRAYERS[nextPrayerIndex];
+    else if(qRead<q.target) focus.textContent = "📖 بقي "+ar(q.target-qRead)+" صفحات لإتمام ورد القرآن";
+    else if(state.water<waterGoal()) focus.textContent = "💧 بقي "+ar(waterGoal()-state.water)+" أكواب لإتمام هدف الماء";
+    else focus.textContent = "✨ أنجزت أساسيات يومك — أحسنت وبارك الله في وقتك";
+    const priorityHost=document.getElementById("todayPriorityItems"); priorityHost.innerHTML="";
+    const pendingPriorityItems=priorities.filter(p=>!itemDone(p)).slice(0,3);
+    const fallbackTasks=tasks.filter(t=>!itemDone(t)).slice(0,Math.max(0,3-pendingPriorityItems.length));
+    const highlights=pendingPriorityItems.map(p=>itemText(p)).concat(fallbackTasks.map(t=>itemText(t)));
+    if(highlights.length) highlights.forEach(text=>{ const chip=document.createElement("span"); chip.className="today-priority-chip"; chip.textContent=text; priorityHost.appendChild(chip); });
+    else{ const chip=document.createElement("span"); chip.className="today-priority-chip"; chip.textContent="لا توجد أولويات معلّقة"; priorityHost.appendChild(chip); }
+    const remaining=state.prayers.filter(v=>!isPrayed(v)).length+tasks.filter(t=>!itemDone(t)).length+priorities.filter(p=>!itemDone(p)).length+(qRead<q.target?1:0)+(state.water<waterGoal()?1:0);
+    document.getElementById("todayRemaining").textContent="المتبقي اليوم: "+ar(remaining)+" عناصر";
+    renderWeeklyGoalBanner();
   }
 
   function renderProgress(){
@@ -7246,7 +7949,7 @@
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
     const ibItems = wAllItems();
     total += ibItems.length; done += ibItems.filter(w=>!!state.worship[w.id]).length;
-    total += 1; if(state.water >= N_CUPS) done += 1;
+    total += 1; if(state.water >= waterGoal()) done += 1;
     total += 1; if(sportDone(state)) done += 1;
     const filledTasks = state.tasks.filter(t=>t.text.trim());
     total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
@@ -7256,6 +7959,7 @@
     const C = 163.36;
     document.getElementById("ringFg").style.strokeDashoffset = C * (1 - pct/100);
     document.getElementById("ringText").textContent = pct+"%";
+    renderTodayOverview();
     updateStreak();
   }
 
@@ -7298,7 +8002,7 @@
     const wsh = s.worship || {};
     const ibAll = wAllItems();
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
-    total += 1; if((s.water || 0) >= N_CUPS) done += 1;
+    total += 1; if((s.water || 0) >= waterGoal()) done += 1;
     total += 1; if(sportDone(s)) done += 1;
     const ft = (s.tasks || []).filter(t=>t && t.text && t.text.trim());
     total += ft.length; done += ft.filter(t=>t.done).length;
@@ -7327,6 +8031,144 @@
     if(pr.length > 5) return pval(pr[idx]);
     const map = {0:0, 2:1, 3:2, 4:3, 5:4};
     return idx === 1 ? "" : pval(pr[map[idx]]);
+  }
+
+  let statsPeriod = "week";
+  function statsSeries(days,count,offset){
+    offset=offset||0;
+    const end=new Date(todayStr()+"T12:00:00"); end.setDate(end.getDate()-offset);
+    const start=new Date(end); start.setDate(start.getDate()-count+1);
+    const rows=[];
+    for(let i=0;i<count;i++){
+      const d=new Date(start); d.setDate(d.getDate()+i);
+      const key=fmtDate(d); rows.push({key,date:d,state:days[key]||null,pct:days[key]?dayPct(days[key]):0});
+    }
+    return rows;
+  }
+  function statsSportMinutes(s){
+    const mins=(s&&s.sport&&+s.sport.mins)||0;
+    return mins>0?mins:((s&&s.worship&&s.worship.sport)?sportGoal():0);
+  }
+  function statsPeriodMetrics(rows){
+    const observed=rows.filter(r=>!!r.state), n=observed.length;
+    let prayerDone=0, prayerTotal=n*FARD_IDX.length;
+    let taskDone=0, taskTotal=0, worshipDone=0, worshipTotal=0;
+    let sportActive=0, sportGoalDays=0, sportMinutes=0, waterDays=0, quranDays=0;
+    const ibItems=ibOnlyItems();
+    observed.forEach(r=>{
+      const s=r.state||{}, prayers=s.prayers||[];
+      FARD_IDX.forEach(i=>{ if(isPrayed(prayerVal(prayers,i))) prayerDone++; });
+      const tasks=(s.tasks||[]).filter(t=>t&&t.text&&t.text.trim());
+      const priorities=(s.priorities||[]).filter(p=>p&&(p.sourceTaskId||(p.text&&p.text.trim())));
+      taskTotal+=tasks.length+priorities.length;
+      taskDone+=tasks.filter(t=>t.done).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
+      worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
+      const mins=statsSportMinutes(s); sportMinutes+=mins; if(mins>0)sportActive++; if(sportDone(s))sportGoalDays++;
+      if((s.water||0)>=waterGoal()) waterDays++;
+      if(s.worship&&s.worship.werd) quranDays++;
+    });
+    const ratio=(a,b)=>b?Math.round(a/b*100):0;
+    return {
+      observed:n, overall:n?Math.round(observed.reduce((a,r)=>a+r.pct,0)/n):0,
+      prayerDone,prayerTotal,prayerPct:ratio(prayerDone,prayerTotal),
+      taskDone,taskTotal,taskPct:ratio(taskDone,taskTotal),
+      worshipDone,worshipTotal,worshipPct:ratio(worshipDone,worshipTotal),
+      sportActive,sportGoalDays,sportMinutes,sportPct:ratio(sportGoalDays,n),
+      waterDays,waterPct:ratio(waterDays,n),quranDays,quranPct:ratio(quranDays,n)
+    };
+  }
+  function statsReviewRecord(){
+    const target=wgWeekStart(todayStr(),1), saved=wgLoad().items[target];
+    if(saved) return saved;
+    /* توافق مؤقت مع هدف المرحلة السابقة المحفوظ داخل سجل اليوم. */
+    if(currentDate===todayStr()&&state&&state.weeklyReview) return state.weeklyReview;
+    try{ const daily=JSON.parse(localStorage.getItem(storageKey(todayStr()))||"null"); return (daily&&daily.weeklyReview)||{}; }catch(e){ return {}; }
+  }
+  function statsRenderWeeklyReview(cur,metrics){
+    const review=document.getElementById("statsWeeklyReview"), win=document.getElementById("statsWeeklyWin"), improve=document.getElementById("statsWeeklyImprove");
+    review.hidden=false;
+    const available=metrics.filter(m=>m.den>0).sort((a,b)=>b.value-a.value);
+    if(!cur.observed){
+      win.textContent="سجّل أيامك لتظهر هنا أبرز نقطة قوة في أسبوعك.";
+      improve.textContent="ابدأ بعادة واحدة صغيرة، ثم راقب ثباتها خلال الأيام السبعة.";
+    }else{
+      const strongest=available[0], weakest=available[available.length-1];
+      win.textContent=strongest&&strongest.value>0?strongest.name+" كان أقوى مجالاتك بنسبة "+strongest.value.toLocaleString("ar-EG")+"٪.":"بدأت بتسجيل أسبوعك؛ الاستمرار في التسجيل هو أول إنجاز قابل للقياس.";
+      improve.textContent=weakest?weakest.name+" هو أقرب مجال للتحسين عند "+weakest.value.toLocaleString("ar-EG")+"٪.":"أضف مهامًا أو أهدافًا قابلة للقياس لتظهر فرصة التحسين بدقة.";
+    }
+    const saved=statsReviewRecord(), input=document.getElementById("statsNextGoal");
+    input.value=saved.goal||"";
+    document.querySelectorAll(".stats-goal-step-plan").forEach((row,index)=>{
+      const step=saved.steps&&saved.steps[index]; row.querySelector("input").value=(step&&step.text)||""; row.querySelector("select").value=step&&Number.isInteger(step.day)?String(step.day):"";
+    });
+    document.getElementById("statsGoalStatus").textContent=saved.goal?"محفوظ للأسبوع القادم وسيظهر في ملخصك اليومي عند بدايته.":"";
+  }
+  function statsSaveWeeklyGoal(){
+    const input=document.getElementById("statsNextGoal"), goal=input.value.trim(), status=document.getElementById("statsGoalStatus");
+    const steps=Array.from(document.querySelectorAll(".stats-goal-step-plan")).map(row=>({text:row.querySelector("input").value,day:row.querySelector("select").value}));
+    const target=wgWeekStart(todayStr(),1); wgSetGoal(target,goal,steps);
+    status.textContent=goal?"تم حفظ هدف الأسبوع القادم وخطواته ✓ وسيظهر في ملخصك عند بداية الأسبوع.":"تم مسح الهدف المحفوظ.";
+  }
+  function renderUnifiedStats(period){
+    const days=allDays(), count=period==="month"?30:7;
+    const rows=statsSeries(days,count,0), previous=statsSeries(days,count,count);
+    const cur=statsPeriodMetrics(rows), prev=statsPeriodMetrics(previous);
+    const ar=n=>Number(n||0).toLocaleString("ar-EG");
+    const f=d=>d.toLocaleDateString("ar",{day:"numeric",month:"short"});
+    document.getElementById("statsRangeLabel").textContent=(period==="month"?"آخر ٣٠ يومًا":"آخر ٧ أيام")+" · "+f(rows[0].date)+" – "+f(rows[rows.length-1].date)+" · "+ar(cur.observed)+" أيام مسجلة";
+    const cmp=document.getElementById("statsCompare"); cmp.className="stats-compare";
+    if(!prev.observed) cmp.textContent="لا توجد فترة سابقة للمقارنة";
+    else{
+      const diff=cur.overall-prev.overall;
+      cmp.textContent=diff>0?"↑ "+ar(diff)+"٪ عن الفترة السابقة":diff<0?"↓ "+ar(Math.abs(diff))+"٪ عن الفترة السابقة":"مماثل للفترة السابقة";
+      if(diff<0) cmp.classList.add("down");
+    }
+    const kpis=[
+      [ar(cur.overall)+"٪","متوسط الإنجاز"],
+      [ar(cur.prayerPct)+"٪","الصلوات المفروضة"],
+      [cur.taskTotal?ar(cur.taskPct)+"٪":"—","المهام والأولويات"],
+      [ar(cur.sportMinutes)+" د","دقائق الرياضة"],
+      [ar(cur.waterDays)+" / "+ar(cur.observed),"أيام هدف الماء"],
+      [ar(cur.quranDays)+" / "+ar(cur.observed),"أيام ورد القرآن"]
+    ];
+    document.getElementById("statsUnifiedKpis").innerHTML=kpis.map(k=>'<div class="stats-kpi"><b>'+k[0]+'</b><small>'+k[1]+'</small></div>').join("");
+    const trend=document.getElementById("statsTrend"); trend.className="stats-trend "+period; trend.innerHTML="";
+    rows.forEach((r,i)=>{
+      const item=document.createElement("div"); item.className="stats-day"+(r.state?"":" empty");
+      const bar=document.createElement("i"); bar.className="stats-day-bar"; bar.style.height=(r.state?Math.max(4,r.pct):4)+"%"; bar.dataset.v=r.state?ar(r.pct)+"٪":"—";
+      const label=document.createElement("span"); label.className="stats-day-label";
+      label.textContent=period==="week"?r.date.toLocaleDateString("ar",{weekday:"short"}):((i%5===0||i===rows.length-1)?ar(r.date.getDate()):"");
+      item.title=r.state?f(r.date)+" — "+ar(r.pct)+"٪":f(r.date)+" — لا توجد بيانات";
+      item.setAttribute("aria-label",item.title); item.append(bar,label); trend.appendChild(item);
+    });
+    document.getElementById("statsTrendSubtitle").textContent="كل عمود يمثل يومًا، وارتفاعه يعكس نسبة إنجاز عناصر ذلك اليوم";
+    const metrics=[
+      {name:"🕌 الصلوات",value:cur.prayerPct,den:cur.prayerTotal},
+      {name:"📿 العبادات",value:cur.worshipPct,den:cur.worshipTotal},
+      {name:"✅ المهام",value:cur.taskPct,den:cur.taskTotal},
+      {name:"💧 هدف الماء",value:cur.waterPct,den:cur.observed},
+      {name:"🏃 هدف الرياضة",value:cur.sportPct,den:cur.observed},
+      {name:"📖 ورد القرآن",value:cur.quranPct,den:cur.observed}
+    ];
+    const breakdown=document.getElementById("statsBreakdown"); breakdown.innerHTML="";
+    metrics.forEach(m=>{
+      const row=document.createElement("div"); row.className="stats-break-row";
+      row.innerHTML='<span class="stats-break-name">'+m.name+'</span><span class="stats-break-bar"><i style="width:'+(m.den?m.value:0)+'%"></i></span><span class="stats-break-pct">'+(m.den?ar(m.value)+"٪":"—")+'</span>';
+      breakdown.appendChild(row);
+    });
+    const available=metrics.filter(m=>m.den>0).sort((a,b)=>a.value-b.value), insight=document.getElementById("statsInsight");
+    if(!cur.observed) insight.textContent="ابدأ بتسجيل يومك، وستظهر هنا مقارنة واضحة لتقدمك.";
+    else if(cur.overall>=80) insight.innerHTML="✨ <b>ثبات ممتاز.</b> متوسط إنجازك "+ar(cur.overall)+"٪ خلال الفترة؛ حافظ على نفس الإيقاع.";
+    else if(available.length) insight.innerHTML="💡 <b>فرصة التحسين الأقرب:</b> "+available[0].name+" عند "+ar(available[0].value)+"٪. اختر خطوة صغيرة وثابتة للفترة القادمة.";
+    const review=document.getElementById("statsWeeklyReview");
+    if(period==="week") statsRenderWeeklyReview(cur,metrics); else review.hidden=true;
+  }
+  function renderStatsPeriod(period){
+    statsPeriod=period;
+    document.querySelectorAll("[data-stats-period]").forEach(btn=>{ const active=btn.dataset.statsPeriod===period; btn.classList.toggle("active",active); btn.setAttribute("aria-selected",active?"true":"false"); });
+    document.getElementById("statsUnifiedView").hidden=period==="year";
+    document.getElementById("statsYearView").hidden=period!=="year";
+    if(period==="year") renderStats(); else renderUnifiedStats(period);
   }
 
   function renderStats(){
@@ -7514,11 +8356,14 @@
     const sec = document.getElementById("statsSection");
     sec.hidden = !sec.hidden;
     if(!sec.hidden){
-      renderStats();
+      renderStatsPeriod(statsPeriod);
       sec.scrollIntoView({behavior:"smooth", block:"start"});
     }
     ibSyncCalBtn();
   };
+  document.querySelectorAll("[data-stats-period]").forEach(btn=>btn.onclick=()=>renderStatsPeriod(btn.dataset.statsPeriod));
+  document.getElementById("statsGoalSave").onclick=statsSaveWeeklyGoal;
+  document.getElementById("statsClose").onclick=()=>{ document.getElementById("statsSection").hidden=true; ibSyncCalBtn(); document.getElementById("statsBtn").focus(); };
 
   /* ---------- الاحتفال عند إكمال الصلوات ---------- */
   function celebrate(){
@@ -7570,10 +8415,11 @@
     picker.value = dateStr;
     const existed = load(dateStr);
     if(!existed) carryOver(dateStr);
+    seedRecurringTasks(dateStr);
     renderQuote(dateStr);
     renderAll();
     fetchTimes(dateStr);
-    pullRemote(dateStr);
+    pullRemote(dateStr,{trigger:"navigation",forceServer:true,bypassThrottle:true});
   }
 
   function shiftDay(delta){
@@ -8166,12 +9012,8 @@
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
   let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
-  /* قراءة تُفضّل الخادم لتفادي البيانات المخزّنة القديمة عند العودة للمقدّمة، وترجع للمخزّن المحلي عند انقطاع الشبكة */
-  function expGetDoc(){
-    const ref = expDocRef();
-    try{ return ref.get({source:"server"}).catch(()=> ref.get()); }
-    catch(e){ return ref.get(); }
-  }
+  /* القراءة المشتركة تُفضّل الخادم وترجع صراحةً إلى مخزّن Firestore المحلي عند انقطاع الشبكة. */
+  function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
   function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
   function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
@@ -8193,7 +9035,7 @@
   }
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
-  function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
+  function expTriggerPull(){ if(!db || !user) return syncSkipped("expenses","signedOut"); expLastPullAt=Date.now(); return expPullRemote({trigger:"expenses-open",forceServer:true}); }
   function expPushRemote(d){
     if(!db || !user) return;
     /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
@@ -8201,10 +9043,9 @@
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
     expPushTimer = setTimeout(()=>{
       try{
-        if(syncStatus) syncStatus.textContent = "☁️ جارٍ حفظ المصاريف…";
         expDocRef().set(snapshot)
-          .then(()=>{ if(syncStatus) syncStatus.textContent = "☁️ تمت المزامنة"; expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
-          .catch(()=>{ if(syncStatus) syncStatus.textContent = "⚠️ تعذّرت مزامنة المصاريف (سيُعاد المحاولة تلقائيًا)"; expSetSyncState("error"); });
+          .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
+          .catch(error=>{ syncCoordinator.states.expenses.lastError=error; expSetSyncState("error"); });
       }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
     }, 400);
   }
@@ -8265,16 +9106,17 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return; }
-    if(navigator.onLine === false && !opts.manual){ expSetSyncState("offline"); return; }
+    if(!db || !user){ expRenderSyncRow(); return syncSkipped("expenses","signedOut"); }
     expSetSyncState("syncing");
-    const done = ()=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); };
-    expGetDoc().then(snap=>{
+    return syncCoordinator.runModule("expenses","default",opts.trigger,opts,async()=>{
+      const read=await expGetDoc(), snap=read.snapshot;
+      const status=syncReadStatus(read);
+      const done = changed=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); return {status,source:read.source,changed:!!changed}; };
       const local = expState;
       if(!snap.exists){
         /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
-        if((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length)) expPushRemote(local);
-        done(); return;
+        if(read.source==="server" && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) expPushRemote(local);
+        return done(false);
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -8285,19 +9127,22 @@
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
-        done(); return;
+        return done(true);
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
       const contributed = expSig(merged) !== expSig(remote);   /* هل أضاف المحلي شيئًا؟ (قبل إعادة حساب المثيلات) */
+      const changed = expSig(merged) !== expSig(local);
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
-      localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-      expRefresh();                                            /* حالة غير قابلة للطفر → إعادة رسم فورية لكل الملخّصات والتقارير */
-      if(contributed) expPushRemote(merged);                   /* ادفع الاتحاد ليتقارب الطرفان */
-      done();
-    }).catch(()=>{ expSetSyncState("error"); });
+      if(changed){
+        localStorage.setItem(EXP_KEY, JSON.stringify(merged));
+        expRefresh();                                          /* أعد الرسم فقط عندما ساهم السحب بتغيير فعلي */
+      }
+      if(read.source==="server" && contributed) expPushRemote(merged); /* لا ندفع المحلي بعد فشل قراءة الخادم */
+      return done(changed);
+    }).then(result=>{ if(result.status==="failed") expSetSyncState("error"); else if(result.status==="throttled" || result.status==="skipped") expSetSyncState("idle"); return result; });
   }
 
   let expState = expData();
@@ -8600,6 +9445,9 @@
     const box = document.getElementById("expLaunchSummary"); if(!box) return;
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
+    const alert=document.getElementById("expBudgetAlert"), wr=expWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
+    if(alert && budget>0 && spent/budget>=.8){ const over=spent>budget; alert.hidden=false; alert.textContent=over ? "⚠️ تجاوزت ميزانية الأسبوع بـ "+expMoney(spent-budget) : "⚠️ استخدمت "+_arn(Math.round(spent/budget*100))+"٪ من ميزانية الأسبوع — المتبقي "+expMoney(budget-spent); }
+    else if(alert){ alert.hidden=true; alert.textContent=""; }
     expRenderTravelBanner("expLaunchBanner");
   }
   /* شارة «وضع السفر نشط» المدمجة — تُعرض عند وجود رحلة نشطة، قابلة للضغط لفتح الرحلة */
@@ -9026,11 +9874,37 @@
   }
 
   /* ---------- التقارير ---------- */
+  let expSearchTerm="";
+  function expApplySearch(){
+    const body=document.getElementById("expReportBody"); if(!body) return;
+    body.querySelector(".exp-search-panel")?.remove();
+    const q=expSearchTerm.trim().toLowerCase(); body.querySelectorAll(".exp-txitem").forEach(row=>{ row.hidden=!!q&&!row.textContent.toLowerCase().includes(q); });
+    if(q && !body.querySelector(".exp-txitem")){
+      const found=expTxInRange(expCurrentReportRange()).filter(t=>{ const c=expCatById(t.categoryId), trip=t.tripId?expTripById(t.tripId):null; return [t.transactionDate,t.description,t.subcategory,t.paymentMethod,c&&c.name,trip&&trip.name].filter(Boolean).join(" ").toLowerCase().includes(q); });
+      const panel=document.createElement("div"); panel.className="exp-search-panel"; panel.innerHTML='<div class="exp-sec-head">نتائج البحث ('+_arn(found.length)+')</div>'+(found.length?found.map(expTxRow).join(""):'<div class="exp-empty">لا توجد معاملات مطابقة.</div>'); body.prepend(panel); expWireTxMenus(panel);
+    }
+  }
+  function expCurrentReportRange(){
+    if(expRepMode==="daily") return expDayRange(expRepDate);
+    if(expRepMode==="weekly") return expWeekRange(expRepDate);
+    if(expRepMode==="monthly") return expMonthRange(expRepDate);
+    const y=new Date(expRepDate+"T12:00:00").getFullYear(); return {start:y+"-01-01",end:y+"-12-31"};
+  }
+  function expExportCurrentCsv(){
+    const range=expCurrentReportRange(), q=expSearchTerm.trim().toLowerCase();
+    const txs=expTxInRange(range).filter(t=>{ if(!q) return true; const c=expCatById(t.categoryId); return [t.transactionDate,t.description,t.subcategory,t.paymentMethod,c&&c.name,expClassify(t)].filter(Boolean).join(" ").toLowerCase().includes(q); });
+    const quote=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const rows=[["التاريخ","النوع","التصنيف","الفئة","الوصف","المبلغ","العملة","طريقة الدفع","رحلة"]];
+    txs.forEach(t=>{ const c=expCatById(t.categoryId), trip=t.tripId?expTripById(t.tripId):null; rows.push([t.transactionDate,t.transactionType,expClassify(t),c?c.name:"",t.description||t.subcategory||"",(t.amountMinor/100).toFixed(2),"SAR",t.paymentMethod||"",trip?trip.name:""]); });
+    const blob=new Blob(["\ufeff"+rows.map(r=>r.map(quote).join(",")).join("\n")],{type:"text/csv;charset=utf-8"}), a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="expenses-"+expRepMode+"-"+range.start+"-"+range.end+".csv"; a.click(); URL.revokeObjectURL(a.href);
+  }
   function expRenderReport(){
     if(expRepMode==="daily") expReportDaily();
     else if(expRepMode==="weekly") expReportWeekly();
     else if(expRepMode==="monthly") expReportMonthly();
     else expReportYearly();
+    expApplySearch();
   }
   function expNavBar(label){
     return '<div class="exp-rep-nav"><button id="expRepPrev">›</button><div class="exp-rep-label">'+label+'</div><button id="expRepNext">‹</button></div>';
@@ -9485,18 +10359,156 @@
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
     expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
+    const search=document.getElementById("expSearch"); search.oninput=()=>{ expSearchTerm=search.value; expApplySearch(); };
+    document.getElementById("expExportCsv").onclick=expExportCurrentCsv;
     /* زرّ التحديث اليدوي (يتجاوز الخنق ويقرأ من الخادم مباشرة) */
     const syncBtnEl = document.getElementById("expSyncBtn");
-    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({manual:true}); };
-    /* مشغّلات السحب التلقائية — نفس نمط السحب القائم، بلا آلية جديدة ولا onSnapshot:
-       رجوع التطبيق للمقدّمة / ظهور التبويب / استعادة الصفحة من ذاكرة السفاري / عودة الشبكة */
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") expTriggerPull(); });
-    window.addEventListener("focus", ()=> expTriggerPull());
-    window.addEventListener("pageshow", ()=> expTriggerPull());   /* مهمّ لسفاري iOS عند الرجوع من الخلفية (bfcache) */
-    window.addEventListener("online", ()=>{ expRenderSyncRow(); expTriggerPull(); });
-    window.addEventListener("offline", ()=> expRenderSyncRow());
+    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({trigger:"expenses-manual",forceServer:true,bypassThrottle:true}); };
     expRenderLaunch();
     expRenderSyncRow();
+  }
+
+  /* ---------- تخصيص بطاقات الصفحة ---------- */
+  const CARD_PREF_KEY = "h2do-card-layout-v1";
+  const CARD_DEFS = [
+    {id:"prayerCard",icon:"🕌",label:"الصلاة"},
+    {id:"ibadahCard",icon:"📿",label:"العبادات"},
+    {id:"quranCard",icon:"📖",label:"القرآن"},
+    {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
+    {id:"sportCard",icon:"🏃",label:"الرياضة"},
+    {id:"healthCard",icon:"⚖️",label:"الصحة"},
+    {id:"waterCard",icon:"💧",label:"شرب الماء"},
+    {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
+    {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
+    {id:"prioritiesCard",icon:"⭐",label:"الأولويات"},
+    {id:"memoryCard",icon:"📌",label:"ذكرى اليوم"},
+    {id:"notesCard",icon:"🗒️",label:"الملاحظات"},
+    {id:"ratingCard",icon:"🌟",label:"تقييم اليوم"}
+  ];
+  function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[]}; }
+  function personalizeLoad(){
+    let raw={};
+    try{ raw=JSON.parse(localStorage.getItem(CARD_PREF_KEY)||"{}"); }catch(e){}
+    const valid=new Set(CARD_DEFS.map(d=>d.id)), seen=new Set();
+    const order=(Array.isArray(raw.order)?raw.order:[]).filter(id=>valid.has(id)&&!seen.has(id)&&seen.add(id));
+    CARD_DEFS.forEach(d=>{ if(!seen.has(d.id)) order.push(d.id); });
+    const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
+    return {order,hidden};
+  }
+  let cardPrefs=personalizeLoad(), customizeDragId=null;
+  function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
+  function personalizeApply(){
+    const host=document.querySelector(".grid .col");
+    if(!host) return;
+    const hidden=new Set(cardPrefs.hidden);
+    cardPrefs.order.forEach(id=>{ const card=document.getElementById(id); if(card){ card.hidden=hidden.has(id); host.appendChild(card); } });
+    document.querySelectorAll("[data-app-view]").forEach(link=>{ link.hidden=false; });
+    if(typeof appViewApply==="function") appViewApply();
+  }
+  function personalizeCommit(){ personalizeSave(); personalizeApply(); personalizeRenderList(); }
+  function personalizeMove(id,delta){
+    const from=cardPrefs.order.indexOf(id), to=from+delta;
+    if(from<0||to<0||to>=cardPrefs.order.length) return;
+    cardPrefs.order.splice(from,1); cardPrefs.order.splice(to,0,id); personalizeCommit();
+  }
+  function personalizeDrop(source,target){
+    if(!source||source===target||!cardPrefs.order.includes(source)||!cardPrefs.order.includes(target)) return;
+    const next=cardPrefs.order.filter(id=>id!==source), at=next.indexOf(target);
+    next.splice(at,0,source); cardPrefs.order=next; personalizeCommit();
+  }
+  function personalizeRenderList(){
+    const list=document.getElementById("customizeList");
+    if(!list) return;
+    list.innerHTML="";
+    const hidden=new Set(cardPrefs.hidden);
+    cardPrefs.order.forEach((id,index)=>{
+      const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
+      const row=document.createElement("div");
+      row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
+      const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
+      const name=document.createElement("span"); name.className="customize-name"; name.textContent=def.icon+" "+def.label;
+      const controls=document.createElement("div"); controls.className="customize-controls";
+      const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
+      const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
+      const toggle=document.createElement("label"); toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة";
+      const input=document.createElement("input"); input.type="checkbox"; input.checked=!hidden.has(id); input.setAttribute("aria-label","إظهار بطاقة "+def.label);
+      const track=document.createElement("i"); toggle.append(input,track);
+      input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
+      controls.append(up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
+      row.ondragstart=e=>{ customizeDragId=id; row.classList.add("dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); } };
+      row.ondragover=e=>{ e.preventDefault(); row.classList.add("drag-over"); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; };
+      row.ondragleave=()=>row.classList.remove("drag-over");
+      row.ondrop=e=>{ e.preventDefault(); row.classList.remove("drag-over"); personalizeDrop(customizeDragId||(e.dataTransfer&&e.dataTransfer.getData("text/plain")),id); };
+      row.ondragend=()=>{ customizeDragId=null; list.querySelectorAll(".dragging,.drag-over").forEach(x=>x.classList.remove("dragging","drag-over")); };
+    });
+  }
+  const customizeOverlay=document.getElementById("customizeOverlay");
+  function personalizeOpen(){ personalizeRenderList(); customizeOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("customizeClose").focus(); }
+  function personalizeClose(){ customizeOverlay.hidden=true; document.body.style.overflow=""; document.getElementById("customizeBtn").focus(); }
+  function personalizeInit(){
+    personalizeApply();
+    document.getElementById("customizeBtn").onclick=personalizeOpen;
+    document.getElementById("customizeClose").onclick=personalizeClose;
+    document.getElementById("customizeDone").onclick=personalizeClose;
+    document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
+    document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
+    customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
+  }
+
+  /* ---------- إعداد البداية والأهداف اليومية ---------- */
+  const ONBOARD_KEY="h2do-onboarding-v1";
+  const onboardOverlay=document.getElementById("onboardOverlay");
+  function onboardRenderModules(){
+    const host=document.getElementById("onboardModules"), hidden=new Set(cardPrefs.hidden); host.innerHTML="";
+    CARD_DEFS.forEach(def=>{
+      const label=document.createElement("label"); label.className="onboard-module";
+      const input=document.createElement("input"); input.type="checkbox"; input.value=def.id; input.checked=!hidden.has(def.id);
+      const text=document.createElement("span"); text.textContent=def.icon+" "+def.label; label.append(input,text); host.appendChild(label);
+    });
+  }
+  function onboardOpen(firstRun){
+    onboardRenderModules();
+    document.getElementById("onboardWater").value=waterGoal(); document.getElementById("onboardSport").value=sportGoal(); document.getElementById("onboardQuran").value=qLoad().target;
+    document.getElementById("onboardCancel").hidden=!!firstRun; onboardOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("onboardSave").focus();
+  }
+  function onboardClose(){ onboardOverlay.hidden=true; document.body.style.overflow=""; localStorage.setItem(ONBOARD_KEY,"1"); }
+  function onboardSave(){
+    const selected=new Set([...document.querySelectorAll("#onboardModules input:checked")].map(input=>input.value));
+    cardPrefs.hidden=CARD_DEFS.map(def=>def.id).filter(id=>!selected.has(id)); personalizeSave();
+    const water=Math.max(4,Math.min(16,parseInt(document.getElementById("onboardWater").value,10)||N_CUPS_DEFAULT));
+    const sport=Math.max(5,Math.min(180,parseInt(document.getElementById("onboardSport").value,10)||30));
+    const quran=Math.max(1,Math.min(100,parseInt(document.getElementById("onboardQuran").value,10)||5));
+    localStorage.setItem(WATER_GOAL_KEY,String(water)); localStorage.setItem(SPORT_GOAL_KEY,String(sport)); const q=qLoad(); q.target=quran; qSave(q);
+    onboardClose(); personalizeApply(); renderWater(); renderSport(); renderProgress();
+  }
+  function onboardHasExistingData(){
+    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i)||""; if(key.startsWith("h2do-tracker:")||[QURAN_KEY,"h2do-expenses","h2do-hifz"].includes(key)) return true; }
+    return false;
+  }
+  function onboardInit(){
+    document.getElementById("onboardSave").onclick=onboardSave; document.getElementById("onboardCancel").onclick=onboardClose;
+    onboardOverlay.onclick=e=>{ if(e.target===onboardOverlay&&!document.getElementById("onboardCancel").hidden) onboardClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!onboardOverlay.hidden&&!document.getElementById("onboardCancel").hidden) onboardClose(); });
+    if(!localStorage.getItem(ONBOARD_KEY)){ if(onboardHasExistingData()) localStorage.setItem(ONBOARD_KEY,"1"); else onboardOpen(true); }
+  }
+
+  /* ---------- تنقل الجوال بخمس وجهات ---------- */
+  const APP_VIEW_KEY="h2do-mobile-view";
+  const APP_VIEW_GROUPS={
+    today:["prayerCard","tasksCard","prioritiesCard","waterCard"], quran:["quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["ibadahCard","intentionCard","memoryCard","notesCard","ratingCard"]
+  };
+  let appView=localStorage.getItem(APP_VIEW_KEY)||"today";
+  function appViewApply(){
+    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(APP_VIEW_GROUPS[appView]||APP_VIEW_GROUPS.today);
+    Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
+    document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
+  }
+  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); window.scrollTo({top:document.querySelector(".today-overview").offsetTop-8,behavior:"smooth"}); }
+  function appViewInit(){
+    document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
+    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); appViewApply();
   }
 
   /* ---------- Theme (light/dark) ---------- */
@@ -9530,10 +10542,16 @@
   }
 
   /* ---------- Init ---------- */
+  registerGlobalSyncLifecycle();
   initFirebase();
+  renderGlobalSyncStatus(null,false);
+  personalizeInit();
+  appViewInit();
+  document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen;
   goto(todayStr());
   renderHifzCard();
   expInit();
+  onboardInit();
 })();
 </script>
 </body>
