@@ -2884,28 +2884,32 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("customWorship");
   }
   function wCustomPushRemote(list, updatedAt){
-    if(!db || !user) return;
-    wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return wCustomDocRef().set({items: JSON.parse(JSON.stringify(list)), updatedAt}).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function wCustomPullRemote(options){
-    options=options||{};
-    if(!db || !user) return syncSkipped("customWorship","signedOut");
-    return syncCoordinator.runModule("customWorship","default",options.trigger,options,async()=>{
-      const read=await getDocServerFirst(wCustomDocRef()), snap=read.snapshot;
-      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
-      const remote = snap.data();
-      const localMeta = wCustomMeta();
-      let changed=false;
-      if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
-        localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
-        localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
-        renderWorship(); renderProgress();
-        changed=true;
-      }else if(read.source==="server" && (localMeta.updatedAt||0) > (remote.updatedAt||0)){
-        wCustomPushRemote(wCustom(), localMeta.updatedAt);
+  function wCustomPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"customWorship", skipped:true});
+    return joinOrRun("customWorship", ()=> _wCustomPullWork(trigger));
+  }
+  function _wCustomPullWork(trigger){
+    syncBegin("customWorship", trigger);
+    return getDocServerFirst(wCustomDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
+      if(snap.exists){
+        const remote = snap.data();
+        const localMeta = wCustomMeta();
+        if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
+          localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
+          localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
+          safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
+        }else if((localMeta.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = wCustomPushRemote(wCustom(), localMeta.updatedAt);
+        }
       }
-      return {status:syncReadStatus(read),source:read.source,changed};
-    });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("customWorship", true, snap); else syncEnd("customWorship", false, snap, new Error("reconWriteFailed"));
+        return {module:"customWorship", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("wCustomPullRemote", e); syncEnd("customWorship", false, null, e); return {module:"customWorship", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   function wHidden(){
     try{ return JSON.parse(localStorage.getItem(HIDDEN_WORSHIP_KEY) || "[]"); }catch(e){ return []; }
@@ -3354,7 +3358,10 @@
     return merged;
   }
   function wgDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("weeklyGoals"); }
-  function wgPushRemote(data){ if(db&&user) wgDocRef().set(JSON.parse(JSON.stringify(data))).catch(error=>{ syncCoordinator.states.weeklyGoals.lastError=error; }); }
+  function wgPushRemote(data){
+    if(!db||!user) return Promise.resolve({ok:false,reason:"noauth"});
+    return wgDocRef().set(JSON.parse(JSON.stringify(data))).then(()=>({ok:true})).catch(error=>({ok:false,error:(error&&error.message)||String(error)}));
+  }
   function wgSave(data){
     const normalized=wgNormalize(data); normalized.updatedAt=Date.now();
     localStorage.setItem(WEEKLY_GOALS_KEY,JSON.stringify(normalized)); wgPushRemote(normalized);
@@ -3383,21 +3390,27 @@
     const step=(item.steps||[]).find(entry=>entry.id===stepId); if(!step) return;
     step.done=!step.done; item.done=item.steps.length>0&&item.steps.every(entry=>entry.done); item.updatedAt=Date.now(); wgSave(data);
   }
-  function wgPullRemote(options){
-    options=options||{};
-    if(!db||!user) return syncSkipped("weeklyGoals","signedOut");
-    return syncCoordinator.runModule("weeklyGoals","default",options.trigger,options,async()=>{
-      const read=await getDocServerFirst(wgDocRef()), snap=read.snapshot, local=wgLoad();
-      if(!snap.exists){ if(read.source==="server"&&local.updatedAt) wgPushRemote(local); return {status:syncReadStatus(read),source:read.source,changed:false}; }
-      const remote=wgNormalize(snap.data()), merged=wgMerge(local,remote);
-      const changed=JSON.stringify(local.items)!==JSON.stringify(merged.items);
-      const remoteNeedsUpdate=JSON.stringify(remote.items)!==JSON.stringify(merged.items);
-      if(changed) localStorage.setItem(WEEKLY_GOALS_KEY,JSON.stringify(merged));
-      if(read.source==="server"&&remoteNeedsUpdate) wgPushRemote(merged);
-      if(changed&&typeof renderTodayOverview==="function") renderTodayOverview();
-      if(changed&&!document.getElementById("statsSection").hidden&&statsPeriod==="week") renderUnifiedStats("week");
-      return {status:syncReadStatus(read),source:read.source,changed};
-    });
+  function wgPullRemote(trigger){
+    if(!db||!user) return Promise.resolve({module:"weeklyGoals",status:"skipped",reason:"noauth"});
+    return joinOrRun("weeklyGoals",()=>_wgPullWork(trigger));
+  }
+  function _wgPullWork(trigger){
+    syncBegin("weeklyGoals",trigger);
+    return getDocServerFirst(wgDocRef()).then(snap=>{
+      const cache=_fromCache(snap), local=wgLoad(); let changed=false, reconcile=Promise.resolve({ok:true});
+      if(!snap.exists){ if(!cache&&local.updatedAt) reconcile=wgPushRemote(local); }
+      else{
+        const remote=wgNormalize(snap.data()), merged=wgMerge(local,remote);
+        changed=JSON.stringify(local.items)!==JSON.stringify(merged.items);
+        const remoteNeedsUpdate=JSON.stringify(remote.items)!==JSON.stringify(merged.items);
+        if(changed){
+          localStorage.setItem(WEEKLY_GOALS_KEY,JSON.stringify(merged));
+          safeRun("weeklyGoals:render",()=>{ if(typeof renderTodayOverview==="function") renderTodayOverview(); if(!document.getElementById("statsSection").hidden&&statsPeriod==="week") renderUnifiedStats("week"); });
+        }
+        if(!cache&&remoteNeedsUpdate) reconcile=wgPushRemote(merged);
+      }
+      return Promise.resolve(reconcile).then(write=>{ const ok=!(write&&write.ok===false); syncEnd("weeklyGoals",ok,snap,ok?null:new Error("reconWriteFailed")); return {module:"weeklyGoals",status:ok?(cache?"cacheFallback":"success"):"failed",source:cache?"cache":"server",changed,reconWriteOk:ok}; });
+    }).catch(error=>{ diagErr("wgPullRemote",error); syncEnd("weeklyGoals",false,null,error); return {module:"weeklyGoals",status:"failed",error:(error&&error.message)||String(error)}; });
   }
 
   /* قراءات Firestore: الخادم أولًا، ثم مخزّن IndexedDB المحلي عند تعذّر الشبكة فقط. */
@@ -3478,14 +3491,6 @@
   function triggerGlobalForegroundSync(trigger){
     return syncCoordinator.triggerDebounced(trigger,t=>syncPullAllModules(t,{forceServer:true}));
   }
-  function registerGlobalSyncLifecycle(){
-    document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("visibilitychange"); });
-    window.addEventListener("focus",()=>triggerGlobalForegroundSync("focus"));
-    window.addEventListener("pageshow",()=>triggerGlobalForegroundSync("pageshow"));
-    window.addEventListener("online",()=>{ expRenderSyncRow(); triggerGlobalForegroundSync("online"); });
-    window.addEventListener("offline",()=>{ expRenderSyncRow(); renderGlobalSyncStatus(null,false); });
-  }
-
   function initFirebase(){
     if(!FIREBASE_CONFIG.apiKey || typeof firebase === "undefined") return;
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -3526,7 +3531,8 @@
         syncBtn.textContent = "تسجيل الخروج";
         syncAllBtn.disabled = false;
         renderGlobalSyncStatus(null,false);
-        syncPullAllModules("auth",{forceServer:true,bypassThrottle:true});
+        /* إقلاع بارد مُصادَق: اسحب كل الأقسام من الخادم أولًا عبر المنسّق العام (كلٌّ مستقل) */
+        safeRun("auth:syncAll", ()=> syncPullAllModules("auth"));
       }else{
         syncBtn.textContent = "☁️ تسجيل الدخول للمزامنة";
         syncAllBtn.disabled = true;
@@ -3540,33 +3546,166 @@
   }
 
   function pushRemote(date, data){
-    if(!db || !user) return;
-    dayRef(date).set(JSON.parse(JSON.stringify(data)))
-      .catch(error=>{ syncCoordinator.states.daily.lastError=error; });
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    /* يُعيد نتيجة الكتابة (لا يرمي أبدًا) كي يتتبّعها المنسّق: كتابة المصالحة يجب ألّا تُعتبر نجاحًا قبل اكتمالها.
+       لا يكتب في syncStatus مباشرةً — الحالة المرئية تُشتق فقط من حالة المنسّق (SYNC_STATE) عبر syncSummary */
+    return dayRef(date).set(JSON.parse(JSON.stringify(data)))
+      .then(()=>({ok:true}))
+      .catch((e)=>({ok:false, error:(e&&e.message)||String(e)}));
   }
 
-  function pullRemote(date, options){
-    options=options||{};
-    if(!db || !user) return syncSkipped("daily","signedOut");
-    return syncCoordinator.runModule("daily",date,options.trigger,options,async()=>{
-      const read=await getDocServerFirst(dayRef(date)), snap=read.snapshot;
-      if(date !== currentDate) return {status:syncReadStatus(read),source:read.source,changed:false,reason:"dateChanged"};
-      let changed=false;
-      if(snap.exists){
-        const remote = snap.data();
-        if((remote.updatedAt||0) > (state.updatedAt||0)){
-          state = Object.assign(blankState(), remote);
-          localStorage.setItem(storageKey(date), JSON.stringify(state));
-          renderAll();
-          changed=true;
-        }else if(read.source==="server" && (state.updatedAt||0) > (remote.updatedAt||0)){
-          pushRemote(date, state);
-        }
-      }else if(read.source==="server" && state.updatedAt){
-        pushRemote(date, state);
-      }
-      return {status:syncReadStatus(read),source:read.source,changed};
+  /* ==================== منسّق مزامنة عام لكل الأقسام (سحب) ==================== */
+  /* قراءة تُفضّل الخادم أولًا ثم ترجع للمخزّن المحلي عند تعذّر الشبكة — تُنهي مشكلة الكاش القديم عند العودة للمقدّمة */
+  /* خادم أولًا ثم كاش صراحةً (compat 10.14.1): يعلّم المصدر على اللقطة كي نميّز نجاح الخادم عن رجوع الكاش بدقّة */
+  function _tagSource(snap, src, serverErr){ try{ if(snap){ snap._srcServer = (src==="server"); snap._srcCache = (src==="cache"); if(serverErr) snap._serverErr = (serverErr&&serverErr.message)||String(serverErr); } }catch(e){} return snap; }
+  function getDocServerFirst(ref){
+    try{ return ref.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> ref.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  function getQueryServerFirst(q){
+    try{ return q.get({source:"server"}).then(s=> _tagSource(s,"server")).catch(serverErr=> q.get({source:"cache"}).then(s=> _tagSource(s,"cache",serverErr))); }
+    catch(e){ return Promise.reject(e); }
+  }
+  /* مصدر الكاش: العلامة الصريحة أولًا، ثم metadata.fromCache احتياطًا */
+  function _fromCache(snap){ return !!(snap && (snap._srcCache || (snap.metadata && snap.metadata.fromCache))); }
+  /* حالة مزامنة مستقلّة لكل قسم — لا يطمس قسمٌ حالة قسم آخر */
+  const SYNC_STATE = {};
+  function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, lastSource:null, trigger:null}); }
+  function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
+  /* إنهاء القسم: النجاح وحده يُقدّم آخر نجاح خادم/كاش ويمسح الخطأ؛ الفشل (بما فيه فشل كتابة المصالحة) لا يُقدّم أيّ ختم نجاح،
+     ويحفظ مصدر القراءة (خادم/كاش) منفصلًا للتشخيص */
+  function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false;
+    if(snap) s.lastSource = _fromCache(snap) ? "cache" : "server";
+    if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; }
+    else { s.lastError=(err&&err.message)||String(err||"error"); }   /* لا نلمس lastServerSuccessAt/lastCacheFallbackAt عند الفشل */
+  }
+  /* أقفال ذات انضمام (JOIN): أوّل نداء يملك السحب الحقيقي، والنداءات المتزامنة تنضمّ لنفس الوعد فتحصل على نتيجته
+     (قراءة فيزيائية واحدة، ونتيجة خادم صالحة تصل الجميع) بدل ردّ throttled فوري يُهدر عمل التشغيل المالك */
+  const _inflight = {};
+  function joinOrRun(key, worker){
+    if(_inflight[key]) return _inflight[key];
+    let pr; try{ pr = Promise.resolve(worker()); }catch(e){ pr = Promise.reject(e); }
+    const wrapped = pr.then(r=>{ delete _inflight[key]; return r; }, e=>{ delete _inflight[key]; throw e; });
+    _inflight[key] = wrapped;
+    return wrapped;
+  }
+  function syncInFlight(name){ return !!_inflight[name] || !!(SYNC_STATE[name] && SYNC_STATE[name].inFlight); }
+  /* جيل تشغيل تصاعدي: يُستخدم فقط لمنع كتابة حالة مرئية متقادمة — لا يُستخدم أبدًا لإسقاط بيانات خادم صالحة */
+  let _syncRunGen = 0;
+  /* منسّق عام: يشغّل كل الأقسام مستقلّةً عبر Promise.allSettled — فشل قسم لا يلغي غيره؛ التشغيل الأحدث ينضمّ لعمل الأقدم */
+  function syncPullAllModules(trigger, opts){
+    opts = opts || {};
+    const gen = ++_syncRunGen;
+    if(!db || !user) return Promise.resolve({trigger, gen, isLatest:()=> gen===_syncRunGen, skipped:true});
+    diagMark("syncAll:begin:"+trigger);
+    safeRun("syncHeader:begin",()=>renderGlobalSyncStatus(null,true));
+    const jobs = [
+      ["daily", ()=> pullRemote(currentDate, trigger)],
+      ["quran", ()=> qPullRemote(trigger)],
+      ["customWorship", ()=> wCustomPullRemote(trigger)],
+      ["witr", ()=> witrPullRemote(trigger)],
+      ["hifz", ()=> hifzPullRemote(trigger)],
+      ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})],
+      ["weeklyGoals", ()=> wgPullRemote(trigger)]
+    ];
+    return Promise.allSettled(jobs.map(([name, fn])=>{
+      try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
+      catch(e){ diagErr("pull:"+name, e); return Promise.resolve({module:name, status:"failed"}); }
+    })).then(rs=>{ diagMark("syncAll:end:"+trigger);
+      /* التشغيل الأحدث ينضمّ (join) لعمل الأقدم فلا يكتمل قبله؛ فعند اكتماله تكون كل الأقسام مستقرّة.
+         نحدّث الحالة المرئية إن كنّا الأحدث (أو لم يبدأ أحدثُ منّا) فلا تعلق على «جارٍ». */
+      if(gen===_syncRunGen) safeRun("syncUI", expRefreshSyncUI);
+      return {trigger, gen, isLatest:()=> gen===_syncRunGen, results:rs.map(r=> r.value||r.reason)}; });
+  }
+  /* تحديث الحالة المرئية العامّة من الحالة الحيّة — يُستدعى عند اكتمال أي تشغيل فيتعافى العرض تلقائيًا لأحدث حقيقة */
+  function expRefreshSyncUI(){
+    const summary=syncSummary();
+    safeRun("syncHeader:end",()=>renderGlobalSyncStatus({status:summary.state==="ok"?"success":summary.state==="fail"?"failed":summary.state==="offline"?"cacheFallback":"partial"},summary.state==="syncing"));
+    const gst=document.getElementById("expGlobalSyncText"); if(gst){ try{ gst.textContent = syncSummary().text; }catch(e){} }
+    const ms=document.getElementById("expModStatus"); if(ms && typeof expModStatusHtml==="function"){ try{ ms.innerHTML = expModStatusHtml(); }catch(e){} }
+  }
+  /* خنق عام يجمع أحداث المتصفّح المتزامنة (focus/pageshow/visibility) دون تعطيل أقفال الأقسام المستقلّة */
+  let _lastGlobalPull = 0;
+  function syncPullAllThrottled(trigger){
+    if(!db || !user) return;
+    const now = Date.now();
+    if(trigger!=="manual" && now - _lastGlobalPull < 1500) return;
+    _lastGlobalPull = now;
+    return syncPullAllModules(trigger, {forceServer: trigger==="manual"});
+  }
+  /* ترشيح أحداث دورة الحياة: يجمع focus/pageshow/visibilitychange المتزامنة خلال ~400ms في نداء واحد (منفصل عن خنق الأقسام) */
+  let _lcDebounceTimer = null, _lcPendingTrigger = null;
+  function triggerGlobalForegroundSync(trigger){
+    if(!db || !user) return;
+    _lcPendingTrigger = _lcPendingTrigger || trigger || "foreground";
+    if(_lcDebounceTimer) return;
+    _lcDebounceTimer = setTimeout(()=>{ const t=_lcPendingTrigger; _lcDebounceTimer=null; _lcPendingTrigger=null; safeRun("foregroundSync", ()=> syncPullAllThrottled(t)); }, 400);
+  }
+  /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
+  function syncSummary(){
+    const names=["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"];
+    let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
+    names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
+      if(s.inFlight) flight=true;
+      if(s.lastError){ anyFail=true; allServer=false; }
+      const serverOk = s.lastServerSuccessAt>0 && s.lastServerSuccessAt>=s.lastCacheFallbackAt && !s.lastError;
+      if(serverOk) anyServer=true; else allServer=false;
+      if(s.lastCacheFallbackAt>0 && s.lastCacheFallbackAt>s.lastServerSuccessAt) anyCache=true;
     });
+    if(!attempted) return {state:"idle", text:"—"};
+    if(flight) return {state:"syncing", text:"جارٍ مزامنة جميع البيانات…"};
+    if(anyFail) return anyServer ? {state:"partial", text:"تمت مزامنة بعض الأقسام"} : {state:"fail", text:"تعذّرت المزامنة"};
+    if(navigator.onLine===false) return {state:"offline", text:"بانتظار الاتصال"};
+    if(anyCache) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};   /* كاش = ليس نجاح خادم كامل */
+    if(allServer) return {state:"ok", text:"تمت مزامنة جميع البيانات"};
+    return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
+  }
+  /* تسجيل مشغّلات دورة الحياة مرّة واحدة (لا تكرار عند فتح النوافذ) — يحدّث كل الأقسام */
+  let _lifecycleInit = false;
+  function initLifecycleSync(){
+    if(_lifecycleInit) return; _lifecycleInit = true;
+    /* تسجيل واحد لكل حدث؛ الأحداث المتزامنة تُجمع عبر triggerGlobalForegroundSync (~400ms) */
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("foreground"); });
+    window.addEventListener("focus", ()=> triggerGlobalForegroundSync("focus"));
+    window.addEventListener("pageshow", ()=> triggerGlobalForegroundSync("pageshow"));
+    window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); triggerGlobalForegroundSync("online"); });
+    window.addEventListener("offline", ()=>{ safeRun("syncRowOffline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); });
+  }
+
+  /* قفل ذو انضمام لكل تاريخ: نداءان متزامنان لنفس التاريخ ينضمّان لقراءة فيزيائية واحدة؛ تاريخان مختلفان مستقلّان */
+  function pullRemote(date, trigger){
+    if(!db || !user) return Promise.resolve({module:"daily", date, status:"skipped", reason:"noauth"});
+    return joinOrRun("daily:"+date, ()=> _pullRemoteWork(date, trigger));
+  }
+  function _pullRemoteWork(date, trigger){
+    syncBegin("daily", trigger);
+    return getDocServerFirst(dayRef(date)).then(snap=>{
+      const cache = _fromCache(snap);
+      let reconcile = Promise.resolve({ok:true});
+      /* الحماية من التاريخ القديم: نطبّق نتيجة التاريخ المختار حاليًا فقط (لو غيّر المستخدم اليوم أثناء السحب).
+         نتيجة الخادم الصالحة تُطبَّق دائمًا على الحالة المحلية — لا حراسة جيل هنا */
+      if(date === currentDate){
+        if(snap.exists){
+          const remote = snap.data();
+          if((remote.updatedAt||0) > (state.updatedAt||0)){
+            state = Object.assign(blankState(), remote);
+            localStorage.setItem(storageKey(date), JSON.stringify(state));
+            safeRun("pullRemote:renderAll", renderAll);   /* الرسم معزول — فشله لا يُفشل المزامنة */
+          }else if((state.updatedAt||0) > (remote.updatedAt||0) && !cache){   /* لا ندفع فوق كاش: قد يكون الخادم أحدث */
+            reconcile = pushRemote(date, state);
+          }
+        }else if(state.updatedAt && !cache){
+          reconcile = pushRemote(date, state);
+        }
+      }
+      return Promise.resolve(reconcile).then(w=>{
+        const writeOk = !(w && w.ok===false);
+        /* فشل كتابة المصالحة = فشل العملية: لا نُقدّم ختم نجاح الخادم ولا نمسح خطأً سابقًا */
+        if(writeOk) syncEnd("daily", true, snap);
+        else syncEnd("daily", false, snap, new Error("reconWriteFailed"));
+        return {module:"daily", date, status: writeOk ? (cache ? "cacheFallback" : "success") : "failed", source: cache?"cache":"server", reconWriteOk: writeOk};
+      });
+    }).catch(e=>{ diagErr("pullRemote", e); syncEnd("daily", false, null, e); return {module:"daily", date, status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* ---------- الورد اليومي من القرآن (مصحف دار الحرا) ---------- */
@@ -3595,31 +3734,34 @@
     return db.collection("users").doc(user.uid).collection("meta").doc("quran");
   }
   function qPushRemote(q){
-    if(!db || !user) return;
-    qDocRef().set(JSON.parse(JSON.stringify(q))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return qDocRef().set(JSON.parse(JSON.stringify(q))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function qPullRemote(options){
-    options=options||{};
-    if(!db || !user) return syncSkipped("quran","signedOut");
-    return syncCoordinator.runModule("quran","default",options.trigger,options,async()=>{
-      const read=await getDocServerFirst(qDocRef()), snap=read.snapshot;
-      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
-      const remote = snap.data();
-      const local = qLoad();
-      let changed=false;
-      if((remote.updatedAt||0) > (local.updatedAt||0)){
-        const merged = Object.assign({}, remote);
-        if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
-        localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
-        renderWorship();
-        renderTodayOverview();
-        if(!quranOverlay.hidden) qRenderOverlay();
-        changed=true;
-      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
-        qPushRemote(local);
+  function qPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"quran", skipped:true});
+    return joinOrRun("quran", ()=> _qPullWork(trigger));
+  }
+  function _qPullWork(trigger){
+    syncBegin("quran", trigger);
+    return getDocServerFirst(qDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
+      if(snap.exists){
+        const remote = snap.data();
+        const local = qLoad();
+        if((remote.updatedAt||0) > (local.updatedAt||0)){
+          const merged = Object.assign({}, remote);
+          if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
+          localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
+          safeRun("qPull:renderWorship", renderWorship);
+          safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = qPushRemote(local);
+        }
       }
-      return {status:syncReadStatus(read),source:read.source,changed};
-    });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("quran", true, snap); else syncEnd("quran", false, snap, new Error("reconWriteFailed"));
+        return {module:"quran", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("qPullRemote", e); syncEnd("quran", false, null, e); return {module:"quran", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* يعلّم "الورد اليومي" منجزًا في يوم اليوم الفعلي دائمًا، حتى لو كان المستخدم متصفحًا يومًا آخر */
@@ -4255,26 +4397,32 @@
   /* مزامنة سجل الاقتراحات والسور المفضّلة عبر الأجهزة */
   function witrDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("witr"); }
   function witrPushRemote(meta){
-    if(!db || !user) return;
-    witrDocRef().set(JSON.parse(JSON.stringify(meta))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return witrDocRef().set(JSON.parse(JSON.stringify(meta))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
-  function witrPullRemote(options){
-    options=options||{};
-    if(!db || !user) return syncSkipped("witr","signedOut");
-    return syncCoordinator.runModule("witr","default",options.trigger,options,async()=>{
-      const read=await getDocServerFirst(witrDocRef()), snap=read.snapshot;
-      if(!snap.exists) return {status:syncReadStatus(read),source:read.source,changed:false};
-      const remote = snap.data();
-      const local = witrMeta();
-      let changed=false;
-      if((remote.updatedAt||0) > (local.updatedAt||0)){
-        localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
-        changed=true;
-      }else if(read.source==="server" && (local.updatedAt||0) > (remote.updatedAt||0)){
-        witrPushRemote(local);
+  function witrPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"witr", skipped:true});
+    return joinOrRun("witr", ()=> _witrPullWork(trigger));
+  }
+  function _witrPullWork(trigger){
+    syncBegin("witr", trigger);
+    return getDocServerFirst(witrDocRef()).then(snap=>{
+      const cache=_fromCache(snap); let reconcile=Promise.resolve({ok:true});
+      if(snap.exists){
+        const remote = snap.data();
+        const local = witrMeta();
+        if((remote.updatedAt||0) > (local.updatedAt||0)){
+          localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
+          /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم) */
+          safeRun("witrPull:render", ()=>{ if(witrOverlay && !witrOverlay.hidden && typeof witrRenderAll==="function") witrRenderAll(); });
+        }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
+          reconcile = witrPushRemote(local);
+        }
       }
-      return {status:syncReadStatus(read),source:read.source,changed};
-    });
+      return Promise.resolve(reconcile).then(w=>{ const writeOk=!(w&&w.ok===false);
+        if(writeOk) syncEnd("witr", true, snap); else syncEnd("witr", false, snap, new Error("reconWriteFailed"));
+        return {module:"witr", status: writeOk?(cache?"cacheFallback":"success"):"failed", source:cache?"cache":"server", reconWriteOk:writeOk}; });
+    }).catch(e=>{ diagErr("witrPullRemote", e); syncEnd("witr", false, null, e); return {module:"witr", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
   /* اختيار السور المفضّلة: إدخال ذكي (Autocomplete) + شرائح (Chips) — قائمة ثابتة بالـ ١١٤ سورة فقط، بلا نص حر */
@@ -5393,12 +5541,12 @@
     return db.collection("users").doc(user.uid).collection("hifzSegments").doc(segmentId);
   }
   function hifzPushSegment(seg){
-    if(!db || !user) return;
-    hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(seg.id).set(JSON.parse(JSON.stringify(seg))).then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzDeleteSegmentRemote(segmentId){
-    if(!db || !user) return;
-    hifzSegmentRef(segmentId).delete().catch(()=>{});
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    return hifzSegmentRef(segmentId).delete().then(()=>({ok:true})).catch(e=>({ok:false, error:(e&&e.message)||String(e)}));
   }
   function hifzUpsertSegment(seg){
     seg.updatedAt = Date.now();
@@ -5415,30 +5563,31 @@
     hifzDeleteSegmentRemote(segmentId);
   }
   /* دمج بالأحدث لكل مقطع على حدة (وليس السجل كاملًا) */
-  function hifzPullRemote(options){
-    options=options||{};
-    if(!db || !user) return syncSkipped("hifz","signedOut");
-    return syncCoordinator.runModule("hifz","default",options.trigger,options,async()=>{
-      const query=db.collection("users").doc(user.uid).collection("hifzSegments");
-      const read=await getQueryServerFirst(query), snap=read.snapshot;
+  function hifzPullRemote(trigger){
+    if(!db || !user) return Promise.resolve({module:"hifz", skipped:true});
+    return joinOrRun("hifz", ()=> _hifzPullWork(trigger));
+  }
+  function _hifzPullWork(trigger){
+    syncBegin("hifz", trigger);
+    return getQueryServerFirst(db.collection("users").doc(user.uid).collection("hifzSegments")).then(snap=>{
+      const cache=_fromCache(snap);
       const remoteSegs = [];
       snap.forEach(d=> remoteSegs.push(d.data()));
-      if(!remoteSegs.length) return {status:syncReadStatus(read),source:read.source,changed:false};
-      const data = hifzData();
-      const byId = {};
-      data.segments.forEach(s=> byId[s.id] = s);
-      let changed=false;
-      remoteSegs.forEach(rs=>{
-        const ls = byId[rs.id];
-        if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)){ byId[rs.id] = rs; changed=true; }
-      });
-      if(changed){
+      if(remoteSegs.length){
+        const data = hifzData();
+        const byId = {};
+        data.segments.forEach(s=> byId[s.id] = s);
+        remoteSegs.forEach(rs=>{
+          const ls = byId[rs.id];
+          if(!ls || (rs.updatedAt||0) > (ls.updatedAt||0)) byId[rs.id] = rs;
+        });
         data.segments = Object.values(byId);
-        localStorage.setItem(HIFZ_KEY, JSON.stringify(data));
-        renderHifzCard();
+        hifzSaveLocal(data);
+        safeRun("hifzPull:render", renderHifzCard);
       }
-      return {status:syncReadStatus(read),source:read.source,changed};
-    });
+      syncEnd("hifz", true, snap);   /* الحفظ (upsert) لا يمرّ بمصالحة سحبٍ هنا؛ لا كتابة مصالحة تفشل */
+      return {module:"hifz", status: cache?"cacheFallback":"success", source: cache?"cache":"server"};
+    }).catch(e=>{ diagErr("hifzPullRemote", e); syncEnd("hifz", false, null, e); return {module:"hifz", status:"failed", error:(e&&e.message)||String(e)}; });
   }
   /* الاستعلام المطلوب: كل المقاطع المستحقة اليوم أو قبله — استعلام Firestore حقيقي (وليس فقط حساب محلي).
      تُستخدم القيمة المحلية دائمًا لعرض الواجهة (Offline-First)؛ هذا الاستعلام إضافي عند توفر الاتصال والمزامنة. */
@@ -8389,22 +8538,21 @@
 
   function renderAll(){
     /* ترحيل معرّفات + تنظيف روابط مكسورة مرّة واحدة لأي حالة وصلت (تحميل قديم/مزامنة) ثم حفظها لتثبيتها */
-    let migrated = ensureIds(state);
-    if(validateLinks(state)) migrated = true;
-    if(migrated) save();
-    renderHijri(currentDate);
-    renderPrayers();
-    renderWorship();
-    renderWater();
-    renderSport();
-    renderHealth();
-    renderTaskLists();
-    bindTextarea("intention","intention");
-    bindTextarea("memory","memory");
-    bindTextarea("notes","notes");
-    renderStars();
-    renderProgress();
-    if(typeof expRenderLaunch === "function") expRenderLaunch();
+    safeRun("renderAll:migrate", ()=>{ let migrated = ensureIds(state); if(validateLinks(state)) migrated = true; if(migrated) save(); });
+    /* عزل رسم كل قسم: فشل قسم واحد (مثل بطاقة المصاريف) لا يوقف رسم بقية الأقسام */
+    safeRun("renderHijri", ()=> renderHijri(currentDate));
+    safeRun("renderPrayers", renderPrayers);
+    safeRun("renderWorship", renderWorship);
+    safeRun("renderWater", renderWater);
+    safeRun("renderSport", renderSport);
+    safeRun("renderHealth", renderHealth);
+    safeRun("renderTaskLists", renderTaskLists);
+    safeRun("bindIntention", ()=> bindTextarea("intention","intention"));
+    safeRun("bindMemory", ()=> bindTextarea("memory","memory"));
+    safeRun("bindNotes", ()=> bindTextarea("notes","notes"));
+    safeRun("renderStars", renderStars);
+    safeRun("renderProgress", renderProgress);
+    safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
   }
 
   /* ---------- Date navigation ---------- */
@@ -8412,14 +8560,15 @@
 
   function goto(dateStr){
     currentDate = dateStr;
-    picker.value = dateStr;
-    const existed = load(dateStr);
-    if(!existed) carryOver(dateStr);
-    seedRecurringTasks(dateStr);
-    renderQuote(dateStr);
-    renderAll();
-    fetchTimes(dateStr);
-    pullRemote(dateStr,{trigger:"navigation",forceServer:true,bypassThrottle:true});
+    /* المزامنة لا تعتمد على نجاح الرسم: كل خطوة معزولة، والسحب يعمل دائمًا حتى لو فشل الرسم */
+    safeRun("goto:picker", ()=>{ picker.value = dateStr; });
+    const existed = safeRun("goto:load", ()=> load(dateStr));
+    if(!existed) safeRun("goto:carryOver", ()=> carryOver(dateStr));
+    safeRun("goto:recurringTasks", ()=> seedRecurringTasks(dateStr));
+    safeRun("goto:quote", ()=> renderQuote(dateStr));
+    safeRun("goto:renderAll", renderAll);
+    safeRun("goto:fetchTimes", ()=> fetchTimes(dateStr));
+    safeRun("goto:pullDay", ()=> pullRemote(dateStr));   /* سحب مستند اليوم مستقلّ عن الرسم */
   }
 
   function shiftDay(delta){
@@ -8867,6 +9016,63 @@
   /* ======================  وحدة المصاريف (المصاريف)  =================== */
   /* تخزين مستقل عالمي (عبر الأيام) — لا يمسّ حالة اليوم ولا أي ميزة قائمة.
      المصدر الوحيد للحقيقة للصرف الفعلي هو سجل المعاملات (transactions). */
+  /* ---------- تشخيص خفيف (بلا أي محتوى شخصي: موضع + رسالة الخطأ فقط) ---------- */
+  const MFKR_DIAG = { marks:[], errors:[] };
+  function diagMark(name){ try{ MFKR_DIAG.marks.push({t:Date.now(), name:String(name)}); if(MFKR_DIAG.marks.length>80) MFKR_DIAG.marks.shift(); }catch(e){} }
+  function diagErr(where, err){ try{ const m=(err&&err.message)?err.message:String(err); MFKR_DIAG.errors.push({t:Date.now(), where:String(where), msg:m, stack:(err&&err.stack)?String(err.stack).split("\n").slice(0,4).join(" | "):""}); if(MFKR_DIAG.errors.length>40) MFKR_DIAG.errors.shift(); if(window.console&&console.warn) console.warn("[diag] "+where+": "+m); }catch(e){} }
+  function expDiag(where, err){ diagErr(where, err); }
+  try{ window.__mfkrDiag = ()=> JSON.parse(JSON.stringify(MFKR_DIAG)); }catch(e){}
+  /* خطّاف المزامنة: في الإنتاج نكشف تشخيصًا للقراءة فقط. أمّا الطرائق المُحدِثة للكتابة/المزامنة (pullAll/expPull/expPush)
+     فلا تظهر إلّا إذا فعّل الاختبار العلمَ window.__MFKR_TEST__=true عبر addInitScript قبل التحميل. */
+  try{
+    const _syncReadOnly = {
+      summary:()=> syncSummary(),
+      state:()=> JSON.parse(JSON.stringify(SYNC_STATE)),
+      module:(n)=> JSON.parse(JSON.stringify(syncModule(n))),
+      inFlight:(n)=> syncInFlight(n),
+      runGen:()=> _syncRunGen
+    };
+    if(window.__MFKR_TEST__ === true){
+      window.__mfkrSync = Object.assign({
+        pullAll:(trigger,opts)=> syncPullAllModules(trigger,opts),
+        expPull:(opts)=> expPullRemote(opts),
+        expPush:(d)=> expPushRemote(d)
+      }, _syncReadOnly);
+      /* واجهة اختبار مصاريف (محصورة خلف __MFKR_TEST__): تقود الطفرات وتقرأ الحالة للاختبارات الحتمية */
+      window.__mfkrExp = {
+        state:()=> JSON.parse(JSON.stringify(expState)),
+        raw:()=> JSON.parse(localStorage.getItem(EXP_KEY)),
+        reload:()=> expRetryLoad(),
+        deleteTrip:(id)=> expDeleteTrip(id),
+        restoreDeletedTrip:(id)=> expRestoreDeletedTrip(id),
+        deleteTripWithExpenses:(id)=> expDeleteTripWithExpenses(id),
+        restoreTripWithExpenses:(id,txIds)=> expRestoreTripWithExpenses(id,txIds),
+        tripLinkedLiveTxCount:(id)=> expTripLinkedLiveTxCount(id),
+        unlinkTrip:(id)=> expUnlinkTripTransactions(id),
+        showUndo:(text,fn)=> expShowUndoAction(text, fn),
+        deleteTripFlow:(id)=> expDeleteTripFlow(id),
+        setActive:(id,on)=> expSetManualActive(id,on),
+        reconcileActive:()=> { const c=expReconcileActiveTrips(expState); expSave(expState); return c; },
+        activeTrips:()=> expGetActiveTrips().map(t=>t.id),
+        liveTrips:()=> expLiveTrips().map(t=>t.id),
+        pauseTpl:(id)=> expPauseTemplate(id),
+        resumeTpl:(id)=> expResumeTemplate(id),
+        archiveTpl:(id)=> expArchiveTemplate(id),
+        restoreTpl:(id)=> expRestoreTemplate(id),
+        monthInstances:(y,m)=> expMonthInstances(y,m).map(i=>({id:i.id,templateId:i.templateId,paid:i.paidAmountMinor,planned:i.plannedAmountMinor,status:i.status})),
+        genActive:(id,y,m)=> { const t=expTplById(id); return t? expTplGenActive(t,y,m):null; },
+        toMinor:(v)=> expToMinor(v),
+        minorParse:(v)=> expMinorParse(v),
+        merge:(a,b)=> expMerge(a,b),
+        openExpenseForm:(id,pre)=> expOpenExpenseForm(id,pre)
+      };
+    } else {
+      window.__mfkrSync = _syncReadOnly;   /* إنتاج: قراءة فقط، لا كتابة */
+    }
+  }catch(e){}
+  /* غلاف رسم آمن: فشل رسم قسم لا يوقف بقية الأقسام */
+  function safeRun(name, fn){ try{ return fn(); }catch(e){ diagErr(name, e); return undefined; } }
+
   const EXP_KEY = "h2do-expenses";
   const EXP_SCHEMA = 2;   /* v2: ميزة السفر (trips + حقول تحويل عملة + countAgainstWeeklyBudget) */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
@@ -8907,43 +9113,88 @@
       localStorage.setItem(EXP_KEY, JSON.stringify(d));
       return d;
     }
-    /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) */
+    /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) — دالة كليّة لا ترمي مهما كان شكل البيانات */
     raw.settings = Object.assign({ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG",
-      defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() }, raw.settings||{});
-    raw.categories = Array.isArray(raw.categories)? raw.categories : [];
-    raw.fixedTemplates = Array.isArray(raw.fixedTemplates)? raw.fixedTemplates : [];
-    raw.instances = Array.isArray(raw.instances)? raw.instances : [];
-    raw.transactions = Array.isArray(raw.transactions)? raw.transactions : [];
-    raw.categories.forEach(c=>{ if(!Array.isArray(c.budgets)) c.budgets=[]; if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
-    /* ترحيل v2 (السفر): إضافة مجموعة الرحلات + حقول المعاملات الجديدة دون تغيير أي قيمة قائمة.
-       المعاملات القديمة تحتفظ بسلوك الميزانية الأسبوعية كما كان: countAgainstWeeklyBudget=true. */
-    if(!Array.isArray(raw.trips)) raw.trips = [];
-    if((raw.version||1) < 2){
-      raw.transactions.forEach(t=>{
-        if(t.tripId===undefined) t.tripId = null;
-        if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = true;
-        if(t.originalAmountMinor===undefined) t.originalAmountMinor = null;
-        if(t.originalCurrency===undefined) t.originalCurrency = null;
-        if(t.exchangeRate===undefined) t.exchangeRate = null;
-        if(t.exchangeRateSource===undefined) t.exchangeRateSource = null;
-        if(t.merchantCountry===undefined) t.merchantCountry = null;
-      });
-    } else {
-      /* توافق تصاعدي لأي معاملة تنقصها الحقول */
-      raw.transactions.forEach(t=>{ if(t.tripId===undefined) t.tripId=null; if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = t.tripId? false : true; });
-    }
-    raw.trips.forEach(tr=>{ if(!Array.isArray(tr.allocations)) tr.allocations=[]; if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; });
-    /* حقول تصنيف الالتزام الثابت (توافق تصاعدي): مصدر ثابت للدفعات المرتبطة بمثيل */
+      defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() },
+      (raw.settings && typeof raw.settings==="object") ? raw.settings : {});
+    /* أزِل عناصر القمامة (null/غير كائن) فقط — لا نحذف أي سجلّ حقيقي */
+    const objArr = a => (Array.isArray(a)? a : []).filter(x=> x && typeof x==="object");
+    raw.categories = objArr(raw.categories);
+    raw.fixedTemplates = objArr(raw.fixedTemplates);
+    raw.instances = objArr(raw.instances);
+    raw.transactions = objArr(raw.transactions);
+    raw.trips = objArr(raw.trips);
+    raw.categories.forEach(c=>{ c.budgets = objArr(c.budgets); if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
+    raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
+    /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
+    raw.fixedTemplates.forEach(tp=>{ if(!Array.isArray(tp.suspensions)) tp.suspensions=[]; if(tp.archiveMonth===undefined) tp.archiveMonth=null; });
+    /* ترحيل v2 (السفر) + حقول تصنيف الالتزام — على كائنات مضمونة فقط، بلا رمي */
+    const was = raw.version||1;
     raw.transactions.forEach(t=>{
+      if(t.tripId===undefined) t.tripId = null;
+      if(t.countAgainstWeeklyBudget===undefined) t.countAgainstWeeklyBudget = (was<2) ? true : (t.tripId? false : true);
+      if(t.originalAmountMinor===undefined) t.originalAmountMinor = null;
+      if(t.originalCurrency===undefined) t.originalCurrency = null;
+      if(t.exchangeRate===undefined) t.exchangeRate = null;
+      if(t.exchangeRateSource===undefined) t.exchangeRateSource = null;
+      if(t.merchantCountry===undefined) t.merchantCountry = null;
       if(t.sourceType===undefined) t.sourceType = t.fixedExpenseInstanceId ? "fixed" : null;
       if(t.fixedTemplateId===undefined) t.fixedTemplateId = null;
       if(t.needsReview===undefined) t.needsReview = false;
+      if(t.amountInvalid===undefined) t.amountInvalid = false;
     });
-    const repaired = expRepairMisclassified(raw);   /* إصلاح لمرّة واحدة للدفعات المصنّفة خطأً تحت فئة أسبوعية */
+    /* تطبيع المبالغ عند التحميل (توافقي، عديم التغيير عند إعادة التشغيل):
+       - سلسلة رقمية صالحة → عدد صحيح (تُصلَّح فتُجمَع لا تُسلسَل)
+       - قيمة مشوّهة فعلًا → نحفظ الخام في amountRaw، ونصفّر amountMinor للحساب، ونصِمها amountInvalid+needsReview
+         (لا تُعرض كمال صحيح، لا تُضخّم الإجماليات، لا تُنتج NaN). لا نبصم updatedAt فلا مزامنة زائدة. */
+    let normalized=false;
+    raw.transactions.forEach(t=>{
+      try{
+        if(t.amountInvalid === true){
+          /* موسوم مشوّهًا سلفًا: يبقى مشوّهًا (لا نُعيد اشتقاق الصلاحية من amountMinor=0 فنُلغي الوسم) — إدمبوتنسي */
+          if(t.amountMinor !== 0){ t.amountMinor = 0; normalized=true; }
+          return;
+        }
+        const pr = expMinorParse(t.amountMinor);
+        if(pr.ok){
+          if(t.amountMinor !== pr.minor){ t.amountMinor = pr.minor; normalized=true; }   /* سلسلة رقمية → عدد صحيح */
+        } else {
+          if(!("amountRaw" in t)) t.amountRaw = t.amountMinor;   /* احفظ الخام مرّة */
+          t.amountMinor = 0; t.amountInvalid = true; t.needsReview = true; normalized=true;
+        }
+      }catch(e){ if(typeof expDiag==="function") expDiag("normAmount", e); }
+    });
+    let repaired=false;
+    try{ repaired = expRepairMisclassified(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expRepairMisclassified", e); }
+    /* توفيق القيم المشتقّة للمثيلات مع مصدر الحقيقة (المعاملات) عند التحميل — كي لا تبقى الحالة/المدفوع متأخّرةً حتى أول تعديل أو مزامنة.
+       نحافظ على updatedAt (لا نبصمه) فلا يُحدث ضجيج مزامنة، ولا نرمي مهما كان شكل البيانات */
+    let reconInst=false;
+    try{
+      (raw.instances||[]).forEach(inst=>{
+        if(!inst || typeof inst!=="object") return;
+        let paid=0, lastDate=null;
+        (raw.transactions||[]).forEach(t=>{
+          if(!t || t.deletedAt || t.fixedExpenseInstanceId!==inst.id) return;
+          const amt = expToMinor(t.amountMinor);
+          if(t.transactionType==="refund") paid-=amt;
+          else { paid+=amt; if(typeof t.transactionDate==="string" && (!lastDate || t.transactionDate>lastDate)) lastDate=t.transactionDate; }
+        });
+        paid=Math.max(0,paid);
+        const status = paid<=0 ? "unpaid" : (paid >= (Number(inst.plannedAmountMinor)||0) ? "paid" : "partial");
+        const paidAt = paid>0 ? lastDate : null;
+        if(inst.paidAmountMinor!==paid || inst.status!==status || inst.paidAt!==paidAt){
+          inst.paidAmountMinor=paid; inst.status=status; inst.paidAt=paidAt; reconInst=true;   /* updatedAt محفوظ */
+        }
+      });
+    }catch(e){ if(typeof expDiag==="function") expDiag("expReconInstances", e); }
+    /* توفيق ثبات الرحلة النشطة يدويًا عند التحميل: على الأكثر واحدة (يمنع بقاء اثنتين بعد دمج سيّئ) */
+    let activeRecon=false;
+    try{ activeRecon = expReconcileActiveTrips(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expReconcileActiveTrips", e); }
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
-    /* ثبّت الترحيل/الإصلاح في التخزين حتى لا يتكرر ويُزامَن عبر الأجهزة */
-    if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }
+    /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
+    if(oldVersion < EXP_SCHEMA || repaired){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    else if(reconInst || normalized || activeRecon){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق/التطبيع دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
   /* إصلاح محافظ لمرّة واحدة: دفعة التزام سُجّلت خطأً تحت فئة أسبوعية (مثل «الأكل»).
@@ -8951,37 +9202,46 @@
      تطابق واحد → ربطها بالالتزام (ثابت، خارج الميزانية الأسبوعية). تطابق متعدد وتحت فئة أسبوعية → needsReview فقط. */
   function expRepairMisclassified(d){
     if(!Array.isArray(d.transactions) || !Array.isArray(d.fixedTemplates)) return false;
+    if(!Array.isArray(d.categories)) d.categories=[];
+    if(!Array.isArray(d.instances)) d.instances=[];
     let changed=false;
     d.transactions.forEach(t=>{
-      if(t.deletedAt) return;
-      if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return;   /* مصنّفة ثابتة سلفًا — تخطَّ */
-      const desc=(t.description||"").trim();
-      if(desc.indexOf("دفعة:")!==0) return;
-      const name=desc.slice(5).trim(); if(!name) return;
-      const matches=d.fixedTemplates.filter(tp=> !tp.archivedAt && (tp.name||"").trim()===name);
-      const cat=d.categories.find(c=>c.id===t.categoryId);
-      const underVariable = !!(cat && cat.section==="variable");
-      if(matches.length===1){
-        const tp=matches[0];
-        const dt=new Date(t.transactionDate+"T12:00:00"), y=dt.getFullYear(), mo=dt.getMonth()+1;
-        let inst=d.instances.find(i=>i.templateId===tp.id && i.year===y && i.month===mo);
-        if(!inst){ inst={ id:newId(), templateId:tp.id, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo),
-          paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; d.instances.push(inst); }
-        t.sourceType="fixed"; t.fixedTemplateId=tp.id; t.fixedExpenseInstanceId=inst.id;
-        t.countAgainstWeeklyBudget=false; t.categoryId=null; t.needsReview=false; t.updatedAt=Date.now();
-        changed=true;
-      } else if(matches.length>1 && underVariable && !t.needsReview){
-        t.needsReview=true; t.updatedAt=Date.now(); changed=true;   /* غموض — لا إصلاح تلقائي */
-      }
+      try{
+        if(!t || typeof t!=="object") return;
+        if(t.deletedAt) return;
+        if(t.sourceType==="fixed" || t.fixedExpenseInstanceId) return;   /* مصنّفة ثابتة سلفًا — تخطَّ */
+        const desc = (typeof t.description==="string") ? t.description.trim() : "";   /* تحقّق النوع قبل أي عملية نصّية */
+        if(desc.indexOf("دفعة:")!==0) return;
+        const name=desc.slice(5).trim(); if(!name) return;
+        const matches=d.fixedTemplates.filter(tp=> tp && !tp.archivedAt && typeof tp.name==="string" && tp.name.trim()===name);
+        const cat=d.categories.find(c=> c && c.id===t.categoryId);
+        const underVariable = !!(cat && cat.section==="variable");
+        if(matches.length===1){
+          const tp=matches[0];
+          const tds = (typeof t.transactionDate==="string") ? t.transactionDate : "";
+          const dt=new Date(tds+"T12:00:00");
+          if(isNaN(dt.getTime())) return;   /* تاريخ غير صالح — لا إصلاح تلقائي */
+          const y=dt.getFullYear(), mo=dt.getMonth()+1;
+          let inst=d.instances.find(i=> i && i.templateId===tp.id && i.year===y && i.month===mo);
+          if(!inst){ inst={ id:newId(), templateId:tp.id, year:y, month:mo, plannedAmountMinor:expPlannedForMonth(tp,y,mo),
+            paidAmountMinor:0, status:"unpaid", dueDate:expDueDate(tp,y,mo), paidAt:null, createdAt:Date.now(), updatedAt:Date.now() }; d.instances.push(inst); }
+          t.sourceType="fixed"; t.fixedTemplateId=tp.id; t.fixedExpenseInstanceId=inst.id;
+          t.countAgainstWeeklyBudget=false; t.categoryId=null; t.needsReview=false; t.updatedAt=Date.now();
+          changed=true;
+        } else if(matches.length>1 && underVariable && !t.needsReview){
+          t.needsReview=true; t.updatedAt=Date.now(); changed=true;   /* غموض — لا إصلاح تلقائي */
+        }
+      }catch(e){ /* معاملة واحدة معطوبة لا توقف إصلاح البقية */ if(typeof expDiag==="function") expDiag("repairTx", e); }
     });
     /* أعِد حساب المثيلات المتأثرة من المعاملات (المصدر الوحيد للحقيقة) */
-    if(changed) d.instances.forEach(inst=>{
-      const linked=d.transactions.filter(x=>!x.deletedAt && x.fixedExpenseInstanceId===inst.id);
-      let paid=0,last=null; linked.forEach(x=>{ if(x.transactionType==="expense"){ paid+=x.amountMinor; if(!last||x.transactionDate>last)last=x.transactionDate; } else if(x.transactionType==="refund") paid-=x.amountMinor; });
+    if(changed) d.instances.forEach(inst=>{ try{
+      if(!inst || typeof inst!=="object") return;
+      const linked=d.transactions.filter(x=> x && !x.deletedAt && x.fixedExpenseInstanceId===inst.id);
+      let paid=0,last=null; linked.forEach(x=>{ const amt=(typeof x.amountMinor==="number" && isFinite(x.amountMinor))?x.amountMinor:0; if(x.transactionType==="expense"){ paid+=amt; if(!last||x.transactionDate>last)last=x.transactionDate; } else if(x.transactionType==="refund") paid-=amt; });
       inst.paidAmountMinor=Math.max(0,paid);
-      inst.status= inst.paidAmountMinor<=0?"unpaid":(inst.paidAmountMinor>=inst.plannedAmountMinor?"paid":"partial");
+      inst.status= inst.paidAmountMinor<=0?"unpaid":(inst.paidAmountMinor>=(inst.plannedAmountMinor||0)?"paid":"partial");
       inst.paidAt= inst.paidAmountMinor>0?last:null;
-    });
+    }catch(e){} });
     return changed;
   }
   /* خطّاف ترحيل دفاعي: يبحث عن قوائم مصاريف قديمة محتملة ويستوردها كفئات دون اختلاق معاملات يومية.
@@ -9010,9 +9270,9 @@
      التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
   const EXP_BACKUP_KEY = "h2do-expenses-backup";
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
-  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0;
+  let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0, expPushResolvers = [];
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
-  /* القراءة المشتركة تُفضّل الخادم وترجع صراحةً إلى مخزّن Firestore المحلي عند انقطاع الشبكة. */
+  /* قراءة عبر المساعد العام: خادم أولًا ثم كاش صراحةً مع وسم المصدر — نفس عقد بقيّة الأقسام */
   function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
   function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
@@ -9035,31 +9295,44 @@
   }
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
-  function expTriggerPull(){ if(!db || !user) return syncSkipped("expenses","signedOut"); expLastPullAt=Date.now(); return expPullRemote({trigger:"expenses-open",forceServer:true}); }
+  function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
+  /* يُعيد وعدًا بنتيجة الكتابة {ok} (لا يرمي، لا يكتب في syncStatus مباشرةً).
+     يجمّع الكتابات السريعة في دفعة واحدة؛ كل النداءات المُجمّعة تُحلّ عند اكتمال الكتابة النهائية */
   function expPushRemote(d){
-    if(!db || !user) return;
-    /* تجميع الكتابات المتتابعة السريعة (كدفعة واحدة) — يقلّل الكتابات دون فقدان أي تغيير */
-    clearTimeout(expPushTimer);
+    if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
+    if(expLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
     const snapshot = JSON.parse(JSON.stringify(d));   /* تطبيع: يزيل undefined/الدوال/الدورات ويُبقي الأرقام والتواريخ النصية و null */
-    expPushTimer = setTimeout(()=>{
-      try{
-        expDocRef().set(snapshot)
-          .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); })
-          .catch(error=>{ syncCoordinator.states.expenses.lastError=error; expSetSyncState("error"); });
-      }catch(e){ /* لا نُفشي أخطاء الخلفية للمستخدم */ }
-    }, 400);
+    clearTimeout(expPushTimer);
+    return new Promise((resolve)=>{
+      expPushResolvers.push(resolve);
+      expPushTimer = setTimeout(()=>{
+        const resolvers = expPushResolvers; expPushResolvers = [];
+        try{
+          expDocRef().set(snapshot)
+            .then(()=>{ expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); resolvers.forEach(r=> r({ok:true})); })
+            .catch((e)=>{ expSetSyncState("error"); resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); });
+        }catch(e){ resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); }
+      }, 400);
+    });
   }
   /* دمج على مستوى السجل: اتحاد حسب المعرّف الثابت + آخر تحديث يفوز (بلا فقدان، بلا تكرار، بلا جمع مبالغ) */
-  function expMergeById(localArr, remoteArr, keyFn){
+  /* اتحاد حسب المعرّف: الأحدث updatedAt يفوز. عند تعادل updatedAt يُستخدم tie(l,ex) لحسمٍ حتمي
+     (لا يعتمد على أيّهما «المحلي») إن مُرِّر؛ وإلّا تبقى القاعدة العامّة (المحلي) دون إضعافٍ للسجلات الأخرى. */
+  function expMergeById(localArr, remoteArr, keyFn, tie){
     const map = new Map();
     (remoteArr||[]).forEach(r=>{ const k=r&&keyFn(r); if(k!=null) map.set(k, r); });
     (localArr||[]).forEach(l=>{ const k=l&&keyFn(l); if(k==null) return;
       const ex = map.get(k);
-      if(!ex) map.set(k, l);
-      else map.set(k, (l.updatedAt||0) >= (ex.updatedAt||0) ? l : ex);
+      if(!ex){ map.set(k, l); return; }
+      const lu=(l.updatedAt||0), eu=(ex.updatedAt||0);
+      let win;
+      if(lu>eu) win=l; else if(eu>lu) win=ex; else win = tie ? tie(l, ex) : l;
+      map.set(k, win);
     });
     return [...map.values()].map(r=> Object.assign({}, r));   /* مراجع جديدة (حالة غير قابلة للطفر) */
   }
+  /* حسم تعادل الرحلات حتميًا: عند تساوي updatedAt تفوز الشاهدة على الحيّة (لا إحياء)، وإلّا ترتيب مستقر بالمعرّف */
+  function expTripTie(a, b){ const ad=!!(a&&a.deletedAt), bd=!!(b&&b.deletedAt); if(ad!==bd) return ad?a:b; return (String(a.id) <= String(b.id)) ? a : b; }
   function expMerge(localD, remoteD){
     localD = localD||{}; remoteD = remoteD||{};
     const out = { version: Math.max(localD.version||1, remoteD.version||1) };
@@ -9068,7 +9341,7 @@
     out.categories = expMergeById(localD.categories, remoteD.categories, c=>c.id);
     out.fixedTemplates = expMergeById(localD.fixedTemplates, remoteD.fixedTemplates, t=>t.id);
     out.transactions = expMergeById(localD.transactions, remoteD.transactions, t=>t.id);  /* الحذف الناعم محفوظ كـ tombstone */
-    out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id);
+    out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id, expTripTie);   /* عند التعادل: الشاهدة تفوز حتميًا */
     /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
     out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
     /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
@@ -9106,17 +9379,38 @@
   }
   function expPullRemote(opts){
     opts = opts || {};
-    if(!db || !user){ expRenderSyncRow(); return syncSkipped("expenses","signedOut"); }
+    if(!db || !user){ expRenderSyncRow(); return Promise.resolve({module:"expenses", status:"skipped", reason:"noauth"}); }
+    if(expLoadFailed && !opts.manual){ return Promise.resolve({module:"expenses", status:"skipped", reason:"loadFailed"}); }   /* لا نسحب فوق حالة فاشلة تلقائيًا */
+    return joinOrRun("expenses", ()=> _expPullWork(opts));   /* قفل ذو انضمام: النداءات المتزامنة تنضمّ لقراءة واحدة وتحصل على نتيجتها */
+  }
+  function _expPullWork(opts){
+    /* ملاحظة: لا نتخطّى القراءة لمجرّد كوننا دون اتصال — نُجري القراءة فيرجع المساعد للكاش ويُبلَّغ cacheFallback */
+    syncBegin("expenses", opts.trigger);
     expSetSyncState("syncing");
-    return syncCoordinator.runModule("expenses","default",opts.trigger,opts,async()=>{
-      const read=await expGetDoc(), snap=read.snapshot;
-      const status=syncReadStatus(read);
-      const done = changed=>{ expSetLastSync(Date.now()); expSetSyncState("idle"); return {status,source:read.source,changed:!!changed}; };
+    /* الإنهاء يحسب الحالة من مصدر اللقطة ونجاح كتابة المصالحة:
+       - فشل الكتابة = فشل العملية: لا نُقدّم آخر مزامنة خادم (expSetLastSync) ولا ختم نجاح القسم، ونسجّل الخطأ
+       - قراءة كاش = ليست نجاح خادم كامل، ولا نبصم آخر مزامنة خادم */
+    const finish = (snap, reconWriteOk)=>{
+      const cache=_fromCache(snap);
+      const writeOk = reconWriteOk!==false;
+      if(writeOk){
+        if(!cache) expSetLastSync(Date.now());
+        syncEnd("expenses", true, snap);
+        expSetSyncState(cache ? (navigator.onLine===false?"offline":"idle") : "idle");
+      } else {
+        syncEnd("expenses", false, snap, new Error("reconWriteFailed"));   /* لا يُقدّم lastServerSuccessAt ولا يمسّ lastSyncAt */
+        expSetSyncState("error");
+      }
+      return {module:"expenses", status: writeOk?(cache?"cacheFallback":"success"):"failed", source: cache?"cache":"server", reconWriteOk:writeOk};
+    };
+    return expGetDoc().then(snap=>{
+      const cache=_fromCache(snap);
       const local = expState;
       if(!snap.exists){
-        /* لا بيانات على الخادم بعد → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء */
-        if(read.source==="server" && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) expPushRemote(local);
-        return done(false);
+        /* الخادم فارغ → ارفع المحلي (الترحيل/أول مزامنة) إن وُجد شيء — لكن ليس بناءً على قراءة كاش (قد يملك الخادم بيانات لم تصلنا) */
+        let recon = Promise.resolve({ok:true});
+        if(!cache && ((local.settings&&local.settings.updatedAt) || (local.transactions&&local.transactions.length) || (local.trips&&local.trips.length))) recon = expPushRemote(local);
+        return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
       }
       const remote = snap.data();
       /* نسخة احتياطية محلية لمرّة واحدة قبل أول مصالحة مع الخادم (تُبقى حتى تأكيد الحفظ) */
@@ -9126,26 +9420,42 @@
         const adopt = Object.assign({}, remote);
         ["categories","fixedTemplates","instances","transactions","trips"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
-        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt)); expRefresh();
-        return done(true);
+        expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
+        safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
+        return finish(snap, true);
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
-      const contributed = expSig(merged) !== expSig(remote);   /* هل أضاف المحلي شيئًا؟ (قبل إعادة حساب المثيلات) */
-      const changed = expSig(merged) !== expSig(local);
+      const activeChanged = expReconcileActiveTrips(merged);   /* رحلة نشطة يدويًا واحدة على الأكثر بعد الدمج (حتمي) */
+      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged;   /* هل أضاف/غيّر المحلي شيئًا؟ */
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
-      if(changed){
-        localStorage.setItem(EXP_KEY, JSON.stringify(merged));
-        expRefresh();                                          /* أعد الرسم فقط عندما ساهم السحب بتغيير فعلي */
-      }
-      if(read.source==="server" && contributed) expPushRemote(merged); /* لا ندفع المحلي بعد فشل قراءة الخادم */
-      return done(changed);
-    }).then(result=>{ if(result.status==="failed") expSetSyncState("error"); else if(result.status==="throttled" || result.status==="skipped") expSetSyncState("idle"); return result; });
+      localStorage.setItem(EXP_KEY, JSON.stringify(merged));
+      safeRun("expRefresh", expRefresh);                       /* نتيجة خادم صالحة تُرسم دائمًا */
+      /* ادفع الاتحاد ليتقارب الطرفان — وننتظر نتيجته؛ وليس بعد قراءة كاش (قد نطمس أحدث على الخادم) */
+      let recon = Promise.resolve({ok:true});
+      if(contributed && !cache) recon = expPushRemote(merged);
+      return Promise.resolve(recon).then(w=> finish(snap, !(w&&w.ok===false)));
+    }).catch(e=>{ diagErr("expPullRemote", e); expSetSyncState("error"); syncEnd("expenses", false, null, e); return {module:"expenses", status:"failed", error:(e&&e.message)||String(e)}; });
   }
 
-  let expState = expData();
+  /* حدّ عزل: تحميل المصاريف لا يجوز أن يوقف إقلاع بقية التطبيق مهما كان شكل البيانات */
+  let expLoadFailed = false;
+  let expState;
+  diagMark("expData:begin");
+  try{ expState = expData(); diagMark("expData:end"); }
+  catch(e){
+    expLoadFailed = true; diagErr("expData:init", e);
+    /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
+    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
+      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[] };
+  }
+  /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
+  function expRetryLoad(){
+    try{ expState = expData(); expLoadFailed = false; diagMark("expData:retry-ok"); safeRun("expRefresh", ()=>{ if(typeof expRefresh==="function") expRefresh(); }); }
+    catch(e){ expLoadFailed = true; diagErr("expData:retry", e); }
+  }
 
   /* ---------- أدوات النقود (وحدة صغرى صحيحة — بلا أخطاء عائمة) ---------- */
   function expParseAmount(str){
@@ -9169,6 +9479,24 @@
     return (neg?"−":"")+str+(withUnit?" ر.س":"");
   }
   function expPct(part, whole){ if(!whole) return 0; return Math.round((part/whole)*100); }
+
+  /* ---------- تطبيع الوحدة الصغرى (مصدر واحد آمن لكل جمع/إعادة حساب) ----------
+     amountMinor يجب أن يكون عددًا صحيحًا للوحدة الصغرى. القيم القديمة قد تكون سلاسل رقمية
+     صحيحة ("80000") فتتسلسل مع + بدل الجمع، أو قيمًا مشوّهة (null/NaN/"oops")، أو كسورًا (12.5/"12.5").
+     صرامة: نقبل الأعداد الصحيحة المنتهية فقط (Number.isInteger)؛ فالسلسلة الصحيحة "80000" صالحة،
+     أمّا الكسر عددًا أو سلسلةً فيُعدّ مشوّهًا (لا يُقرّب صامتًا فيبدو صالحًا) — يبقى amountInvalid ويُسهم بصفر.
+     expToMinor: مُحوِّل آمن للحساب — غير الصالح صفرٌ (لا تضخيم ولا تسلسل ولا NaN)؛ السجل يُوسَم needsReview. */
+  function expMinorParse(v){
+    if(typeof v === "number"){ return Number.isInteger(v) ? {ok:true, minor:v} : {ok:false}; }
+    if(typeof v === "string"){
+      const s = v.trim();
+      if(s === "") return {ok:false};
+      const n = Number(s);              /* السلسلة كاملةً عددًا فقط (Number("1a")=NaN)، والصحيح فقط يُقبَل */
+      return Number.isInteger(n) ? {ok:true, minor:n} : {ok:false};
+    }
+    return {ok:false};
+  }
+  function expToMinor(v){ const r = expMinorParse(v); return r.ok ? r.minor : 0; }
 
   /* ---------- أدوات التاريخ (نقية، عبر حدود الشهر/السنة) ---------- */
   function expDayRange(dateStr){ return {start:dateStr, end:dateStr}; }
@@ -9214,17 +9542,17 @@
   /* صافي الصرف = مصروف − استرجاع ، والتحويلات مستثناة تمامًا */
   function expNet(list){
     let s = 0;
-    list.forEach(t=>{ if(t.transactionType==="expense") s+=t.amountMinor; else if(t.transactionType==="refund") s-=t.amountMinor; });
+    list.forEach(t=>{ const a=expToMinor(t.amountMinor); if(t.transactionType==="expense") s+=a; else if(t.transactionType==="refund") s-=a; });
     return s;
   }
   function expTxInRange(r, extra){
     return expActiveTx().filter(t=> expInRange(t.transactionDate, r) && t.transactionType!=="transfer" && (!extra || extra(t)));
   }
   function expNetInRange(r, extra){ return expNet(expTxInRange(r, extra)); }
-  function expRefundsInRange(r, extra){ return expTxInRange(r, extra).filter(t=>t.transactionType==="refund").reduce((a,t)=>a+t.amountMinor,0); }
+  function expRefundsInRange(r, extra){ return expTxInRange(r, extra).filter(t=>t.transactionType==="refund").reduce((a,t)=>a+expToMinor(t.amountMinor),0); }
   function expByCategory(r, extra){
     const map = {};
-    expTxInRange(r, extra).forEach(t=>{ const k=t.categoryId||"_"; map[k]=(map[k]||0)+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor); });
+    expTxInRange(r, extra).forEach(t=>{ const k=t.categoryId||"_"; const a=expToMinor(t.amountMinor); map[k]=(map[k]||0)+(t.transactionType==="refund"?-a:a); });
     return map;
   }
   /* ميزانية فئة أسبوعية لأسبوع معيّن (نسخ مؤرّخة — لا يُعاد كتابة التاريخ) */
@@ -9247,7 +9575,10 @@
   function expTravelExcludedInWeek(r){ return expNetInRange(r, t=> t.tripId && !expCountsWeekly(t)); }
 
   /* ==================== حسابات الرحلات (نقية — لا تُعدّل المصدر) ==================== */
-  function expTripById(id){ return (expState.trips||[]).find(t=>t.id===id) || null; }
+  /* الرحلات الحيّة فقط: نتجاهل الرحلات المحذوفة (tombstone: deletedAt) في كل عرض/قائمة/تقرير/تفعيل */
+  function expLiveTrips(){ return (expState.trips||[]).filter(t=> t && !t.deletedAt); }
+  /* البحث بالمعرّف يُرجع الحيّة فقط (المحذوفة كأنها غير موجودة للواجهة)؛ الدمج/التوفيق يقرأ المصفوفة الخام مباشرةً */
+  function expTripById(id){ return expLiveTrips().find(t=>t.id===id) || null; }
   function expTripStatus(trip){
     if(!trip) return "planned";
     if(trip.archivedAt) return "archived";
@@ -9257,44 +9588,62 @@
     if(today > trip.endDate) return "completed";
     return "active";
   }
-  function expGetActiveTrips(){ return (expState.trips||[]).filter(t=> !t.archivedAt && expTripStatus(t)==="active"); }
+  function expGetActiveTrips(){ return expLiveTrips().filter(t=> !t.archivedAt && expTripStatus(t)==="active"); }
   function expGetTripTransactions(tripId){ return expActiveTx().filter(t=> t.tripId===tripId && t.transactionType!=="transfer"); }
-  function expTripGross(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="expense").reduce((a,t)=>a+t.amountMinor,0); }
-  function expTripRefunds(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="refund").reduce((a,t)=>a+t.amountMinor,0); }
+  function expTripGross(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="expense").reduce((a,t)=>a+expToMinor(t.amountMinor),0); }
+  function expTripRefunds(tripId){ return expGetTripTransactions(tripId).filter(t=>t.transactionType==="refund").reduce((a,t)=>a+expToMinor(t.amountMinor),0); }
   function expTripNet(tripId){ return expTripGross(tripId) - expTripRefunds(tripId); }
   function expTripRemaining(trip){ if(!trip || trip.totalBudgetMinor==null) return null; return trip.totalBudgetMinor - expTripNet(trip.id); }
   function expTripUsage(trip){ if(!trip || !trip.totalBudgetMinor) return 0; return expPct(expTripNet(trip.id), trip.totalBudgetMinor); }
   function expTripCategoryBreakdown(tripId){
-    const map={}; expGetTripTransactions(tripId).forEach(t=>{ const k=t.categoryId||"_"; map[k]=(map[k]||0)+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor); });
+    const map={}; expGetTripTransactions(tripId).forEach(t=>{ const k=t.categoryId||"_"; const a=expToMinor(t.amountMinor); map[k]=(map[k]||0)+(t.transactionType==="refund"?-a:a); });
     return map;
   }
   function expTripDailyBreakdown(tripId){
-    const map={}; expGetTripTransactions(tripId).forEach(t=>{ map[t.transactionDate]=(map[t.transactionDate]||0)+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor); });
+    const map={}; expGetTripTransactions(tripId).forEach(t=>{ const a=expToMinor(t.amountMinor); map[t.transactionDate]=(map[t.transactionDate]||0)+(t.transactionType==="refund"?-a:a); });
     return map;
   }
   /* تقسيم قبل/أثناء/بعد الرحلة اعتمادًا على تاريخ المعاملة مقابل مدى الرحلة */
   function expTripPeriodBreakdown(trip){
     const res={before:0, during:0, after:0};
-    expGetTripTransactions(trip.id).forEach(t=>{ const v=(t.transactionType==="refund"?-t.amountMinor:t.amountMinor);
+    expGetTripTransactions(trip.id).forEach(t=>{ const a=expToMinor(t.amountMinor); const v=(t.transactionType==="refund"?-a:a);
       if(t.transactionDate < trip.startDate) res.before+=v; else if(t.transactionDate > trip.endDate) res.after+=v; else res.during+=v; });
     return res;
   }
   function expTripAllocBudget(trip, catId){ const a=(trip.allocations||[]).find(x=>x.categoryId===catId); return a? a.budgetMinor : null; }
   function expTripDays(trip){ const s=new Date(trip.startDate+"T12:00:00"), e=new Date(trip.endDate+"T12:00:00"); return Math.max(1, Math.round((e-s)/86400000)+1); }
 
-  /* ---------- التزامات ثابتة: توليد المثيلات + الدفعات ---------- */
-  function expTplActiveInMonth(t, y, m){
-    if(!t.isActive || t.archivedAt) return false;
-    const key = y+"-"+_pad2(m);
+  /* ---------- التزامات ثابتة: توليد المثيلات + الدفعات ----------
+     نفصل «حالة الواجهة الحالية» (isActive/archivedAt للعرض) عن «قابلية التطبيق التاريخية» لكل شهر.
+     دلالات الأشهر (مفاتيح YYYY-MM):
+       • إيقاف (pause): يبدأ من الشهر الحالي → نُضيف تعليقًا مفتوحًا {fromMonth:الحالي, toMonth:null}.
+       • استئناف (resume): يبدأ من الشهر الحالي → نُغلق التعليق عند (الشهر السابق للحالي)؛
+         فالأشهر داخل التعليق تبقى مستبعدة، وإيقاف/استئناف في نفس الشهر لا يخلق فجوة كاذبة (نطاق فارغ يُحذف).
+       • أرشفة (archive): توقف التوليد الجديد بعد الشهر الحالي (archiveMonth=الحالي)؛ يبقى الماضي/الحالي.
+       • استعادة (restore): لا تُنشئ التزامات بأثر رجعي لأشهر الأرشفة — نُعلّق الفجوة [بعد الأرشفة، قبل الاستعادة].
+     التوليد يفحص القابلية؛ العرض يُبقي المثيلات التاريخية المُنشأة سلفًا وأي مثيل فيه مالٌ فعلي. */
+  function expMonthKey(y, m){ return y+"-"+_pad2(m); }
+  function expCurMonthKey(){ return todayStr().slice(0,7); }
+  function expShiftMonthKey(key, delta){ const y=+key.slice(0,4), m=+key.slice(5,7); const d=new Date(y, (m-1)+delta, 1); return d.getFullYear()+"-"+_pad2(d.getMonth()+1); }
+  function expInSuspension(t, key){ return Array.isArray(t.suspensions) && t.suspensions.some(s=> s && s.fromMonth && key>=s.fromMonth && (s.toMonth==null || key<=s.toMonth)); }
+  function expHasOpenSuspension(t){ return Array.isArray(t.suspensions) && t.suspensions.some(s=> s && s.fromMonth && s.toMonth==null); }
+  /* قابلية توليد مثيل لهذا الشهر (المنطق الوحيد للتوليد الجديد) */
+  function expTplGenActive(t, y, m){
+    if(!t) return false;
+    const key = expMonthKey(y, m);
     if(t.startMonth && key < t.startMonth) return false;
     if(t.endMonth && key > t.endMonth) return false;
+    if(t.archivedAt){ if(t.archiveMonth){ if(key > t.archiveMonth) return false; } else { return false; } }   /* أرشفة: أوقف بعد شهر الأرشفة (أو الكل للقديم بلا شهر) */
+    if(expInSuspension(t, key)) return false;
+    /* توافق مع إيقاف قديم لا يحمل تعليقًا: يوقف الحالي وما بعده فقط (الماضي يبقى) */
+    if(t.isActive===false && !expHasOpenSuspension(t) && key >= expCurMonthKey()) return false;
     return true;
   }
-  function expPlannedForMonth(t, y, m){ const key=y+"-"+_pad2(m); return (t.overrides && t.overrides[key]!=null)? t.overrides[key] : (t.defaultAmountMinor||0); }
+  function expPlannedForMonth(t, y, m){ const key=y+"-"+_pad2(m); return (t.overrides && t.overrides[key]!=null)? expToMinor(t.overrides[key]) : expToMinor(t.defaultAmountMinor); }
   function expEnsureMonth(y, m){
     let changed=false;
     expState.fixedTemplates.forEach(t=>{
-      if(!expTplActiveInMonth(t,y,m)) return;
+      if(!expTplGenActive(t,y,m)) return;
       let inst = expState.instances.find(i=>i.templateId===t.id && i.year===y && i.month===m);
       if(!inst){
         inst = { id:newId(), templateId:t.id, year:y, month:m, plannedAmountMinor:expPlannedForMonth(t,y,m),
@@ -9304,23 +9653,60 @@
     });
     if(changed) expSave(expState);
   }
+  /* هل يُعرض هذا المثيل؟ يُعرض إن حمل مالًا فعليًا (لا يُخفى مطلقًا) أو كان شهره قابلًا للتطبيق.
+     فالمثيل الفارغ لشهر متوقّف/مؤرشف يُخفى (تُعرض الحالة «متوقف» بدلًا منه)، والتاريخي الحقيقي يبقى. */
+  function expInstVisible(i, y, m){
+    if(expToMinor(i.paidAmountMinor) > 0) return true;
+    const t = expTplById(i.templateId);
+    if(!t) return true;   /* مثيل يتيم (قالبه حُذف): أبقِه ظاهرًا — لا نفقد بيانات */
+    return expTplGenActive(t, y, m);
+  }
   function expMonthInstances(y, m){
     expEnsureMonth(y,m);
-    return expState.instances.filter(i=>i.year===y && i.month===m && expTplActiveInMonth(expTplById(i.templateId)||{isActive:true,archivedAt:null},y,m))
+    return expState.instances.filter(i=>i.year===y && i.month===m && expInstVisible(i,y,m))
       .sort((a,b)=>{ const ta=expTplById(a.templateId)||{}, tb=expTplById(b.templateId)||{}; return (ta.sortOrder||0)-(tb.sortOrder||0); });
   }
   function expRecalcInstance(inst){
     if(!inst) return;
     const linked = expActiveTx().filter(t=>t.fixedExpenseInstanceId===inst.id);
     let paid=0, lastDate=null;
-    linked.forEach(t=>{ if(t.transactionType==="expense"){ paid+=t.amountMinor; if(!lastDate||t.transactionDate>lastDate) lastDate=t.transactionDate; } else if(t.transactionType==="refund") paid-=t.amountMinor; });
+    linked.forEach(t=>{ const a=expToMinor(t.amountMinor); if(t.transactionType==="expense"){ paid+=a; if(!lastDate||t.transactionDate>lastDate) lastDate=t.transactionDate; } else if(t.transactionType==="refund") paid-=a; });
     inst.paidAmountMinor = Math.max(0, paid);
-    inst.status = inst.paidAmountMinor<=0 ? "unpaid" : (inst.paidAmountMinor >= inst.plannedAmountMinor ? "paid" : "partial");
+    inst.status = inst.paidAmountMinor<=0 ? "unpaid" : (inst.paidAmountMinor >= expToMinor(inst.plannedAmountMinor) ? "paid" : "partial");
     inst.paidAt = inst.paidAmountMinor>0 ? lastDate : null;
     inst.updatedAt = Date.now();
   }
   function expOutstandingForMonth(y,m){
-    return expMonthInstances(y,m).reduce((a,i)=> a + Math.max(0, i.plannedAmountMinor - i.paidAmountMinor), 0);
+    return expMonthInstances(y,m).reduce((a,i)=> a + Math.max(0, expToMinor(i.plannedAmountMinor) - expToMinor(i.paidAmountMinor)), 0);
+  }
+  /* ---------- طفرات حالة الالتزام (إيقاف/استئناف/أرشفة/استعادة) مع سجلّ التعليق الشهري ---------- */
+  function expPauseTemplate(tplId){
+    const t=expTplById(tplId); if(!t) return;
+    if(!Array.isArray(t.suspensions)) t.suspensions=[];
+    if(!expHasOpenSuspension(t)) t.suspensions.push({fromMonth: expCurMonthKey(), toMonth:null});   /* يبدأ من الشهر الحالي */
+    t.isActive=false; t.updatedAt=Date.now(); expSave(expState);
+  }
+  function expResumeTemplate(tplId){
+    const t=expTplById(tplId); if(!t) return;
+    if(!Array.isArray(t.suspensions)) t.suspensions=[];
+    const cur=expCurMonthKey(), closeAt=expShiftMonthKey(cur,-1);   /* استئناف من الحالي → التعليق ينتهي بالشهر السابق */
+    const open=t.suspensions.filter(s=> s && s.toMonth==null);
+    open.forEach(s=>{ s.toMonth=closeAt; });
+    t.suspensions=t.suspensions.filter(s=> s && s.fromMonth && !(s.toMonth!=null && s.toMonth < s.fromMonth));   /* نطاق فارغ (نفس الشهر) يُحذف: لا فجوة كاذبة */
+    t.isActive=true; t.updatedAt=Date.now(); expSave(expState);
+  }
+  function expArchiveTemplate(tplId){
+    const t=expTplById(tplId); if(!t) return;
+    t.archivedAt=Date.now(); t.archiveMonth=expCurMonthKey(); t.isActive=false; t.updatedAt=Date.now(); expSave(expState);   /* يوقف التوليد بعد الشهر الحالي */
+  }
+  function expRestoreTemplate(tplId){
+    const t=expTplById(tplId); if(!t) return;
+    if(!Array.isArray(t.suspensions)) t.suspensions=[];
+    if(t.archiveMonth){   /* لا التزامات بأثر رجعي لأشهر الأرشفة: علّق الفجوة [بعد الأرشفة، قبل الاستعادة] */
+      const from=expShiftMonthKey(t.archiveMonth,1), to=expShiftMonthKey(expCurMonthKey(),-1);
+      if(from<=to) t.suspensions.push({fromMonth:from, toMonth:to});
+    }
+    t.archivedAt=null; t.archiveMonth=null; t.isActive=true; t.updatedAt=Date.now(); expSave(expState);
   }
 
   /* ---------- طفرات (كل تغيير يحفظ ثم يعيد العرض) ---------- */
@@ -9340,6 +9726,8 @@
     const t = expState.transactions.find(x=>x.id===id); if(!t) return;
     const oldInst = t.fixedExpenseInstanceId;
     Object.assign(t, patch, {updatedAt:Date.now()});
+    /* تصحيح مبلغ مشوّه صراحةً عبر التعديل: إن أصبح المبلغ صالحًا نُزيل وسم «يحتاج مراجعة» ونطبّعه */
+    if(t.amountInvalid && patch && "amountMinor" in patch){ const pr=expMinorParse(t.amountMinor); if(pr.ok){ t.amountMinor=pr.minor; t.amountInvalid=false; t.needsReview=false; if("amountRaw" in t) delete t.amountRaw; } }
     if(oldInst) expRecalcInstance(expInstById(oldInst));
     if(t.fixedExpenseInstanceId && t.fixedExpenseInstanceId!==oldInst) expRecalcInstance(expInstById(t.fixedExpenseInstanceId));
     expSave(expState);
@@ -9386,16 +9774,88 @@
   }
   function expArchiveTrip(id){ const t=expTripById(id); if(!t) return; t.archivedAt=Date.now(); t.isManuallyActivated=false; t.updatedAt=Date.now(); expSave(expState); }
   function expRestoreTrip(id){ const t=expTripById(id); if(!t) return; t.archivedAt=null; t.updatedAt=Date.now(); expSave(expState); }
+  /* تفعيل يدوي: عند تفعيل رحلة نُعطّل الأخريات ونبصم updatedAt لها (كي يتقارب الحذف عبر الأجهزة، لا يبقى نشطان) */
   function expSetManualActive(id, on){
     const t=expTripById(id); if(!t) return;
     t.isManuallyActivated=!!on; t.updatedAt=Date.now();
-    if(on){ (expState.trips||[]).forEach(o=>{ if(o.id!==id) o.isManuallyActivated=false; }); expActiveTripId=id; }
+    if(on){ const now=Date.now(); expLiveTrips().forEach(o=>{ if(o.id!==id && o.isManuallyActivated){ o.isManuallyActivated=false; o.updatedAt=now; } }); expActiveTripId=id; }
+    expReconcileActiveTrips(expState);
     expSave(expState);
+  }
+  /* توفيق حتمي: على الأكثر رحلة واحدة نشطة يدويًا (غير محذوفة/غير مؤرشفة). الفائز: الأحدث updatedAt ثم أصغر id.
+     نُعطّل الخاسرين ونبصم updatedAt لهم (القيمة false ثابتة فلا تذبذب) مع الحفاظ على updatedAt الفائز (بلا ضجيج). */
+  function expReconcileActiveTrips(d){
+    if(!d || !Array.isArray(d.trips)) return false;
+    const cands = d.trips.filter(t=> t && !t.deletedAt && !t.archivedAt && t.isManuallyActivated);
+    if(cands.length<=1) return false;
+    let win = cands[0];
+    cands.forEach(t=>{ const wu=win.updatedAt||0, tu=t.updatedAt||0; if(tu>wu || (tu===wu && String(t.id)<String(win.id))) win=t; });
+    let changed=false; const now=Date.now();
+    cands.forEach(t=>{ if(t!==win && t.isManuallyActivated){ t.isManuallyActivated=false; t.updatedAt=now; changed=true; } });
+    return changed;
   }
   function expCompleteTrip(id){ const t=expTripById(id); if(!t) return; t.isManuallyActivated=false; const y=todayStr(); if(t.endDate>=y) t.endDate=y; t.updatedAt=Date.now(); expSave(expState); }
   /* حذف رحلة مرتبطة بمصاريف: فكّ الارتباط دون حذف المعاملات */
   function expUnlinkTripTransactions(id){ expState.transactions.forEach(t=>{ if(t.tripId===id){ t.tripId=null; t.updatedAt=Date.now(); } }); expSave(expState); }
-  function expDeleteTrip(id){ expState.trips=(expState.trips||[]).filter(t=>t.id!==id); expSave(expState); }
+  /* حذف الرحلة = شاهدة قبر (tombstone) لا إزالة فيزيائية: يتقارب الحذف عبر الأجهزة ولا يُحييه اتحادٌ من نسخة أقدم.
+     لا نلمس أي معاملة هنا — هذا خيار «حذف الرحلة فقط»: تبقى مصاريفها في فئاتها وتقاريرها الشهرية كما هي. */
+  function expDeleteTrip(id){
+    const t=(expState.trips||[]).find(x=> x && x.id===id && !x.deletedAt); if(!t) return;
+    t.deletedAt=Date.now(); t.isManuallyActivated=false; t.updatedAt=Date.now();
+    if(expActiveTripId===id) expActiveTripId=null;
+    expSave(expState);
+  }
+  /* استعادة فورية (تراجع) لحذف «الرحلة فقط» — يعيد الرحلة تحديدًا من شاهدة القبر؛ لا يلمس أي معاملة
+     (لم تُمَسّ أصلًا بهذا الخيار). يبصم updatedAt جديدًا كي يتقارب عبر الأجهزة. */
+  function expRestoreDeletedTrip(id){
+    const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt); if(!t) return false;
+    t.deletedAt=null; t.updatedAt=Date.now();
+    expSave(expState);
+    return true;
+  }
+  /* حذف مُدمَّر صراحةً بإذن المستخدم: يحذف الرحلة ويحذف كل معاملاتها الحيّة المرتبطة (شاهدة قبر لكلّ سجلّ،
+     لا إزالة فيزيائية) — بخلاف «فكّ الارتباط» الذي يُبقي المعاملات. دفعات الالتزامات الثابتة المرتبطة بالرحلة
+     تُحذف أيضًا هنا (سجلّها لا يزال معاملة)، وتُعاد حساب مثيلاتها المتأثرة من مصدر الحقيقة بعد الحذف.
+     كتابة واحدة مُجمَّعة (expSave مرّة واحدة) لتفادي ضجيج المزامنة. يُعيد معرّفات المعاملات المحذوفة تحديدًا
+     في هذه الدفعة (txIds) كي يستعيد التراجع نفس المجموعة بالضبط، لا أي سجلّ آخر محذوف لسببٍ مختلف. */
+  function expDeleteTripWithExpenses(id){
+    const t=(expState.trips||[]).find(x=> x && x.id===id && !x.deletedAt); if(!t) return {trip:0, transactions:0, txIds:[]};
+    const now=Date.now();
+    const affectedInstIds=new Set();
+    const txIds=[];
+    (expState.transactions||[]).forEach(x=>{
+      if(!x || x.deletedAt || x.tripId!==id) return;
+      x.deletedAt=now; x.updatedAt=now; txIds.push(x.id);
+      if(x.fixedExpenseInstanceId) affectedInstIds.add(x.fixedExpenseInstanceId);
+    });
+    t.deletedAt=now; t.isManuallyActivated=false; t.updatedAt=now;
+    if(expActiveTripId===id) expActiveTripId=null;
+    /* أعِد حساب المثيلات المتأثرة فقط (المصدر الوحيد للحقيقة: المعاملات الحيّة المتبقّية) */
+    affectedInstIds.forEach(instId=>{ const inst=expInstById(instId); if(inst) expRecalcInstance(inst); });
+    expSave(expState);   /* كتابة واحدة مُجمَّعة للرحلة+المعاملات+المثيلات */
+    return {trip:1, transactions:txIds.length, txIds};
+  }
+  /* استعادة فورية (تراجع) لحذف «الرحلة مع مصاريفها» — يستعيد الرحلة تحديدًا وكل معاملة ضمن txIds المحذوفة
+     في تلك الدفعة بالذات (لا يستعيد أي معاملة أخرى بنفس tripId قد تكون محذوفة سلفًا لسببٍ مختلف).
+     يعيد حساب المثيلات المتأثرة، ويبصم updatedAt جديدًا للسجلات المستعادة كي يتقارب عبر الأجهزة. */
+  function expRestoreTripWithExpenses(id, txIds){
+    const now=Date.now();
+    const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt);
+    let restoredTrip=0, restoredTx=0;
+    if(t){ t.deletedAt=null; t.updatedAt=now; restoredTrip=1; }
+    const idSet=new Set(txIds||[]);
+    const affectedInstIds=new Set();
+    (expState.transactions||[]).forEach(x=>{
+      if(!x || !idSet.has(x.id) || !x.deletedAt) return;   /* استُعيدت سلفًا أو ليست ضمن هذه الدفعة تحديدًا */
+      x.deletedAt=null; x.updatedAt=now; restoredTx++;
+      if(x.fixedExpenseInstanceId) affectedInstIds.add(x.fixedExpenseInstanceId);
+    });
+    affectedInstIds.forEach(instId=>{ const inst=expInstById(instId); if(inst) expRecalcInstance(inst); });
+    if(restoredTrip || restoredTx>0) expSave(expState);
+    return {trip:restoredTrip, transactions:restoredTx};
+  }
+  /* عدد المعاملات الحيّة المرتبطة برحلة (للتحذير قبل الحذف المُدمَّر) */
+  function expTripLinkedLiveTxCount(id){ return (expState.transactions||[]).filter(x=> x && !x.deletedAt && x.tripId===id).length; }
 
   /* ==================== العرض ==================== */
   const expOverlay = document.getElementById("expOverlay");
@@ -9443,6 +9903,12 @@
   }
   function expRenderLaunch(){
     const box = document.getElementById("expLaunchSummary"); if(!box) return;
+    if(expLoadFailed){
+      box.innerHTML = '<div class="exp-empty" style="grid-column:1/-1">تعذّر تحميل المصاريف. بياناتك محفوظة ولم تُمس. <button class="exp-sync-btn" id="expReloadBtn">إعادة المحاولة</button></div>';
+      const rb=document.getElementById("expReloadBtn"); if(rb) rb.onclick=expRetryLoad;
+      const bn=document.getElementById("expLaunchBanner"); if(bn){ bn.hidden=true; bn.innerHTML=""; }
+      return;
+    }
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
     const alert=document.getElementById("expBudgetAlert"), wr=expWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
@@ -9478,8 +9944,10 @@
     const box = document.getElementById("expFixedCard");
     const d = new Date(todayStr()+"T12:00:00"), y=d.getFullYear(), m=d.getMonth()+1;
     const insts = expMonthInstances(y,m);
-    /* التزامات متوقّفة (غير نشطة وغير مؤرشفة): تبقى في القائمة بحالة «متوقف» ولا تتحوّل لفئة */
-    const pausedTpls = expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive);
+    /* التزامات متوقّفة (غير نشطة وغير مؤرشفة): تبقى في القائمة بحالة «متوقف» ولا تتحوّل لفئة.
+       نستثني ما له مثيل ظاهر هذا الشهر (فيه مالٌ فعلي) كي لا يُكرَّر كصفٍّ عادي وصفِّ «متوقف» معًا. */
+    const shownTpl = new Set(insts.map(i=>i.templateId));
+    const pausedTpls = expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive && !shownTpl.has(tp.id));
     let rows = "";
     if(!insts.length && !pausedTpls.length){
       rows = '<div class="exp-empty">لا توجد التزامات شهرية بعد. أضِف التزامك الأول 👇</div>';
@@ -9593,9 +10061,10 @@
       {label:"✏️ تعديل", onClick:()=> expOpenFixedForm(tplId)},
       {label:"💵 تسجيل دفعة", onClick:()=>{ const d=new Date(todayStr()+"T12:00:00"); expEnsureMonth(d.getFullYear(),d.getMonth()+1); const inst=expState.instances.find(i=>i.templateId===tplId&&i.year===d.getFullYear()&&i.month===d.getMonth()+1); if(inst) expOpenPaymentForm(inst.id); }},
       {label:"🕓 سجل الدفعات", onClick:()=> expShowPaymentHistory(tplId)},
-      /* إيقاف/استئناف: يبقى في قائمة الالتزامات الشهرية بحالة «متوقف»، ولا يتحوّل لفئة أسبوعية */
-      {label: t.isActive?"⏸ إيقاف":"▶ استئناف", onClick:()=>{ t.isActive=!t.isActive; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }},
-      {label:"🗄 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة هذا الالتزام؟", body:"سيختفي من الشهور الجديدة ويبقى في التقارير السابقة.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ t.archivedAt=Date.now(); t.isActive=false; t.updatedAt=Date.now(); expSave(expState); expRefresh(); }})}
+      /* إيقاف/استئناف: يبقى في قائمة الالتزامات الشهرية بحالة «متوقف»، ولا يتحوّل لفئة أسبوعية.
+         سجلّ التعليق الشهري يحفظ متى بدأ/انتهى الإيقاف فلا تختفي الشهور السابقة ولا تتولّد أشهر الإيقاف بأثر رجعي. */
+      {label: t.isActive?"⏸ إيقاف":"▶ استئناف", onClick:()=>{ if(t.isActive) expPauseTemplate(tplId); else expResumeTemplate(tplId); expRefresh(); }},
+      {label:"🗄 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة هذا الالتزام؟", body:"سيختفي من الشهور الجديدة ويبقى في التقارير السابقة.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ expArchiveTemplate(tplId); expRefresh(); }})}
     ];
     /* حذف نهائي متاح فقط عند عدم وجود معاملات مرتبطة */
     if(expTplLinkedTxCount(tplId)===0){
@@ -9635,10 +10104,15 @@
     /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
     const active = expPreferredActiveTrip();
     let curTrip = tx? (tx.tripId||"") : (preTripId!=null? preTripId : (active? active.id : ""));
-    /* قائمة الرحلات المتاحة للاختيار: غير المؤرشفة + رحلة المعاملة الحالية إن كانت مؤرشفة (للتعديل) */
-    const tripPool = (expState.trips||[]).filter(t=> !t.archivedAt || (tx && t.id===tx.tripId));
-    const tripOpts = '<option value="">بدون رحلة</option>' + tripPool.map(t=>{ const st=expTripStatus(t); const tag=st==="active"?" ✈️":st==="planned"?" (قادمة)":st==="completed"?" (مكتملة)":st==="archived"?" (مؤرشفة)":""; return '<option value="'+t.id+'"'+(t.id===curTrip?' selected':'')+'>'+expEsc(t.name)+tag+'</option>'; }).join("");
-    const showTripField = tripPool.length>0 || !!active;
+    /* قائمة الرحلات المتاحة للاختيار: الحيّة فقط (تُستبعد المحذوفة/الشواهد) + رحلة المعاملة إن كانت مؤرشفة (للتعديل).
+       إن كانت رحلة المعاملة محذوفةً (شاهدة) لا نعرضها كخيار حيّ، بل خيارًا واحدًا مُوسومًا «محذوفة (محفوظة)»
+       يحمل معرّفها الأصلي كي لا يُفكّ الارتباط صامتًا عند الحفظ؛ ويظلّ للمستخدم اختيار «بدون رحلة» صراحةً. */
+    const tripPool = expLiveTrips().filter(t=> !t.archivedAt || (tx && t.id===tx.tripId));
+    const curTripDeleted = !!(curTrip && !tripPool.some(t=>t.id===curTrip));
+    const tripOpts = '<option value="">بدون رحلة</option>'
+      + (curTripDeleted? '<option value="'+expEsc(curTrip)+'" selected>↳ رحلة محذوفة (محفوظة)</option>' : '')
+      + tripPool.map(t=>{ const st=expTripStatus(t); const tag=st==="active"?" ✈️":st==="planned"?" (قادمة)":st==="completed"?" (مكتملة)":st==="archived"?" (مؤرشفة)":""; return '<option value="'+t.id+'"'+(t.id===curTrip?' selected':'')+'>'+expEsc(t.name)+tag+'</option>'; }).join("");
+    const showTripField = tripPool.length>0 || !!active || curTripDeleted;
     const initCount = tx? (tx.countAgainstWeeklyBudget!==false) : (curTrip? !!(expTripById(curTrip)||{}).includeInWeeklyBudgets : true);
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(tx?"تعديل مصروف":"إضافة مصروف")+'</h3><button data-close>✕</button></div>'+
@@ -9864,14 +10338,17 @@
     expFormBox.querySelectorAll("[data-scopeval]").forEach(b=> b.onclick=()=>{ const v=b.dataset.scopeval; cb(v); });
   }
 
-  /* ---------- التراجع بعد الحذف ---------- */
-  function expShowUndo(text, txId){
+  /* ---------- التراجع بعد الحذف (شريط مؤقّت، بلا وجوب التراجع بعد انتهاء المهلة) ----------
+     خطّاف عام: نداءٌ جديد يُلغي/يُعيد تشغيل أيّ عدّاد وزرّ سابقَين نظيفًا (استبدال onclick + إعادة ضبط المؤقّت)،
+     فلا يتراكم تراجعان معًا ولا يبقى زرٌّ قديم يستعيد سجلًّا تجاوزته مهلته. */
+  function expShowUndoAction(text, restoreFn){
     const bar=document.getElementById("expUndo"); document.getElementById("expUndoText").textContent=text;
     bar.hidden=false; if(expUndoTimer) clearTimeout(expUndoTimer);
     const btn=document.getElementById("expUndoBtn");
-    btn.onclick=()=>{ expRestoreTransaction(txId); bar.hidden=true; expRefresh(); };
+    btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
     expUndoTimer=setTimeout(()=>{ bar.hidden=true; }, 6000);
   }
+  function expShowUndo(text, txId){ expShowUndoAction(text, ()=> expRestoreTransaction(txId)); }
 
   /* ---------- التقارير ---------- */
   let expSearchTerm="";
@@ -9999,8 +10476,8 @@
   }
   function expOpenRefundForm(txId){
     const t=expState.transactions.find(x=>x.id===txId); if(!t) return;
-    const refunded=expActiveTx().filter(x=>x.relatedTransactionId===txId&&x.transactionType==="refund").reduce((a,x)=>a+x.amountMinor,0);
-    const remain=Math.max(0, t.amountMinor-refunded);
+    const refunded=expActiveTx().filter(x=>x.relatedTransactionId===txId&&x.transactionType==="refund").reduce((a,x)=>a+expToMinor(x.amountMinor),0);
+    const remain=Math.max(0, expToMinor(t.amountMinor)-refunded);
     expOpenForm('<div class="exp-form-head"><h3>استرجاع مبلغ</h3><button data-close>✕</button></div>'+
       '<div class="exp-card-hint">استرجاع فعلي لمبلغ أُعيد من الجهة/المتجر (يختلف عن «تراجع عن الدفع»).</div>'+
       '<div class="exp-foot" style="border:none;margin:0 0 .8rem"><div class="exp-foot-row"><span>المبلغ الأصلي</span><b>'+expMoney(t.amountMinor)+'</b></div><div class="exp-foot-row"><span>المتبقي القابل للاسترجاع</span><b>'+expMoney(remain)+'</b></div></div>'+
@@ -10019,8 +10496,8 @@
   function expReportDaily(){
     const r=expDayRange(expRepDate);
     const txs=expActiveTx().filter(t=>t.transactionDate===expRepDate).sort((a,b)=>b.createdAt-a.createdAt);
-    const spend=txs.filter(t=>t.transactionType==="expense").reduce((a,t)=>a+t.amountMinor,0);
-    const refunds=txs.filter(t=>t.transactionType==="refund").reduce((a,t)=>a+t.amountMinor,0);
+    const spend=txs.filter(t=>t.transactionType==="expense").reduce((a,t)=>a+expToMinor(t.amountMinor),0);
+    const refunds=txs.filter(t=>t.transactionType==="refund").reduce((a,t)=>a+expToMinor(t.amountMinor),0);
     const net=spend-refunds;
     /* تفصيل عادي/سفر لصرف اليوم (لا يُطرح السفر من الإجمالي — الإجمالي يمثّل المال الفعلي) */
     const travelNet=expNetInRange(r, t=> t.tripId);
@@ -10075,9 +10552,11 @@
   }
   function expReportMonthly(){
     const r=expMonthRange(expRepDate); const d=new Date(expRepDate+"T12:00:00"), y=d.getFullYear(), m=d.getMonth()+1;
+    /* دلاء الإجمالي حصريّة متبادلة (لا ازدواج): ثابتة كلّها + متغيّرة عادية (بلا رحلة) + متغيّرة سفر.
+       معاملة أُعيد تصنيفها ثابتة مع بقاء tripId تُحسب ضمن «الثابتة» فقط، لا مرّتين. */
     const fixedActual=expNetInRange(r, t=>expClassify(t)==="fixed");
     const varNormal=expNetInRange(r, t=>expClassify(t)==="variable" && !t.tripId);
-    const travelActual=expNetInRange(r, t=> t.tripId);   /* كل معاملات السفر في الشهر (تُحسب مرة واحدة) */
+    const travelActual=expNetInRange(r, t=> expClassify(t)==="variable" && t.tripId);   /* السفر المتغيّر فقط (حصريّ) */
     const varActual=varNormal+travelActual;
     const total=fixedActual+varActual;
     const refunds=expRefundsInRange(r);
@@ -10090,7 +10569,7 @@
     const catLines=catKeys.map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
     /* دفعات الالتزامات الفعلية خلال الشهر (مجمّعة حسب الالتزام) */
     const fixedPays=expTxInRange(r, t=> expClassify(t)==="fixed" && t.transactionType==="expense");
-    const fixedByTpl={}; fixedPays.forEach(t=>{ const nm=expFixedTitle(t); fixedByTpl[nm]=(fixedByTpl[nm]||0)+t.amountMinor; });
+    const fixedByTpl={}; fixedPays.forEach(t=>{ const nm=expFixedTitle(t); fixedByTpl[nm]=(fixedByTpl[nm]||0)+expToMinor(t.amountMinor); });
     const fixedLines=Object.keys(fixedByTpl).sort((a,b)=>fixedByTpl[b]-fixedByTpl[a]).map(nm=>'<div class="exp-foot-row"><span>'+expEsc(nm)+'</span><b>'+expMoney(fixedByTpl[nm])+'</b></div>').join("");
     const pausedCount=expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive).length;
     /* حسب الأسبوع */
@@ -10117,10 +10596,12 @@
     const fixedActual=expNetInRange(yr, t=>expClassify(t)==="fixed");
     const varActual=expNetInRange(yr, t=>expClassify(t)==="variable");
     const total=fixedActual+varActual; const refunds=expRefundsInRange(yr);
-    /* مقاييس السفر السنوية — مشتقّة من tripId فقط، بلا إجماليات مُدخلة يدويًا */
-    const yTrips=(expState.trips||[]).filter(t=> expGetTripTransactions(t.id).some(x=> x.transactionDate>=yr.start && x.transactionDate<=yr.end));
+    /* مقاييس السفر السنوية — من الرحلات الحيّة فقط (الشواهد المحذوفة تُتجاهَل فلا تعود كبند رحلة) */
+    const yTrips=expLiveTrips().filter(t=> expGetTripTransactions(t.id).some(x=> x.transactionDate>=yr.start && x.transactionDate<=yr.end));
     const tripSpends=yTrips.map(t=>({t, v:expNetInRange(yr, x=> x.tripId===t.id)})).filter(o=>o.v!==0).sort((a,b)=>b.v-a.v);
-    const travelTotal=expNetInRange(yr, t=> t.tripId);
+    /* «إجمالي السفر» متداخل ضمن إجمالي السنة (يظهر عبر الثابت/المتغيّر) — لا يُجمع كدلوٍ ثالث.
+       يُقصر على معاملات الرحلات الحيّة كي يتّسق مع قائمة الرحلات ويتجاهل الشواهد. */
+    const travelTotal=expNetInRange(yr, t=> t.tripId && !!expTripById(t.tripId));
     const tripCount=tripSpends.length;
     const avgTrip=tripCount? Math.round(travelTotal/tripCount):0;
     let monthBars=""; let maxM=1; const months=[];
@@ -10145,7 +10626,7 @@
       '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>'+
       (travelTotal!==0?
         '<div class="exp-sec-head">✈️ السفر</div>'+
-        '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السفر</small><b>'+expMoney(travelTotal)+'</b></div>'+
+        '<div class="exp-stat-grid"><div class="exp-stat"><small>إجمالي السفر (ضمن إجمالي السنة)</small><b>'+expMoney(travelTotal)+'</b></div>'+
         '<div class="exp-stat"><small>عدد الرحلات</small><b>'+_arn(tripCount)+'</b></div>'+
         '<div class="exp-stat"><small>متوسط الرحلة</small><b>'+expMoney(avgTrip)+'</b></div></div>'+
         '<div class="exp-foot" style="border:none">'+tripSpends.map(o=>'<div class="exp-foot-row"><span>'+(o===tripSpends[0]?'🏆 ':'')+expEsc(o.t.name)+'</span><b>'+expMoney(o.v)+'</b></div>').join("")+'</div>'
@@ -10165,16 +10646,49 @@
       '<div class="exp-card-hint">العملة: ريال سعودي (ر.س) · الأرقام: عربية</div>'+
       '</div>'+
       (legacyCats.length? '<div class="exp-card" style="margin-top:1rem"><h3>📥 مراجعة الاستيراد</h3><div class="exp-card-hint">فئات مستوردة تحتاج تحديد ميزانية أسبوعية (القيم القديمة كانت إجماليات شهرية ولم تُحسب تلقائيًا).</div>'+legacyCats.map(c=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(c.name)+'</div><div class="exp-row-sub">إجمالي قديم: '+expMoney(c.legacyMonthlySnapshotMinor||0)+'</div></div><button class="exp-mini" data-setbudget="'+c.id+'">💰</button></div>').join("")+'</div>':'')+
-      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 الفئات المؤرشفة</h3>'+expArchivedList()+'</div>';
+      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 الفئات المؤرشفة</h3>'+expArchivedList()+'</div>'+
+      /* مزامنة عامّة لكل الأقسام + حالة كل قسم (منطقة مزامنة/تشخيص) */
+      '<div class="exp-card" style="margin-top:1rem"><h3>🔄 المزامنة</h3>'+
+        '<div class="exp-sync-text" id="expGlobalSyncText" style="margin-bottom:.6rem">'+expEsc(syncSummary().text)+'</div>'+
+        '<button class="exp-primary" id="expGlobalSyncBtn" style="width:100%">🔄 مزامنة جميع البيانات</button>'+
+        '<div id="expModStatus" style="margin-top:.7rem">'+expModStatusHtml()+'</div>'+
+      '</div>';
     body.querySelector("#stWeek").onchange=e=>{ s.weekStartDay=parseInt(e.target.value,10); expSave(expState); expRefresh(); };
     body.querySelector("#stPay").onchange=e=>{ s.defaultPaymentMethod=e.target.value||null; expSave(expState); };
+    const gsb=body.querySelector("#expGlobalSyncBtn"), gst=body.querySelector("#expGlobalSyncText");
+    if(gsb) gsb.onclick=()=>{
+      if(!db||!user){ if(gst) gst.textContent="سجّل الدخول أولًا للمزامنة"; return; }
+      gsb.disabled=true; if(gst) gst.textContent="جارٍ مزامنة جميع البيانات…";
+      _lastGlobalPull=0;   /* التحديث اليدوي يتجاوز الخنق لكنه يحترم أقفال الأقسام قيد التنفيذ */
+      syncPullAllModules("manual", {forceServer:true}).then((run)=>{
+        gsb.disabled=false;   /* أعِد تفعيل الزر دائمًا */
+        /* حماية الجيل الفعلية: إن تجاوز هذا التشغيلَ تشغيلٌ أحدث، فلا نكتب حالته المتقادمة —
+           التشغيل الأحدث يحدّث الحالة المرئية عبر expRefreshSyncUI (المحروس بالجيل) داخل المنسّق */
+        if(run && typeof run.isLatest==="function" && !run.isLatest()) return;
+        const su=syncSummary(); if(gst) gst.textContent=su.text;
+        const ms=body.querySelector("#expModStatus"); if(ms) ms.innerHTML=expModStatusHtml();
+        safeRun("expRefreshLaunch", expRenderLaunch);
+      });
+    };
     body.querySelectorAll("[data-setbudget]").forEach(b=> b.onclick=()=> expOpenBudgetForm(b.dataset.setbudget));
-    body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ c.archivedAt=null; c.isActive=true; c.updatedAt=Date.now(); expSave(expState); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ t.archivedAt=null; t.isActive=true; t.updatedAt=Date.now(); expSave(expState); expRefresh(); } });
+    body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ c.archivedAt=null; c.isActive=true; c.updatedAt=Date.now(); expSave(expState); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ expRestoreTemplate(b.dataset.restore); expRefresh(); } });
   }
   function expArchivedList(){
     const cats=expState.categories.filter(c=>c.archivedAt), tpls=expState.fixedTemplates.filter(t=>t.archivedAt);
     if(!cats.length && !tpls.length) return '<div class="exp-empty">لا عناصر مؤرشفة.</div>';
     return cats.concat(tpls).map(x=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(x.name)+'</div><div class="exp-row-sub">'+(x.section?"فئة أسبوعية":"التزام شهري")+'</div></div><button class="exp-mini" data-restore="'+x.id+'" title="استعادة">↩️</button></div>').join("");
+  }
+  /* حالة مزامنة كل قسم (مشتقّة من SYNC_STATE — دقيقة، لا تُظهر نجاحًا كاملًا إن نجح قسم واحد) */
+  function expModStatusHtml(){
+    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف"};
+    return Object.keys(labels).map(n=>{ const s=SYNC_STATE[n]; let tag,cls;
+      if(!s || (!s.lastServerSuccessAt && !s.lastCacheFallbackAt && !s.lastError && !s.inFlight)){ tag="—"; cls="partial"; }
+      else if(s.inFlight){ tag="جارٍ"; cls="near"; }
+      else if(s.lastError){ tag="تعذّرت"; cls="unpaid"; }
+      else if((s.lastCacheFallbackAt||0) > (s.lastServerSuccessAt||0)){ tag="من الكاش"; cls="near"; }
+      else { tag="من الخادم"; cls="ok"; }
+      return '<div class="exp-foot-row"><span>'+labels[n]+'</span><span class="exp-pill '+cls+'">'+tag+'</span></div>';
+    }).join("");
   }
 
   /* ==================== واجهة الرحلات ==================== */
@@ -10190,7 +10704,7 @@
   }
   function expRenderTrips(){
     const body=document.getElementById("expTripsBody");
-    const trips=(expState.trips||[]);
+    const trips=expLiveTrips();   /* الشواهد (المحذوفة) لا تظهر في قوائم الرحلات */
     const groups={ active:[], planned:[], completed:[], archived:[] };
     trips.forEach(t=> groups[expTripStatus(t)].push(t));
     Object.keys(groups).forEach(k=> groups[k].sort((a,b)=> a.startDate<b.startDate?1:-1));
@@ -10221,16 +10735,43 @@
     }
     expActionMenu(anchor, items);
   }
-  /* حذف رحلة مرتبطة بمصاريف: أرشفة / فكّ الارتباط / إلغاء — لا تُحذف المعاملات أبدًا */
+  /* حذف رحلة: لا مصاريف مرتبطة → تأكيد مباشر «حذف الرحلة فقط» (لا شيء آخر يتأثر).
+     مصاريف مرتبطة → بالضبط خياران صريحان للحذف + إلغاء (✕)؛ الأرشفة تبقى فعلًا مستقلًا في قائمة الرحلة
+     نفسها (لا تُعرض هنا)، وفكّ الارتباط لا يحلّ محلّ أيًّا من الخيارين. كل حذف يُظهر شريط تراجع فوري مؤقّت. */
   function expDeleteTripFlow(tripId){
     const linked=expState.transactions.filter(t=>t.tripId===tripId && !t.deletedAt).length;
-    if(!linked){ hifzShowConfirm({title:"حذف الرحلة؟", body:"لا مصاريف مرتبطة بها.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{ expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); return; }
-    expOpenForm('<div class="exp-form-head"><h3>هذه الرحلة مرتبطة بمصاريف مسجّلة</h3><button data-close>✕</button></div>'+
-      '<div class="exp-card-hint">لديها '+_arn(linked)+' معاملة مرتبطة. ماذا تريد أن تفعل؟</div>'+
-      '<button class="exp-optbtn" data-act="archive">🗑 أرشفة الرحلة<small>تبقى المصاريف والتقارير كما هي</small></button>'+
-      '<button class="exp-optbtn" data-act="unlink">🔗 إزالة ارتباط الرحلة من المصاريف<small>تبقى كل المعاملات بلا رحلة</small></button>');
-    expFormBox.querySelector('[data-act="archive"]').onclick=()=>{ expArchiveTrip(tripId); expCloseForm(); expTripDetailId=null; expSetView("trips"); };
-    expFormBox.querySelector('[data-act="unlink"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({title:"تأكيد إزالة الارتباط", body:"سيُزال ربط الرحلة من "+_arn(linked)+" معاملة (تبقى المعاملات). ثم تُحذف الرحلة. متابعة؟", okText:"نعم، أزل الارتباط واحذف", cancelText:"إلغاء", onOk:()=>{ expUnlinkTripTransactions(tripId); expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); }}); };
+    if(!linked){
+      hifzShowConfirm({title:"حذف الرحلة؟", body:"لا مصاريف مرتبطة بها.", okText:"حذف", cancelText:"إلغاء", onOk:()=>{
+        expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة", ()=> expRestoreDeletedTrip(tripId));
+      }});
+      return;
+    }
+    expOpenForm('<div class="exp-form-head"><h3>حذف الرحلة</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">لديها '+_arn(linked)+' معاملة مرتبطة. اختر إحدى طريقتَي الحذف:</div>'+
+      '<button class="exp-optbtn" data-act="triponly">🗑️ حذف الرحلة فقط<small>تبقى '+_arn(linked)+' مصروفًا في فئاتها وتقاريرها الشهرية</small></button>'+
+      '<button class="exp-optbtn danger" data-act="deleteall" style="border-color:#dc2626;color:#dc2626">🗑️❌ حذف الرحلة مع مصاريفها<small>سيختفي '+_arn(linked)+' مصروفًا من التقارير</small></button>');
+    /* الخيار ١: حذف الرحلة فقط — لا تُلمَس المعاملات إطلاقًا (لا حذف، لا فكّ ارتباط) */
+    expFormBox.querySelector('[data-act="triponly"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({
+      title:"حذف الرحلة فقط؟",
+      body:"ستُحذف الرحلة نفسها فقط، وتبقى مصاريفها ("+_arn(linked)+") كما هي دون أي تغيير في فئاتها وتقاريرها الشهرية. هل تريد المتابعة؟",
+      okText:"نعم، احذف الرحلة فقط", cancelText:"إلغاء",
+      onOk:()=>{
+        expDeleteTrip(tripId); expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة (بقيت مصاريفها)", ()=> expRestoreDeletedTrip(tripId));
+      }
+    }); };
+    /* الخيار ٢: حذف مُدمَّر بإذن صريح من المستخدم — يحذف الرحلة ومعاملاتها المرتبطة معًا (شاهدة قبر لكلٍّ منها) */
+    expFormBox.querySelector('[data-act="deleteall"]').onclick=()=>{ expCloseForm(); hifzShowConfirm({
+      title:"حذف الرحلة مع مصاريفها؟",
+      body:"سيُزيل هذا "+_arn(linked)+" مصروفًا من التقارير الشهرية وحسب الفئة. استخدمه فقط للمصاريف الخاطئة أو غير المرغوبة. يمكنك التراجع فور الحذف من الشريط الذي سيظهر أسفل الشاشة لفترة محدودة. هل أنت متأكد؟",
+      okText:"نعم، احذف الرحلة والمصاريف", cancelText:"إلغاء",
+      onOk:()=>{
+        const res=expDeleteTripWithExpenses(tripId);
+        expTripDetailId=null; expSetView("trips"); expRefresh();
+        expShowUndoAction("حُذفت الرحلة ومصاريفها ("+_arn(res.transactions)+")", ()=> expRestoreTripWithExpenses(tripId, res.txIds));
+      }
+    }); };
   }
   function expOpenTripDetail(id){ expTripDetailId=id; if(expCurView!=="trips"){ expSetView("trips"); } expRenderTripDetail(); }
   function expRenderTripDetail(){
@@ -10361,9 +10902,10 @@
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
     const search=document.getElementById("expSearch"); search.oninput=()=>{ expSearchTerm=search.value; expApplySearch(); };
     document.getElementById("expExportCsv").onclick=expExportCurrentCsv;
-    /* زرّ التحديث اليدوي (يتجاوز الخنق ويقرأ من الخادم مباشرة) */
+    /* زرّ التحديث اليدوي داخل المصاريف: يزامن كل الأقسام من الخادم (لا المصاريف وحدها) */
     const syncBtnEl = document.getElementById("expSyncBtn");
-    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); expPullRemote({trigger:"expenses-manual",forceServer:true,bypassThrottle:true}); };
+    if(syncBtnEl) syncBtnEl.onclick = ()=>{ expLastPullAt = Date.now(); _lastGlobalPull = 0; syncPullAllThrottled("manual"); expSetSyncState("syncing"); };
+    /* لا نُسجّل مشغّلات المقدّمة هنا — تُدار عالميًا عبر initLifecycleSync لكل الأقسام دفعة واحدة */
     expRenderLaunch();
     expRenderSyncRow();
   }
@@ -10542,16 +11084,17 @@
   }
 
   /* ---------- Init ---------- */
-  registerGlobalSyncLifecycle();
-  initFirebase();
-  renderGlobalSyncStatus(null,false);
-  personalizeInit();
-  appViewInit();
-  document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen;
-  goto(todayStr());
-  renderHifzCard();
-  expInit();
-  onboardInit();
+  diagMark("script:end");
+  safeRun("initFirebase", initFirebase);
+  safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
+  safeRun("personalizeInit", personalizeInit);
+  safeRun("appViewInit", appViewInit);
+  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; });
+  safeRun("goto:init", ()=> goto(todayStr()));
+  safeRun("renderHifzCard:init", renderHifzCard);
+  safeRun("expInit", expInit);
+  safeRun("onboardInit", onboardInit);
+  safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();
 </script>
 </body>

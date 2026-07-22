@@ -76,7 +76,7 @@ test("card personalization supports persistent visibility and ordering",()=>{
   assert.match(html,/function personalizeMove\(/);
   assert.match(html,/function personalizeDrop\(/);
   assert.match(html,/row\.draggable=true/);
-  assert.match(html,/personalizeInit\(\);\s*\n\s*appViewInit\(\);/);
+  assert.match(html,/safeRun\("personalizeInit", personalizeInit\);\s*\n\s*safeRun\("appViewInit", appViewInit\);/);
 });
 
 test("onboarding, task planning, and expense tools are wired",()=>{
