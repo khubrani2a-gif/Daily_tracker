@@ -1,6 +1,6 @@
 /* عامل الخدمة — يخزّن ملفات التطبيق ليعمل بدون إنترنت.
    عند أي تحديث جوهري للتطبيق نرفع رقم النسخة أدناه. */
-const CACHE = "mufakkirati-v99d";
+const CACHE = "mufakkirati-v101";
 const ASSETS = [
   "./",
   "./index.html",
@@ -30,12 +30,28 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+self.addEventListener("message", (e) => {
+  if (e.data === "SKIP_WAITING") self.skipWaiting();
+});
+
 /* إستراتيجية: نقدّم النسخة المخزنة فورًا (سرعة + عمل دون اتصال)
    ونحدّثها في الخلفية من الشبكة لزيارتك القادمة.
    طلبات Firebase وغيرها من النطاقات الخارجية لا نتدخل فيها. */
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
+  /* التنقّل والصفحة الرئيسية: الشبكة أولًا كي لا يبقى الجوال على إصدار قديم بعد النشر. */
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res && res.ok) caches.open(CACHE).then((c) => c.put("./index.html", res.clone()));
+          return res;
+        })
+        .catch(() => caches.match("./index.html").then((cached) => cached || caches.match("./")))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fresh = fetch(e.request)

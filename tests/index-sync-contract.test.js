@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v99",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v101",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ٩٩/); assert.match(sw,/mufakkirati-v99/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠١/); assert.match(sw,/mufakkirati-v101/); assert.match(sw,/sync-core\.js/);
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
