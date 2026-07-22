@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {createCoordinator} = require("../sync-core.js");
 
-const MODULES=["daily","quran","customWorship","witr","hifz","expenses"];
+const MODULES=["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"];
 const clone=value=>JSON.parse(JSON.stringify(value));
 
 function createClient(name, server, options){
@@ -43,7 +43,7 @@ function initialServer(){
   return {
     daily:{updatedAt:1,prayers:{fajr:false},health:{sleep:""},tasks:[],priorities:[],water:0,intention:"",notes:"",rating:0,sport:{}},
     quran:{updatedAt:1,page:1}, customWorship:{updatedAt:1,items:[]}, witr:{updatedAt:1,favorites:[]},
-    hifz:{segments:[]}, expenses:{settings:{updatedAt:1},transactions:[]}
+    hifz:{segments:[]}, expenses:{settings:{updatedAt:1},transactions:[]}, weeklyGoals:{updatedAt:1,items:{}}
   };
 }
 
@@ -82,11 +82,11 @@ test("Expenses merge keeps stable IDs and never duplicates a transaction",async(
   assert.deepEqual(phone.local.expenses.transactions.map(x=>x.id),["e1"]);
 });
 
-test("one failed module cannot cancel the other five",async()=>{
+test("one failed module cannot cancel the other six",async()=>{
   const server=initialServer(), phone=createClient("phone",server,{fail:"quran"});
   const summary=await phone.sync("online");
   assert.equal(summary.status,"partial");
-  assert.equal(summary.counts.failed,1); assert.equal(summary.counts.success,5);
+  assert.equal(summary.counts.failed,1); assert.equal(summary.counts.success,6);
   MODULES.filter(m=>m!=="quran").forEach(m=>assert.equal(phone.reads[m],1));
 });
 
@@ -94,7 +94,7 @@ test("cache fallback is not reported as full server success",async()=>{
   const server=initialServer(), phone=createClient("phone",server,{offline:true});
   const summary=await phone.sync("visibilitychange");
   assert.equal(summary.status,"cacheFallback");
-  assert.equal(summary.counts.cacheFallback,6);
+  assert.equal(summary.counts.cacheFallback,7);
 });
 
 test("offline edit survives reconnect and converges across phone, laptop, and iPad",async()=>{
