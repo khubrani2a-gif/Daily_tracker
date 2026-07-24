@@ -769,6 +769,7 @@
   /* واجهة رقمية أنيقة للمهام/الأولويات (قائمتان مستقلّتان تمامًا) */
   .task-card-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
   .task-card-head h2{margin:0}
+  .task-card-actions{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
   .task-history-btn,.task-meta-btn{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;font-family:inherit;cursor:pointer}
   .task-history-btn{padding:.35rem .55rem;font-size:.75rem}
   .task-meta-btn{width:31px;height:31px;font-size:1rem;flex-shrink:0}
@@ -954,7 +955,7 @@
   .stats-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding-bottom:.65rem;margin-bottom:.8rem}
   .stats-head h2{border:0;padding:0;margin:0}
   .stats-close{border:1px solid var(--line);background:var(--chip-bg);color:var(--muted);border-radius:10px;width:34px;height:34px;cursor:pointer}
-  .stats-period-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;background:var(--chip-bg);padding:.3rem;border:1px solid var(--line);border-radius:13px;margin-bottom:.8rem}
+  .stats-period-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;background:var(--chip-bg);padding:.3rem;border:1px solid var(--line);border-radius:13px;margin-bottom:.8rem}
   .stats-period-tabs button{border:0;background:transparent;color:var(--muted);border-radius:10px;padding:.5rem;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
   .stats-period-tabs button.active{background:var(--paper);color:var(--accent);box-shadow:var(--shadow-sm)}
   .stats-range{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;color:var(--muted);font-size:.76rem;margin-bottom:.7rem}
@@ -1004,13 +1005,62 @@
   .stats-goal-steps select{padding-inline:.45rem;max-width:88px}
   .stats-goal-steps input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .stats-goal-status{min-height:1.2em;margin-top:.35rem;color:var(--muted);font-size:.67rem}
-  #statsYearView[hidden],#statsUnifiedView[hidden]{display:none}
+  #statsYearView[hidden],#statsUnifiedView[hidden],#statsCalendarView[hidden]{display:none}
+  .calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.7rem}
+  .calendar-toolbar button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;min-width:38px;height:38px;padding:0 .65rem;font-family:inherit;font-weight:700;cursor:pointer}
+  .calendar-toolbar button:hover,.calendar-toolbar button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+  .calendar-month-label{font-weight:700;color:var(--ink);text-align:center;flex:1}
+  .calendar-today{font-size:.72rem}
+  .calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.35rem}
+  .calendar-weekdays{margin-bottom:.35rem}
+  .calendar-weekdays span{text-align:center;color:var(--muted);font-size:.68rem;font-weight:700}
+  .calendar-day{position:relative;min-height:70px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:.42rem;text-align:right;font-family:inherit;cursor:pointer;transition:.15s}
+  .calendar-day:hover,.calendar-day:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
+  .calendar-day.outside{visibility:hidden;pointer-events:none}
+  .calendar-day.today{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+  .calendar-day.selected{background:var(--accent-soft)}
+  .calendar-day.done{background:color-mix(in srgb,var(--accent-soft) 72%,var(--paper))}
+  .calendar-day.partial{background:color-mix(in srgb,var(--sand) 62%,var(--paper))}
+  .calendar-day.low{background:color-mix(in srgb,var(--danger-soft) 58%,var(--paper))}
+  .calendar-day-number{font-weight:700;font-size:.82rem}
+  .calendar-day-score{position:absolute;left:.4rem;top:.4rem;color:var(--muted);font-size:.62rem;font-weight:700}
+  .calendar-day-tasks{display:block;margin-top:.55rem;color:var(--muted);font-size:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .calendar-legend{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:.65rem 0;color:var(--muted);font-size:.67rem}
+  .calendar-legend span{display:inline-flex;align-items:center;gap:.28rem}
+  .calendar-legend i{width:10px;height:10px;border-radius:3px;background:var(--line)}
+  .calendar-legend .done{background:var(--accent-soft);border:1px solid var(--accent)}
+  .calendar-legend .partial{background:var(--sand);border:1px solid var(--gold)}
+  .calendar-legend .low{background:var(--danger-soft);border:1px solid var(--danger)}
+  .calendar-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.7rem 0}
+  .calendar-summary div{background:var(--chip-bg);border:1px solid var(--line);border-radius:12px;padding:.55rem;text-align:center}
+  .calendar-summary b{display:block;color:var(--accent);font-size:1.05rem}
+  .calendar-summary small{display:block;color:var(--muted);font-size:.65rem}
+  .upcoming-head{display:flex;align-items:flex-end;justify-content:space-between;gap:.5rem;margin-top:1rem}
+  .upcoming-head h3{font-size:.92rem;color:var(--ink)}
+  .upcoming-head small{font-size:.66rem;color:var(--muted)}
+  .upcoming-list{display:flex;flex-direction:column;gap:.4rem;margin-top:.55rem}
+  .upcoming-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.55rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:.58rem .65rem;text-align:right;font-family:inherit;cursor:pointer}
+  .upcoming-item:hover,.upcoming-item:focus-visible{border-color:var(--accent);outline:none}
+  .upcoming-date{min-width:52px;text-align:center;color:var(--accent);font-size:.7rem;font-weight:700}
+  .upcoming-main{min-width:0}
+  .upcoming-title{display:block;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .upcoming-meta{display:block;font-size:.64rem;color:var(--muted);margin-top:.12rem}
+  .upcoming-badge{font-size:.62rem;border-radius:99px;padding:.16rem .42rem;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .upcoming-badge.overdue{background:var(--danger-soft);color:var(--danger)}
+  .upcoming-empty{text-align:center;color:var(--muted);padding:1rem;border:1px dashed var(--line);border-radius:12px}
   @media(max-width:620px){
+    .stats-period-tabs{grid-template-columns:repeat(2,1fr)}
     .stats-kpis{grid-template-columns:repeat(2,1fr)}
     .stats-break-row{grid-template-columns:90px 1fr 38px;gap:.4rem}
     .stats-review-grid{grid-template-columns:1fr}
     .stats-goal-row{flex-direction:column}
     .stats-goal-steps{grid-template-columns:1fr}
+    .calendar-weekdays,.calendar-grid{gap:.2rem}
+    .calendar-day{min-height:58px;padding:.32rem;border-radius:9px}
+    .calendar-day-score{left:.25rem;top:.3rem;font-size:.56rem}
+    .calendar-day-tasks{margin-top:.4rem;font-size:.56rem}
+    .upcoming-item{grid-template-columns:auto minmax(0,1fr)}
+    .upcoming-badge{grid-column:2;justify-self:start}
   }
 
   /* ===== المصاريف ===== */
@@ -1842,7 +1892,7 @@
       </div>
       <div>
         <div class="date-nav">
-          <button id="statsBtn" title="إحصائيات الأسبوع والشهر والسنة" aria-label="فتح إحصائيات الأسبوع والشهر والسنة">📊</button>
+          <button id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
           <span class="date-pill">
@@ -2169,7 +2219,7 @@
       </div>
 
       <div class="card task-card" id="tasksCard">
-        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div>
+        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><div class="task-card-actions"><button type="button" class="task-history-btn" id="taskCalendarBtn">التقويم والقادمة</button><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div></div>
         <div class="task-summary" id="tasksSummary" hidden></div>
         <div id="tasks"></div>
       </div>
@@ -2225,6 +2275,7 @@
     <div class="stats-period-tabs" role="tablist" aria-label="فترة الإحصائيات">
       <button type="button" class="active" role="tab" aria-selected="true" data-stats-period="week">الأسبوع</button>
       <button type="button" role="tab" aria-selected="false" data-stats-period="month">الشهر</button>
+      <button type="button" role="tab" aria-selected="false" data-stats-period="calendar">التقويم</button>
       <button type="button" role="tab" aria-selected="false" data-stats-period="year">السنة</button>
     </div>
 
@@ -2263,6 +2314,21 @@
         </div>
         <div class="stats-goal-status" id="statsGoalStatus" role="status" aria-live="polite"></div>
       </div>
+    </div>
+
+    <div id="statsCalendarView" hidden>
+      <div class="calendar-toolbar">
+        <button type="button" id="calendarPrev" aria-label="الشهر السابق">›</button>
+        <div class="calendar-month-label" id="calendarMonthLabel"></div>
+        <button type="button" class="calendar-today" id="calendarToday">هذا الشهر</button>
+        <button type="button" id="calendarNext" aria-label="الشهر التالي">‹</button>
+      </div>
+      <div class="calendar-weekdays" aria-hidden="true"><span>الأحد</span><span>الاثنين</span><span>الثلاثاء</span><span>الأربعاء</span><span>الخميس</span><span>الجمعة</span><span>السبت</span></div>
+      <div class="calendar-grid" id="calendarGrid" role="grid" aria-label="تقويم الإنجاز الشهري"></div>
+      <div class="calendar-legend"><span><i class="done"></i>إنجاز مرتفع</span><span><i class="partial"></i>يحتاج متابعة</span><span><i class="low"></i>إنجاز منخفض</span><span><i></i>لا توجد بيانات</span></div>
+      <div class="calendar-summary" id="calendarSummary"></div>
+      <div class="upcoming-head"><div><h3>المهام القادمة والمتكررة</h3><small>المواعيد المحفوظة وأقرب تكرار خلال ٣٠ يومًا</small></div></div>
+      <div class="upcoming-list" id="calendarUpcoming"></div>
     </div>
 
     <div id="statsYearView" hidden>
@@ -2839,7 +2905,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٢</div>
+    <div class="app-version">النسخة ١٠٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -7297,8 +7363,9 @@
     document.getElementById("ibCalBtn").textContent = hidden ? "📊 تقويمك" : "🔼 إخفاء الإحصائيات";
   }
   document.getElementById("ibCalBtn").onclick = ()=>{
-    document.getElementById("statsBtn").click();
-    ibSyncCalBtn();
+    const sec=document.getElementById("statsSection");
+    if(!sec.hidden&&statsPeriod==="calendar"){ sec.hidden=true; ibSyncCalBtn(); }
+    else openCalendarView();
   };
   ibSyncCalBtn();
 
@@ -8200,6 +8267,99 @@
     return out;
   }
 
+  let calendarCursor = new Date(currentDate.slice(0,7)+"-01T12:00:00");
+  function calendarTaskSeriesKey(task){
+    return task.recurrenceRootId || task.id || ((task.text||"").trim()+"|"+(task.repeat||"none"));
+  }
+  function calendarTaskOccurrences(days){
+    const startDate=new Date(todayStr()+"T12:00:00"), overdueStart=new Date(startDate), endDate=new Date(startDate);
+    overdueStart.setDate(overdueStart.getDate()-14); endDate.setDate(endDate.getDate()+30);
+    const startKey=fmtDate(overdueStart), endKey=fmtDate(endDate), rows=new Map(), latestRecurring=new Map();
+    Object.keys(days).sort().forEach(dayKey=>{
+      const day=days[dayKey]||{};
+      (day.tasks||[]).filter(itemFilled).forEach(task=>{
+        const due=/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate||"")?task.dueDate:dayKey;
+        const series=calendarTaskSeriesKey(task), rowKey=series+"|"+due;
+        if(!task.done && due>=startKey && due<=endKey && !rows.has(rowKey)){
+          rows.set(rowKey,{date:due,time:task.dueTime||"",text:task.text||"",category:task.category||"",repeat:task.repeat||"none",series,projected:false});
+        }
+        if(task.repeat==="daily"||task.repeat==="weekly"){
+          const prev=latestRecurring.get(series);
+          if(!prev || due>prev.date || (due===prev.date && dayKey>prev.dayKey)) latestRecurring.set(series,{date:due,dayKey,task});
+        }
+      });
+    });
+    latestRecurring.forEach((source,series)=>{
+      if(Array.from(rows.values()).some(r=>r.series===series)) return;
+      const step=source.task.repeat==="weekly"?7:1, next=new Date(source.date+"T12:00:00");
+      if(source.task.done) next.setDate(next.getDate()+step);
+      while(fmtDate(next)<todayStr()) next.setDate(next.getDate()+step);
+      const date=fmtDate(next);
+      if(date<=endKey){
+        rows.set(series+"|"+date,{date,time:source.task.dueTime||"",text:source.task.text||"",category:source.task.category||"",repeat:source.task.repeat,series,projected:true});
+      }
+    });
+    return Array.from(rows.values()).sort((a,b)=>(a.date+"T"+(a.time||"23:59")).localeCompare(b.date+"T"+(b.time||"23:59"))).slice(0,18);
+  }
+  function calendarTaskCounts(days){
+    const counts={};
+    Object.keys(days).forEach(dayKey=>{
+      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done).forEach(t=>{
+        const due=/^\d{4}-\d{2}-\d{2}$/.test(t.dueDate||"")?t.dueDate:dayKey;
+        counts[due]=(counts[due]||0)+1;
+      });
+    });
+    return counts;
+  }
+  function calendarOpenDay(date){
+    document.getElementById("statsSection").hidden=true;
+    goto(date); ibSyncCalBtn();
+    requestAnimationFrame(()=>document.querySelector("header").scrollIntoView({behavior:"smooth",block:"start"}));
+  }
+  function calendarRenderUpcoming(days){
+    const box=document.getElementById("calendarUpcoming"), rows=calendarTaskOccurrences(days), today=todayStr();
+    box.innerHTML="";
+    if(!rows.length){ box.innerHTML='<div class="upcoming-empty">لا توجد مهام مؤرخة أو متكررة قادمة خلال ٣٠ يومًا.</div>'; return; }
+    rows.forEach(row=>{
+      const btn=document.createElement("button"); btn.type="button"; btn.className="upcoming-item";
+      const date=document.createElement("span"); date.className="upcoming-date";
+      date.textContent=new Date(row.date+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"short",day:"numeric",month:"short"});
+      const main=document.createElement("span"); main.className="upcoming-main";
+      const title=document.createElement("span"); title.className="upcoming-title"; title.textContent=row.text;
+      const meta=document.createElement("span"); meta.className="upcoming-meta";
+      meta.textContent=[row.time?("الساعة "+row.time):"",row.category||"",row.repeat==="daily"?"تكرار يومي":row.repeat==="weekly"?"تكرار أسبوعي":""].filter(Boolean).join(" · ");
+      main.append(title,meta);
+      const badge=document.createElement("span"); badge.className="upcoming-badge"+(row.date<today?" overdue":"");
+      badge.textContent=row.date<today?"متأخرة":row.projected?"التكرار القادم":"مجدولة";
+      btn.setAttribute("aria-label",row.text+"، "+date.textContent); btn.append(date,main,badge);
+      btn.onclick=()=>calendarOpenDay(row.date); box.appendChild(btn);
+    });
+  }
+  function renderCalendar(){
+    const days=allDays(), y=calendarCursor.getFullYear(), m=calendarCursor.getMonth(), first=new Date(y,m,1,12), total=new Date(y,m+1,0,12).getDate();
+    const grid=document.getElementById("calendarGrid"), taskCounts=calendarTaskCounts(days);
+    document.getElementById("calendarMonthLabel").textContent=first.toLocaleDateString("ar-SA",{month:"long",year:"numeric"});
+    grid.innerHTML="";
+    for(let i=0;i<first.getDay();i++){ const blank=document.createElement("span"); blank.className="calendar-day outside"; blank.setAttribute("aria-hidden","true"); grid.appendChild(blank); }
+    let recorded=0, high=0, focus=0;
+    for(let day=1;day<=total;day++){
+      const date=new Date(y,m,day,12), key=fmtDate(date), saved=days[key], pct=saved?dayPct(saved):0, tasks=taskCounts[key]||0;
+      if(saved){ recorded++; if(pct>=80)high++; if(pct<40)focus++; }
+      const btn=document.createElement("button"); btn.type="button"; btn.className="calendar-day";
+      if(saved) btn.classList.add(pct>=80?"done":pct>=40?"partial":"low");
+      if(key===todayStr()) btn.classList.add("today");
+      if(key===currentDate) btn.classList.add("selected");
+      const label=date.toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
+      btn.setAttribute("role","gridcell"); btn.setAttribute("aria-label",label+(saved?"، إنجاز "+pct.toLocaleString("ar-EG")+"٪":"، لا توجد بيانات")+(tasks?"، "+tasks.toLocaleString("ar-EG")+" مهام":""));
+      btn.innerHTML='<span class="calendar-day-number">'+day.toLocaleString("ar-EG")+'</span>'+(saved?'<span class="calendar-day-score">'+pct.toLocaleString("ar-EG")+'٪</span>':'')+(tasks?'<span class="calendar-day-tasks">📝 '+tasks.toLocaleString("ar-EG")+'</span>':'');
+      btn.onclick=()=>calendarOpenDay(key); grid.appendChild(btn);
+    }
+    while(grid.children.length%7){ const blank=document.createElement("span"); blank.className="calendar-day outside"; blank.setAttribute("aria-hidden","true"); grid.appendChild(blank); }
+    const ar=n=>n.toLocaleString("ar-EG");
+    document.getElementById("calendarSummary").innerHTML='<div><b>'+ar(recorded)+'</b><small>أيام مسجلة</small></div><div><b>'+ar(high)+'</b><small>إنجاز مرتفع</small></div><div><b>'+ar(focus)+'</b><small>تحتاج تركيزًا</small></div>';
+    calendarRenderUpcoming(days);
+  }
+
   /* توافق الأيام القديمة (٥ صلوات قبل إضافة الضحى) مع الترتيب الجديد */
   function prayerVal(pr, idx){
     if(!Array.isArray(pr)) return "";
@@ -8341,9 +8501,10 @@
   function renderStatsPeriod(period){
     statsPeriod=period;
     document.querySelectorAll("[data-stats-period]").forEach(btn=>{ const active=btn.dataset.statsPeriod===period; btn.classList.toggle("active",active); btn.setAttribute("aria-selected",active?"true":"false"); });
-    document.getElementById("statsUnifiedView").hidden=period==="year";
+    document.getElementById("statsUnifiedView").hidden=period==="year"||period==="calendar";
+    document.getElementById("statsCalendarView").hidden=period!=="calendar";
     document.getElementById("statsYearView").hidden=period!=="year";
-    if(period==="year") renderStats(); else renderUnifiedStats(period);
+    if(period==="year") renderStats(); else if(period==="calendar") renderCalendar(); else renderUnifiedStats(period);
   }
 
   function renderStats(){
@@ -8527,6 +8688,12 @@
     }else spark.innerHTML = "";
   }
 
+  function openCalendarView(){
+    calendarCursor=new Date(currentDate.slice(0,7)+"-01T12:00:00");
+    const sec=document.getElementById("statsSection"); sec.hidden=false;
+    renderStatsPeriod("calendar"); ibSyncCalBtn();
+    sec.scrollIntoView({behavior:"smooth",block:"start"});
+  }
   document.getElementById("statsBtn").onclick = ()=>{
     const sec = document.getElementById("statsSection");
     sec.hidden = !sec.hidden;
@@ -8537,6 +8704,9 @@
     ibSyncCalBtn();
   };
   document.querySelectorAll("[data-stats-period]").forEach(btn=>btn.onclick=()=>renderStatsPeriod(btn.dataset.statsPeriod));
+  document.getElementById("calendarPrev").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()-1); renderCalendar(); };
+  document.getElementById("calendarNext").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()+1); renderCalendar(); };
+  document.getElementById("calendarToday").onclick=()=>{ calendarCursor=new Date(todayStr().slice(0,7)+"-01T12:00:00"); renderCalendar(); };
   document.getElementById("statsGoalSave").onclick=statsSaveWeeklyGoal;
   document.getElementById("statsClose").onclick=()=>{ document.getElementById("statsSection").hidden=true; ibSyncCalBtn(); document.getElementById("statsBtn").focus(); };
 
@@ -11120,7 +11290,7 @@
   safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
   safeRun("personalizeInit", personalizeInit);
   safeRun("appViewInit", appViewInit);
-  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; });
+  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("goto:init", ()=> goto(todayStr()));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);

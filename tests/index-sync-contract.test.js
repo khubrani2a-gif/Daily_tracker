@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v102",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v103",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٢/); assert.match(sw,/mufakkirati-v102/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٣/); assert.match(sw,/mufakkirati-v103/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -124,6 +124,15 @@ test("unified weekly and monthly statistics remain wired",()=>{
   assert.match(html,/function renderStatsPeriod\(/);
   assert.match(html,/statsSeries\(days,count,count\)/);
   assert.match(html,/renderStatsPeriod\(statsPeriod\)/);
+});
+
+test("unified calendar opens saved days and lists upcoming recurring tasks",()=>{
+  ["taskCalendarBtn","statsCalendarView","calendarPrev","calendarNext","calendarToday","calendarGrid","calendarSummary","calendarUpcoming"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["calendarTaskOccurrences","calendarTaskCounts","calendarOpenDay","calendarRenderUpcoming","renderCalendar","openCalendarView"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/data-stats-period="calendar"/);
+  assert.match(html,/btn\.onclick=\(\)=>calendarOpenDay\(key\)/);
+  assert.match(html,/task\.repeat==="daily"\|\|task\.repeat==="weekly"/);
+  assert.match(html,/document\.getElementById\("taskCalendarBtn"\)\.onclick=openCalendarView/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{
