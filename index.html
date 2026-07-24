@@ -282,10 +282,36 @@
   .notify-switch{position:relative;width:42px;height:24px;display:inline-block;flex-shrink:0}.notify-switch input{position:absolute;opacity:0;pointer-events:none}.notify-switch i{position:absolute;inset:0;background:var(--line);border-radius:99px;cursor:pointer;transition:.18s}.notify-switch i::after{content:"";position:absolute;width:18px;height:18px;top:3px;right:3px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.18s}.notify-switch input:checked+i{background:var(--accent)}.notify-switch input:checked+i::after{transform:translateX(-18px)}
   .notify-next{margin:.75rem 0;background:var(--chip-bg);border-radius:12px;padding:.65rem .75rem;font-size:.72rem;color:var(--muted);line-height:1.7}
   .notify-actions{display:flex;gap:.5rem;margin-top:.7rem}.notify-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}.notify-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* ===== البحث الشامل ===== */
+  .global-search-overlay{position:fixed;inset:0;z-index:1850;background:rgba(20,17,12,.64);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
+  .global-search-overlay[hidden]{display:none}
+  .global-search-sheet{width:min(760px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:0 28px 80px rgba(0,0,0,.32)}
+  .global-search-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;padding:1rem 1rem .65rem}
+  .global-search-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--accent)}
+  .global-search-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:10px;width:36px;height:36px;cursor:pointer;flex-shrink:0}
+  .global-search-query{position:relative;padding:0 1rem .65rem}
+  .global-search-query span{position:absolute;right:1.75rem;top:50%;transform:translateY(-58%);pointer-events:none}
+  .global-search-query input{width:100%;border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:13px;padding:.78rem 2.6rem .78rem .8rem;font-family:inherit;font-size:.9rem;outline:none}
+  .global-search-query input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .global-search-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;padding:0 1rem .75rem}
+  .global-search-filters label{font-size:.66rem;color:var(--muted)}
+  .global-search-filters select,.global-search-filters input{display:block;width:100%;margin-top:.2rem;border:1px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.5rem .55rem;font-family:inherit;font-size:.72rem}
+  .global-search-summary{padding:.55rem 1rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.7rem;color:var(--muted);background:var(--chip-bg)}
+  .global-search-results{overflow-y:auto;overscroll-behavior:contain;padding:.65rem 1rem 1rem;scroll-padding-bottom:1rem}
+  .global-search-result{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:13px;padding:.7rem .75rem;margin-bottom:.45rem;font-family:inherit;cursor:pointer;transition:.15s}
+  .global-search-result:hover,.global-search-result:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
+  .global-search-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--chip-bg);font-size:1rem}
+  .global-search-copy{min-width:0}.global-search-copy b{display:block;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.global-search-copy small{display:block;color:var(--muted);font-size:.65rem;margin-top:.14rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .global-search-date{font-size:.65rem;color:var(--muted);white-space:nowrap}
+  .global-search-empty{text-align:center;color:var(--muted);padding:2.5rem 1rem;font-size:.78rem;line-height:1.8}
   @media(max-width:620px){
     .notify-overlay{align-items:flex-end;padding:.5rem}
     .notify-sheet{border-radius:22px 22px 14px 14px;padding-bottom:var(--mobile-scroll-clearance)}
     .notify-row{grid-template-columns:1fr}.notify-controls{justify-content:space-between}
+    .global-search-overlay{align-items:flex-end;padding:.5rem}
+    .global-search-sheet{height:min(88vh,760px);max-height:calc(100vh - .5rem);border-radius:22px 22px 14px 14px}
+    .global-search-filters{grid-template-columns:1fr 1fr}.global-search-filters label:first-child,.global-search-filters label:last-child{grid-column:1/-1}
+    .global-search-results{padding-bottom:var(--mobile-scroll-clearance);scroll-padding-bottom:var(--mobile-scroll-clearance)}
   }
   @media(max-width:520px){.onboard-modules,.onboard-goals{grid-template-columns:1fr}.onboard-sheet{border-radius:19px}}
 
@@ -1918,6 +1944,7 @@
       <div>
         <div class="date-nav">
           <button id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
+          <button id="globalSearchBtn" title="البحث الشامل" aria-label="البحث في المهام والملاحظات والذكريات والمصاريف">🔎</button>
           <button id="notifyBtn" title="الإشعارات والتذكيرات" aria-label="فتح إعدادات الإشعارات">🔔</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
@@ -2386,6 +2413,21 @@
       <div class="notify-row"><span class="notify-copy"><b>📖 القرآن</b><small>إذا لم يكتمل ورد القراءة اليومي</small></span><span class="notify-controls"><input type="time" id="notifyQuranTime" aria-label="وقت تذكير القرآن"><label class="notify-switch"><input type="checkbox" id="notifyQuran"><i></i></label></span></div>
       <div class="notify-next" id="notifyNext"></div>
       <div class="notify-actions"><button type="button" id="notifyCancel">إلغاء</button><button type="button" class="primary" id="notifySave">حفظ الإعدادات</button></div>
+    </div>
+  </div>
+
+  <div class="global-search-overlay" id="globalSearchOverlay" hidden>
+    <div class="global-search-sheet" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+      <div class="global-search-head"><h2 id="globalSearchTitle">🔎 البحث الشامل</h2><button type="button" class="global-search-close" id="globalSearchClose" aria-label="إغلاق">✕</button></div>
+      <div class="global-search-query"><span aria-hidden="true">🔎</span><input type="search" id="globalSearchInput" autocomplete="off" placeholder="ابحث في المهام والملاحظات والذكريات والمصاريف…" aria-label="عبارة البحث"></div>
+      <div class="global-search-filters">
+        <label>النوع<select id="globalSearchType"><option value="all">الكل</option><option value="task">المهام</option><option value="note">الملاحظات</option><option value="memory">الذكريات</option><option value="expense">المصاريف</option></select></label>
+        <label>من تاريخ<input type="date" id="globalSearchFrom"></label>
+        <label>إلى تاريخ<input type="date" id="globalSearchTo"></label>
+        <label>التصنيف<select id="globalSearchCategory"><option value="">كل التصنيفات</option></select></label>
+      </div>
+      <div class="global-search-summary" id="globalSearchSummary" role="status" aria-live="polite"></div>
+      <div class="global-search-results" id="globalSearchResults"></div>
     </div>
   </div>
 
@@ -2947,7 +2989,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٤</div>
+    <div class="app-version">النسخة ١٠٥</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -8515,6 +8557,116 @@
     notifyButtonState(); clearInterval(notifyTimer); notifyTimer=setInterval(notifyCheck,30000); setTimeout(notifyCheck,1200);
   }
 
+  /* ---------- بحث شامل: المهام والملاحظات والذكريات والمصاريف ---------- */
+  const GLOBAL_SEARCH_TYPES={
+    task:{label:"مهمة",icon:"✅",view:"today",target:"tasksCard"},
+    note:{label:"ملاحظة",icon:"🗒️",view:"more",target:"notesCard"},
+    memory:{label:"ذكرى",icon:"📌",view:"more",target:"memoryCard"},
+    expense:{label:"مصروف",icon:"💰",view:"expenses",target:"expensesCard"}
+  };
+  let globalSearchRows=[];
+  let globalSearchVisible=[];
+  function globalSearchNorm(value){
+    return String(value==null?"":value).toLowerCase().normalize("NFKD")
+      .replace(/[\u064B-\u065F\u0670]/g,"").replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه")
+      .replace(/[٠-٩]/g,d=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[۰-۹]/g,d=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+      .replace(/\s+/g," ").trim();
+  }
+  function globalSearchExcerpt(value,max){
+    const text=String(value||"").replace(/\s+/g," ").trim(), limit=max||86;
+    return text.length>limit?text.slice(0,limit-1)+"…":text;
+  }
+  function globalSearchIndex(){
+    const rows=[], days=allDays();
+    Object.keys(days).sort().forEach(date=>{
+      const day=days[date]||{};
+      (day.tasks||[]).filter(itemFilled).forEach(task=>{
+        const category=task.category||"";
+        rows.push({type:"task",date,id:task.id||"",title:task.text||"",detail:[category,task.dueTime||"",task.repeat==="daily"?"يومي":task.repeat==="weekly"?"أسبوعي":""].filter(Boolean).join(" · "),category,done:!!task.done});
+      });
+      if(String(day.notes||"").trim()) rows.push({type:"note",date,title:globalSearchExcerpt(day.notes),detail:"ملاحظات اليوم",category:""});
+      if(String(day.memory||"").trim()) rows.push({type:"memory",date,title:globalSearchExcerpt(day.memory),detail:"ذكرى اليوم",category:""});
+    });
+    expActiveTx().forEach(tx=>{
+      const category=(expCatById(tx.categoryId)||{}).name||"غير مصنف";
+      const parts=[category,tx.subcategory,tx.description,tx.paymentMethod,tx.merchantCountry].filter(Boolean);
+      const title=tx.description||tx.subcategory||category||"مصروف";
+      rows.push({type:"expense",date:tx.transactionDate||"",id:tx.id,title,detail:parts.join(" · "),category,amount:expMoney(tx.amountMinor),transactionType:tx.transactionType||"expense"});
+    });
+    rows.forEach(row=>{ row.searchText=globalSearchNorm([row.title,row.detail,row.category,row.date,row.amount||""].join(" ")); });
+    return rows.sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.type==="expense"?1:-1));
+  }
+  function globalSearchDateLabel(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date||"")) return "";
+    try{ return new Date(date+"T12:00:00").toLocaleDateString("ar-SA",{day:"numeric",month:"short",year:"numeric"}); }catch(e){ return date; }
+  }
+  function globalSearchFillCategories(){
+    const select=document.getElementById("globalSearchCategory"), selected=select.value;
+    const categories=[...new Set(globalSearchRows.map(row=>row.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ar"));
+    select.innerHTML='<option value="">كل التصنيفات</option>';
+    categories.forEach(category=>{ const option=document.createElement("option"); option.value=category; option.textContent=category; select.appendChild(option); });
+    if(categories.includes(selected)) select.value=selected;
+  }
+  function globalSearchRender(){
+    const query=globalSearchNorm(document.getElementById("globalSearchInput").value);
+    const tokens=query.split(" ").filter(Boolean), type=document.getElementById("globalSearchType").value;
+    const from=document.getElementById("globalSearchFrom").value, to=document.getElementById("globalSearchTo").value;
+    const category=document.getElementById("globalSearchCategory").value;
+    globalSearchVisible=globalSearchRows.filter(row=>
+      (type==="all"||row.type===type)&&(!from||row.date>=from)&&(!to||row.date<=to)&&(!category||row.category===category)&&tokens.every(token=>row.searchText.includes(token))
+    ).slice(0,100);
+    const resultBox=document.getElementById("globalSearchResults"), summary=document.getElementById("globalSearchSummary");
+    resultBox.innerHTML="";
+    const total=globalSearchRows.filter(row=>(type==="all"||row.type===type)&&(!from||row.date>=from)&&(!to||row.date<=to)&&(!category||row.category===category)&&tokens.every(token=>row.searchText.includes(token))).length;
+    summary.textContent=total?("تم العثور على "+total.toLocaleString("ar-EG")+" نتيجة"+(total>100?" — تظهر أول ١٠٠":"")):"لا توجد نتائج مطابقة";
+    if(!globalSearchVisible.length){
+      const empty=document.createElement("div"); empty.className="global-search-empty";
+      empty.textContent=query||type!=="all"||from||to||category?"جرّب كلمة أخرى أو وسّع نطاق الفلاتر.":"ابدأ بكتابة كلمة، أو تصفّح أحدث العناصر المحفوظة.";
+      resultBox.appendChild(empty); return;
+    }
+    globalSearchVisible.forEach((row,index)=>{
+      const meta=GLOBAL_SEARCH_TYPES[row.type], button=document.createElement("button"); button.type="button"; button.className="global-search-result"; button.dataset.searchIndex=String(index);
+      const icon=document.createElement("span"); icon.className="global-search-icon"; icon.textContent=meta.icon;
+      const copy=document.createElement("span"); copy.className="global-search-copy";
+      const title=document.createElement("b"); title.textContent=(row.done?"✓ ":"")+globalSearchExcerpt(row.title,100);
+      const detail=document.createElement("small"); detail.textContent=[meta.label,row.detail,row.amount].filter(Boolean).join(" · ");
+      const date=document.createElement("span"); date.className="global-search-date"; date.textContent=globalSearchDateLabel(row.date);
+      copy.append(title,detail); button.append(icon,copy,date); button.onclick=()=>globalSearchOpenResult(row); resultBox.appendChild(button);
+    });
+  }
+  function globalSearchClose(returnFocus){
+    document.getElementById("globalSearchOverlay").hidden=true; document.body.style.overflow="";
+    if(returnFocus!==false) document.getElementById("globalSearchBtn").focus();
+  }
+  function globalSearchOpenResult(row){
+    globalSearchClose(false);
+    if(row.type==="expense"){
+      expOpenOverlay(); expOpenExpenseForm(row.id); return;
+    }
+    goto(row.date);
+    const meta=GLOBAL_SEARCH_TYPES[row.type], mobile=window.matchMedia("(max-width:700px)").matches;
+    if(mobile) appViewSet(meta.view);
+    setTimeout(()=>{
+      const target=document.getElementById(meta.target); if(!target) return;
+      target.hidden=false; target.classList.remove("mobile-view-hidden"); target.scrollIntoView({behavior:"smooth",block:"start"});
+      target.setAttribute("tabindex","-1"); target.focus({preventScroll:true});
+    },80);
+  }
+  function globalSearchOpen(){
+    globalSearchRows=globalSearchIndex(); globalSearchFillCategories(); globalSearchRender();
+    document.getElementById("globalSearchOverlay").hidden=false; document.body.style.overflow="hidden";
+    setTimeout(()=>document.getElementById("globalSearchInput").focus(),20);
+  }
+  function globalSearchInit(){
+    const overlay=document.getElementById("globalSearchOverlay");
+    document.getElementById("globalSearchBtn").onclick=globalSearchOpen; document.getElementById("globalSearchClose").onclick=()=>globalSearchClose(true);
+    ["globalSearchInput","globalSearchType","globalSearchFrom","globalSearchTo","globalSearchCategory"].forEach(id=>{
+      const control=document.getElementById(id); control.addEventListener(id==="globalSearchInput"?"input":"change",globalSearchRender);
+    });
+    overlay.onclick=e=>{ if(e.target===overlay) globalSearchClose(true); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!overlay.hidden) globalSearchClose(true); });
+  }
+
   /* توافق الأيام القديمة (٥ صلوات قبل إضافة الضحى) مع الترتيب الجديد */
   function prayerVal(pr, idx){
     if(!Array.isArray(pr)) return "";
@@ -11452,6 +11604,7 @@
   safeRun("appViewInit", appViewInit);
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);
+  safeRun("globalSearchInit", globalSearchInit);
   safeRun("goto:init", ()=> goto(initialDay));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
