@@ -45,33 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v112",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v103",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١١٢/); assert.match(sw,/mufakkirati-v112/); assert.match(sw,/sync-core\.js/);
-});
-
-test("daily history is cached and below-fold content is deferred at startup",()=>{
-  assert.match(html,/let allDaysCache = null/);
-  assert.match(html,/function invalidateAllDaysCache\(\)/);
-  assert.match(html,/if\(allDaysCache === null\)/);
-  assert.match(html,/const out = Object\.assign\(\{\}, allDaysCache\)/);
-  assert.match(html,/function deferNonCriticalRender\(name, fn\)/);
-  assert.match(html,/deferNonCriticalRender\("renderHifzCard:init", renderHifzCard\)/);
-});
-
-test("backup import limits size, validates entries, and blocks newer schemas",()=>{
-  assert.match(html,/const DATA_MAX_IMPORT_BYTES=5\*1024\*1024/);
-  assert.match(html,/const DATA_MAX_IMPORT_ENTRIES=1000/);
-  assert.match(html,/if\(\+raw\.schema>DATA_VERSION\) throw new Error\("newer backup"\)/);
-  assert.match(html,/if\(keys\.length>DATA_MAX_IMPORT_ENTRIES\) throw new Error\("too many entries"\)/);
-  assert.match(html,/if\(f\.size>DATA_MAX_IMPORT_BYTES\)/);
-});
-
-test("data center can run a non-destructive health check before recovery",()=>{
-  assert.match(html,/id="dataHealthCheck"/);
-  assert.match(html,/function dataHealthCheck\(\)/);
-  assert.match(html,/document\.getElementById\("dataHealthCheck"\)\.onclick=dataHealthCheck/);
-  assert.match(html,/dataSnapshotStats\(dataBuildSnapshot/);
+  assert.match(html,/النسخة ١٠٣/); assert.match(sw,/mufakkirati-v103/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -194,78 +170,6 @@ test("unified calendar opens saved days and lists upcoming recurring tasks",()=>
   assert.match(html,/btn\.onclick=\(\)=>calendarOpenDay\(key\)/);
   assert.match(html,/task\.repeat==="daily"\|\|task\.repeat==="weekly"/);
   assert.match(html,/document\.getElementById\("taskCalendarBtn"\)\.onclick=openCalendarView/);
-});
-
-test("notification center schedules configurable local reminders",()=>{
-  ["notifyBtn","notifyOverlay","notifyPermissionBtn","notifyEnabled","notifyPrayer","notifyPrayerLead","notifyTasks","notifyWater","notifyWaterTime","notifySport","notifySportTime","notifyQuran","notifyQuranTime"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["notifyLoad","notifyDue","notifyShow","notifyTodayPrayerTimes","notifyTaskRowsForToday","notifyCheck","notifySaveSettings","notifyInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  assert.match(html,/Notification\.requestPermission\(\)/);
-  assert.match(html,/reg\.showNotification\(title,options\)/);
-  assert.match(html,/setInterval\(notifyCheck,30000\)/);
-  assert.match(sw,/addEventListener\("notificationclick"/);
-  assert.match(sw,/postMessage\(\{type:"OPEN_DAY"/);
-});
-
-test("global search indexes daily content and expenses with filters",()=>{
-  ["globalSearchBtn","globalSearchOverlay","globalSearchInput","globalSearchType","globalSearchFrom","globalSearchTo","globalSearchCategory","globalSearchSummary","globalSearchResults"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["globalSearchIndex","globalSearchNorm","globalSearchRender","globalSearchOpenResult","globalSearchOpen","globalSearchInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  ["task","note","memory","expense"].forEach(type=>assert.match(html,new RegExp('value="'+type+'"'),type));
-  assert.match(html,/expActiveTx\(\)/);
-  assert.match(html,/appViewSet\(view\)/);
-  assert.match(html,/expOpenExpenseForm\(row\.id\)/);
-});
-
-test("custom habits support schedules, streaks, and periodic goals",()=>{
-  ["habitManageBtn","habitOverlay","habitManageList","habitAddBtn","habitEditView","habitName","habitGroup","habitDailyTarget","habitDays","habitGoalPeriod","habitGoalTarget","habitEditSave"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["habitScheduledOn","habitPeriodRange","habitPeriodProgress","habitStreak","habitDaysText","habitRenderManager","habitOpenEditor","habitSaveEditor","habitDelete","habitInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  assert.match(html,/scheduleDays/);
-  assert.match(html,/goalPeriod==="weekly"/);
-  assert.match(html,/goalPeriod==="monthly"/);
-  assert.match(html,/kind:"habit"/);
-  assert.match(html,/safeRun\("habitInit", habitInit\)/);
-});
-
-test("data management provides backups, restore, exports, and conflict review",()=>{
-  ["dataManageBtn","dataOverlay","dataCreateBackup","dataBackupList","dataConflictList","dataExportExcel","dataExportPdf","dataClearReviewed","exportBtn","importBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["dataBuildSnapshot","dataSaveBackup","dataNormalizeImported","dataRestoreBackup","dataApplySnapshot","dataExportExcel","dataExportPdf","dataDetectConflict","dataDetectCollectionConflicts","dataRecordConflict","dataRenderCenter","dataInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  assert.match(html,/h2do-backup-library-v1/);
-  assert.match(html,/h2do-sync-conflicts-v1/);
-  assert.match(html,/application\/vnd\.ms-excel/);
-  assert.match(html,/printWindow\.print\(\)/);
-  assert.match(html,/dataDetectConflict\("daily"/);
-  assert.match(html,/dataDetectCollectionConflicts\("expenses"/);
-  assert.match(html,/safeRun\("dataInit", dataInit\)/);
-});
-
-test("advanced expenses include savings, budget comparison, charts, and recurring rules",()=>{
-  ["expSavingsCard","expBudgetCompareCard","expCategoryChartCard","expRecurringCard"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["expRenderSavingsCard","expRenderBudgetCompareCard","expRenderCategoryChartCard","expRenderRecurringCard","expOpenSavingForm","expOpenRecurringForm","expGenerateRecurringDue","expNextRecurringDate"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  assert.match(html,/savingsGoals:\[\]/);
-  assert.match(html,/recurringTransactions:\[\]/);
-  assert.match(html,/recurringOccurrenceDate/);
-  assert.match(html,/t\.recurringRuleId===rule\.id && t\.recurringOccurrenceDate===occurrence/);
-  assert.match(html,/const occurrenceId="expr_"/);
-  assert.match(html,/out\.savingsGoals = expMergeById/);
-  assert.match(html,/out\.recurringTransactions = expMergeById/);
-});
-
-test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
-  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["taskStatus","taskActive","taskSetDone","taskWeekOpen"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  ["pending","in_progress","deferred","done","cancelled"].forEach(status=>assert.ok(html.includes(status),status));
-  assert.match(html,/item\.subtasks=lines\.map/);
-  assert.match(html,/task\.reminderMinutes/);
-  assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
-  assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
-});
-
-test("advanced statistics support KPI customization, month comparison, day analysis, and suggested goals",()=>{
-  ["statsCustomizeBtn","statsBestWorst","statsMonthComparePanel","statsMonthCompare","statsAutoGoal","statsAutoGoalText","statsAutoGoalUse"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["statsKpiSelection","statsCustomizeOpen","statsRenderDayAnalysis","statsRenderMonthComparison","statsSuggestedGoal"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  assert.match(html,/h2do-stats-kpis-v1/);
-  assert.match(html,/for\(let offset=5;offset>=0;offset--\)/);
-  assert.match(html,/اقتراح بناءً على أدائك/);
-  assert.match(html,/document\.getElementById\("statsCustomizeBtn"\)\.onclick=statsCustomizeOpen/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{
