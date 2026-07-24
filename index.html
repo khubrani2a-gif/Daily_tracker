@@ -262,6 +262,31 @@
   .onboard-actions{display:flex;gap:.5rem;margin-top:1rem}
   .onboard-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}
   .onboard-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* ===== مركز الإشعارات ===== */
+  .notify-overlay{position:fixed;inset:0;z-index:1800;background:rgba(20,17,12,.62);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
+  .notify-overlay[hidden]{display:none}
+  .notify-sheet{width:min(620px,100%);max-height:92vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:1rem;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+  .notify-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;margin-bottom:.35rem}
+  .notify-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--accent)}
+  .notify-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:10px;width:36px;height:36px;cursor:pointer}
+  .notify-intro{font-size:.75rem;line-height:1.7;color:var(--muted);margin-bottom:.75rem}
+  .notify-permission{display:flex;align-items:center;justify-content:space-between;gap:.65rem;background:var(--chip-bg);border:1px solid var(--line);border-radius:13px;padding:.65rem .75rem;margin-bottom:.75rem}
+  .notify-permission div{min-width:0}.notify-permission b{display:block;font-size:.82rem}.notify-permission small{display:block;color:var(--muted);font-size:.66rem;margin-top:.1rem}
+  .notify-permission button{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  .notify-master,.notify-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:13px;padding:.68rem .75rem;margin-bottom:.45rem}
+  .notify-master{background:var(--accent-soft);border-color:var(--accent-2)}
+  .notify-copy b{display:block;font-size:.84rem;color:var(--ink)}.notify-copy small{display:block;font-size:.66rem;color:var(--muted);margin-top:.12rem;line-height:1.55}
+  .notify-controls{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;flex-wrap:wrap}
+  .notify-controls input[type="time"],.notify-controls select{border:1px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:9px;padding:.38rem .45rem;font-family:inherit;font-size:.75rem}
+  .notify-switch{position:relative;width:42px;height:24px;display:inline-block;flex-shrink:0}.notify-switch input{position:absolute;opacity:0;pointer-events:none}.notify-switch i{position:absolute;inset:0;background:var(--line);border-radius:99px;cursor:pointer;transition:.18s}.notify-switch i::after{content:"";position:absolute;width:18px;height:18px;top:3px;right:3px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.18s}.notify-switch input:checked+i{background:var(--accent)}.notify-switch input:checked+i::after{transform:translateX(-18px)}
+  .notify-next{margin:.75rem 0;background:var(--chip-bg);border-radius:12px;padding:.65rem .75rem;font-size:.72rem;color:var(--muted);line-height:1.7}
+  .notify-actions{display:flex;gap:.5rem;margin-top:.7rem}.notify-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}.notify-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  @media(max-width:620px){
+    .notify-overlay{align-items:flex-end;padding:.5rem}
+    .notify-sheet{border-radius:22px 22px 14px 14px;padding-bottom:var(--mobile-scroll-clearance)}
+    .notify-row{grid-template-columns:1fr}.notify-controls{justify-content:space-between}
+  }
   @media(max-width:520px){.onboard-modules,.onboard-goals{grid-template-columns:1fr}.onboard-sheet{border-radius:19px}}
 
   /* ===== Grid layout ===== */
@@ -1893,6 +1918,7 @@
       <div>
         <div class="date-nav">
           <button id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
+          <button id="notifyBtn" title="الإشعارات والتذكيرات" aria-label="فتح إعدادات الإشعارات">🔔</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
           <span class="date-pill">
@@ -2346,6 +2372,22 @@
       <div id="weightSpark"></div>
     </div>
   </section>
+
+  <div class="notify-overlay" id="notifyOverlay" hidden>
+    <div class="notify-sheet" role="dialog" aria-modal="true" aria-labelledby="notifyTitle">
+      <div class="notify-head"><h2 id="notifyTitle">🔔 الإشعارات والتذكيرات</h2><button type="button" class="notify-close" id="notifyClose" aria-label="إغلاق">✕</button></div>
+      <p class="notify-intro">اختر ما تريد تذكيرك به. تعمل التذكيرات المحلية أثناء تشغيل التطبيق، ويعتمد ظهورها عند إغلاقه تمامًا على دعم نظام الجهاز للتطبيقات المثبتة.</p>
+      <div class="notify-permission"><div><b id="notifyPermissionTitle">إذن الإشعارات</b><small id="notifyPermissionText"></small></div><button type="button" id="notifyPermissionBtn">السماح بالإشعارات</button></div>
+      <label class="notify-master"><span class="notify-copy"><b>تشغيل التذكيرات</b><small>مفتاح عام لجميع التنبيهات المحددة أدناه</small></span><span class="notify-switch"><input type="checkbox" id="notifyEnabled"><i></i></span></label>
+      <div class="notify-row"><span class="notify-copy"><b>🕌 الصلاة القادمة</b><small>تنبيه قبل وقت الصلاة حسب مواقيت مدينتك</small></span><span class="notify-controls"><select id="notifyPrayerLead" aria-label="وقت تنبيه الصلاة"><option value="0">عند الأذان</option><option value="5">قبل ٥ دقائق</option><option value="10">قبل ١٠ دقائق</option><option value="15">قبل ١٥ دقيقة</option><option value="30">قبل ٣٠ دقيقة</option></select><label class="notify-switch"><input type="checkbox" id="notifyPrayer"><i></i></label></span></div>
+      <div class="notify-row"><span class="notify-copy"><b>✅ المهام</b><small>يستخدم التاريخ والوقت المحفوظين داخل تفاصيل كل مهمة</small></span><span class="notify-controls"><label class="notify-switch"><input type="checkbox" id="notifyTasks"><i></i></label></span></div>
+      <div class="notify-row"><span class="notify-copy"><b>💧 الماء</b><small>إذا لم يكتمل هدف أكواب الماء</small></span><span class="notify-controls"><input type="time" id="notifyWaterTime" aria-label="وقت تذكير الماء"><label class="notify-switch"><input type="checkbox" id="notifyWater"><i></i></label></span></div>
+      <div class="notify-row"><span class="notify-copy"><b>🏃 الرياضة</b><small>إذا لم يكتمل هدف دقائق الرياضة</small></span><span class="notify-controls"><input type="time" id="notifySportTime" aria-label="وقت تذكير الرياضة"><label class="notify-switch"><input type="checkbox" id="notifySport"><i></i></label></span></div>
+      <div class="notify-row"><span class="notify-copy"><b>📖 القرآن</b><small>إذا لم يكتمل ورد القراءة اليومي</small></span><span class="notify-controls"><input type="time" id="notifyQuranTime" aria-label="وقت تذكير القرآن"><label class="notify-switch"><input type="checkbox" id="notifyQuran"><i></i></label></span></div>
+      <div class="notify-next" id="notifyNext"></div>
+      <div class="notify-actions"><button type="button" id="notifyCancel">إلغاء</button><button type="button" class="primary" id="notifySave">حفظ الإعدادات</button></div>
+    </div>
+  </div>
 
   <!-- ===== شاشة الأذكار ===== -->
   <div class="adhkar-overlay" id="adhkarOverlay" hidden>
@@ -2905,7 +2947,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٣</div>
+    <div class="app-version">النسخة ١٠٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
@@ -3757,7 +3799,7 @@
   function initLifecycleSync(){
     if(_lifecycleInit) return; _lifecycleInit = true;
     /* تسجيل واحد لكل حدث؛ الأحداث المتزامنة تُجمع عبر triggerGlobalForegroundSync (~400ms) */
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") triggerGlobalForegroundSync("foreground"); });
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible"){ triggerGlobalForegroundSync("foreground"); safeRun("notifyForeground",()=>{ if(typeof notifyCheck==="function") notifyCheck(); }); } });
     window.addEventListener("focus", ()=> triggerGlobalForegroundSync("focus"));
     window.addEventListener("pageshow", ()=> triggerGlobalForegroundSync("pageshow"));
     window.addEventListener("online", ()=>{ safeRun("syncRowOnline", ()=>{ if(typeof expRenderSyncRow==="function") expRenderSyncRow(); }); triggerGlobalForegroundSync("online"); });
@@ -8360,6 +8402,119 @@
     calendarRenderUpcoming(days);
   }
 
+  /* ---------- الإشعارات والتذكيرات المحلية ---------- */
+  const NOTIFY_KEY="h2do-notify-v1", NOTIFY_SENT_KEY="h2do-notify-sent-v1";
+  const NOTIFY_DEFAULTS={enabled:false,prayer:true,prayerLead:10,tasks:true,water:true,waterTime:"12:00",sport:true,sportTime:"18:00",quran:true,quranTime:"20:00"};
+  let notifyTimer=null;
+  function notifyLoad(){
+    let saved={}; try{ saved=JSON.parse(localStorage.getItem(NOTIFY_KEY)||"{}")||{}; }catch(e){}
+    return Object.assign({},NOTIFY_DEFAULTS,saved);
+  }
+  function notifySupported(){ return "Notification" in window; }
+  function notifyPermission(){
+    if(!notifySupported()) return "unsupported";
+    return Notification.permission||"default";
+  }
+  function notifyTodayState(){
+    if(currentDate===todayStr()&&state) return state;
+    try{ return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(todayStr()))||"{}")); }catch(e){ return blankState(); }
+  }
+  function notifyTodayPrayerTimes(){
+    if(currentDate===todayStr()&&prayerTimes) return prayerTimes;
+    let loc=null; try{ loc=JSON.parse(localStorage.getItem(LOC_KEY)||"null"); }catch(e){}
+    if(!loc) return null;
+    const locId=loc.address||((loc.lat!==undefined)?loc.lat.toFixed(2)+","+loc.lng.toFixed(2):loc.city);
+    try{ return JSON.parse(localStorage.getItem("h2do-times:"+todayStr()+":"+locId)||"null"); }catch(e){ return null; }
+  }
+  function notifyDue(hm,lead){
+    if(!/^\d{2}:\d{2}$/.test(hm||"")) return false;
+    const p=hm.split(":").map(Number), now=new Date(), target=new Date(now.getFullYear(),now.getMonth(),now.getDate(),p[0],p[1],0,0);
+    target.setMinutes(target.getMinutes()-(lead||0));
+    const delta=now.getTime()-target.getTime();
+    return delta>=0&&delta<5*60000;
+  }
+  function notifyWasSent(tag){
+    let sent={}; try{ sent=JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)||"{}")||{}; }catch(e){}
+    const cutoff=Date.now()-3*86400000; Object.keys(sent).forEach(k=>{ if(sent[k]<cutoff) delete sent[k]; });
+    if(sent[tag]) return true;
+    sent[tag]=Date.now(); localStorage.setItem(NOTIFY_SENT_KEY,JSON.stringify(sent)); return false;
+  }
+  function notifyShow(title,body,tag,date){
+    if(notifyPermission()!=="granted"||notifyWasSent(tag)) return;
+    const options={body,tag,renotify:false,icon:"icons/icon-192.png",badge:"icons/icon-192.png",dir:"rtl",lang:"ar",data:{date:date||todayStr()}};
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.getRegistration().then(reg=>{ if(reg) return reg.showNotification(title,options); new Notification(title,options); }).catch(()=>{ try{ new Notification(title,options); }catch(e){} });
+    }else try{ new Notification(title,options); }catch(e){}
+  }
+  function notifyTaskRowsForToday(){
+    const today=todayStr(), rows=[], seen=new Set(), days=allDays();
+    Object.keys(days).forEach(dayKey=>{
+      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done&&t.dueTime).forEach(t=>{
+        const due=t.dueDate||dayKey, key=(t.id||t.text)+"|"+due+"|"+t.dueTime;
+        if(due===today&&!seen.has(key)){ seen.add(key); rows.push(t); }
+      });
+    });
+    return rows;
+  }
+  function notifyCheck(){
+    const settings=notifyLoad();
+    if(!settings.enabled||notifyPermission()!=="granted") return;
+    const today=todayStr(), todayState=notifyTodayState();
+    const todayTimes=notifyTodayPrayerTimes();
+    if(settings.prayer&&todayTimes){
+      [["Fajr","الفجر"],["Dhuhr","الظهر"],["Asr","العصر"],["Maghrib","المغرب"],["Isha","العشاء"]].forEach(p=>{
+        const hm=todayTimes[p[0]]||null;
+        if(notifyDue(hm,+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+p[1],"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
+      });
+    }
+    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ if(notifyDue(task.dueTime,0)) notifyShow("✅ موعد مهمة",task.text,"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime,today); });
+    if(settings.water&&todayState.water<waterGoal()&&notifyDue(settings.waterTime,0)) notifyShow("💧 تذكير الماء","أكملت "+todayState.water.toLocaleString("ar-EG")+" من "+waterGoal().toLocaleString("ar-EG")+" أكواب اليوم.","water|"+today+"|"+settings.waterTime,today);
+    if(settings.sport&&!sportDone(todayState)&&notifyDue(settings.sportTime,0)) notifyShow("🏃 وقت الحركة","هدفك اليومي "+sportGoal().toLocaleString("ar-EG")+" دقيقة — ابدأ بخطوة خفيفة.","sport|"+today+"|"+settings.sportTime,today);
+    const q=qLoad(), readToday=Math.max(0,q.page-q.startPage);
+    if(settings.quran&&readToday<q.target&&notifyDue(settings.quranTime,0)) notifyShow("📖 ورد القرآن","بقي "+Math.max(0,q.target-readToday).toLocaleString("ar-EG")+" صفحات لإتمام ورد اليوم.","quran|"+today+"|"+settings.quranTime,today);
+  }
+  function notifyPermissionRender(){
+    const p=notifyPermission(), title=document.getElementById("notifyPermissionTitle"), text=document.getElementById("notifyPermissionText"), btn=document.getElementById("notifyPermissionBtn");
+    if(p==="granted"){ title.textContent="الإشعارات مسموحة ✓"; text.textContent="يمكن للتطبيق عرض التذكيرات التي تختارها."; btn.textContent="تم السماح"; btn.disabled=true; }
+    else if(p==="denied"){ title.textContent="الإشعارات محظورة"; text.textContent="فعّلها من إعدادات المتصفح أو إعدادات التطبيق في جهازك."; btn.textContent="محظورة"; btn.disabled=true; }
+    else if(p==="unsupported"){ title.textContent="الإشعارات غير متاحة هنا"; text.textContent="على iPhone ثبّت التطبيق على الشاشة الرئيسية ثم افتحه وجرّب مجددًا."; btn.textContent="غير متاحة"; btn.disabled=true; }
+    else{ title.textContent="السماح بالإشعارات"; text.textContent="لن نطلب الإذن إلا بعد ضغطك على الزر."; btn.textContent="السماح بالإشعارات"; btn.disabled=false; }
+  }
+  function notifyRenderNext(settings){
+    const parts=[];
+    if(settings.prayer) parts.push("الصلاة قبل "+(+settings.prayerLead||0).toLocaleString("ar-EG")+" د");
+    if(settings.tasks) parts.push("المهام حسب وقتها");
+    if(settings.water) parts.push("الماء "+fmt12(settings.waterTime));
+    if(settings.sport) parts.push("الرياضة "+fmt12(settings.sportTime));
+    if(settings.quran) parts.push("القرآن "+fmt12(settings.quranTime));
+    document.getElementById("notifyNext").textContent=settings.enabled&&parts.length?"التذكيرات النشطة: "+parts.join(" · "):"التذكيرات متوقفة حاليًا.";
+  }
+  function notifyFill(){
+    const s=notifyLoad();
+    ["Enabled","Prayer","Tasks","Water","Sport","Quran"].forEach(k=>{ document.getElementById("notify"+k).checked=!!s[k.charAt(0).toLowerCase()+k.slice(1)]; });
+    document.getElementById("notifyPrayerLead").value=String(s.prayerLead);
+    document.getElementById("notifyWaterTime").value=s.waterTime; document.getElementById("notifySportTime").value=s.sportTime; document.getElementById("notifyQuranTime").value=s.quranTime;
+    notifyPermissionRender(); notifyRenderNext(s);
+  }
+  function notifyOpen(){ notifyFill(); document.getElementById("notifyOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("notifyClose").focus(); }
+  function notifyClose(){ document.getElementById("notifyOverlay").hidden=true; document.body.style.overflow=""; document.getElementById("notifyBtn").focus(); }
+  function notifySaveSettings(){
+    const s={enabled:document.getElementById("notifyEnabled").checked,prayer:document.getElementById("notifyPrayer").checked,prayerLead:+document.getElementById("notifyPrayerLead").value||0,tasks:document.getElementById("notifyTasks").checked,water:document.getElementById("notifyWater").checked,waterTime:document.getElementById("notifyWaterTime").value||"12:00",sport:document.getElementById("notifySport").checked,sportTime:document.getElementById("notifySportTime").value||"18:00",quran:document.getElementById("notifyQuran").checked,quranTime:document.getElementById("notifyQuranTime").value||"20:00",updatedAt:Date.now()};
+    localStorage.setItem(NOTIFY_KEY,JSON.stringify(s)); notifyClose(); notifyCheck(); notifyButtonState();
+  }
+  function notifyButtonState(){
+    const btn=document.getElementById("notifyBtn"), active=notifyLoad().enabled&&notifyPermission()==="granted";
+    btn.textContent=active?"🔔":"🔕"; btn.title=active?"التذكيرات مفعّلة":"الإشعارات والتذكيرات"; btn.setAttribute("aria-label",btn.title);
+  }
+  function notifyInit(){
+    const overlay=document.getElementById("notifyOverlay");
+    document.getElementById("notifyBtn").onclick=notifyOpen; document.getElementById("notifyClose").onclick=notifyClose; document.getElementById("notifyCancel").onclick=notifyClose; document.getElementById("notifySave").onclick=notifySaveSettings;
+    document.getElementById("notifyPermissionBtn").onclick=async()=>{ if(!notifySupported()) return; try{ await Notification.requestPermission(); }catch(e){} notifyPermissionRender(); notifyButtonState(); };
+    overlay.onclick=e=>{ if(e.target===overlay) notifyClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!overlay.hidden) notifyClose(); });
+    notifyButtonState(); clearInterval(notifyTimer); notifyTimer=setInterval(notifyCheck,30000); setTimeout(notifyCheck,1200);
+  }
+
   /* توافق الأيام القديمة (٥ صلوات قبل إضافة الضحى) مع الترتيب الجديد */
   function prayerVal(pr, idx){
     if(!Array.isArray(pr)) return "";
@@ -11282,16 +11437,22 @@
     navigator.serviceWorker.addEventListener("controllerchange", ()=>{
       if(hadController && !refreshed){ refreshed = true; location.reload(); }
     });
+    navigator.serviceWorker.addEventListener("message",e=>{
+      if(e.data&&e.data.type==="OPEN_DAY"&&/^\d{4}-\d{2}-\d{2}$/.test(e.data.date||"")) goto(e.data.date);
+    });
   }
 
   /* ---------- Init ---------- */
+  const launchDay=new URLSearchParams(location.search).get("date");
+  const initialDay=/^\d{4}-\d{2}-\d{2}$/.test(launchDay||"")?launchDay:todayStr();
   diagMark("script:end");
   safeRun("initFirebase", initFirebase);
   safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
   safeRun("personalizeInit", personalizeInit);
   safeRun("appViewInit", appViewInit);
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
-  safeRun("goto:init", ()=> goto(todayStr()));
+  safeRun("notifyInit", notifyInit);
+  safeRun("goto:init", ()=> goto(initialDay));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
   safeRun("onboardInit", onboardInit);

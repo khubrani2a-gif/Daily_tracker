@@ -1,6 +1,6 @@
 /* عامل الخدمة — يخزّن ملفات التطبيق ليعمل بدون إنترنت.
    عند أي تحديث جوهري للتطبيق نرفع رقم النسخة أدناه. */
-const CACHE = "mufakkirati-v103";
+const CACHE = "mufakkirati-v104";
 const ASSETS = [
   "./",
   "./index.html",
@@ -32,6 +32,22 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("message", (e) => {
   if (e.data === "SKIP_WAITING") self.skipWaiting();
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = new URL("./", self.location).href + (e.notification.data && e.notification.data.date ? "?date=" + encodeURIComponent(e.notification.data.date) : "");
+  e.waitUntil(
+    clients.matchAll({type:"window", includeUncontrolled:true}).then((wins) => {
+      for(const win of wins){
+        if("focus" in win){
+          win.postMessage({type:"OPEN_DAY", date:e.notification.data && e.notification.data.date});
+          return win.focus();
+        }
+      }
+      return clients.openWindow(target);
+    })
+  );
 });
 
 /* إستراتيجية: نقدّم النسخة المخزنة فورًا (سرعة + عمل دون اتصال)
