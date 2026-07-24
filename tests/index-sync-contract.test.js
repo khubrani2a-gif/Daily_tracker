@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v104",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v105",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٤/); assert.match(sw,/mufakkirati-v104/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٥/); assert.match(sw,/mufakkirati-v105/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -180,6 +180,15 @@ test("notification center schedules configurable local reminders",()=>{
   assert.match(html,/setInterval\(notifyCheck,30000\)/);
   assert.match(sw,/addEventListener\("notificationclick"/);
   assert.match(sw,/postMessage\(\{type:"OPEN_DAY"/);
+});
+
+test("global search indexes daily content and expenses with filters",()=>{
+  ["globalSearchBtn","globalSearchOverlay","globalSearchInput","globalSearchType","globalSearchFrom","globalSearchTo","globalSearchCategory","globalSearchSummary","globalSearchResults"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["globalSearchIndex","globalSearchNorm","globalSearchRender","globalSearchOpenResult","globalSearchOpen","globalSearchInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  ["task","note","memory","expense"].forEach(type=>assert.match(html,new RegExp('value="'+type+'"'),type));
+  assert.match(html,/expActiveTx\(\)/);
+  assert.match(html,/appViewSet\(view\)/);
+  assert.match(html,/expOpenExpenseForm\(row\.id\)/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{
