@@ -51,6 +51,8 @@
   .display{font-family:"Thmanyah Display","Thmanyah Sans","IBM Plex Sans Arabic",serif}
   :root{
     color-scheme:light;
+    /* مساحة تفريغ الشريط السفلي الثابت على الجوال (يطابق padding-bottom الجسم) + منطقة الأمان لاحقًا */
+    --app-nav-clearance:5.4rem;
     --bg:#f3efe6;
     --paper:#fffefb;
     --ink:#37302a;
@@ -227,7 +229,14 @@
   .mobile-view-hidden{display:none!important}
   #prayerCard,#ibadahCard,#quranCard,#hifzCard,#sportCard,#tasksCard,#prioritiesCard,#expensesCard{scroll-margin-top:76px}
   @media(max-width:700px){
-    body{padding-bottom:5.4rem}
+    body{padding-bottom:calc(var(--app-nav-clearance) + env(safe-area-inset-bottom,0px))}
+    /* الشريط السفلي الثابت (z-900) يطفو فوق النوافذ ذات التمرير الداخلي المستقل، فنترك أسفلها مساحةً
+       تعادل ارتفاعه + منطقة الأمان كي يظهر آخر زر/حقل (مثل «حفظ») كاملًا فوقه — على عنصر التمرير نفسه.
+       نستخدم مُحدِّد الأب لرفع الخصوصية كي يتغلّب على padding المختصر في القاعدة الأساسية بغضّ النظر عن ترتيب المصدر */
+    .exp-form-overlay .exp-form,.adhkar-overlay .adhkar-sheet{
+      padding-bottom:calc(var(--app-nav-clearance) + .9rem + env(safe-area-inset-bottom,0px));
+      scroll-padding-bottom:calc(var(--app-nav-clearance) + .9rem + env(safe-area-inset-bottom,0px));
+    }
     .today-overview-head{display:grid;grid-template-columns:1fr auto}.today-focus{grid-column:1/-1;max-width:none;margin-top:.55rem}.today-customize{grid-column:2;grid-row:1}
     .today-metrics{grid-template-columns:1fr 1fr}
     .weekly-goal-banner{grid-template-columns:auto 1fr}.weekly-goal-action{grid-column:1/-1;width:100%}.weekly-goal-steps{grid-column:1/-1;flex-direction:column}.weekly-goal-step{width:100%}
