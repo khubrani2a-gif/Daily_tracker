@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v103",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v104",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٣/); assert.match(sw,/mufakkirati-v103/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٤/); assert.match(sw,/mufakkirati-v104/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -170,6 +170,16 @@ test("unified calendar opens saved days and lists upcoming recurring tasks",()=>
   assert.match(html,/btn\.onclick=\(\)=>calendarOpenDay\(key\)/);
   assert.match(html,/task\.repeat==="daily"\|\|task\.repeat==="weekly"/);
   assert.match(html,/document\.getElementById\("taskCalendarBtn"\)\.onclick=openCalendarView/);
+});
+
+test("notification center schedules configurable local reminders",()=>{
+  ["notifyBtn","notifyOverlay","notifyPermissionBtn","notifyEnabled","notifyPrayer","notifyPrayerLead","notifyTasks","notifyWater","notifyWaterTime","notifySport","notifySportTime","notifyQuran","notifyQuranTime"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["notifyLoad","notifyDue","notifyShow","notifyTodayPrayerTimes","notifyTaskRowsForToday","notifyCheck","notifySaveSettings","notifyInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/Notification\.requestPermission\(\)/);
+  assert.match(html,/reg\.showNotification\(title,options\)/);
+  assert.match(html,/setInterval\(notifyCheck,30000\)/);
+  assert.match(sw,/addEventListener\("notificationclick"/);
+  assert.match(sw,/postMessage\(\{type:"OPEN_DAY"/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{

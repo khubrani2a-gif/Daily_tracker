@@ -290,36 +290,10 @@
   .notify-switch{position:relative;width:42px;height:24px;display:inline-block;flex-shrink:0}.notify-switch input{position:absolute;opacity:0;pointer-events:none}.notify-switch i{position:absolute;inset:0;background:var(--line);border-radius:99px;cursor:pointer;transition:.18s}.notify-switch i::after{content:"";position:absolute;width:18px;height:18px;top:3px;right:3px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.18s}.notify-switch input:checked+i{background:var(--accent)}.notify-switch input:checked+i::after{transform:translateX(-18px)}
   .notify-next{margin:.75rem 0;background:var(--chip-bg);border-radius:12px;padding:.65rem .75rem;font-size:.72rem;color:var(--muted);line-height:1.7}
   .notify-actions{display:flex;gap:.5rem;margin-top:.7rem}.notify-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}.notify-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  /* ===== البحث الشامل ===== */
-  .global-search-overlay{position:fixed;inset:0;z-index:1850;background:rgba(20,17,12,.64);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
-  .global-search-overlay[hidden]{display:none}
-  .global-search-sheet{width:min(760px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:0 28px 80px rgba(0,0,0,.32)}
-  .global-search-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;padding:1rem 1rem .65rem}
-  .global-search-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--accent)}
-  .global-search-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:10px;width:36px;height:36px;cursor:pointer;flex-shrink:0}
-  .global-search-query{position:relative;padding:0 1rem .65rem}
-  .global-search-query span{position:absolute;right:1.75rem;top:50%;transform:translateY(-58%);pointer-events:none}
-  .global-search-query input{width:100%;border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:13px;padding:.78rem 2.6rem .78rem .8rem;font-family:inherit;font-size:.9rem;outline:none}
-  .global-search-query input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-  .global-search-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;padding:0 1rem .75rem}
-  .global-search-filters label{font-size:.66rem;color:var(--muted)}
-  .global-search-filters select,.global-search-filters input{display:block;width:100%;margin-top:.2rem;border:1px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.5rem .55rem;font-family:inherit;font-size:.72rem}
-  .global-search-summary{padding:.55rem 1rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.7rem;color:var(--muted);background:var(--chip-bg)}
-  .global-search-results{overflow-y:auto;overscroll-behavior:contain;padding:.65rem 1rem 1rem;scroll-padding-bottom:1rem}
-  .global-search-result{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:13px;padding:.7rem .75rem;margin-bottom:.45rem;font-family:inherit;cursor:pointer;transition:.15s}
-  .global-search-result:hover,.global-search-result:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
-  .global-search-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--chip-bg);font-size:1rem}
-  .global-search-copy{min-width:0}.global-search-copy b{display:block;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.global-search-copy small{display:block;color:var(--muted);font-size:.65rem;margin-top:.14rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .global-search-date{font-size:.65rem;color:var(--muted);white-space:nowrap}
-  .global-search-empty{text-align:center;color:var(--muted);padding:2.5rem 1rem;font-size:.78rem;line-height:1.8}
   @media(max-width:620px){
     .notify-overlay{align-items:flex-end;padding:.5rem}
     .notify-sheet{border-radius:22px 22px 14px 14px;padding-bottom:var(--mobile-scroll-clearance)}
     .notify-row{grid-template-columns:1fr}.notify-controls{justify-content:space-between}
-    .global-search-overlay{align-items:flex-end;padding:.5rem}
-    .global-search-sheet{height:min(88vh,760px);max-height:calc(100vh - .5rem);border-radius:22px 22px 14px 14px}
-    .global-search-filters{grid-template-columns:1fr 1fr}.global-search-filters label:first-child,.global-search-filters label:last-child{grid-column:1/-1}
-    .global-search-results{padding-bottom:var(--mobile-scroll-clearance);scroll-padding-bottom:var(--mobile-scroll-clearance)}
   }
   @media(max-width:520px){.onboard-modules,.onboard-goals{grid-template-columns:1fr}.onboard-sheet{border-radius:19px}}
 
@@ -2071,6 +2045,7 @@
       <div>
         <div class="date-nav">
           <button id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
+          <button id="notifyBtn" title="الإشعارات والتذكيرات" aria-label="فتح إعدادات الإشعارات">🔔</button>
           <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
           <button id="prevDay" title="اليوم السابق">›</button>
           <span class="date-pill">
@@ -2598,83 +2573,6 @@
       <div class="notify-next" id="notifyNext"></div>
       <div class="notify-actions"><button type="button" id="notifyCancel">إلغاء</button><button type="button" class="primary" id="notifySave">حفظ الإعدادات</button></div>
     </div>
-  </div>
-
-  <div class="global-search-overlay" id="globalSearchOverlay" hidden>
-    <div class="global-search-sheet" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
-      <div class="global-search-head"><h2 id="globalSearchTitle">🔎 البحث الشامل</h2><button type="button" class="global-search-close" id="globalSearchClose" aria-label="إغلاق">✕</button></div>
-      <div class="global-search-query"><span aria-hidden="true">🔎</span><input type="search" id="globalSearchInput" autocomplete="off" placeholder="ابحث في المهام والملاحظات والذكريات والمصاريف…" aria-label="عبارة البحث"></div>
-      <div class="global-search-filters">
-        <label>النوع<select id="globalSearchType"><option value="all">الكل</option><option value="task">المهام</option><option value="note">الملاحظات</option><option value="memory">الذكريات</option><option value="expense">المصاريف</option></select></label>
-        <label>من تاريخ<input type="date" id="globalSearchFrom"></label>
-        <label>إلى تاريخ<input type="date" id="globalSearchTo"></label>
-        <label>التصنيف<select id="globalSearchCategory"><option value="">كل التصنيفات</option></select></label>
-      </div>
-      <div class="global-search-summary" id="globalSearchSummary" role="status" aria-live="polite"></div>
-      <div class="global-search-results" id="globalSearchResults"></div>
-    </div>
-  </div>
-
-  <div class="habit-overlay" id="habitOverlay" hidden>
-    <section class="habit-sheet" role="dialog" aria-modal="true" aria-labelledby="habitTitle">
-      <div class="habit-head"><h2 id="habitTitle">🌱 إدارة العادات</h2><button type="button" class="habit-close" id="habitClose" aria-label="إغلاق">✕</button></div>
-      <div class="habit-list-view" id="habitListView">
-        <p class="habit-list-intro">أنشئ عادة، اختر أيامها، وحدد هدفًا أسبوعيًا أو شهريًا. يحسب التطبيق تقدمك وسلسلة التزامك تلقائيًا.</p>
-        <div class="habit-list" id="habitManageList"></div>
-        <button type="button" class="habit-main-action" id="habitAddBtn">＋ عادة جديدة</button>
-      </div>
-      <div class="habit-edit-view" id="habitEditView" hidden>
-        <label class="habit-field">اسم العادة<input id="habitName" maxlength="80" placeholder="مثال: المشي ٢٠ دقيقة"></label>
-        <div class="habit-grid2">
-          <label class="habit-field">القسم<select id="habitGroup"><option value="habit">عادات مخصصة</option><option value="adhkar">أذكار</option><option value="salah">الصلاة والنوافل</option><option value="awrad">الأوراد اليومية</option></select></label>
-          <label class="habit-field">عدد المرات في اليوم<input id="habitDailyTarget" type="number" inputmode="numeric" min="1" max="9999" value="1"></label>
-        </div>
-        <div class="habit-days-title">أيام التكرار</div>
-        <div class="habit-days" id="habitDays">
-          <label class="habit-day"><input type="checkbox" value="0"><span>الأحد</span></label><label class="habit-day"><input type="checkbox" value="1"><span>الاثنين</span></label><label class="habit-day"><input type="checkbox" value="2"><span>الثلاثاء</span></label><label class="habit-day"><input type="checkbox" value="3"><span>الأربعاء</span></label><label class="habit-day"><input type="checkbox" value="4"><span>الخميس</span></label><label class="habit-day"><input type="checkbox" value="5"><span>الجمعة</span></label><label class="habit-day"><input type="checkbox" value="6"><span>السبت</span></label>
-        </div>
-        <div class="habit-goal-box">
-          <p>الهدف الدوري اختياري، مثل إكمال العادة ٣ مرات أسبوعيًا أو ٢٠ مرة شهريًا.</p>
-          <div class="habit-grid2">
-            <label class="habit-field">الفترة<select id="habitGoalPeriod"><option value="none">بدون هدف دوري</option><option value="weekly">أسبوعي</option><option value="monthly">شهري</option></select></label>
-            <label class="habit-field">عدد مرات الإنجاز<input id="habitGoalTarget" type="number" inputmode="numeric" min="1" max="99" value="3"></label>
-          </div>
-        </div>
-        <div class="habit-edit-error" id="habitEditError" role="alert"></div>
-        <div class="habit-edit-actions"><button type="button" id="habitEditCancel">رجوع</button><button type="button" class="primary" id="habitEditSave">حفظ العادة</button></div>
-      </div>
-    </section>
-  </div>
-
-  <div class="data-overlay" id="dataOverlay" hidden>
-    <section class="data-sheet" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
-      <div class="data-head"><h2 id="dataTitle">🗄️ إدارة البيانات</h2><button type="button" class="data-close" id="dataClose" aria-label="إغلاق">✕</button></div>
-      <div class="data-body">
-        <div class="data-status-grid">
-          <div class="data-status-card"><small>الأيام المحفوظة</small><b id="dataDaysCount">٠</b></div>
-          <div class="data-status-card"><small>النسخ المحلية</small><b id="dataBackupsCount">٠</b></div>
-          <div class="data-status-card"><small>تعارضات تحتاج مراجعة</small><b id="dataConflictsCount">٠</b></div>
-        </div>
-        <div class="data-actions">
-          <button type="button" class="data-action primary" id="dataCreateBackup">＋ إنشاء نسخة الآن</button>
-          <button type="button" class="data-action" id="exportBtn">⬇️ JSON</button>
-          <button type="button" class="data-action" id="importBtn">⬆️ استيراد نسخة</button>
-          <button type="button" class="data-action" id="dataExportExcel">📊 Excel</button>
-          <button type="button" class="data-action" id="dataExportPdf">📄 PDF / طباعة</button>
-          <button type="button" class="data-action" id="dataClearReviewed">✓ مسح المراجَعة</button>
-        </div>
-        <div class="data-section">
-          <button type="button" class="data-action" id="dataHealthCheck">🩺 فحص سلامة البيانات</button>
-          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٥ نسخ على هذا الجهاز</span></div>
-          <div class="data-list" id="dataBackupList"></div>
-        </div>
-        <div class="data-section">
-          <div class="data-section-head"><h3>تعارضات المزامنة</h3><span>تُكتشف قبل اعتماد الدمج</span></div>
-          <div class="data-list" id="dataConflictList"></div>
-        </div>
-        <div class="data-note">تُنشأ نسخة أمان تلقائيًا قبل الاستعادة وقبل دمج أي تعارض مكتشف. تبقى النسخ محليًا ما لم تُنزّلها بنفسك.</div>
-      </div>
-    </section>
   </div>
 
   <!-- ===== شاشة الأذكار ===== -->
@@ -3262,7 +3160,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٣</div>
+    <div class="app-version">النسخة ١٠٤</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -9083,6 +8981,119 @@
     calendarRenderUpcoming(days);
   }
 
+  /* ---------- الإشعارات والتذكيرات المحلية ---------- */
+  const NOTIFY_KEY="h2do-notify-v1", NOTIFY_SENT_KEY="h2do-notify-sent-v1";
+  const NOTIFY_DEFAULTS={enabled:false,prayer:true,prayerLead:10,tasks:true,water:true,waterTime:"12:00",sport:true,sportTime:"18:00",quran:true,quranTime:"20:00"};
+  let notifyTimer=null;
+  function notifyLoad(){
+    let saved={}; try{ saved=JSON.parse(localStorage.getItem(NOTIFY_KEY)||"{}")||{}; }catch(e){}
+    return Object.assign({},NOTIFY_DEFAULTS,saved);
+  }
+  function notifySupported(){ return "Notification" in window; }
+  function notifyPermission(){
+    if(!notifySupported()) return "unsupported";
+    return Notification.permission||"default";
+  }
+  function notifyTodayState(){
+    if(currentDate===todayStr()&&state) return state;
+    try{ return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(todayStr()))||"{}")); }catch(e){ return blankState(); }
+  }
+  function notifyTodayPrayerTimes(){
+    if(currentDate===todayStr()&&prayerTimes) return prayerTimes;
+    let loc=null; try{ loc=JSON.parse(localStorage.getItem(LOC_KEY)||"null"); }catch(e){}
+    if(!loc) return null;
+    const locId=loc.address||((loc.lat!==undefined)?loc.lat.toFixed(2)+","+loc.lng.toFixed(2):loc.city);
+    try{ return JSON.parse(localStorage.getItem("h2do-times:"+todayStr()+":"+locId)||"null"); }catch(e){ return null; }
+  }
+  function notifyDue(hm,lead){
+    if(!/^\d{2}:\d{2}$/.test(hm||"")) return false;
+    const p=hm.split(":").map(Number), now=new Date(), target=new Date(now.getFullYear(),now.getMonth(),now.getDate(),p[0],p[1],0,0);
+    target.setMinutes(target.getMinutes()-(lead||0));
+    const delta=now.getTime()-target.getTime();
+    return delta>=0&&delta<5*60000;
+  }
+  function notifyWasSent(tag){
+    let sent={}; try{ sent=JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)||"{}")||{}; }catch(e){}
+    const cutoff=Date.now()-3*86400000; Object.keys(sent).forEach(k=>{ if(sent[k]<cutoff) delete sent[k]; });
+    if(sent[tag]) return true;
+    sent[tag]=Date.now(); localStorage.setItem(NOTIFY_SENT_KEY,JSON.stringify(sent)); return false;
+  }
+  function notifyShow(title,body,tag,date){
+    if(notifyPermission()!=="granted"||notifyWasSent(tag)) return;
+    const options={body,tag,renotify:false,icon:"icons/icon-192.png",badge:"icons/icon-192.png",dir:"rtl",lang:"ar",data:{date:date||todayStr()}};
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.getRegistration().then(reg=>{ if(reg) return reg.showNotification(title,options); new Notification(title,options); }).catch(()=>{ try{ new Notification(title,options); }catch(e){} });
+    }else try{ new Notification(title,options); }catch(e){}
+  }
+  function notifyTaskRowsForToday(){
+    const today=todayStr(), rows=[], seen=new Set(), days=allDays();
+    Object.keys(days).forEach(dayKey=>{
+      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done&&t.dueTime).forEach(t=>{
+        const due=t.dueDate||dayKey, key=(t.id||t.text)+"|"+due+"|"+t.dueTime;
+        if(due===today&&!seen.has(key)){ seen.add(key); rows.push(t); }
+      });
+    });
+    return rows;
+  }
+  function notifyCheck(){
+    const settings=notifyLoad();
+    if(!settings.enabled||notifyPermission()!=="granted") return;
+    const today=todayStr(), todayState=notifyTodayState();
+    const todayTimes=notifyTodayPrayerTimes();
+    if(settings.prayer&&todayTimes){
+      [["Fajr","الفجر"],["Dhuhr","الظهر"],["Asr","العصر"],["Maghrib","المغرب"],["Isha","العشاء"]].forEach(p=>{
+        const hm=todayTimes[p[0]]||null;
+        if(notifyDue(hm,+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+p[1],"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
+      });
+    }
+    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ if(notifyDue(task.dueTime,0)) notifyShow("✅ موعد مهمة",task.text,"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime,today); });
+    if(settings.water&&todayState.water<waterGoal()&&notifyDue(settings.waterTime,0)) notifyShow("💧 تذكير الماء","أكملت "+todayState.water.toLocaleString("ar-EG")+" من "+waterGoal().toLocaleString("ar-EG")+" أكواب اليوم.","water|"+today+"|"+settings.waterTime,today);
+    if(settings.sport&&!sportDone(todayState)&&notifyDue(settings.sportTime,0)) notifyShow("🏃 وقت الحركة","هدفك اليومي "+sportGoal().toLocaleString("ar-EG")+" دقيقة — ابدأ بخطوة خفيفة.","sport|"+today+"|"+settings.sportTime,today);
+    const q=qLoad(), readToday=Math.max(0,q.page-q.startPage);
+    if(settings.quran&&readToday<q.target&&notifyDue(settings.quranTime,0)) notifyShow("📖 ورد القرآن","بقي "+Math.max(0,q.target-readToday).toLocaleString("ar-EG")+" صفحات لإتمام ورد اليوم.","quran|"+today+"|"+settings.quranTime,today);
+  }
+  function notifyPermissionRender(){
+    const p=notifyPermission(), title=document.getElementById("notifyPermissionTitle"), text=document.getElementById("notifyPermissionText"), btn=document.getElementById("notifyPermissionBtn");
+    if(p==="granted"){ title.textContent="الإشعارات مسموحة ✓"; text.textContent="يمكن للتطبيق عرض التذكيرات التي تختارها."; btn.textContent="تم السماح"; btn.disabled=true; }
+    else if(p==="denied"){ title.textContent="الإشعارات محظورة"; text.textContent="فعّلها من إعدادات المتصفح أو إعدادات التطبيق في جهازك."; btn.textContent="محظورة"; btn.disabled=true; }
+    else if(p==="unsupported"){ title.textContent="الإشعارات غير متاحة هنا"; text.textContent="على iPhone ثبّت التطبيق على الشاشة الرئيسية ثم افتحه وجرّب مجددًا."; btn.textContent="غير متاحة"; btn.disabled=true; }
+    else{ title.textContent="السماح بالإشعارات"; text.textContent="لن نطلب الإذن إلا بعد ضغطك على الزر."; btn.textContent="السماح بالإشعارات"; btn.disabled=false; }
+  }
+  function notifyRenderNext(settings){
+    const parts=[];
+    if(settings.prayer) parts.push("الصلاة قبل "+(+settings.prayerLead||0).toLocaleString("ar-EG")+" د");
+    if(settings.tasks) parts.push("المهام حسب وقتها");
+    if(settings.water) parts.push("الماء "+fmt12(settings.waterTime));
+    if(settings.sport) parts.push("الرياضة "+fmt12(settings.sportTime));
+    if(settings.quran) parts.push("القرآن "+fmt12(settings.quranTime));
+    document.getElementById("notifyNext").textContent=settings.enabled&&parts.length?"التذكيرات النشطة: "+parts.join(" · "):"التذكيرات متوقفة حاليًا.";
+  }
+  function notifyFill(){
+    const s=notifyLoad();
+    ["Enabled","Prayer","Tasks","Water","Sport","Quran"].forEach(k=>{ document.getElementById("notify"+k).checked=!!s[k.charAt(0).toLowerCase()+k.slice(1)]; });
+    document.getElementById("notifyPrayerLead").value=String(s.prayerLead);
+    document.getElementById("notifyWaterTime").value=s.waterTime; document.getElementById("notifySportTime").value=s.sportTime; document.getElementById("notifyQuranTime").value=s.quranTime;
+    notifyPermissionRender(); notifyRenderNext(s);
+  }
+  function notifyOpen(){ notifyFill(); document.getElementById("notifyOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("notifyClose").focus(); }
+  function notifyClose(){ document.getElementById("notifyOverlay").hidden=true; document.body.style.overflow=""; document.getElementById("notifyBtn").focus(); }
+  function notifySaveSettings(){
+    const s={enabled:document.getElementById("notifyEnabled").checked,prayer:document.getElementById("notifyPrayer").checked,prayerLead:+document.getElementById("notifyPrayerLead").value||0,tasks:document.getElementById("notifyTasks").checked,water:document.getElementById("notifyWater").checked,waterTime:document.getElementById("notifyWaterTime").value||"12:00",sport:document.getElementById("notifySport").checked,sportTime:document.getElementById("notifySportTime").value||"18:00",quran:document.getElementById("notifyQuran").checked,quranTime:document.getElementById("notifyQuranTime").value||"20:00",updatedAt:Date.now()};
+    localStorage.setItem(NOTIFY_KEY,JSON.stringify(s)); notifyClose(); notifyCheck(); notifyButtonState();
+  }
+  function notifyButtonState(){
+    const btn=document.getElementById("notifyBtn"), active=notifyLoad().enabled&&notifyPermission()==="granted";
+    btn.textContent=active?"🔔":"🔕"; btn.title=active?"التذكيرات مفعّلة":"الإشعارات والتذكيرات"; btn.setAttribute("aria-label",btn.title);
+  }
+  function notifyInit(){
+    const overlay=document.getElementById("notifyOverlay");
+    document.getElementById("notifyBtn").onclick=notifyOpen; document.getElementById("notifyClose").onclick=notifyClose; document.getElementById("notifyCancel").onclick=notifyClose; document.getElementById("notifySave").onclick=notifySaveSettings;
+    document.getElementById("notifyPermissionBtn").onclick=async()=>{ if(!notifySupported()) return; try{ await Notification.requestPermission(); }catch(e){} notifyPermissionRender(); notifyButtonState(); };
+    overlay.onclick=e=>{ if(e.target===overlay) notifyClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!overlay.hidden) notifyClose(); });
+    notifyButtonState(); clearInterval(notifyTimer); notifyTimer=setInterval(notifyCheck,30000); setTimeout(notifyCheck,1200);
+  }
+
   /* توافق الأيام القديمة (٥ صلوات قبل إضافة الضحى) مع الترتيب الجديد */
   function prayerVal(pr, idx){
     if(!Array.isArray(pr)) return "";
@@ -13188,7 +13199,8 @@
   safeRun("personalizeInit", personalizeInit);
   safeRun("appViewInit", appViewInit);
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
-  safeRun("goto:init", ()=> goto(todayStr()));
+  safeRun("notifyInit", notifyInit);
+  safeRun("goto:init", ()=> goto(initialDay));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
   safeRun("rdInit", rdInit);
