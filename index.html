@@ -76,6 +76,12 @@
     --radius:18px;
     --shadow:0 6px 22px -8px rgba(55,48,42,.16);
     --shadow-sm:0 2px 10px -4px rgba(55,48,42,.12);
+    /* ارتفاع الشريط مع موضعه السفلي، ثم فراغ مريح للمحتوى القابل للتمرير. */
+    --mobile-nav-height:5.5rem;
+    --mobile-content-gap:1.25rem;
+    --mobile-scroll-clearance:calc(
+      var(--mobile-nav-height) + var(--mobile-content-gap) + env(safe-area-inset-bottom, 0px)
+    );
   }
   html.dark{
     color-scheme:dark;
@@ -227,7 +233,10 @@
   .mobile-view-hidden{display:none!important}
   #prayerCard,#ibadahCard,#quranCard,#hifzCard,#sportCard,#tasksCard,#prioritiesCard,#expensesCard{scroll-margin-top:76px}
   @media(max-width:700px){
-    body{padding-bottom:5.4rem}
+    body{
+      padding-bottom:var(--mobile-scroll-clearance);
+      scroll-padding-bottom:var(--mobile-scroll-clearance);
+    }
     .today-overview-head{display:grid;grid-template-columns:1fr auto}.today-focus{grid-column:1/-1;max-width:none;margin-top:.55rem}.today-customize{grid-column:2;grid-row:1}
     .today-metrics{grid-template-columns:1fr 1fr}
     .weekly-goal-banner{grid-template-columns:auto 1fr}.weekly-goal-action{grid-column:1/-1;width:100%}.weekly-goal-steps{grid-column:1/-1;flex-direction:column}.weekly-goal-step{width:100%}
@@ -1063,6 +1072,15 @@
   .exp-form-overlay[hidden]{display:none}
   .exp-form{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;padding:1rem 1rem 1.4rem;box-shadow:0 -8px 30px rgba(0,0,0,.28);animation:expUp .22s cubic-bezier(.22,1,.36,1)}
   @media(min-width:620px){ .exp-form{border-radius:20px} }
+  @media(max-width:700px){
+    /* هذه هي حاوية التمرير الفعلية للنموذج؛ مساحة body لا تؤثر داخلها. */
+    .exp-form{
+      max-height:92dvh;
+      padding-bottom:var(--mobile-scroll-clearance);
+      scroll-padding-bottom:var(--mobile-scroll-clearance);
+      overscroll-behavior:contain;
+    }
+  }
   @keyframes expUp{from{transform:translateY(6%);opacity:.6}to{transform:none;opacity:1}}
   .exp-form-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
   .exp-form-head h3{font-size:1.05rem;font-family:"Thmanyah Display","Thmanyah Sans",serif}
@@ -1134,6 +1152,14 @@
   }
   .adhkar-overlay[hidden]{display:none}
   .adhkar-sheet{max-width:720px;margin:0 auto;padding:1rem 1rem 3rem}
+  @media(max-width:700px){
+    /* الشاشات الطويلة المستقلة تستخدم تمريرها الخاص أيضًا. */
+    .adhkar-sheet{padding-bottom:var(--mobile-scroll-clearance)}
+    .onboard-sheet,.task-sheet{
+      padding-bottom:var(--mobile-scroll-clearance);
+      scroll-padding-bottom:var(--mobile-scroll-clearance);
+    }
+  }
   .adhkar-top{
     position:sticky;top:0;z-index:10;
     background:var(--bg);
@@ -2813,7 +2839,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠١</div>
+    <div class="app-version">النسخة ١٠٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
       <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>

@@ -45,9 +45,16 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v101",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v102",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠١/); assert.match(sw,/mufakkirati-v101/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٢/); assert.match(sw,/mufakkirati-v102/); assert.match(sw,/sync-core\.js/);
+});
+
+test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
+  assert.match(html,/--mobile-scroll-clearance:calc\(/);
+  assert.match(html,/env\(safe-area-inset-bottom,\s*0px\)/);
+  assert.match(html,/\.exp-form\{[\s\S]*?padding-bottom:var\(--mobile-scroll-clearance\);[\s\S]*?scroll-padding-bottom:var\(--mobile-scroll-clearance\)/);
+  assert.match(html,/body\{[\s\S]*?padding-bottom:var\(--mobile-scroll-clearance\);[\s\S]*?scroll-padding-bottom:var\(--mobile-scroll-clearance\)/);
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
