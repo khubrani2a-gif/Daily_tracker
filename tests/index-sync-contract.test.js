@@ -82,7 +82,7 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
-  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn"].forEach(id=>{
+  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn","quickTemplateUndoBtn"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
   ["today","quran","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
@@ -91,6 +91,7 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/function renderTomorrowPanel\(/);
   assert.match(html,/function smartWeekSummary\(/);
   assert.match(html,/function smartInit\(/);
+  assert.match(html,/function smartUndoLastTemplate\(/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
 
@@ -98,6 +99,8 @@ test("primary daily controls use native buttons with accessible state",()=>{
   assert.ok((html.match(/document\.createElement\("button"\)/g)||[]).length>=3);
   assert.match(html,/aria-pressed/);
   assert.match(html,/تقييم اليوم/);
+  assert.match(html,/task-delete-btn/);
+  assert.match(html,/حذف المهمة/);
 });
 
 test("card personalization supports persistent visibility and ordering",()=>{

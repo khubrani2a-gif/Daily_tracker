@@ -889,6 +889,8 @@
   .task-history-btn,.task-meta-btn{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;font-family:inherit;cursor:pointer}
   .task-history-btn{padding:.35rem .55rem;font-size:.75rem}
   .task-meta-btn{width:31px;height:31px;font-size:1rem;flex-shrink:0}
+  .task-delete-btn{width:31px;height:31px;border:1px solid var(--line);background:var(--paper);color:var(--danger);border-radius:9px;font-family:inherit;cursor:pointer;flex-shrink:0}
+  .task-delete-btn:hover,.task-delete-btn:focus-visible{border-color:var(--danger);background:var(--danger-soft);outline:none}
   .task-row{display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;padding:.15rem 0;transition:opacity .15s;flex-wrap:wrap}
   .task-row.done{opacity:.83}                       /* شعور هادئ بالإنجاز — واضح ومقروء، دون شطب */
   .task-input{
@@ -2124,6 +2126,7 @@
       <button type="button" data-quick-template="evening">🌙 روتين مسائي</button>
       <button type="button" data-quick-template="task">✅ مهمة مركّزة</button>
       <button type="button" data-quick-template="recurring">🔁 مصروف متكرر</button>
+      <button type="button" id="quickTemplateUndoBtn" hidden>↶ تراجع عن آخر قالب</button>
     </div>
     <section class="tomorrow-panel" aria-labelledby="tomorrowTitle">
       <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
@@ -8285,6 +8288,15 @@
     const adding = taskAddOpen[containerId] || priorityAdding;
     const rerender = ()=>{ if(isTasks) renderTaskLists(); else { renderRows(containerId, items, colors, opts); renderProgress(); } };
     const rerenderBoth = ()=>{ renderTaskLists(); };
+    const deleteTask = (item)=>{
+      const linked=isTasks?(state.priorities||[]).filter(p=>p.sourceTaskId===item.id):[];
+      hifzShowConfirm({
+        title:"حذف هذه المهمة؟",
+        body:linked.length?"سيُحذف معها "+linked.length.toLocaleString("ar-EG")+" أولوية مرتبطة بها.":"يمكنك إضافة مهمة جديدة متى شئت.",
+        okText:"حذف المهمة", cancelText:"إلغاء",
+        onOk:()=>{ if(linked.length) state.priorities=state.priorities.filter(p=>p.sourceTaskId!==item.id); item.text=""; item.done=false; item.status="pending"; item.subtasks=[]; save(); rerenderBoth(); }
+      });
+    };
     /* ===== سحب وإفلات لإعادة الترتيب (نفس تجربة إدارة مقاطع القرآن: مقبض ☰ + مؤشّر يعمل باللمس والفأرة) ===== */
     function dragAfter(y){
       const els = [...box.querySelectorAll(".task-row:not(.task-dragging)")].filter(r=> !r.classList.contains("adding"));
@@ -8388,8 +8400,9 @@
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
       const metaBtn=document.createElement("button"); metaBtn.type="button"; metaBtn.className="task-meta-btn"; metaBtn.textContent="⋯"; metaBtn.title="الحالة والوقت والتكرار والمهام الفرعية"; metaBtn.setAttribute("aria-label","تفاصيل المهمة"); metaBtn.onclick=()=>taskOpenMeta(item,rerender);
-      if(handle){ row.append(handle, chk, input, metaBtn, flag); wireDrag(handle, row); }
-      else row.append(chk, input, metaBtn, flag);
+      const del=document.createElement("button"); del.type="button"; del.className="task-delete-btn"; del.textContent="🗑"; del.title="حذف المهمة"; del.setAttribute("aria-label","حذف المهمة: "+(item.text||"")); del.onclick=()=>deleteTask(item);
+      if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
+      else row.append(chk, input, metaBtn, del, flag);
       const metaParts=taskMetaText(item); if(metaParts.length||item.link){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
         if(item.link){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=item.link;a.target="_blank";a.rel="noopener noreferrer";a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
@@ -8676,9 +8689,14 @@
     renderTodayOverview();
     updateStreak();
     renderTomorrowPanel();
+    smartRenderUndo();
   }
 
   /* ---------- أدوات يومية خفيفة: الغد، القوالب، والمشاركة ---------- */
+  const SMART_TEMPLATE_UNDO_KEY="h2do-template-undo-v1";
+  function smartUndoLoad(){try{return JSON.parse(localStorage.getItem(SMART_TEMPLATE_UNDO_KEY)||"[]");}catch(e){return [];}}
+  function smartUndoSave(rows){localStorage.setItem(SMART_TEMPLATE_UNDO_KEY,JSON.stringify(rows.slice(-12))); smartRenderUndo();}
+  function smartRenderUndo(){const b=document.getElementById("quickTemplateUndoBtn");if(!b)return; b.hidden=!smartUndoLoad().some(x=>x&&x.date===currentDate&&Array.isArray(x.ids)&&x.ids.length);}
   function smartTomorrowDate(){ const d=new Date(currentDate+"T12:00:00"); d.setDate(d.getDate()+1); return fmtDate(d); }
   function smartReadDay(date){ try{return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(date))||"{}"));}catch(e){return blankState();} }
   function renderTomorrowPanel(){
@@ -8699,11 +8717,19 @@
     host.innerHTML=""; (items.length?items:["لا توجد التزامات مجدولة بعد — أضف ما تحتاجه من القوالب."]).forEach(text=>{const el=document.createElement("span");el.className="tomorrow-item";el.textContent=text;host.appendChild(el);});
     hint.textContent="ملخص "+dateLabel+" · يتحدّث تلقائيًا عند تغيير المهام والمصاريف.";
   }
-  function smartAddTasks(rows){
+  function smartAddTasks(rows, templateName){
     const free=()=>state.tasks.find(t=>!itemFilled(t)); let added=0;
-    rows.forEach(row=>{ const slot=free(); const item={id:newId(),text:row,done:false,status:"pending",dueDate:currentDate,dueTime:"",reminderMinutes:0,repeat:"none",category:"",link:"",subtasks:[]}; if(slot) Object.assign(slot,item); else state.tasks.push(item); added++; });
-    if(added){ save(); renderTaskLists(); renderProgress(); }
+    const ids=[];
+    rows.forEach(row=>{ const slot=free(); const item={id:newId(),text:row,done:false,status:"pending",dueDate:currentDate,dueTime:"",reminderMinutes:0,repeat:"none",category:"",link:"",subtasks:[],templateSource:templateName||null}; if(slot) Object.assign(slot,item); else state.tasks.push(item); ids.push(item.id); added++; });
+    if(added){ if(templateName){const history=smartUndoLoad();history.push({date:currentDate,ids,templateName,createdAt:Date.now()});smartUndoSave(history);} save(); renderTaskLists(); renderProgress(); }
     return added;
+  }
+  function smartUndoLastTemplate(){
+    const history=smartUndoLoad(), index=[...history].map((x,i)=>({x,i})).reverse().find(row=>row.x&&row.x.date===currentDate&&Array.isArray(row.x.ids)&&row.x.ids.length);
+    if(!index){smartRenderUndo();return;}
+    const entry=index.x, ids=new Set(entry.ids), count=(state.tasks||[]).filter(t=>ids.has(t.id)&&itemFilled(t)).length;
+    if(!count){history.splice(index.i,1);smartUndoSave(history);return;}
+    hifzShowConfirm({title:"التراجع عن «"+entry.templateName+"»؟",body:"سيتم حذف "+count.toLocaleString("ar-EG")+" مهام أضيفت من هذا القالب فقط.",okText:"تراجع",cancelText:"إلغاء",onOk:()=>{state.priorities=state.priorities.filter(p=>!ids.has(p.sourceTaskId));state.tasks.forEach(t=>{if(ids.has(t.id)){t.text="";t.done=false;t.status="pending";t.subtasks=[];t.templateSource=null;}});history.splice(index.i,1);smartUndoSave(history);save();renderTaskLists();renderProgress();}});
   }
   function smartWeekSummary(){
     const range=expWeekRange(todayStr()), days=allDays(), cursor=new Date(range.start+"T12:00:00"); let prayers=0, tasksDone=0, tasksTotal=0, waterDays=0;
@@ -8717,7 +8743,9 @@
     byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
     byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
     byId("quickTemplatesBtn").onclick=()=>{const box=byId("quickTemplateBar");box.hidden=!box.hidden;};
-    document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const type=button.dataset.quickTemplate;if(type==="morning")smartAddTasks(["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"]);else if(type==="evening")smartAddTasks(["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"]);else if(type==="task")smartAddTasks(["جلسة تركيز لمدة ٣٠ دقيقة"]);else if(type==="recurring")expOpenRecurringForm(null);});
+    document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const type=button.dataset.quickTemplate;if(type==="morning")smartAddTasks(["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"],"روتين صباحي");else if(type==="evening")smartAddTasks(["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"],"روتين مسائي");else if(type==="task")smartAddTasks(["جلسة تركيز لمدة ٣٠ دقيقة"],"مهمة مركّزة");else if(type==="recurring")expOpenRecurringForm(null);});
+    byId("quickTemplateUndoBtn").onclick=smartUndoLastTemplate;
+    smartRenderUndo();
     byId("shareWeekBtn").onclick=async()=>{const text=smartWeekSummary();try{if(navigator.share){await navigator.share({title:"ملخص أسبوعي",text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);alert("تم نسخ الملخص للمشاركة.");}else prompt("انسخ الملخص:",text);}catch(e){if(e&&e.name!=="AbortError")prompt("انسخ الملخص:",text);}};
   }
 
