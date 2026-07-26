@@ -93,6 +93,8 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/function smartInit\(/);
   assert.match(html,/function smartUndoLastTemplate\(/);
   assert.match(html,/function smartTemplateNotice\(/);
+  assert.match(html,/function smartOpenQuickTask\(/);
+  assert.match(html,/quickTemplatesBtn"\)\.onclick=[\s\S]*?scrollIntoView/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
 

@@ -8897,6 +8897,13 @@
     if(!count){history.splice(index.i,1);smartUndoSave(history);return;}
     hifzShowConfirm({title:"التراجع عن «"+entry.templateName+"»؟",body:"سيتم حذف "+count.toLocaleString("ar-EG")+" مهام أضيفت من هذا القالب فقط.",okText:"تراجع",cancelText:"إلغاء",onOk:()=>{state.priorities=state.priorities.filter(p=>!ids.has(p.sourceTaskId));state.tasks.forEach(t=>{if(ids.has(t.id)){t.text="";t.done=false;t.status="pending";t.subtasks=[];t.templateSource=null;}});history.splice(index.i,1);smartUndoSave(history);smartTemplateNotice("تم التراجع عن قالب «"+entry.templateName+"».");save();renderTaskLists();renderProgress();}});
   }
+  function smartOpenQuickTask(){
+    const sheet=taskSheet("إضافة مهمة سريعة",'<label class="task-field-wide">اسم المهمة<input id="smartQuickTaskInput" type="text" maxlength="160" placeholder="مثال: الاتصال بوالدي" autocomplete="off"></label><div class="exp-err" id="smartQuickTaskErr"></div><button type="button" class="task-sheet-save" id="smartQuickTaskSave">إضافة إلى مهام اليوم</button>');
+    const input=sheet.over.querySelector("#smartQuickTaskInput"), err=sheet.over.querySelector("#smartQuickTaskErr"), add=()=>{const text=input.value.trim();if(!text){err.textContent="اكتب اسم المهمة أولًا.";input.focus();return;}smartAddTasks([text]);sheet.close();smartTemplateNotice("تمت إضافة المهمة إلى مهام اليوم.");};
+    sheet.over.querySelector("#smartQuickTaskSave").onclick=add;
+    input.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add();}};
+    input.focus();
+  }
   function smartWeekSummary(){
     const range=expWeekRange(todayStr()), days=allDays(), cursor=new Date(range.start+"T12:00:00"); let prayers=0, tasksDone=0, tasksTotal=0, waterDays=0;
     for(let i=0;i<7;i++){const day=days[fmtDate(cursor)]||{}; prayers+=(day.prayers||[]).filter(isPrayed).length; const tasks=(day.tasks||[]).filter(taskActive), priorities=(day.priorities||[]).filter(itemFilled); tasksTotal+=tasks.length+priorities.length; tasksDone+=tasks.filter(t=>itemDone(t)).length+priorities.filter(p=>itemDone(p,day.tasks)).length; if((day.water||0)>=waterGoal()) waterDays++; cursor.setDate(cursor.getDate()+1);}
@@ -8905,10 +8912,10 @@
   }
   function smartInit(){
     const byId=id=>document.getElementById(id);
-    byId("quickTaskBtn").onclick=()=>{const text=prompt("اكتب المهمة السريعة:");if(text&&text.trim())smartAddTasks([text.trim()]);};
+    byId("quickTaskBtn").onclick=smartOpenQuickTask;
     byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
     byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
-    byId("quickTemplatesBtn").onclick=()=>{const box=byId("quickTemplateBar");box.hidden=!box.hidden;};
+    byId("quickTemplatesBtn").onclick=()=>{const box=byId("quickTemplateBar");box.hidden=!box.hidden;if(!box.hidden){smartTemplateNotice("اختر قالبًا لإضافته إلى مهام اليوم.");box.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>box.querySelector("button")?.focus(),300);}};
     document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const type=button.dataset.quickTemplate;if(type==="morning")smartAddTasks(["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"],"روتين صباحي");else if(type==="evening")smartAddTasks(["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"],"روتين مسائي");else if(type==="task")smartAddTasks(["جلسة تركيز لمدة ٣٠ دقيقة"],"مهمة مركّزة");else if(type==="recurring")expOpenRecurringForm(null);});
     byId("quickTemplateUndoBtn").onclick=smartUndoLastTemplate;
     smartRenderUndo();
