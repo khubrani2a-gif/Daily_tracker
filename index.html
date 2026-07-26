@@ -3257,7 +3257,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١١١</div>
+    <div class="app-version">النسخة ١١٢</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -9849,6 +9849,8 @@
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
   const DATA_VERSION=1;
+  const DATA_MAX_IMPORT_BYTES=5*1024*1024;
+  const DATA_MAX_IMPORT_ENTRIES=1000;
   function dataOwnedKey(key){ return !!key&&key.startsWith("h2do-"); }
   function dataLoadJson(key,fallback){ try{ return JSON.parse(localStorage.getItem(key)||"")||fallback; }catch(e){ return fallback; } }
   function dataSnapshotStats(snapshot){
@@ -9862,7 +9864,7 @@
       const key=localStorage.key(i);
       if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) entries[key]=localStorage.getItem(key);
     }
-    return {schema:DATA_VERSION,appVersion:107,createdAt:Date.now(),reason:reason||"يدوية",entries};
+    return {schema:DATA_VERSION,appVersion:112,createdAt:Date.now(),reason:reason||"يدوية",entries};
   }
   function dataLoadBackups(){
     const list=dataLoadJson(DATA_BACKUP_KEY,[]);
@@ -9889,7 +9891,11 @@
   }
   function dataNormalizeImported(raw,name){
     if(raw&&raw.schema&&raw.entries&&typeof raw.entries==="object"){
-      const entries={}; Object.keys(raw.entries).forEach(key=>{ const value=raw.entries[key]; entries[key]=typeof value==="string"?value:JSON.stringify(value); });
+      if(+raw.schema>DATA_VERSION) throw new Error("newer backup");
+      const keys=Object.keys(raw.entries);
+      if(keys.length>DATA_MAX_IMPORT_ENTRIES) throw new Error("too many entries");
+      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
+      if(!Object.keys(entries).length) throw new Error("empty backup");
       return {schema:DATA_VERSION,appVersion:+raw.appVersion||0,createdAt:+raw.createdAt||Date.now(),reason:"مستوردة: "+(name||"ملف"),entries};
     }
     if(raw&&typeof raw==="object"&&!Array.isArray(raw)){
@@ -10004,7 +10010,7 @@
     if(f.size>DATA_MAX_IMPORT_BYTES){ alert("حجم النسخة أكبر من ٥ م.ب. اختر نسخة JSON أصغر لحماية مساحة التطبيق."); importFile.value=""; return; }
     f.text().then(txt=>{
       const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
-    }).catch(()=> alert("الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
+    }).catch(error=> alert(error&&error.message==="newer backup"?"هذه النسخة من إصدار أحدث من التطبيق، حدّث التطبيق أولًا ثم أعد المحاولة.":"الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
     importFile.value = "";
   }
   function dataInit(){

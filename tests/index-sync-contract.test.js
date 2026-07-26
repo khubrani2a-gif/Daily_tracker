@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v111",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v112",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١١١/); assert.match(sw,/mufakkirati-v111/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١١٢/); assert.match(sw,/mufakkirati-v112/); assert.match(sw,/sync-core\.js/);
 });
 
 test("daily history is cached and below-fold content is deferred at startup",()=>{
@@ -57,6 +57,14 @@ test("daily history is cached and below-fold content is deferred at startup",()=
   assert.match(html,/const out = Object\.assign\(\{\}, allDaysCache\)/);
   assert.match(html,/function deferNonCriticalRender\(name, fn\)/);
   assert.match(html,/deferNonCriticalRender\("renderHifzCard:init", renderHifzCard\)/);
+});
+
+test("backup import limits size, validates entries, and blocks newer schemas",()=>{
+  assert.match(html,/const DATA_MAX_IMPORT_BYTES=5\*1024\*1024/);
+  assert.match(html,/const DATA_MAX_IMPORT_ENTRIES=1000/);
+  assert.match(html,/if\(\+raw\.schema>DATA_VERSION\) throw new Error\("newer backup"\)/);
+  assert.match(html,/if\(keys\.length>DATA_MAX_IMPORT_ENTRIES\) throw new Error\("too many entries"\)/);
+  assert.match(html,/if\(f\.size>DATA_MAX_IMPORT_BYTES\)/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
