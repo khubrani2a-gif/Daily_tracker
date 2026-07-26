@@ -1082,6 +1082,8 @@
   .stats-range{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;color:var(--muted);font-size:.76rem;margin-bottom:.7rem}
   .stats-compare{font-weight:700;border-radius:99px;padding:.2rem .55rem;background:var(--accent-soft);color:var(--accent)}
   .stats-compare.down{background:rgba(195,154,43,.15);color:var(--gold)}
+  .stats-range-actions{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .stats-customize{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.28rem .55rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
   .stats-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem}
   .stats-kpi{background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;padding:.7rem;text-align:center}
   .stats-kpi b{display:block;font-size:1.25rem;color:var(--accent);line-height:1.25}
@@ -1107,6 +1109,19 @@
   .stats-break-pct{text-align:left;color:var(--muted);font-weight:700}
   .stats-insight{margin-top:.75rem;background:var(--accent-soft);border-radius:14px;padding:.75rem .9rem;font-size:.8rem;line-height:1.7;color:var(--ink)}
   .stats-insight b{color:var(--accent)}
+  .stats-days-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-top:.65rem}
+  .stats-day-note{background:var(--chip-bg);border-radius:12px;padding:.65rem;font-size:.75rem;line-height:1.6}
+  .stats-day-note strong{display:block;color:var(--accent);font-size:.7rem}
+  .stats-month-bars{display:grid;grid-template-columns:repeat(6,1fr);align-items:end;gap:.45rem;height:150px;margin-top:.65rem}
+  .stats-month-col{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:.25rem}
+  .stats-month-col i{display:block;width:70%;max-width:30px;min-height:4px;background:var(--accent);border-radius:7px 7px 3px 3px;position:relative}
+  .stats-month-col i::after{content:attr(data-v);position:absolute;bottom:calc(100% + 2px);right:50%;transform:translateX(50%);font-size:.58rem;color:var(--muted);white-space:nowrap}
+  .stats-month-col span{font-size:.62rem;color:var(--muted);white-space:nowrap}
+  .stats-auto-goal{display:flex;align-items:center;justify-content:space-between;gap:.6rem;background:var(--accent-soft);border-radius:12px;padding:.65rem .7rem;margin-bottom:.65rem;font-size:.73rem;line-height:1.55}
+  .stats-auto-goal button{border:0;background:var(--accent);color:#fff;border-radius:9px;padding:.42rem .6rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  .stats-kpi-options{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}
+  .stats-kpi-option{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line);border-radius:10px;padding:.55rem;font-size:.78rem;color:var(--ink)}
+  .stats-kpi-option input{accent-color:var(--accent)}
   .stats-review{margin-top:.75rem;border:1px solid var(--line);border-radius:15px;padding:.85rem;background:var(--paper)}
   .stats-review[hidden]{display:none}
   .stats-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.7rem}
@@ -1174,6 +1189,8 @@
     .stats-kpis{grid-template-columns:repeat(2,1fr)}
     .stats-break-row{grid-template-columns:90px 1fr 38px;gap:.4rem}
     .stats-review-grid{grid-template-columns:1fr}
+    .stats-days-grid{grid-template-columns:1fr}
+    .stats-kpi-options{grid-template-columns:1fr}
     .stats-goal-row{flex-direction:column}
     .stats-goal-steps{grid-template-columns:1fr}
     .calendar-weekdays,.calendar-grid{gap:.2rem}
@@ -2414,7 +2431,7 @@
     </div>
 
     <div id="statsUnifiedView">
-      <div class="stats-range"><span id="statsRangeLabel"></span><span class="stats-compare" id="statsCompare"></span></div>
+      <div class="stats-range"><span id="statsRangeLabel"></span><span class="stats-range-actions"><span class="stats-compare" id="statsCompare"></span><button type="button" class="stats-customize" id="statsCustomizeBtn">⚙️ تخصيص المؤشرات</button></span></div>
       <div class="stats-kpis" id="statsUnifiedKpis"></div>
       <div class="stats-panel">
         <div class="stats-panel-title">اتجاه الإنجاز اليومي</div>
@@ -2427,6 +2444,15 @@
         <div class="stats-breakdown" id="statsBreakdown"></div>
       </div>
       <div class="stats-insight" id="statsInsight"></div>
+      <div class="stats-panel" id="statsDaysPanel">
+        <div class="stats-panel-title">أفضل وأضعف أيام الالتزام</div>
+        <div class="stats-days-grid" id="statsBestWorst"></div>
+      </div>
+      <div class="stats-panel" id="statsMonthComparePanel" hidden>
+        <div class="stats-panel-title">مقارنة آخر ٦ أشهر</div>
+        <div class="stats-panel-sub">متوسط الإنجاز في الأيام المسجلة من كل شهر</div>
+        <div class="stats-month-bars" id="statsMonthCompare"></div>
+      </div>
       <div class="stats-review" id="statsWeeklyReview">
         <div class="stats-review-head">
           <div><b>مراجعة الأسبوع</b><small>حوّل الأرقام إلى خطوة واضحة للأسبوع القادم</small></div>
@@ -2436,6 +2462,7 @@
           <div class="stats-review-note"><strong>أبرز إنجاز</strong><span id="statsWeeklyWin"></span></div>
           <div class="stats-review-note"><strong>فرصة التحسين</strong><span id="statsWeeklyImprove"></span></div>
         </div>
+        <div class="stats-auto-goal" id="statsAutoGoal"><span id="statsAutoGoalText"></span><button type="button" id="statsAutoGoalUse">استخدام الاقتراح</button></div>
         <label class="stats-goal-label" for="statsNextGoal">هدفي للأسبوع القادم</label>
         <div class="stats-goal-row">
           <input id="statsNextGoal" maxlength="120" placeholder="مثال: المشي ٣ مرات وإكمال ورد القرآن يوميًا">
@@ -3137,7 +3164,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٩</div>
+    <div class="app-version">النسخة ١١٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -9005,6 +9032,22 @@
   }
 
   let statsPeriod = "week";
+  const STATS_KPI_KEY="h2do-stats-kpis-v1";
+  const STATS_KPI_LABELS={overall:"متوسط الإنجاز",prayer:"الصلوات المفروضة",tasks:"المهام والأولويات",sport:"دقائق الرياضة",water:"أيام هدف الماء",quran:"أيام ورد القرآن"};
+  function statsKpiSelection(){
+    try{const saved=JSON.parse(localStorage.getItem(STATS_KPI_KEY)||"null");if(Array.isArray(saved)&&saved.some(id=>STATS_KPI_LABELS[id]))return saved.filter(id=>STATS_KPI_LABELS[id]);}catch(e){}
+    return Object.keys(STATS_KPI_LABELS);
+  }
+  function statsCustomizeOpen(){
+    const selected=new Set(statsKpiSelection());
+    const options=Object.keys(STATS_KPI_LABELS).map(id=>'<label class="stats-kpi-option"><input type="checkbox" value="'+id+'"'+(selected.has(id)?" checked":"")+'> '+STATS_KPI_LABELS[id]+'</label>').join("");
+    const sheet=taskSheet("تخصيص مؤشرات الإحصائيات",'<div class="stats-kpi-options">'+options+'</div><div class="exp-err" id="statsKpiErr"></div><button type="button" class="task-sheet-save" id="statsKpiSave">حفظ المؤشرات</button>');
+    sheet.over.querySelector("#statsKpiSave").onclick=()=>{
+      const ids=Array.from(sheet.over.querySelectorAll('input[type="checkbox"]:checked')).map(x=>x.value);
+      if(!ids.length){sheet.over.querySelector("#statsKpiErr").textContent="اختر مؤشرًا واحدًا على الأقل.";return;}
+      localStorage.setItem(STATS_KPI_KEY,JSON.stringify(ids));sheet.close();renderUnifiedStats(statsPeriod);
+    };
+  }
   function statsSeries(days,count,offset){
     offset=offset||0;
     const end=new Date(todayStr()+"T12:00:00"); end.setDate(end.getDate()-offset);
@@ -9028,10 +9071,10 @@
     observed.forEach(r=>{
       const s=r.state||{}, prayers=s.prayers||[];
       FARD_IDX.forEach(i=>{ if(isPrayed(prayerVal(prayers,i))) prayerDone++; });
-      const tasks=(s.tasks||[]).filter(t=>t&&t.text&&t.text.trim());
+      const tasks=(s.tasks||[]).filter(taskActive);
       const priorities=(s.priorities||[]).filter(p=>p&&(p.sourceTaskId||(p.text&&p.text.trim())));
       taskTotal+=tasks.length+priorities.length;
-      taskDone+=tasks.filter(t=>t.done).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
+      taskDone+=tasks.filter(itemDone).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
       const ibItems=ibOnlyItems(r.key); worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
       const mins=statsSportMinutes(s); sportMinutes+=mins; if(mins>0)sportActive++; if(sportDone(s))sportGoalDays++;
       if((s.water||0)>=waterGoal()) waterDays++;
@@ -9046,6 +9089,35 @@
       sportActive,sportGoalDays,sportMinutes,sportPct:ratio(sportGoalDays,n),
       waterDays,waterPct:ratio(waterDays,n),quranDays,quranPct:ratio(quranDays,n)
     };
+  }
+  function statsRenderDayAnalysis(rows){
+    const box=document.getElementById("statsBestWorst"), observed=rows.filter(r=>r.state).sort((a,b)=>b.pct-a.pct);
+    if(!observed.length){box.innerHTML='<div class="task-history-empty" style="grid-column:1/-1">لا توجد أيام مسجلة في هذه الفترة.</div>';return;}
+    const best=observed[0], worst=observed[observed.length-1], label=r=>r.date.toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"short"});
+    box.innerHTML='<div class="stats-day-note"><strong>✨ أفضل يوم</strong>'+label(best)+' · '+best.pct.toLocaleString("ar-EG")+'٪</div>'+
+      '<div class="stats-day-note"><strong>🌱 يوم يحتاج دعمًا</strong>'+label(worst)+' · '+worst.pct.toLocaleString("ar-EG")+'٪</div>';
+  }
+  function statsRenderMonthComparison(days){
+    const host=document.getElementById("statsMonthCompare"), now=new Date(todayStr()+"T12:00:00"), rows=[];
+    for(let offset=5;offset>=0;offset--){
+      const first=new Date(now.getFullYear(),now.getMonth()-offset,1,12), last=new Date(first.getFullYear(),first.getMonth()+1,0,12), values=[];
+      for(let d=new Date(first);d<=last;d.setDate(d.getDate()+1)){const key=fmtDate(d);if(days[key])values.push(dayPct(days[key],key));}
+      rows.push({label:first.toLocaleDateString("ar",{month:"short"}),value:values.length?Math.round(values.reduce((a,v)=>a+v,0)/values.length):0,observed:values.length});
+    }
+    host.innerHTML=rows.map(r=>'<div class="stats-month-col"><i style="height:'+(r.observed?Math.max(4,r.value):4)+'%;'+(!r.observed?'background:var(--line)':'')+'" data-v="'+(r.observed?r.value.toLocaleString("ar-EG")+"٪":"—")+'"></i><span>'+r.label+'</span></div>').join("");
+  }
+  function statsSuggestedGoal(metrics,cur){
+    const weakest=metrics.filter(m=>m.den>0).sort((a,b)=>a.value-b.value)[0];
+    if(!cur.observed||!weakest) return {goal:"تسجيل إنجازي يوميًا لمدة أسبوع",steps:["تسجيل يوم السبت","مراجعة منتصف الأسبوع","إكمال مراجعة الجمعة"],days:[6,2,5]};
+    const plans={
+      prayer:{goal:"رفع ثبات الصلوات المفروضة هذا الأسبوع",steps:["تسجيل كل صلاة فور أدائها","مراجعة الصلوات بعد المغرب","إغلاق أي نقص قبل النوم"],days:[6,2,5]},
+      worship:{goal:"الالتزام بعادة عبادية صغيرة يوميًا",steps:["اختيار العبادة الأهم","تنفيذها ٣ أيام متفرقة","مراجعة نسبة الالتزام"],days:[6,2,5]},
+      tasks:{goal:"إكمال أهم ٣ مهام خلال الأسبوع",steps:["اختيار المهمة الأولى","إنهاء المهمة الثانية","إغلاق المهمة الثالثة"],days:[6,2,4]},
+      water:{goal:"إكمال هدف الماء في ٥ أيام",steps:["تجهيز الماء صباحًا","فحص الهدف منتصف الأسبوع","إكمال خمسة أيام"],days:[6,2,5]},
+      sport:{goal:"تنفيذ ٣ جلسات رياضية هذا الأسبوع",steps:["الجلسة الأولى","الجلسة الثانية","الجلسة الثالثة"],days:[0,2,4]},
+      quran:{goal:"إكمال ورد القرآن في ٥ أيام",steps:["بدء الورد أول الأسبوع","تثبيت وقت القراءة","إكمال خمسة أوراد"],days:[6,2,5]}
+    };
+    return plans[weakest.id]||plans.tasks;
   }
   function statsReviewRecord(){
     const target=wgWeekStart(todayStr(),1), saved=wgLoad().items[target];
@@ -9071,6 +9143,9 @@
     document.querySelectorAll(".stats-goal-step-plan").forEach((row,index)=>{
       const step=saved.steps&&saved.steps[index]; row.querySelector("input").value=(step&&step.text)||""; row.querySelector("select").value=step&&Number.isInteger(step.day)?String(step.day):"";
     });
+    const suggestion=statsSuggestedGoal(metrics,cur), auto=document.getElementById("statsAutoGoalText"), use=document.getElementById("statsAutoGoalUse");
+    auto.textContent="اقتراح بناءً على أدائك: "+suggestion.goal;
+    use.onclick=()=>{input.value=suggestion.goal;document.querySelectorAll(".stats-goal-step-plan").forEach((row,index)=>{row.querySelector("input").value=suggestion.steps[index]||"";row.querySelector("select").value=Number.isInteger(suggestion.days[index])?String(suggestion.days[index]):"";});document.getElementById("statsGoalStatus").textContent="تم تطبيق الاقتراح؛ اضغط حفظ الهدف لاعتماده.";};
     document.getElementById("statsGoalStatus").textContent=saved.goal?"محفوظ للأسبوع القادم وسيظهر في ملخصك اليومي عند بدايته.":"";
   }
   function statsSaveWeeklyGoal(){
@@ -9094,14 +9169,15 @@
       if(diff<0) cmp.classList.add("down");
     }
     const kpis=[
-      [ar(cur.overall)+"٪","متوسط الإنجاز"],
-      [ar(cur.prayerPct)+"٪","الصلوات المفروضة"],
-      [cur.taskTotal?ar(cur.taskPct)+"٪":"—","المهام والأولويات"],
-      [ar(cur.sportMinutes)+" د","دقائق الرياضة"],
-      [ar(cur.waterDays)+" / "+ar(cur.observed),"أيام هدف الماء"],
-      [ar(cur.quranDays)+" / "+ar(cur.observed),"أيام ورد القرآن"]
+      {id:"overall",value:ar(cur.overall)+"٪",label:"متوسط الإنجاز"},
+      {id:"prayer",value:ar(cur.prayerPct)+"٪",label:"الصلوات المفروضة"},
+      {id:"tasks",value:cur.taskTotal?ar(cur.taskPct)+"٪":"—",label:"المهام والأولويات"},
+      {id:"sport",value:ar(cur.sportMinutes)+" د",label:"دقائق الرياضة"},
+      {id:"water",value:ar(cur.waterDays)+" / "+ar(cur.observed),label:"أيام هدف الماء"},
+      {id:"quran",value:ar(cur.quranDays)+" / "+ar(cur.observed),label:"أيام ورد القرآن"}
     ];
-    document.getElementById("statsUnifiedKpis").innerHTML=kpis.map(k=>'<div class="stats-kpi"><b>'+k[0]+'</b><small>'+k[1]+'</small></div>').join("");
+    const selected=new Set(statsKpiSelection());
+    document.getElementById("statsUnifiedKpis").innerHTML=kpis.filter(k=>selected.has(k.id)).map(k=>'<div class="stats-kpi"><b>'+k.value+'</b><small>'+k.label+'</small></div>').join("");
     const trend=document.getElementById("statsTrend"); trend.className="stats-trend "+period; trend.innerHTML="";
     rows.forEach((r,i)=>{
       const item=document.createElement("div"); item.className="stats-day"+(r.state?"":" empty");
@@ -9113,12 +9189,12 @@
     });
     document.getElementById("statsTrendSubtitle").textContent="كل عمود يمثل يومًا، وارتفاعه يعكس نسبة إنجاز عناصر ذلك اليوم";
     const metrics=[
-      {name:"🕌 الصلوات",value:cur.prayerPct,den:cur.prayerTotal},
-      {name:"📿 العبادات",value:cur.worshipPct,den:cur.worshipTotal},
-      {name:"✅ المهام",value:cur.taskPct,den:cur.taskTotal},
-      {name:"💧 هدف الماء",value:cur.waterPct,den:cur.observed},
-      {name:"🏃 هدف الرياضة",value:cur.sportPct,den:cur.observed},
-      {name:"📖 ورد القرآن",value:cur.quranPct,den:cur.observed}
+      {id:"prayer",name:"🕌 الصلوات",value:cur.prayerPct,den:cur.prayerTotal},
+      {id:"worship",name:"📿 العبادات",value:cur.worshipPct,den:cur.worshipTotal},
+      {id:"tasks",name:"✅ المهام",value:cur.taskPct,den:cur.taskTotal},
+      {id:"water",name:"💧 هدف الماء",value:cur.waterPct,den:cur.observed},
+      {id:"sport",name:"🏃 هدف الرياضة",value:cur.sportPct,den:cur.observed},
+      {id:"quran",name:"📖 ورد القرآن",value:cur.quranPct,den:cur.observed}
     ];
     const breakdown=document.getElementById("statsBreakdown"); breakdown.innerHTML="";
     metrics.forEach(m=>{
@@ -9130,6 +9206,8 @@
     if(!cur.observed) insight.textContent="ابدأ بتسجيل يومك، وستظهر هنا مقارنة واضحة لتقدمك.";
     else if(cur.overall>=80) insight.innerHTML="✨ <b>ثبات ممتاز.</b> متوسط إنجازك "+ar(cur.overall)+"٪ خلال الفترة؛ حافظ على نفس الإيقاع.";
     else if(available.length) insight.innerHTML="💡 <b>فرصة التحسين الأقرب:</b> "+available[0].name+" عند "+ar(available[0].value)+"٪. اختر خطوة صغيرة وثابتة للفترة القادمة.";
+    statsRenderDayAnalysis(rows);
+    const monthPanel=document.getElementById("statsMonthComparePanel");monthPanel.hidden=period!=="month";if(period==="month")statsRenderMonthComparison(days);
     const review=document.getElementById("statsWeeklyReview");
     if(period==="week") statsRenderWeeklyReview(cur,metrics); else review.hidden=true;
   }
@@ -9339,6 +9417,7 @@
     ibSyncCalBtn();
   };
   document.querySelectorAll("[data-stats-period]").forEach(btn=>btn.onclick=()=>renderStatsPeriod(btn.dataset.statsPeriod));
+  document.getElementById("statsCustomizeBtn").onclick=statsCustomizeOpen;
   document.getElementById("calendarPrev").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()-1); renderCalendar(); };
   document.getElementById("calendarNext").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()+1); renderCalendar(); };
   document.getElementById("calendarToday").onclick=()=>{ calendarCursor=new Date(todayStr().slice(0,7)+"-01T12:00:00"); renderCalendar(); };
