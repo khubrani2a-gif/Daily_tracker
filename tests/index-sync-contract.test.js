@@ -82,7 +82,7 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
-  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus"].forEach(id=>{
+  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
   ["today","iman","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
@@ -94,6 +94,9 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/function smartUndoLastTemplate\(/);
   assert.match(html,/function smartTemplateNotice\(/);
   assert.match(html,/function smartOpenQuickTask\(/);
+  assert.match(html,/function smartOpenCustomTemplate\(/);
+  assert.match(html,/function smartManageCustomTemplates\(/);
+  assert.match(html,/SMART_CUSTOM_TEMPLATES_KEY/);
   assert.match(html,/quickTemplatesBtn"\)\.onclick=[\s\S]*?scrollIntoView/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
