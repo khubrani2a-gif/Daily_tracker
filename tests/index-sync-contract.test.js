@@ -112,6 +112,8 @@ test("separate dhikr counter supports presets, custom wording, and a daily targe
   assert.match(html,/function openDhikrCounterSettings\(/);
   assert.match(html,/function openDhikrManager\(/);
   assert.match(html,/function dhikrAddPermanent\(/);
+  assert.match(html,/function dhikrCounterCustomPresets\(/);
+  assert.match(html,/dhikrMigrateLegacyCounterItems\(/);
   assert.match(html,/DHIKR_COUNTER_PRESETS/);
 });
 
