@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v107",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v108",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٧/); assert.match(sw,/mufakkirati-v107/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٨/); assert.match(sw,/mufakkirati-v108/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -211,6 +211,18 @@ test("data management provides backups, restore, exports, and conflict review",(
   assert.match(html,/dataDetectConflict\("daily"/);
   assert.match(html,/dataDetectCollectionConflicts\("expenses"/);
   assert.match(html,/safeRun\("dataInit", dataInit\)/);
+});
+
+test("advanced expenses include savings, budget comparison, charts, and recurring rules",()=>{
+  ["expSavingsCard","expBudgetCompareCard","expCategoryChartCard","expRecurringCard"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["expRenderSavingsCard","expRenderBudgetCompareCard","expRenderCategoryChartCard","expRenderRecurringCard","expOpenSavingForm","expOpenRecurringForm","expGenerateRecurringDue","expNextRecurringDate"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/savingsGoals:\[\]/);
+  assert.match(html,/recurringTransactions:\[\]/);
+  assert.match(html,/recurringOccurrenceDate/);
+  assert.match(html,/t\.recurringRuleId===rule\.id && t\.recurringOccurrenceDate===occurrence/);
+  assert.match(html,/const occurrenceId="expr_"/);
+  assert.match(html,/out\.savingsGoals = expMergeById/);
+  assert.match(html,/out\.recurringTransactions = expMergeById/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{

@@ -3263,7 +3263,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٧</div>
+    <div class="app-version">النسخة ١٠٨</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -10837,7 +10837,7 @@
       }
       if(!cache){
         dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
-        ["categories","fixedTemplates","transactions","trips"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
+        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
