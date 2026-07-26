@@ -2166,7 +2166,7 @@
     <a href="#prayerCard" data-app-view="iman"><span>📿</span>إيمانيات</a>
     <a href="#sportCard" data-app-view="sport"><span>🏃</span>الرياضة</a>
     <a href="#expensesCard" data-app-view="expenses"><span>💰</span>المصاريف</a>
-    <a href="#intentionCard" data-app-view="more"><span>•••</span>المزيد</a>
+    <a href="#readingCard" data-app-view="more"><span>•••</span>المزيد</a>
   </nav>
 
   <div class="customize-overlay" id="customizeOverlay" hidden>
@@ -3380,7 +3380,7 @@
     const date=new Date((dateStr||currentDate||todayStr())+"T12:00:00");
     return days.includes(date.getDay());
   }
-  function wAllItemsForDate(dateStr){ return wAllItems().filter(item=>habitScheduledOn(item,dateStr)); }
+  function wAllItemsForDate(dateStr){ return wAllItems(dateStr||currentDate).filter(item=>habitScheduledOn(item,dateStr)); }
   /* بنود بطاقة «العبادات» فقط (أذكار/صلاة/أوراد عادية) — الورد اليومي وقراءة السور المخصّصة لها بطاقة «القرآن» المستقلة */
   function ibOnlyItems(dateStr){
     return wAllItemsForDate(dateStr||currentDate).filter(w=> w.id !== "werd" && w.kind !== "quran");
@@ -7795,13 +7795,14 @@
   }
   function renderWorship(){
     dhikrMigrateLegacyCounterItems();
-    const custom = wCustom();
-    const hidden = wHidden();
+    const worshipItems = wAllItemsForDate(currentDate);
     IB_GROUPS.forEach(g=>{
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
-      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd").forEach(w=> ibRenderItem(g==="adhkar"?Object.assign({},w,{label:dhikrDisplayLabel(w)}):w, ul));
-      custom.filter(w=>w.group === g && !w.hidden && w.kind !== "quran" && habitScheduledOn(w,currentDate)).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+      worshipItems.filter(w=>w.group === g && w.id !== "werd" && w.kind !== "quran").forEach(w=>{
+        const item=(g==="adhkar"?Object.assign({},w,{label:dhikrDisplayLabel(w)}):w);
+        ibRenderItem(w.id in Object.fromEntries(WORSHIP.map(x=>[x.id,true])) ? item : Object.assign({custom:true},item), ul);
+      });
     });
 
     renderQuranCard();
@@ -9792,7 +9793,6 @@
     safeRun("renderWorship", renderWorship);
     safeRun("renderWater", renderWater);
     safeRun("renderSport", renderSport);
-    safeRun("renderLearning", renderLearning);
     safeRun("renderHealth", renderHealth);
     safeRun("renderTaskLists", renderTaskLists);
     safeRun("bindIntention", ()=> bindTextarea("intention","intention"));
@@ -12482,6 +12482,7 @@
     {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
     {id:"quranCard",icon:"📖",label:"القرآن"},
     {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
+    {id:"readingCard",icon:"📚",label:"القراءة"},
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
     {id:"healthCard",icon:"⚖️",label:"الصحة"},
     {id:"waterCard",icon:"💧",label:"شرب الماء"},
@@ -12501,6 +12502,157 @@
     CARD_DEFS.forEach(d=>{ if(!seen.has(d.id)) order.push(d.id); });
     const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
     return {order,hidden};
+  }
+  let cardPrefs=personalizeLoad(), customizeDragId=null;
+  function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
+  function personalizeApply(){
+    const host=document.querySelector(".grid .col");
+    if(!host) return;
+    const hidden=new Set(cardPrefs.hidden);
+    cardPrefs.order.forEach(id=>{ const card=document.getElementById(id); if(card){ card.hidden=hidden.has(id); host.appendChild(card); } });
+    if(typeof appViewApply==="function") appViewApply();
+  }
+  function personalizeCommit(){ personalizeSave(); personalizeApply(); personalizeRenderList(); }
+  function personalizeMove(id,delta){
+    const from=cardPrefs.order.indexOf(id), to=from+delta;
+    if(from<0||to<0||to>=cardPrefs.order.length) return;
+    cardPrefs.order.splice(from,1); cardPrefs.order.splice(to,0,id); personalizeCommit();
+  }
+  function personalizeDrop(source,target){
+    if(!source||source===target||!cardPrefs.order.includes(source)||!cardPrefs.order.includes(target)) return;
+    const next=cardPrefs.order.filter(id=>id!==source), at=next.indexOf(target);
+    next.splice(at,0,source); cardPrefs.order=next; personalizeCommit();
+  }
+  function personalizeRenderList(){
+    const list=document.getElementById("customizeList");
+    if(!list) return;
+    list.innerHTML="";
+    const hidden=new Set(cardPrefs.hidden);
+    cardPrefs.order.forEach((id,index)=>{
+      const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
+      const row=document.createElement("div");
+      row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
+      const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
+      const name=document.createElement("span"); name.className="customize-name"; name.textContent=def.icon+" "+def.label;
+      const controls=document.createElement("div"); controls.className="customize-controls";
+      const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
+      const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
+      const toggle=document.createElement("label"); toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة";
+      const input=document.createElement("input"); input.type="checkbox"; input.checked=!hidden.has(id); input.setAttribute("aria-label","إظهار بطاقة "+def.label);
+      const track=document.createElement("i"); toggle.append(input,track);
+      input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
+      controls.append(up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
+      row.ondragstart=e=>{ customizeDragId=id; row.classList.add("dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); } };
+      row.ondragover=e=>{ e.preventDefault(); row.classList.add("drag-over"); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; };
+      row.ondragleave=()=>row.classList.remove("drag-over");
+      row.ondrop=e=>{ e.preventDefault(); row.classList.remove("drag-over"); personalizeDrop(customizeDragId||(e.dataTransfer&&e.dataTransfer.getData("text/plain")),id); };
+      row.ondragend=()=>{ customizeDragId=null; list.querySelectorAll(".dragging,.drag-over").forEach(x=>x.classList.remove("dragging","drag-over")); };
+    });
+  }
+  const customizeOverlay=document.getElementById("customizeOverlay");
+  function personalizeOpen(){ personalizeRenderList(); customizeOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("customizeClose").focus(); }
+  function personalizeClose(){ customizeOverlay.hidden=true; document.body.style.overflow=""; document.getElementById("customizeBtn").focus(); }
+  function personalizeInit(){
+    personalizeApply();
+    document.getElementById("customizeBtn").onclick=personalizeOpen;
+    document.getElementById("customizeClose").onclick=personalizeClose;
+    document.getElementById("customizeDone").onclick=personalizeClose;
+    document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
+    document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
+    customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
+  }
+
+  /* ---------- تنقل الجوال بخمس وجهات ---------- */
+  const APP_VIEW_KEY="h2do-mobile-view";
+  const APP_VIEW_GROUPS={
+    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["readingCard","intentionCard","memoryCard","notesCard","ratingCard"]
+  };
+  let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
+  function appViewApply(){
+    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(APP_VIEW_GROUPS[appView]||APP_VIEW_GROUPS.today);
+    Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
+    document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
+  }
+  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById(APP_VIEW_GROUPS[view][0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
+  function appViewInit(){
+    document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
+    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); appViewApply();
+  }
+
+  /* ---------- إعداد البداية والأهداف اليومية ---------- */
+  const ONBOARD_KEY="h2do-onboarding-v1";
+  const onboardOverlay=document.getElementById("onboardOverlay");
+  function onboardRenderModules(){
+    const host=document.getElementById("onboardModules"), hidden=new Set(cardPrefs.hidden); host.innerHTML="";
+    CARD_DEFS.forEach(def=>{
+      const label=document.createElement("label"); label.className="onboard-module";
+      const input=document.createElement("input"); input.type="checkbox"; input.value=def.id; input.checked=!hidden.has(def.id);
+      const text=document.createElement("span"); text.textContent=def.icon+" "+def.label; label.append(input,text); host.appendChild(label);
+    });
+  }
+  function onboardOpen(firstRun){
+    onboardRenderModules();
+    document.getElementById("onboardWater").value=waterGoal(); document.getElementById("onboardSport").value=sportGoal(); document.getElementById("onboardQuran").value=qLoad().target;
+    document.getElementById("onboardCancel").hidden=!!firstRun; onboardOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("onboardSave").focus();
+  }
+  function onboardClose(){ onboardOverlay.hidden=true; document.body.style.overflow=""; localStorage.setItem(ONBOARD_KEY,"1"); }
+  function onboardSave(){
+    const selected=new Set([...document.querySelectorAll("#onboardModules input:checked")].map(input=>input.value));
+    cardPrefs.hidden=CARD_DEFS.map(def=>def.id).filter(id=>!selected.has(id)); personalizeSave();
+    const water=Math.max(4,Math.min(16,parseInt(document.getElementById("onboardWater").value,10)||N_CUPS_DEFAULT));
+    const sport=Math.max(5,Math.min(180,parseInt(document.getElementById("onboardSport").value,10)||30));
+    const quran=Math.max(1,Math.min(100,parseInt(document.getElementById("onboardQuran").value,10)||5));
+    localStorage.setItem(WATER_GOAL_KEY,String(water)); localStorage.setItem(SPORT_GOAL_KEY,String(sport)); const q=qLoad(); q.target=quran; qSave(q);
+    onboardClose(); personalizeApply(); renderWater(); renderSport(); renderProgress();
+  }
+  function onboardHasExistingData(){
+    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i)||""; if(key.startsWith("h2do-tracker:")||[QURAN_KEY,"h2do-expenses","h2do-hifz"].includes(key)) return true; }
+    return false;
+  }
+  function onboardInit(){
+    document.getElementById("onboardSave").onclick=onboardSave; document.getElementById("onboardCancel").onclick=onboardClose;
+    onboardOverlay.onclick=e=>{ if(e.target===onboardOverlay&&!document.getElementById("onboardCancel").hidden) onboardClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!onboardOverlay.hidden&&!document.getElementById("onboardCancel").hidden) onboardClose(); });
+    if(!localStorage.getItem(ONBOARD_KEY)){ if(onboardHasExistingData()) localStorage.setItem(ONBOARD_KEY,"1"); else onboardOpen(true); }
+  }
+  /* ==================================================================
+     وحدة القراءة — كتب/مقالات/بحوث/مواد دراسية/تقارير
+     مستقلة عن القرآن والحفظ، وتُخزَّن وتُزامَن كوحدة مستقلة.
+     ================================================================== */
+  const RD_SETTINGS_KEY = "h2do-reading-settings";
+  const RD_ITEMS_KEY = "h2do-reading-items";
+  const RD_SESSIONS_KEY = "h2do-reading-sessions";
+  const RD_ACTIVE_KEY = "h2do-reading-active-session";
+  const RD_SYNCMETA_KEY = "h2do-reading-syncmeta";
+  const RD_STATS_CACHE_KEY = "h2do-reading-stats-cache";
+  const RD_SCHEMA_VERSION = 1;
+  const RD_CACHE_SCHEMA_VERSION = 1;
+  const READING_LAUNCH_DATE = "2026-07-14";
+  const RD_MATERIAL_TYPES = ["book","article","research","study","report","other"];
+  const RD_UNITS = ["page","chapter","section","percent","time"];
+  const RD_STATUSES = ["queued","active","paused","completed","abandoned"];
+  const RD_MATERIAL_LABELS = {book:"📘 كتاب",article:"📰 مقال",research:"🔬 بحث",study:"📑 مادة دراسية",report:"📊 تقرير",other:"📄 أخرى"};
+  const RD_UNIT_LABELS = {page:"صفحة",chapter:"فصل",section:"قسم",percent:"٪",time:"وقت فقط"};
+  const RD_STATUS_LABELS = {queued:"قائمة الانتظار",active:"نشطة",paused:"متوقفة",completed:"مكتملة",abandoned:"مهجورة"};
+
+  function rdDefaultSettings(){ return {schemaVersion:RD_SCHEMA_VERSION, focusItemId:null, dailyGoal:null, createdAt:Date.now(), updatedAt:0}; }
+  function rdNormalizeSettings(raw){
+    const s = rdDefaultSettings();
+    if(!raw || typeof raw !== "object") return s;
+    s.focusItemId = (typeof raw.focusItemId === "string" && raw.focusItemId) ? raw.focusItemId : null;
+    if(raw.dailyGoal && typeof raw.dailyGoal === "object"){
+      const g = raw.dailyGoal;
+      if((g.mode === "minutes" || g.mode === "focusUnits") && typeof g.value === "number" && isFinite(g.value) && g.value > 0){
+        s.dailyGoal = { mode:g.mode, value:g.value,
+          itemId: (g.mode === "focusUnits" && typeof g.itemId === "string") ? g.itemId : null,
+          unit: (g.mode === "focusUnits" && RD_UNITS.indexOf(g.unit) !== -1) ? g.unit : null };
+      }
+    }
+    s.createdAt = (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now();
+    s.updatedAt = (typeof raw.updatedAt === "number" && isFinite(raw.updatedAt)) ? raw.updatedAt : 0;
+    return s;
   }
   function rdNormalizeItem(raw){
     if(!raw || typeof raw !== "object" || typeof raw.id !== "string" || !raw.id) return null;
@@ -13489,6 +13641,8 @@
   safeRun("smartTools:init", smartInit);
   safeRun("tomorrowPanel:init", renderTomorrowPanel);
   safeRun("onboardInit", onboardInit);
+  safeRun("rdInit", rdInit);
+  safeRun("renderReadingCard:init", renderReadingCard);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();
 </script>
