@@ -67,6 +67,13 @@ test("backup import limits size, validates entries, and blocks newer schemas",()
   assert.match(html,/if\(f\.size>DATA_MAX_IMPORT_BYTES\)/);
 });
 
+test("data center can run a non-destructive health check before recovery",()=>{
+  assert.match(html,/id="dataHealthCheck"/);
+  assert.match(html,/function dataHealthCheck\(\)/);
+  assert.match(html,/document\.getElementById\("dataHealthCheck"\)\.onclick=dataHealthCheck/);
+  assert.match(html,/dataSnapshotStats\(dataBuildSnapshot/);
+});
+
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
   assert.match(html,/--mobile-scroll-clearance:calc\(/);
   assert.match(html,/env\(safe-area-inset-bottom,\s*0px\)/);
