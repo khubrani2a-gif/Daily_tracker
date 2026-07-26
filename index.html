@@ -519,6 +519,7 @@
 
   /* ===== العبادات (مُعاد تصميمها) ===== */
   .ib-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;margin-bottom:.9rem}
+  .ib-head-actions{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
   .ib-title{padding-bottom:0;margin-bottom:0;border-bottom:none}
   .ib-sub{font-size:.74rem;color:var(--muted);margin-top:.2rem}
   .ib-cal-btn{
@@ -578,6 +579,63 @@
     opacity:.4;transition:opacity .15s, background .15s;line-height:1;
   }
   .ib-custom-del:hover, .ib-custom-del:active{opacity:1;background:var(--danger-soft)}
+  .habit-progress-chip{flex-shrink:0;font-size:.62rem;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:99px;padding:.15rem .42rem;white-space:nowrap}
+  .habit-overlay{position:fixed;inset:0;z-index:1870;background:rgba(20,17,12,.64);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
+  .habit-overlay[hidden]{display:none}
+  .habit-sheet{width:min(650px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:0 28px 80px rgba(0,0,0,.32)}
+  .habit-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;padding:1rem;border-bottom:1px solid var(--line)}
+  .habit-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--accent)}
+  .habit-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:10px;width:36px;height:36px;cursor:pointer}
+  .habit-list-view,.habit-edit-view{overflow-y:auto;padding:1rem;scroll-padding-bottom:1rem}
+  .habit-list-intro{font-size:.75rem;color:var(--muted);line-height:1.7;margin-bottom:.8rem}
+  .habit-list{display:flex;flex-direction:column;gap:.5rem}
+  .habit-manage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.55rem;border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.7rem .75rem}
+  .habit-manage-copy{min-width:0}.habit-manage-copy b{display:block;font-size:.84rem;color:var(--ink)}.habit-manage-copy small{display:block;font-size:.65rem;color:var(--muted);line-height:1.6;margin-top:.12rem}
+  .habit-manage-actions{display:flex;gap:.25rem}.habit-manage-actions button{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;width:34px;height:34px;cursor:pointer}
+  .habit-manage-actions button.danger{color:var(--danger)}
+  .habit-empty{text-align:center;color:var(--muted);padding:2rem 1rem;font-size:.78rem}
+  .habit-main-action{width:100%;margin-top:.8rem;border:0;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:12px;padding:.7rem;font-family:inherit;font-weight:700;cursor:pointer}
+  .habit-field{display:block;font-size:.72rem;color:var(--muted);margin-bottom:.75rem}
+  .habit-field input,.habit-field select{display:block;width:100%;margin-top:.25rem;border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:11px;padding:.58rem .65rem;font-family:inherit;font-size:.82rem}
+  .habit-grid2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  .habit-days-title{font-size:.72rem;color:var(--muted);margin-bottom:.35rem}
+  .habit-days{display:grid;grid-template-columns:repeat(7,1fr);gap:.3rem;margin-bottom:.8rem}
+  .habit-day{position:relative}.habit-day input{position:absolute;opacity:0;pointer-events:none}.habit-day span{display:flex;align-items:center;justify-content:center;min-height:38px;border:1px solid var(--line);background:var(--chip-bg);color:var(--muted);border-radius:9px;font-size:.65rem;cursor:pointer}.habit-day input:checked+span{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .habit-goal-box{border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.7rem;margin-bottom:.8rem}
+  .habit-goal-box p{font-size:.68rem;color:var(--muted);line-height:1.6;margin-bottom:.55rem}
+  .habit-edit-error{min-height:1.3rem;color:var(--danger);font-size:.72rem;text-align:center}
+  .habit-edit-actions{display:flex;gap:.5rem;margin-top:.35rem}.habit-edit-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer}.habit-edit-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  @media(max-width:620px){
+    .habit-overlay{align-items:flex-end;padding:.5rem}
+    .habit-sheet{height:min(88vh,760px);max-height:calc(100vh - .5rem);border-radius:22px 22px 14px 14px}
+    .habit-list-view,.habit-edit-view{padding-bottom:var(--mobile-scroll-clearance);scroll-padding-bottom:var(--mobile-scroll-clearance)}
+    .habit-grid2{grid-template-columns:1fr}.habit-days{grid-template-columns:repeat(4,1fr)}
+  }
+  /* ===== مركز إدارة البيانات ===== */
+  .data-overlay{position:fixed;inset:0;z-index:1890;background:rgba(20,17,12,.66);display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(5px)}
+  .data-overlay[hidden]{display:none}
+  .data-sheet{width:min(780px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:24px;box-shadow:0 28px 80px rgba(0,0,0,.34)}
+  .data-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;padding:1rem;border-bottom:1px solid var(--line)}
+  .data-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;font-size:1.2rem;color:var(--accent)}
+  .data-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:10px;width:36px;height:36px;cursor:pointer}
+  .data-body{overflow-y:auto;padding:1rem;scroll-padding-bottom:1rem}
+  .data-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.8rem}
+  .data-status-card{border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.65rem .7rem}.data-status-card small{display:block;color:var(--muted);font-size:.64rem}.data-status-card b{display:block;color:var(--accent);font-size:.88rem;margin-top:.15rem}
+  .data-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-bottom:1rem}
+  .data-action{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.62rem .45rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer}.data-action.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}.data-action:hover{border-color:var(--accent-2);background:var(--accent-soft);color:var(--accent)}.data-action.primary:hover{color:#fff}
+  .data-section{margin-top:.9rem}.data-section-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.5rem}.data-section-head h3{font-size:.9rem;color:var(--accent)}.data-section-head span{font-size:.65rem;color:var(--muted)}
+  .data-list{display:flex;flex-direction:column;gap:.45rem}
+  .data-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.55rem;border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.68rem .75rem}
+  .data-row-copy{min-width:0}.data-row-copy b{display:block;font-size:.8rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.data-row-copy small{display:block;font-size:.63rem;color:var(--muted);line-height:1.6;margin-top:.1rem}
+  .data-row-actions{display:flex;gap:.22rem}.data-row-actions button{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;min-width:32px;height:32px;padding:0 .4rem;font-family:inherit;font-size:.68rem;cursor:pointer}.data-row-actions .restore{color:var(--accent);font-weight:700}.data-row-actions .danger{color:var(--danger)}
+  .data-empty{text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px;padding:1.2rem;font-size:.72rem;line-height:1.7}
+  .data-conflict-row{border-right:3px solid var(--gold)}.data-conflict-row.reviewed{opacity:.66;border-right-color:var(--line)}
+  .data-conflict-badge{display:inline-block;background:rgba(195,154,43,.14);color:var(--gold);border-radius:99px;padding:.08rem .35rem;font-size:.58rem;margin-inline-start:.25rem}
+  .data-note{margin-top:.8rem;border-radius:11px;background:var(--accent-soft);color:var(--muted);padding:.6rem .7rem;font-size:.66rem;line-height:1.7}
+  @media(max-width:620px){
+    .data-overlay{align-items:flex-end;padding:.5rem}.data-sheet{height:min(90vh,800px);max-height:calc(100vh - .5rem);border-radius:22px 22px 14px 14px}.data-body{padding-bottom:var(--mobile-scroll-clearance);scroll-padding-bottom:var(--mobile-scroll-clearance)}
+    .data-status-grid{grid-template-columns:1fr 1fr}.data-status-card:last-child{grid-column:1/-1}.data-actions{grid-template-columns:1fr 1fr}.data-row{grid-template-columns:1fr}.data-row-actions{justify-content:flex-start;flex-wrap:wrap}
+  }
   .ib-sunnah{
     margin-top:1rem;background:var(--accent-soft);
     border-radius:14px;padding:.9rem 1rem;text-align:center;
@@ -2076,10 +2134,10 @@
       <div class="card" id="ibadahCard">
         <div class="ib-head">
           <div>
-            <h2 class="ib-title"><span class="ico">🕌</span> العبادات</h2>
+            <h2 class="ib-title"><span class="ico">🕌</span> العبادات والعادات</h2>
             <div class="ib-sub">قربك من الله .. سرّ طمأنينتك 🤍</div>
           </div>
-          <button class="ib-cal-btn" id="ibCalBtn" title="تقويم عباداتك">📊 تقويمك</button>
+          <div class="ib-head-actions"><button class="ib-cal-btn" id="habitManageBtn" title="إدارة العادات">🌱 عاداتي</button><button class="ib-cal-btn" id="ibCalBtn" title="تقويم عباداتك">📊 تقويمك</button></div>
         </div>
 
         <div class="ib-stats">
@@ -2114,6 +2172,11 @@
         <div class="ib-group">
           <div class="ib-group-head"><span>📗 الأوراد اليومية</span><button class="ib-add" data-group="awrad" title="إضافة ورد">＋</button></div>
           <ul class="checklist" id="ibList-awrad"></ul>
+        </div>
+
+        <div class="ib-group">
+          <div class="ib-group-head"><span>🌱 عادات مخصصة</span><button class="ib-add" data-group="habit" title="إضافة عادة">＋</button></div>
+          <ul class="checklist" id="ibList-habit"></ul>
         </div>
 
         <div class="ib-sunnah">
@@ -2429,6 +2492,67 @@
       <div class="global-search-summary" id="globalSearchSummary" role="status" aria-live="polite"></div>
       <div class="global-search-results" id="globalSearchResults"></div>
     </div>
+  </div>
+
+  <div class="habit-overlay" id="habitOverlay" hidden>
+    <section class="habit-sheet" role="dialog" aria-modal="true" aria-labelledby="habitTitle">
+      <div class="habit-head"><h2 id="habitTitle">🌱 إدارة العادات</h2><button type="button" class="habit-close" id="habitClose" aria-label="إغلاق">✕</button></div>
+      <div class="habit-list-view" id="habitListView">
+        <p class="habit-list-intro">أنشئ عادة، اختر أيامها، وحدد هدفًا أسبوعيًا أو شهريًا. يحسب التطبيق تقدمك وسلسلة التزامك تلقائيًا.</p>
+        <div class="habit-list" id="habitManageList"></div>
+        <button type="button" class="habit-main-action" id="habitAddBtn">＋ عادة جديدة</button>
+      </div>
+      <div class="habit-edit-view" id="habitEditView" hidden>
+        <label class="habit-field">اسم العادة<input id="habitName" maxlength="80" placeholder="مثال: المشي ٢٠ دقيقة"></label>
+        <div class="habit-grid2">
+          <label class="habit-field">القسم<select id="habitGroup"><option value="habit">عادات مخصصة</option><option value="adhkar">أذكار</option><option value="salah">الصلاة والنوافل</option><option value="awrad">الأوراد اليومية</option></select></label>
+          <label class="habit-field">عدد المرات في اليوم<input id="habitDailyTarget" type="number" inputmode="numeric" min="1" max="9999" value="1"></label>
+        </div>
+        <div class="habit-days-title">أيام التكرار</div>
+        <div class="habit-days" id="habitDays">
+          <label class="habit-day"><input type="checkbox" value="0"><span>الأحد</span></label><label class="habit-day"><input type="checkbox" value="1"><span>الاثنين</span></label><label class="habit-day"><input type="checkbox" value="2"><span>الثلاثاء</span></label><label class="habit-day"><input type="checkbox" value="3"><span>الأربعاء</span></label><label class="habit-day"><input type="checkbox" value="4"><span>الخميس</span></label><label class="habit-day"><input type="checkbox" value="5"><span>الجمعة</span></label><label class="habit-day"><input type="checkbox" value="6"><span>السبت</span></label>
+        </div>
+        <div class="habit-goal-box">
+          <p>الهدف الدوري اختياري، مثل إكمال العادة ٣ مرات أسبوعيًا أو ٢٠ مرة شهريًا.</p>
+          <div class="habit-grid2">
+            <label class="habit-field">الفترة<select id="habitGoalPeriod"><option value="none">بدون هدف دوري</option><option value="weekly">أسبوعي</option><option value="monthly">شهري</option></select></label>
+            <label class="habit-field">عدد مرات الإنجاز<input id="habitGoalTarget" type="number" inputmode="numeric" min="1" max="99" value="3"></label>
+          </div>
+        </div>
+        <div class="habit-edit-error" id="habitEditError" role="alert"></div>
+        <div class="habit-edit-actions"><button type="button" id="habitEditCancel">رجوع</button><button type="button" class="primary" id="habitEditSave">حفظ العادة</button></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="data-overlay" id="dataOverlay" hidden>
+    <section class="data-sheet" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+      <div class="data-head"><h2 id="dataTitle">🗄️ إدارة البيانات</h2><button type="button" class="data-close" id="dataClose" aria-label="إغلاق">✕</button></div>
+      <div class="data-body">
+        <div class="data-status-grid">
+          <div class="data-status-card"><small>الأيام المحفوظة</small><b id="dataDaysCount">٠</b></div>
+          <div class="data-status-card"><small>النسخ المحلية</small><b id="dataBackupsCount">٠</b></div>
+          <div class="data-status-card"><small>تعارضات تحتاج مراجعة</small><b id="dataConflictsCount">٠</b></div>
+        </div>
+        <div class="data-actions">
+          <button type="button" class="data-action primary" id="dataCreateBackup">＋ إنشاء نسخة الآن</button>
+          <button type="button" class="data-action" id="exportBtn">⬇️ JSON</button>
+          <button type="button" class="data-action" id="importBtn">⬆️ استيراد نسخة</button>
+          <button type="button" class="data-action" id="dataExportExcel">📊 Excel</button>
+          <button type="button" class="data-action" id="dataExportPdf">📄 PDF / طباعة</button>
+          <button type="button" class="data-action" id="dataClearReviewed">✓ مسح المراجَعة</button>
+        </div>
+        <div class="data-section">
+          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٥ نسخ على هذا الجهاز</span></div>
+          <div class="data-list" id="dataBackupList"></div>
+        </div>
+        <div class="data-section">
+          <div class="data-section-head"><h3>تعارضات المزامنة</h3><span>تُكتشف قبل اعتماد الدمج</span></div>
+          <div class="data-list" id="dataConflictList"></div>
+        </div>
+        <div class="data-note">تُنشأ نسخة أمان تلقائيًا قبل الاستعادة وقبل دمج أي تعارض مكتشف. تبقى النسخ محليًا ما لم تُنزّلها بنفسك.</div>
+      </div>
+    </section>
   </div>
 
   <!-- ===== شاشة الأذكار ===== -->
@@ -2989,10 +3113,9 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٥</div>
+    <div class="app-version">النسخة ١٠٧</div>
     <div class="footer-actions">
-      <button class="tool-btn" id="exportBtn">⬇️ تصدير نسخة احتياطية</button>
-      <button class="tool-btn" id="importBtn">⬆️ استيراد نسخة</button>
+      <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
     </div>
     <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -3039,7 +3162,7 @@
     {id:"knowledge",  label:"طلب علم", group:"awrad"},
     {id:"reading",    label:"صفحة قراءة", group:"awrad"},
   ];
-  const IB_GROUPS = ["adhkar","salah","awrad"];
+  const IB_GROUPS = ["adhkar","salah","awrad","habit"];
   const CUSTOM_WORSHIP_KEY = "h2do-custom-worship";
   const CUSTOM_WORSHIP_META_KEY = "h2do-custom-worship-meta";
   const HIDDEN_WORSHIP_KEY = "h2do-hidden-worship";
@@ -3074,6 +3197,7 @@
       if(snap.exists){
         const remote = snap.data();
         const localMeta = wCustomMeta();
+        if(!cache) dataDetectConflict("customWorship","items",{items:wCustom(),updatedAt:localMeta.updatedAt||0},remote,"اعتماد قائمة العادات الأحدث مع حفظ نسخة أمان");
         if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
           localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
           localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
@@ -3095,9 +3219,70 @@
     const hidden = wHidden();
     return WORSHIP.filter(w=>hidden.indexOf(w.id) === -1).concat(wCustom());
   }
+  const HABIT_DAY_NAMES=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  function habitScheduledOn(item,dateStr){
+    const days=Array.isArray(item&&item.scheduleDays)?item.scheduleDays.map(Number).filter(n=>n>=0&&n<=6):[];
+    if(!days.length) return true;
+    const date=new Date((dateStr||currentDate||todayStr())+"T12:00:00");
+    return days.includes(date.getDay());
+  }
+  function wAllItemsForDate(dateStr){ return wAllItems().filter(item=>habitScheduledOn(item,dateStr)); }
   /* بنود بطاقة «العبادات» فقط (أذكار/صلاة/أوراد عادية) — الورد اليومي وقراءة السور المخصّصة لها بطاقة «القرآن» المستقلة */
-  function ibOnlyItems(){
-    return wAllItems().filter(w=> w.id !== "werd" && w.kind !== "quran");
+  function ibOnlyItems(dateStr){
+    return wAllItemsForDate(dateStr||currentDate).filter(w=> w.id !== "werd" && w.kind !== "quran");
+  }
+  function habitStateForDate(dateStr){
+    if(dateStr===currentDate&&state) return state;
+    try{ return JSON.parse(localStorage.getItem(storageKey(dateStr))||"null"); }catch(e){ return null; }
+  }
+  function habitCompletedOn(item,dateStr){
+    const saved=habitStateForDate(dateStr);
+    return !!(saved&&saved.worship&&saved.worship[item.id]);
+  }
+  function habitPeriodRange(item,dateStr){
+    const date=new Date((dateStr||currentDate)+"T12:00:00"), start=new Date(date), end=new Date(date);
+    if(item.goalPeriod==="monthly"){ start.setDate(1); end.setMonth(end.getMonth()+1,0); }
+    else{ start.setDate(start.getDate()-start.getDay()); end.setDate(start.getDate()+6); }
+    return {start:fmtDate(start),end:fmtDate(end)};
+  }
+  function habitPeriodProgress(item,dateStr){
+    if(item.goalPeriod!=="weekly"&&item.goalPeriod!=="monthly") return null;
+    const range=habitPeriodRange(item,dateStr||currentDate), cursor=new Date(range.start+"T12:00:00"), stop=new Date(range.end+"T12:00:00");
+    let done=0,scheduled=0;
+    while(cursor<=stop){
+      const key=fmtDate(cursor);
+      if(habitScheduledOn(item,key)){ scheduled++; if(habitCompletedOn(item,key)) done++; }
+      cursor.setDate(cursor.getDate()+1);
+    }
+    const target=Math.max(1,Math.min(99,+item.goalTarget||scheduled||1));
+    return {done,target,period:item.goalPeriod};
+  }
+  function habitStreak(item,dateStr){
+    const cursor=new Date((dateStr||currentDate)+"T12:00:00"), selected=fmtDate(cursor), isCurrentToday=selected===todayStr();
+    let streak=0,scheduledSeen=0;
+    for(let i=0;i<730;i++){
+      const key=fmtDate(cursor);
+      if(habitScheduledOn(item,key)){
+        scheduledSeen++;
+        if(habitCompletedOn(item,key)) streak++;
+        else if(!(isCurrentToday&&key===selected)){ break; }
+      }
+      cursor.setDate(cursor.getDate()-1);
+    }
+    return streak;
+  }
+  function habitDaysText(item){
+    const days=Array.isArray(item.scheduleDays)?item.scheduleDays.map(Number).filter(n=>n>=0&&n<=6):[];
+    if(!days.length||days.length===7) return "يوميًا";
+    return days.map(day=>HABIT_DAY_NAMES[day]).join("، ");
+  }
+  function habitRowMeta(item){
+    if(!item||!item.custom) return null;
+    const progress=habitPeriodProgress(item,currentDate), streak=habitStreak(item,currentDate), chip=document.createElement("span");
+    chip.className="habit-progress-chip";
+    chip.textContent=(streak?"🔥 "+streak.toLocaleString("ar-EG"):"بداية جديدة")+(progress?" · "+progress.done.toLocaleString("ar-EG")+"/"+progress.target.toLocaleString("ar-EG"):"");
+    chip.title="السلسلة الحالية"+(progress?" · تقدم الهدف "+(progress.period==="weekly"?"الأسبوعي":"الشهري"):"");
+    return chip;
   }
   /* حذف بند: مخصّص يُزال نهائيًا، أصلي في مجموعة الأوراد يُخفى فقط (قابل لإرجاعه مستقبلًا لو احتجنا) */
   function ibRemoveItem(w){
@@ -3576,7 +3761,9 @@
       const cache=_fromCache(snap), local=wgLoad(); let changed=false, reconcile=Promise.resolve({ok:true});
       if(!snap.exists){ if(!cache&&local.updatedAt) reconcile=wgPushRemote(local); }
       else{
-        const remote=wgNormalize(snap.data()), merged=wgMerge(local,remote);
+        const remote=wgNormalize(snap.data());
+        if(!cache) dataDetectConflict("weeklyGoals","goals",local,remote,"دمج كل هدف حسب آخر تحديث");
+        const merged=wgMerge(local,remote);
         changed=JSON.stringify(local.items)!==JSON.stringify(merged.items);
         const remoteNeedsUpdate=JSON.stringify(remote.items)!==JSON.stringify(merged.items);
         if(changed){
@@ -3863,6 +4050,7 @@
       if(date === currentDate){
         if(snap.exists){
           const remote = snap.data();
+          if(!cache) dataDetectConflict("daily",date,state,remote,"اعتماد نسخة اليوم الأحدث مع حفظ نسخة أمان");
           if((remote.updatedAt||0) > (state.updatedAt||0)){
             state = Object.assign(blankState(), remote);
             localStorage.setItem(storageKey(date), JSON.stringify(state));
@@ -3924,6 +4112,7 @@
       if(snap.exists){
         const remote = snap.data();
         const local = qLoad();
+        if(!cache) dataDetectConflict("quran","progress",local,remote,"اعتماد تقدم القرآن الأحدث مع حفظ نسخة أمان");
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           const merged = Object.assign({}, remote);
           if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
@@ -4587,6 +4776,7 @@
       if(snap.exists){
         const remote = snap.data();
         const local = witrMeta();
+        if(!cache) dataDetectConflict("witr","meta",local,remote,"اعتماد سجل الوتر الأحدث مع حفظ نسخة أمان");
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           localStorage.setItem(WITR_META_KEY, JSON.stringify(remote));
           /* حدّث واجهة الوتر المفتوحة عند تغيّر بيانات الخادم (كانت تُكتب دون إعادة رسم) */
@@ -5751,6 +5941,7 @@
       snap.forEach(d=> remoteSegs.push(d.data()));
       if(remoteSegs.length){
         const data = hifzData();
+        if(!cache) dataDetectCollectionConflicts("hifz","segments",data.segments,remoteSegs,"دمج كل مقطع حفظ حسب آخر تحديث");
         const byId = {};
         data.segments.forEach(s=> byId[s.id] = s);
         remoteSegs.forEach(rs=>{
@@ -7274,7 +7465,8 @@
       ctrl.className = "tally-ctrl";
       ctrl.append(tally, rst);
       if(w.custom || w.group === "awrad") ctrl.appendChild(ibMakeDelBtn(w));
-      li.append(chk, lbl, ctrl);
+      const habitMeta=habitRowMeta(w);
+      li.append(chk, lbl); if(habitMeta) li.appendChild(habitMeta); li.appendChild(ctrl);
       ul.appendChild(li);
       return;
     }
@@ -7348,6 +7540,7 @@
 
     lbl.onclick = chk.onclick;
     li.appendChild(chk); li.appendChild(lbl);
+    const habitMeta=habitRowMeta(w); if(habitMeta) li.appendChild(habitMeta);
     /* عناصر مخصّصة، وكل عناصر الأوراد اليومية لتناسق الشكل: زر حذف صغير */
     if(w.custom || w.group === "awrad") li.appendChild(ibMakeDelBtn(w));
     ul.appendChild(li);
@@ -7372,7 +7565,7 @@
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
       WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd").forEach(w=> ibRenderItem(w, ul));
-      custom.filter(w=>w.group === g && w.kind !== "quran").forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+      custom.filter(w=>w.group === g && w.kind !== "quran" && habitScheduledOn(w,currentDate)).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
     });
 
     renderQuranCard();
@@ -7424,22 +7617,75 @@
     state.sunnahDone = !state.sunnahDone;
     save(); renderWorship();
   };
-  document.querySelectorAll(".ib-add[data-group]").forEach(btn=>{
-    btn.onclick = ()=>{
-      const group = btn.dataset.group;
-      const gname = group === "adhkar" ? "الأذكار" : group === "salah" ? "الصلاة والنوافل" : "الأوراد اليومية";
-      const label = prompt("أضف بندًا جديدًا إلى «"+gname+"»:");
-      if(!label || !label.trim()) return;
-      const countStr = prompt("كم عدد مرات التكرار؟ (اتركها فارغة لعلامة صح واحدة، أو اكتب رقمًا مثل ١٠٠ لعدّاد)", "");
-      const target = parseInt((countStr||"").trim(), 10);
-      const item = {id:"custom_"+Date.now(), label:label.trim(), group:group};
-      if(target && target > 1) item.target = target;
-      const list = wCustom();
-      list.push(item);
-      wCustomSave(list);
-      renderWorship(); renderProgress();
-    };
-  });
+  let habitEditingId=null;
+  const habitOverlay=document.getElementById("habitOverlay");
+  function habitGroupLabel(group){ return group==="adhkar"?"أذكار":group==="salah"?"الصلاة والنوافل":group==="awrad"?"الأوراد اليومية":"عادات مخصصة"; }
+  function habitRenderManager(){
+    const host=document.getElementById("habitManageList"), habits=wCustom().filter(item=>item.kind!=="quran"); host.innerHTML="";
+    if(!habits.length){ const empty=document.createElement("div"); empty.className="habit-empty"; empty.textContent="لا توجد عادات مخصصة بعد. ابدأ بعادة صغيرة يسهل الاستمرار عليها."; host.appendChild(empty); return; }
+    habits.forEach(item=>{
+      const row=document.createElement("div"); row.className="habit-manage-row";
+      const copy=document.createElement("div"); copy.className="habit-manage-copy";
+      const title=document.createElement("b"); title.textContent=item.label;
+      const progress=habitPeriodProgress(item,currentDate), streak=habitStreak(item,currentDate);
+      const detail=document.createElement("small"); detail.textContent=[habitGroupLabel(item.group),habitDaysText(item),item.target>1?(+item.target).toLocaleString("ar-EG")+" مرات يوميًا":"مرة يوميًا",progress?(progress.done.toLocaleString("ar-EG")+"/"+progress.target.toLocaleString("ar-EG")+" "+(progress.period==="weekly"?"هذا الأسبوع":"هذا الشهر")):"",streak?"🔥 سلسلة "+streak.toLocaleString("ar-EG"):""].filter(Boolean).join(" · ");
+      copy.append(title,detail);
+      const actions=document.createElement("div"); actions.className="habit-manage-actions";
+      const edit=document.createElement("button"); edit.type="button"; edit.textContent="✏️"; edit.setAttribute("aria-label","تعديل "+item.label); edit.onclick=()=>habitOpenEditor(item.id);
+      const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="🗑️"; del.setAttribute("aria-label","حذف "+item.label); del.onclick=()=>habitDelete(item.id);
+      actions.append(edit,del); row.append(copy,actions); host.appendChild(row);
+    });
+  }
+  function habitShowList(){
+    habitEditingId=null; document.getElementById("habitEditView").hidden=true; document.getElementById("habitListView").hidden=false; document.getElementById("habitTitle").textContent="🌱 إدارة العادات"; habitRenderManager();
+  }
+  function habitOpen(){
+    habitShowList(); habitOverlay.hidden=false; document.body.style.overflow="hidden"; document.getElementById("habitClose").focus();
+  }
+  function habitClose(){
+    habitOverlay.hidden=true; document.body.style.overflow=""; document.getElementById("habitManageBtn").focus();
+  }
+  function habitOpenEditor(id,preferredGroup){
+    const item=id?wCustom().find(entry=>entry.id===id):null; habitEditingId=item?item.id:null;
+    document.getElementById("habitListView").hidden=true; document.getElementById("habitEditView").hidden=false; document.getElementById("habitTitle").textContent=item?"✏️ تعديل العادة":"＋ عادة جديدة";
+    document.getElementById("habitName").value=item?item.label:"";
+    document.getElementById("habitGroup").value=(item&&item.group)||preferredGroup||"habit";
+    document.getElementById("habitDailyTarget").value=item&&item.target>1?item.target:1;
+    const selected=item&&Array.isArray(item.scheduleDays)&&item.scheduleDays.length?item.scheduleDays.map(Number):[0,1,2,3,4,5,6];
+    document.querySelectorAll("#habitDays input").forEach(input=>{ input.checked=selected.includes(+input.value); });
+    document.getElementById("habitGoalPeriod").value=(item&&item.goalPeriod)||"none";
+    document.getElementById("habitGoalTarget").value=(item&&item.goalTarget)||3;
+    document.getElementById("habitGoalTarget").disabled=document.getElementById("habitGoalPeriod").value==="none";
+    document.getElementById("habitEditError").textContent="";
+    setTimeout(()=>document.getElementById("habitName").focus(),20);
+  }
+  function habitSaveEditor(){
+    const name=document.getElementById("habitName").value.trim(), group=document.getElementById("habitGroup").value;
+    const dailyTarget=Math.max(1,Math.min(9999,parseInt(document.getElementById("habitDailyTarget").value,10)||1));
+    const scheduleDays=[...document.querySelectorAll("#habitDays input:checked")].map(input=>+input.value).sort((a,b)=>a-b);
+    const goalPeriod=document.getElementById("habitGoalPeriod").value, goalTarget=Math.max(1,Math.min(99,parseInt(document.getElementById("habitGoalTarget").value,10)||1));
+    const error=document.getElementById("habitEditError");
+    if(!name){ error.textContent="اكتب اسم العادة."; document.getElementById("habitName").focus(); return; }
+    if(!scheduleDays.length){ error.textContent="اختر يومًا واحدًا على الأقل."; return; }
+    const list=wCustom(), index=habitEditingId?list.findIndex(item=>item.id===habitEditingId):-1, previous=index>=0?list[index]:null;
+    const item=Object.assign({},previous||{id:"custom_"+Date.now()},{label:name,group,kind:"habit",scheduleDays});
+    if(dailyTarget>1) item.target=dailyTarget; else delete item.target;
+    if(goalPeriod==="weekly"||goalPeriod==="monthly"){ item.goalPeriod=goalPeriod; item.goalTarget=goalTarget; }else{ delete item.goalPeriod; delete item.goalTarget; }
+    if(index>=0) list[index]=item; else list.push(item);
+    wCustomSave(list); renderWorship(); renderProgress(); habitShowList();
+  }
+  function habitDelete(id){
+    const item=wCustom().find(entry=>entry.id===id); if(!item||!confirm("حذف عادة «"+item.label+"»؟ تبقى بيانات الأيام السابقة محفوظة.")) return;
+    wCustomSave(wCustom().filter(entry=>entry.id!==id)); renderWorship(); renderProgress(); habitRenderManager();
+  }
+  function habitInit(){
+    document.getElementById("habitManageBtn").onclick=habitOpen; document.getElementById("habitClose").onclick=habitClose; document.getElementById("habitAddBtn").onclick=()=>habitOpenEditor(null,"habit");
+    document.getElementById("habitEditCancel").onclick=habitShowList; document.getElementById("habitEditSave").onclick=habitSaveEditor;
+    document.getElementById("habitGoalPeriod").onchange=e=>{ document.getElementById("habitGoalTarget").disabled=e.target.value==="none"; };
+    document.querySelectorAll(".ib-add[data-group]").forEach(btn=>{ btn.onclick=()=>{ if(habitOverlay.hidden) habitOpen(); habitOpenEditor(null,btn.dataset.group); }; });
+    habitOverlay.onclick=e=>{ if(e.target===habitOverlay) habitClose(); };
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!habitOverlay.hidden){ if(!document.getElementById("habitEditView").hidden) habitShowList(); else habitClose(); } });
+  }
 
   /* زر تقويم العبادات يشارك نفس حالة زر الإحصائيات في الترويسة، مع تسمية توضح الفتح/الإغلاق */
   function ibSyncCalBtn(){
@@ -8321,12 +8567,12 @@
   }
 
   /* ---------- الإحصائيات وشبكة السنة ---------- */
-  function dayPct(s){
+  function dayPct(s,dateStr){
     let total = 0, done = 0;
     const pr = s.prayers || [];
     total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
     const wsh = s.worship || {};
-    const ibAll = wAllItems();
+    const ibAll = wAllItemsForDate(dateStr||currentDate);
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= waterGoal()) done += 1;
     total += 1; if(sportDone(s)) done += 1;
@@ -8427,7 +8673,7 @@
     for(let i=0;i<first.getDay();i++){ const blank=document.createElement("span"); blank.className="calendar-day outside"; blank.setAttribute("aria-hidden","true"); grid.appendChild(blank); }
     let recorded=0, high=0, focus=0;
     for(let day=1;day<=total;day++){
-      const date=new Date(y,m,day,12), key=fmtDate(date), saved=days[key], pct=saved?dayPct(saved):0, tasks=taskCounts[key]||0;
+      const date=new Date(y,m,day,12), key=fmtDate(date), saved=days[key], pct=saved?dayPct(saved,key):0, tasks=taskCounts[key]||0;
       if(saved){ recorded++; if(pct>=80)high++; if(pct<40)focus++; }
       const btn=document.createElement("button"); btn.type="button"; btn.className="calendar-day";
       if(saved) btn.classList.add(pct>=80?"done":pct>=40?"partial":"low");
@@ -8683,7 +8929,7 @@
     const rows=[];
     for(let i=0;i<count;i++){
       const d=new Date(start); d.setDate(d.getDate()+i);
-      const key=fmtDate(d); rows.push({key,date:d,state:days[key]||null,pct:days[key]?dayPct(days[key]):0});
+      const key=fmtDate(d); rows.push({key,date:d,state:days[key]||null,pct:days[key]?dayPct(days[key],key):0});
     }
     return rows;
   }
@@ -8696,7 +8942,6 @@
     let prayerDone=0, prayerTotal=n*FARD_IDX.length;
     let taskDone=0, taskTotal=0, worshipDone=0, worshipTotal=0;
     let sportActive=0, sportGoalDays=0, sportMinutes=0, waterDays=0, quranDays=0;
-    const ibItems=ibOnlyItems();
     observed.forEach(r=>{
       const s=r.state||{}, prayers=s.prayers||[];
       FARD_IDX.forEach(i=>{ if(isPrayed(prayerVal(prayers,i))) prayerDone++; });
@@ -8704,7 +8949,7 @@
       const priorities=(s.priorities||[]).filter(p=>p&&(p.sourceTaskId||(p.text&&p.text.trim())));
       taskTotal+=tasks.length+priorities.length;
       taskDone+=tasks.filter(t=>t.done).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
-      worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
+      const ibItems=ibOnlyItems(r.key); worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
       const mins=statsSportMinutes(s); sportMinutes+=mins; if(mins>0)sportActive++; if(sportDone(s))sportGoalDays++;
       if((s.water||0)>=waterGoal()) waterDays++;
       if(s.worship&&s.worship.werd) quranDays++;
@@ -8837,7 +9082,7 @@
       const dt = new Date(d+"T12:00:00");
       const ws = new Date(dt); ws.setDate(ws.getDate() - ws.getDay());
       const wk = fmtDate(ws);
-      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d]));
+      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d],d));
     }
     let bestWk = null, bestAvg = 0;
     for(const wk in weeks){
@@ -8885,7 +9130,7 @@
       const cell = document.createElement("span");
       cell.className = "hm-cell";
       if(days[key]){
-        const pct = dayPct(days[key]);
+        const pct = dayPct(days[key],key);
         const lvl = pct === 0 ? 0 : pct <= 25 ? 1 : pct <= 50 ? 2 : pct <= 75 ? 3 : 4;
         if(lvl) cell.classList.add("p"+lvl);
         cell.title = key+" — "+arn(pct)+"٪";
@@ -9086,50 +9331,174 @@
 
   /* ---------- Backup export/import ---------- */
   const PREFIX = storageKey("");
-
-  document.getElementById("exportBtn").onclick = ()=>{
-    const data = {};
+  const DATA_BACKUP_KEY="h2do-backup-library-v1";
+  const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
+  const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
+  const DATA_VERSION=1;
+  function dataOwnedKey(key){ return !!key&&key.startsWith("h2do-"); }
+  function dataLoadJson(key,fallback){ try{ return JSON.parse(localStorage.getItem(key)||"")||fallback; }catch(e){ return fallback; } }
+  function dataSnapshotStats(snapshot){
+    const entries=(snapshot&&snapshot.entries)||{}, days=Object.keys(entries).filter(key=>key.startsWith(PREFIX)).length;
+    let expenses=0; try{ expenses=(JSON.parse(entries["h2do-expenses"]||"{}").transactions||[]).filter(row=>!row.deletedAt).length; }catch(e){}
+    return {days,expenses,size:new Blob([JSON.stringify(snapshot||{})]).size};
+  }
+  function dataBuildSnapshot(reason){
+    const entries={};
     for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.startsWith(PREFIX)){
-        try{ data[k.slice(PREFIX.length)] = JSON.parse(localStorage.getItem(k)); }catch(e){}
-      }
+      const key=localStorage.key(i);
+      if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) entries[key]=localStorage.getItem(key);
     }
-    const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "daily-tracker-backup-"+todayStr()+".json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
+    return {schema:DATA_VERSION,appVersion:107,createdAt:Date.now(),reason:reason||"يدوية",entries};
+  }
+  function dataLoadBackups(){
+    const list=dataLoadJson(DATA_BACKUP_KEY,[]);
+    return Array.isArray(list)?list.filter(item=>item&&item.id&&item.snapshot&&item.snapshot.entries):[];
+  }
+  function dataStoreBackups(list){
+    let next=(list||[]).slice(0,5);
+    while(next.length){
+      try{ localStorage.setItem(DATA_BACKUP_KEY,JSON.stringify(next)); return true; }
+      catch(e){ if(next.length===1) return false; next.pop(); }
+    }
+    try{ localStorage.setItem(DATA_BACKUP_KEY,"[]"); return true; }catch(e){ return false; }
+  }
+  function dataSaveBackup(reason,silent){
+    const list=dataLoadBackups(), now=Date.now();
+    if(silent&&list[0]&&list[0].reason===reason&&now-list[0].createdAt<10*60000) return list[0];
+    const snapshot=dataBuildSnapshot(reason), stats=dataSnapshotStats(snapshot);
+    const record={id:"bak_"+now.toString(36)+"_"+Math.random().toString(36).slice(2,6),createdAt:now,reason:reason||"نسخة يدوية",stats,snapshot};
+    list.unshift(record);
+    if(!dataStoreBackups(list)){ if(!silent) alert("تعذّر حفظ نسخة محلية بسبب امتلاء مساحة المتصفح. نزّل نسخة JSON ثم احذف نسخة قديمة."); return null; }
+    if(typeof dataRenderCenter==="function") dataRenderCenter();
+    if(!silent) alert("تم إنشاء نسخة احتياطية محلية بنجاح.");
+    return record;
+  }
+  function dataNormalizeImported(raw,name){
+    if(raw&&raw.schema&&raw.entries&&typeof raw.entries==="object"){
+      const entries={}; Object.keys(raw.entries).forEach(key=>{ const value=raw.entries[key]; entries[key]=typeof value==="string"?value:JSON.stringify(value); });
+      return {schema:DATA_VERSION,appVersion:+raw.appVersion||0,createdAt:+raw.createdAt||Date.now(),reason:"مستوردة: "+(name||"ملف"),entries};
+    }
+    if(raw&&typeof raw==="object"&&!Array.isArray(raw)){
+      const entries={}; let valid=0;
+      Object.keys(raw).forEach(date=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&raw[date]&&typeof raw[date]==="object"){ entries[storageKey(date)]=JSON.stringify(raw[date]); valid++; } });
+      if(valid) return {schema:DATA_VERSION,appVersion:0,createdAt:Date.now(),reason:"نسخة يومية قديمة: "+(name||"ملف"),entries};
+    }
+    throw new Error("invalid backup");
+  }
+  function dataAddBackupSnapshot(snapshot){
+    const list=dataLoadBackups(), createdAt=Date.now(), stats=dataSnapshotStats(snapshot);
+    const record={id:"bak_"+createdAt.toString(36)+"_"+Math.random().toString(36).slice(2,6),createdAt,reason:snapshot.reason||"نسخة مستوردة",stats,snapshot};
+    list.unshift(record); if(!dataStoreBackups(list)) throw new Error("quota"); dataRenderCenter(); return record;
+  }
+  function dataDownload(content,type,filename){
+    const blob=new Blob([content],{type}), link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=filename; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),500);
+  }
+  function dataExportJson(snapshot){
+    const value=snapshot||dataBuildSnapshot("تصدير JSON");
+    dataDownload(JSON.stringify(value,null,2),"application/json;charset=utf-8","daily-tracker-backup-"+todayStr()+".json");
+  }
+  function dataApplySnapshot(snapshot){
+    const entries=(snapshot&&snapshot.entries)||{}, remove=[];
+    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!Object.prototype.hasOwnProperty.call(entries,key)) remove.push(key); }
+    remove.forEach(key=>localStorage.removeItem(key));
+    Object.keys(entries).forEach(key=>{ if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) localStorage.setItem(key,String(entries[key])); });
+  }
+  function dataRestoreBackup(id){
+    const record=dataLoadBackups().find(item=>item.id===id); if(!record) return;
+    if(!confirm("استعادة «"+record.reason+"»؟ ستُستبدل بيانات التطبيق الحالية، وستُنشأ نسخة أمان منها أولًا.")) return;
+    const safety=dataSaveBackup("قبل استعادة "+record.reason,true);
+    if(!safety){ alert("تعذّر إنشاء نسخة الأمان، لذلك أُلغيت الاستعادة حفاظًا على بياناتك."); return; }
+    try{ dataApplySnapshot(record.snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
+  }
+  function dataDeleteBackup(id){
+    const record=dataLoadBackups().find(item=>item.id===id); if(!record||!confirm("حذف النسخة «"+record.reason+"» من هذا الجهاز؟")) return;
+    dataStoreBackups(dataLoadBackups().filter(item=>item.id!==id)); dataRenderCenter();
+  }
+  function dataXml(value){ return String(value==null?"":value).replace(/[<>&'"]/g,char=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[char])); }
+  function dataExcelCell(value,type){ return '<Cell><Data ss:Type="'+(type||"String")+'">'+dataXml(value)+'</Data></Cell>'; }
+  function dataExportExcel(){
+    const days=allDays(), dailyRows=[["التاريخ","الصلوات المكتملة","المهام المكتملة","إجمالي المهام","الماء","دقائق الرياضة","الملاحظات","الذكريات"]];
+    Object.keys(days).sort().forEach(date=>{ const day=days[date]||{}, tasks=(day.tasks||[]).filter(itemFilled); dailyRows.push([date,(day.prayers||[]).filter(isPrayed).length,tasks.filter(item=>item.done).length,tasks.length,day.water||0,(day.sport&&day.sport.mins)||0,day.notes||"",day.memory||""]); });
+    const expenseRows=[["التاريخ","الفئة","النوع","المبلغ ر.س","التفصيل","الملاحظة"]];
+    expActiveTx().sort((a,b)=>(a.transactionDate||"").localeCompare(b.transactionDate||"")).forEach(tx=>expenseRows.push([tx.transactionDate||"",(expCatById(tx.categoryId)||{}).name||"غير مصنف",tx.transactionType||"expense",(expToMinor(tx.amountMinor)/100),tx.subcategory||"",tx.description||""]));
+    const sheet=(name,rows)=>'<Worksheet ss:Name="'+dataXml(name)+'"><Table>'+rows.map((row,rowIndex)=>'<Row>'+row.map((cell,index)=>dataExcelCell(cell,rowIndex>0&&[1,2,3,4,5].includes(index)&&typeof cell==="number"?"Number":"String")).join("")+'</Row>').join("")+'</Table></Worksheet>';
+    const xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+sheet("اليوميات",dailyRows)+sheet("المصاريف",expenseRows)+'</Workbook>';
+    dataDownload("\ufeff"+xml,"application/vnd.ms-excel;charset=utf-8","daily-tracker-"+todayStr()+".xls");
+  }
+  function dataEsc(value){ return String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char])); }
+  function dataExportPdf(){
+    const days=allDays(), dates=Object.keys(days).sort().reverse(), tx=expActiveTx(), tasks=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(itemFilled).length,0), done=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(item=>itemFilled(item)&&item.done).length,0);
+    const dayRows=dates.slice(0,60).map(date=>{ const day=days[date]||{}, list=(day.tasks||[]).filter(itemFilled); return "<tr><td>"+dataEsc(date)+"</td><td>"+list.filter(item=>item.done).length+" / "+list.length+"</td><td>"+(day.prayers||[]).filter(isPrayed).length+" / "+PRAYERS.length+"</td><td>"+dataEsc(day.notes||"")+"</td></tr>"; }).join("");
+    const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير مفكرتي اليومية</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#173d38;line-height:1.6}h1{font-size:22px}h2{font-size:16px;margin-top:24px}.meta{color:#667}.cards{display:flex;gap:8px}.card{border:1px solid #ccd9d6;border-radius:8px;padding:10px;flex:1}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d9e2e0;padding:5px;text-align:right;vertical-align:top}th{background:#edf6f4}</style></head><body><h1>مفكرتي اليومية — تقرير البيانات</h1><p class="meta">تاريخ الإنشاء: '+dataEsc(new Date().toLocaleString("ar-SA"))+'</p><div class="cards"><div class="card">الأيام المحفوظة<br><b>'+dates.length+'</b></div><div class="card">المهام المكتملة<br><b>'+done+" / "+tasks+'</b></div><div class="card">المعاملات المالية<br><b>'+tx.length+'</b></div></div><h2>آخر الأيام</h2><table><thead><tr><th>التاريخ</th><th>المهام</th><th>الصلوات</th><th>الملاحظات</th></tr></thead><tbody>'+dayRows+'</tbody></table></body></html>';
+    const printWindow=window.open("","_blank"); if(!printWindow){ alert("اسمح بالنوافذ المنبثقة لإعداد ملف PDF."); return; }
+    printWindow.document.open(); printWindow.document.write(html); printWindow.document.close(); setTimeout(()=>{ printWindow.focus(); printWindow.print(); },300);
+  }
+  function dataBaselineLoad(){ const value=dataLoadJson(DATA_BASELINE_KEY,{}); return value&&typeof value==="object"?value:{}; }
+  function dataBaselineId(module,key){ return module+"|"+(key||"all"); }
+  function dataChangedFields(local,remote){
+    const labels={prayers:"الصلاة",worship:"العبادات والعادات",water:"الماء",tasks:"المهام",priorities:"الأولويات",notes:"الملاحظات",memory:"الذكريات",sport:"الرياضة",rating:"التقييم",page:"صفحة القرآن",items:"العناصر",favorites:"المفضلة",history:"السجل"};
+    return [...new Set(Object.keys(Object.assign({},local||{},remote||{})).filter(key=>key!=="updatedAt"&&JSON.stringify(local&&local[key])!==JSON.stringify(remote&&remote[key])).map(key=>labels[key]||key))].slice(0,8);
+  }
+  function dataConflictLoad(){ const list=dataLoadJson(DATA_CONFLICT_KEY,[]); return Array.isArray(list)?list:[]; }
+  function dataRecordConflict(module,key,localTs,remoteTs,fields,resolution){
+    const list=dataConflictLoad(), signature=[module,key,localTs,remoteTs,(fields||[]).join(",")].join("|");
+    if(list.some(item=>item.signature===signature)) return;
+    dataSaveBackup("قبل دمج تعارض",true);
+    list.unshift({id:"conf_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,5),signature,module,key:key||"",createdAt:Date.now(),localUpdatedAt:localTs,remoteUpdatedAt:remoteTs,fields:fields||[],resolution:resolution||"اعتماد الأحدث",reviewed:false});
+    localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.slice(0,50)));
+    if(typeof dataRenderCenter==="function"&&!document.getElementById("dataOverlay").hidden) dataRenderCenter();
+  }
+  function dataDetectConflict(module,key,local,remote,resolution){
+    const localTs=+(local&&local.updatedAt)||0, remoteTs=+(remote&&remote.updatedAt)||0, baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id];
+    if(baseline!==undefined&&localTs>baseline&&remoteTs>baseline&&JSON.stringify(local)!==JSON.stringify(remote)){
+      dataRecordConflict(module,key,localTs,remoteTs,dataChangedFields(local,remote),resolution||((remoteTs>localTs)?"اعتماد نسخة السحابة الأحدث":"اعتماد نسخة الجهاز الأحدث"));
+    }
+    baselines[id]=Math.max(+baseline||0,localTs,remoteTs); localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
+  }
+  function dataDetectCollectionConflicts(module,key,localRows,remoteRows,resolution){
+    const baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id], localMap=new Map((localRows||[]).filter(Boolean).map(row=>[String(row.id||""),row])), conflicts=[], times=[];
+    const maxUpdatedAt=rows=>Math.max(0,...(rows||[]).map(row=>(+(row&&row.updatedAt)||0)));
+    (localRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0)); (remoteRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0));
+    (remoteRows||[]).forEach(remote=>{ const local=localMap.get(String(remote&&remote.id||"")); if(local&&baseline!==undefined&&(local.updatedAt||0)>baseline&&(remote.updatedAt||0)>baseline&&JSON.stringify(local)!==JSON.stringify(remote)) conflicts.push(String(remote.id||"سجل")); });
+    const next=Math.max(+baseline||0,...times,0);
+    if(conflicts.length) dataRecordConflict(module,key,maxUpdatedAt(localRows),maxUpdatedAt(remoteRows),["سجلات: "+conflicts.slice(0,6).join("، ")],resolution||"دمج كل سجل حسب آخر تحديث");
+    baselines[id]=next; localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
+  }
+  function dataReviewConflict(id){ const list=dataConflictLoad(), item=list.find(entry=>entry.id===id); if(item){ item.reviewed=true; localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list)); dataRenderCenter(); } }
+  function dataClearReviewed(){ const list=dataConflictLoad(), reviewed=list.filter(item=>item.reviewed).length; if(!reviewed){ alert("لا توجد تعارضات مراجَعة لمسحها."); return; } localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.filter(item=>!item.reviewed))); dataRenderCenter(); }
+  const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية"};
+  function dataFormatBytes(bytes){ if(bytes<1024) return bytes+" ب"; if(bytes<1048576) return (bytes/1024).toFixed(1)+" ك.ب"; return (bytes/1048576).toFixed(1)+" م.ب"; }
+  function dataRenderCenter(){
+    const backups=dataLoadBackups(), conflicts=dataConflictLoad(), unresolved=conflicts.filter(item=>!item.reviewed), days=Object.keys(allDays()).length;
+    document.getElementById("dataDaysCount").textContent=days.toLocaleString("ar-EG"); document.getElementById("dataBackupsCount").textContent=backups.length.toLocaleString("ar-EG"); document.getElementById("dataConflictsCount").textContent=unresolved.length.toLocaleString("ar-EG");
+    const backupHost=document.getElementById("dataBackupList"); backupHost.innerHTML="";
+    if(!backups.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد نسخ محلية بعد. أنشئ أول نسخة قبل أي تغيير كبير."; backupHost.appendChild(empty); }
+    backups.forEach(record=>{ const row=document.createElement("div"); row.className="data-row"; const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=record.reason; const small=document.createElement("small"); const stats=record.stats||dataSnapshotStats(record.snapshot); small.textContent=new Date(record.createdAt).toLocaleString("ar-SA")+" · "+stats.days.toLocaleString("ar-EG")+" يوم · "+stats.expenses.toLocaleString("ar-EG")+" معاملة · "+dataFormatBytes(stats.size||0); copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions";
+      const restore=document.createElement("button"); restore.type="button"; restore.className="restore"; restore.textContent="استعادة"; restore.onclick=()=>dataRestoreBackup(record.id);
+      const download=document.createElement("button"); download.type="button"; download.textContent="تنزيل"; download.onclick=()=>dataExportJson(record.snapshot);
+      const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="حذف"; del.onclick=()=>dataDeleteBackup(record.id); actions.append(restore,download,del); row.append(copy,actions); backupHost.appendChild(row); });
+    const conflictHost=document.getElementById("dataConflictList"); conflictHost.innerHTML="";
+    if(!conflicts.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد تعارضات مسجّلة. عند تعديل البيانات نفسها على جهازين دون مزامنة، سيظهر التنبيه هنا قبل الدمج."; conflictHost.appendChild(empty); }
+    conflicts.forEach(item=>{ const row=document.createElement("div"); row.className="data-row data-conflict-row"+(item.reviewed?" reviewed":""); const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=(DATA_MODULE_LABELS[item.module]||item.module)+(item.key?" — "+item.key:""); if(!item.reviewed){ const badge=document.createElement("span"); badge.className="data-conflict-badge"; badge.textContent="يحتاج مراجعة"; title.appendChild(badge); } const small=document.createElement("small"); small.textContent=new Date(item.createdAt).toLocaleString("ar-SA")+" · "+(item.fields||[]).join("، ")+" · "+item.resolution; copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions"; if(!item.reviewed){ const review=document.createElement("button"); review.type="button"; review.className="restore"; review.textContent="تمت المراجعة"; review.onclick=()=>dataReviewConflict(item.id); actions.appendChild(review); } row.append(copy,actions); conflictHost.appendChild(row); });
+  }
+  function dataOpen(){ dataRenderCenter(); document.getElementById("dataOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("dataClose").focus(); }
+  function dataClose(){ document.getElementById("dataOverlay").hidden=true; document.body.style.overflow=""; document.getElementById("dataManageBtn").focus(); }
   const importFile = document.getElementById("importFile");
-  document.getElementById("importBtn").onclick = ()=> importFile.click();
-  importFile.onchange = ()=>{
+  function dataImportSelected(){
     const f = importFile.files[0];
     if(!f) return;
     f.text().then(txt=>{
-      const data = JSON.parse(txt);
-      let n = 0;
-      for(const date in data){
-        const incoming = data[date];
-        if(!incoming || typeof incoming !== "object") continue;
-        let write = true;
-        const existingRaw = localStorage.getItem(storageKey(date));
-        if(existingRaw){
-          try{
-            const existing = JSON.parse(existingRaw);
-            if((existing.updatedAt||0) >= (incoming.updatedAt||0)) write = false;
-          }catch(e){}
-        }
-        if(write){ localStorage.setItem(storageKey(date), JSON.stringify(incoming)); n++; }
-      }
-      alert("تم استيراد بيانات "+n+" يوم (الأيام الأحدث على هذا الجهاز لم تُستبدل)");
-      load(currentDate);
-      renderAll();
-    }).catch(()=> alert("الملف غير صالح — اختر ملف نسخة احتياطية صحيحًا"));
+      const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
+    }).catch(()=> alert("الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
     importFile.value = "";
-  };
+  }
+  function dataInit(){
+    const overlay=document.getElementById("dataOverlay");
+    document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackup("نسخة يدوية",false);
+    document.getElementById("exportBtn").onclick=()=>dataExportJson(); document.getElementById("importBtn").onclick=()=>importFile.click(); importFile.onchange=dataImportSelected;
+    document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataClearReviewed").onclick=dataClearReviewed;
+    overlay.onclick=event=>{ if(event.target===overlay) dataClose(); }; document.addEventListener("keydown",event=>{ if(event.key==="Escape"&&!overlay.hidden) dataClose(); });
+  }
 
   document.getElementById("resetDay").onclick = ()=>{
     if(confirm("هل تريد مسح جميع بيانات هذا اليوم؟")){
@@ -9926,6 +10295,10 @@
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
         safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
         return finish(snap, true);
+      }
+      if(!cache){
+        dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
+        ["categories","fixedTemplates","transactions","trips"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -11417,7 +11790,7 @@
   const CARD_PREF_KEY = "h2do-card-layout-v1";
   const CARD_DEFS = [
     {id:"prayerCard",icon:"🕌",label:"الصلاة"},
-    {id:"ibadahCard",icon:"📿",label:"العبادات"},
+    {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
     {id:"quranCard",icon:"📖",label:"القرآن"},
     {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
@@ -11605,6 +11978,8 @@
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);
   safeRun("globalSearchInit", globalSearchInit);
+  safeRun("habitInit", habitInit);
+  safeRun("dataInit", dataInit);
   safeRun("goto:init", ()=> goto(initialDay));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
