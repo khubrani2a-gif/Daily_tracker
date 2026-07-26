@@ -107,9 +107,11 @@ test("today overview and responsive quick navigation remain wired",()=>{
 });
 
 test("separate dhikr counter supports presets, custom wording, and a daily target",()=>{
-  ["dhikrCounterSettings","dhikrCounterText","dhikrCounterProgress","dhikrCounterFill","dhikrCountBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["dhikrCounterSettings","dhikrCounterText","dhikrCounterProgress","dhikrCounterFill","dhikrCountBtn","dhikrManageBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   assert.match(html,/function dhikrCounterState\(/);
   assert.match(html,/function openDhikrCounterSettings\(/);
+  assert.match(html,/function openDhikrManager\(/);
+  assert.match(html,/function dhikrAddPermanent\(/);
   assert.match(html,/DHIKR_COUNTER_PRESETS/);
 });
 
