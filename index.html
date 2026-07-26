@@ -3257,7 +3257,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١١٠</div>
+    <div class="app-version">النسخة ١١١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -8440,7 +8440,7 @@
     addFrom(1,"daily"); addFrom(7,"weekly");
     let changed=false;
     candidates.forEach(src=>{ if(taskStatus(src)==="cancelled") return; const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,repeat:src.repeat,category:src.category||"",link:src.link||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
-    if(changed) localStorage.setItem(storageKey(dateStr),JSON.stringify(state));
+    if(changed){ localStorage.setItem(storageKey(dateStr),JSON.stringify(state)); invalidateAllDaysCache(); }
   }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
@@ -13477,7 +13477,7 @@
   safeRun("habitInit", habitInit);
   safeRun("dataInit", dataInit);
   safeRun("goto:init", ()=> goto(initialDay));
-  safeRun("renderHifzCard:init", renderHifzCard);
+  deferNonCriticalRender("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
   safeRun("rdInit", rdInit);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */

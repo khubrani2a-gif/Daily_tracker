@@ -45,9 +45,18 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v110",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v111",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١١٠/); assert.match(sw,/mufakkirati-v110/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١١١/); assert.match(sw,/mufakkirati-v111/); assert.match(sw,/sync-core\.js/);
+});
+
+test("daily history is cached and below-fold content is deferred at startup",()=>{
+  assert.match(html,/let allDaysCache = null/);
+  assert.match(html,/function invalidateAllDaysCache\(\)/);
+  assert.match(html,/if\(allDaysCache === null\)/);
+  assert.match(html,/const out = Object\.assign\(\{\}, allDaysCache\)/);
+  assert.match(html,/function deferNonCriticalRender\(name, fn\)/);
+  assert.match(html,/deferNonCriticalRender\("renderHifzCard:init", renderHifzCard\)/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
