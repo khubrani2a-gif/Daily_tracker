@@ -1134,8 +1134,6 @@
   .stats-month-col span{font-size:.62rem;color:var(--muted);white-space:nowrap}
   .stats-auto-goal{display:flex;align-items:center;justify-content:space-between;gap:.6rem;background:var(--accent-soft);border-radius:12px;padding:.65rem .7rem;margin-bottom:.65rem;font-size:.73rem;line-height:1.55}
   .stats-auto-goal button{border:0;background:var(--accent);color:#fff;border-radius:9px;padding:.42rem .6rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-  .stats-goal-extra-actions{display:flex;justify-content:flex-end;gap:.45rem;margin-top:.15rem}.stats-goal-extra-actions button{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;padding:.42rem .6rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}.stats-goal-extra-actions button.danger{color:var(--danger)}
-  .stats-auto-goal .stats-suggestion-alt{background:var(--paper);color:var(--accent);border:1px solid var(--accent-2)}
   .stats-kpi-options{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}
   .stats-kpi-option{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line);border-radius:10px;padding:.55rem;font-size:.78rem;color:var(--ink)}
   .stats-kpi-option input{accent-color:var(--accent)}
@@ -3259,7 +3257,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٩</div>
+    <div class="app-version">النسخة ١١٠</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -9399,7 +9397,7 @@
       const tasks=(s.tasks||[]).filter(taskActive);
       const priorities=(s.priorities||[]).filter(p=>p&&(p.sourceTaskId||(p.text&&p.text.trim())));
       taskTotal+=tasks.length+priorities.length;
-      taskDone+=tasks.filter(t=>t.done).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
+      taskDone+=tasks.filter(itemDone).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
       const ibItems=ibOnlyItems(r.key); worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
       const mins=statsSportMinutes(s); sportMinutes+=mins; if(mins>0)sportActive++; if(sportDone(s))sportGoalDays++;
       if((s.water||0)>=waterGoal()) waterDays++;
@@ -9769,6 +9767,7 @@
     ibSyncCalBtn();
   };
   document.querySelectorAll("[data-stats-period]").forEach(btn=>btn.onclick=()=>renderStatsPeriod(btn.dataset.statsPeriod));
+  document.getElementById("statsCustomizeBtn").onclick=statsCustomizeOpen;
   document.getElementById("calendarPrev").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()-1); renderCalendar(); };
   document.getElementById("calendarNext").onclick=()=>{ calendarCursor.setMonth(calendarCursor.getMonth()+1); renderCalendar(); };
   document.getElementById("calendarToday").onclick=()=>{ calendarCursor=new Date(todayStr().slice(0,7)+"-01T12:00:00"); renderCalendar(); };

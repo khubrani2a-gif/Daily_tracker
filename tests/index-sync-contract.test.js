@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v109",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v110",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٩/); assert.match(sw,/mufakkirati-v109/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١١٠/); assert.match(sw,/mufakkirati-v110/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -233,6 +233,15 @@ test("advanced tasks include statuses, subtasks, links, reminders, and weekly vi
   assert.match(html,/task\.reminderMinutes/);
   assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
+});
+
+test("advanced statistics support KPI customization, month comparison, day analysis, and suggested goals",()=>{
+  ["statsCustomizeBtn","statsBestWorst","statsMonthComparePanel","statsMonthCompare","statsAutoGoal","statsAutoGoalText","statsAutoGoalUse"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["statsKpiSelection","statsCustomizeOpen","statsRenderDayAnalysis","statsRenderMonthComparison","statsSuggestedGoal"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/h2do-stats-kpis-v1/);
+  assert.match(html,/for\(let offset=5;offset>=0;offset--\)/);
+  assert.match(html,/اقتراح بناءً على أدائك/);
+  assert.match(html,/document\.getElementById\("statsCustomizeBtn"\)\.onclick=statsCustomizeOpen/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{
