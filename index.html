@@ -221,6 +221,13 @@
   #todayPriorityItems{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .today-priority-chip{max-width:220px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:.3rem .55rem;font-size:.7rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .today-remaining{margin-right:auto;font-size:.7rem;color:var(--accent);font-weight:700}
+  .smart-actions{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.75rem}
+  .smart-actions button,.quick-template-bar button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.44rem .62rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
+  .smart-actions button:hover,.smart-actions button:focus-visible,.quick-template-bar button:hover,.quick-template-bar button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+  .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
+  .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
+  .tomorrow-panel h3{font-size:.86rem;color:var(--accent);margin:0 0 .4rem}.tomorrow-panel p{margin:0;color:var(--muted);font-size:.7rem;line-height:1.7}
+  .tomorrow-items{display:flex;gap:.4rem;flex-wrap:wrap}.tomorrow-item{background:var(--chip-bg);border-radius:9px;padding:.32rem .45rem;font-size:.68rem;color:var(--ink)}
   .quick-nav{
     position:sticky;top:.4rem;z-index:80;display:flex;align-items:center;justify-content:center;gap:.35rem;
     width:max-content;max-width:100%;margin:0 auto 1rem;padding:.35rem;background:color-mix(in srgb,var(--paper) 92%,transparent);
@@ -2105,6 +2112,24 @@
       <button type="button" class="weekly-goal-action" id="weeklyGoalDone" aria-pressed="false">تحديد كمكتمل</button>
       <div class="weekly-goal-steps" id="weeklyGoalSteps" aria-label="خطوات هدف الأسبوع"></div>
     </div>
+    <div class="smart-actions" aria-label="اختصارات سريعة">
+      <button type="button" id="quickTaskBtn">＋ مهمة</button>
+      <button type="button" id="quickExpenseBtn">＋ مصروف</button>
+      <button type="button" id="quickWaterBtn">💧 كوب ماء</button>
+      <button type="button" id="quickTemplatesBtn">✨ قوالب</button>
+      <button type="button" id="shareWeekBtn">↗ مشاركة الأسبوع</button>
+    </div>
+    <div class="quick-template-bar" id="quickTemplateBar" hidden aria-label="قوالب سريعة">
+      <button type="button" data-quick-template="morning">☀️ روتين صباحي</button>
+      <button type="button" data-quick-template="evening">🌙 روتين مسائي</button>
+      <button type="button" data-quick-template="task">✅ مهمة مركّزة</button>
+      <button type="button" data-quick-template="recurring">🔁 مصروف متكرر</button>
+    </div>
+    <section class="tomorrow-panel" aria-labelledby="tomorrowTitle">
+      <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
+      <div class="tomorrow-items" id="tomorrowItems" aria-live="polite"></div>
+      <p id="tomorrowHint"></p>
+    </section>
   </section>
 
   <nav class="quick-nav" aria-label="التنقل الرئيسي">
@@ -8650,6 +8675,50 @@
     document.getElementById("ringText").textContent = pct+"%";
     renderTodayOverview();
     updateStreak();
+    renderTomorrowPanel();
+  }
+
+  /* ---------- أدوات يومية خفيفة: الغد، القوالب، والمشاركة ---------- */
+  function smartTomorrowDate(){ const d=new Date(currentDate+"T12:00:00"); d.setDate(d.getDate()+1); return fmtDate(d); }
+  function smartReadDay(date){ try{return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(date))||"{}"));}catch(e){return blankState();} }
+  function renderTomorrowPanel(){
+    const host=document.getElementById("tomorrowItems"), hint=document.getElementById("tomorrowHint"); if(!host||!hint||!state) return;
+    const tomorrow=smartTomorrowDate(), next=smartReadDay(tomorrow), dateLabel=new Date(tomorrow+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"short"});
+    const items=[];
+    const fajr=getTime("Fajr"); if(fajr) items.push("🕌 فجر الغد "+fmt12(fajr));
+    const scheduled=(next.tasks||[]).filter(taskActive).filter(t=>t.dueTime||t.dueDate===tomorrow).slice(0,2);
+    if(scheduled.length) items.push("✅ "+scheduled.map(t=>t.text).join(" · "));
+    const habits=(typeof wAllItems==="function"?wAllItems():[]).filter(w=>!w.custom||typeof habitScheduledOn!=="function"||habitScheduledOn(w,tomorrow)).slice(0,2).map(w=>w.label);
+    if(habits.length) items.push("🌱 "+habits.join(" · "));
+    try{
+      if(expState&&typeof expWeekRange==="function"){
+        const range=expWeekRange(tomorrow), budget=expWeeklyBudgetTotal(range.start), spent=expVarNetInWeek(range), remain=budget-spent;
+        if(budget>0) items.push("💰 المتبقي "+expMoney(Math.abs(remain))+(remain<0?" تجاوز":""));
+      }
+    }catch(e){}
+    host.innerHTML=""; (items.length?items:["لا توجد التزامات مجدولة بعد — أضف ما تحتاجه من القوالب."]).forEach(text=>{const el=document.createElement("span");el.className="tomorrow-item";el.textContent=text;host.appendChild(el);});
+    hint.textContent="ملخص "+dateLabel+" · يتحدّث تلقائيًا عند تغيير المهام والمصاريف.";
+  }
+  function smartAddTasks(rows){
+    const free=()=>state.tasks.find(t=>!itemFilled(t)); let added=0;
+    rows.forEach(row=>{ const slot=free(); const item={id:newId(),text:row,done:false,status:"pending",dueDate:currentDate,dueTime:"",reminderMinutes:0,repeat:"none",category:"",link:"",subtasks:[]}; if(slot) Object.assign(slot,item); else state.tasks.push(item); added++; });
+    if(added){ save(); renderTaskLists(); renderProgress(); }
+    return added;
+  }
+  function smartWeekSummary(){
+    const range=expWeekRange(todayStr()), days=allDays(), cursor=new Date(range.start+"T12:00:00"); let prayers=0, tasksDone=0, tasksTotal=0, waterDays=0;
+    for(let i=0;i<7;i++){const day=days[fmtDate(cursor)]||{}; prayers+=(day.prayers||[]).filter(isPrayed).length; const tasks=(day.tasks||[]).filter(taskActive), priorities=(day.priorities||[]).filter(itemFilled); tasksTotal+=tasks.length+priorities.length; tasksDone+=tasks.filter(t=>itemDone(t)).length+priorities.filter(p=>itemDone(p,day.tasks)).length; if((day.water||0)>=waterGoal()) waterDays++; cursor.setDate(cursor.getDate()+1);}
+    let expenseLine=""; try{expenseLine="\n💰 المصروف المتغير: "+expMoney(expVarNetInWeek(range));}catch(e){}
+    return "ملخص أسبوعي من مفكرتي 🌙\n🕌 الصلوات: "+prayers.toLocaleString("ar-EG")+"\n✅ المهام: "+tasksDone.toLocaleString("ar-EG")+" / "+tasksTotal.toLocaleString("ar-EG")+"\n💧 أيام هدف الماء: "+waterDays.toLocaleString("ar-EG")+" / ٧"+expenseLine;
+  }
+  function smartInit(){
+    const byId=id=>document.getElementById(id);
+    byId("quickTaskBtn").onclick=()=>{const text=prompt("اكتب المهمة السريعة:");if(text&&text.trim())smartAddTasks([text.trim()]);};
+    byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
+    byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
+    byId("quickTemplatesBtn").onclick=()=>{const box=byId("quickTemplateBar");box.hidden=!box.hidden;};
+    document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const type=button.dataset.quickTemplate;if(type==="morning")smartAddTasks(["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"]);else if(type==="evening")smartAddTasks(["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"]);else if(type==="task")smartAddTasks(["جلسة تركيز لمدة ٣٠ دقيقة"]);else if(type==="recurring")expOpenRecurringForm(null);});
+    byId("shareWeekBtn").onclick=async()=>{const text=smartWeekSummary();try{if(navigator.share){await navigator.share({title:"ملخص أسبوعي",text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);alert("تم نسخ الملخص للمشاركة.");}else prompt("انسخ الملخص:",text);}catch(e){if(e&&e.name!=="AbortError")prompt("انسخ الملخص:",text);}};
   }
 
   /* ---------- سلسلة أيام الصلوات الخمس ---------- */
@@ -12370,6 +12439,8 @@
   safeRun("goto:init", ()=> goto(initialDay));
   deferNonCriticalRender("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
+  safeRun("smartTools:init", smartInit);
+  safeRun("tomorrowPanel:init", renderTomorrowPanel);
   safeRun("onboardInit", onboardInit);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();

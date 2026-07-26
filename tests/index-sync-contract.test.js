@@ -82,12 +82,15 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
-  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone"].forEach(id=>{
+  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
   ["today","quran","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
   assert.match(html,/const APP_VIEW_GROUPS=/);
   assert.match(html,/function renderTodayOverview\(/);
+  assert.match(html,/function renderTomorrowPanel\(/);
+  assert.match(html,/function smartWeekSummary\(/);
+  assert.match(html,/function smartInit\(/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
 
