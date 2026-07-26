@@ -106,6 +106,13 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
 
+test("separate dhikr counter supports presets, custom wording, and a daily target",()=>{
+  ["dhikrCounterSettings","dhikrCounterText","dhikrCounterProgress","dhikrCounterFill","dhikrCountBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  assert.match(html,/function dhikrCounterState\(/);
+  assert.match(html,/function openDhikrCounterSettings\(/);
+  assert.match(html,/DHIKR_COUNTER_PRESETS/);
+});
+
 test("primary daily controls use native buttons with accessible state",()=>{
   assert.ok((html.match(/document\.createElement\("button"\)/g)||[]).length>=3);
   assert.match(html,/aria-pressed/);

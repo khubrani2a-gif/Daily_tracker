@@ -660,6 +660,10 @@
   .ib-sunnah-actions #ibSunnahDone.done{
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;
   }
+  .dhikr-counter{margin:.85rem 0;padding:.85rem;border:1px solid var(--accent);border-radius:15px;background:linear-gradient(135deg,var(--accent-soft),var(--paper))}
+  .dhikr-counter-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}.dhikr-counter-title{font-size:.86rem;font-weight:800;color:var(--accent)}.dhikr-counter-settings{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.35rem .55rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
+  .dhikr-counter-text{text-align:center;font-size:1.05rem;font-weight:800;color:var(--ink);margin:.7rem 0 .2rem}.dhikr-counter-progress{text-align:center;color:var(--muted);font-size:.74rem}.dhikr-counter-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.65rem 0}.dhikr-counter-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .2s}
+  .dhikr-count-btn{display:block;width:min(220px,100%);margin:.1rem auto 0;border:0;border-radius:99px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-family:inherit;font-size:1.1rem;font-weight:800;padding:.75rem;cursor:pointer;box-shadow:var(--shadow-sm)}.dhikr-count-btn:active{transform:scale(.98)}.dhikr-count-btn.done{background:var(--paper);border:1px solid var(--accent);color:var(--accent)}
 
   /* ===== بطاقة القرآن ===== */
   .qc-werd{background:var(--accent-soft);border-radius:14px;padding:1rem;margin-bottom:1.1rem}
@@ -2233,6 +2237,17 @@
           </div>
         </div>
 
+        <section class="dhikr-counter" aria-labelledby="dhikrCounterTitle">
+          <div class="dhikr-counter-head">
+            <span class="dhikr-counter-title" id="dhikrCounterTitle">📿 عداد الذكر</span>
+            <button type="button" class="dhikr-counter-settings" id="dhikrCounterSettings">⚙ ضبط الذكر</button>
+          </div>
+          <div class="dhikr-counter-text" id="dhikrCounterText">استغفر الله</div>
+          <div class="dhikr-counter-progress" id="dhikrCounterProgress">٠ / ١٠٠</div>
+          <div class="dhikr-counter-bar" aria-hidden="true"><i id="dhikrCounterFill"></i></div>
+          <button type="button" class="dhikr-count-btn" id="dhikrCountBtn" aria-label="عدّ الذكر">📿 اضغط للعد</button>
+        </section>
+
         <div class="ib-group">
           <div class="ib-group-head"><span>📿 أذكار</span><button class="ib-add" data-group="adhkar" title="إضافة ذكر">＋</button></div>
           <ul class="checklist" id="ibList-adhkar"></ul>
@@ -3696,6 +3711,7 @@
       notes: "",
       rating: 0,
       istighfar: 0,
+      dhikrCounter: {text:"استغفر الله", target:100, count:0},
       wCounts: {},
       sport: {types:[], mins:0, km:0},
       mood: "ok",
@@ -7657,6 +7673,36 @@
     return w.label;
   }
 
+  const DHIKR_COUNTER_PRESETS=["استغفر الله","سبحان الله","الحمد لله","الله أكبر","لا حول ولا قوة إلا بالله","اللهم صل وسلم على نبينا محمد"];
+  function dhikrCounterState(){
+    if(!state.dhikrCounter || typeof state.dhikrCounter!=="object") state.dhikrCounter={text:"استغفر الله",target:100,count:0};
+    const counter=state.dhikrCounter;
+    counter.text=typeof counter.text==="string"&&counter.text.trim()?counter.text.trim().slice(0,120):"استغفر الله";
+    counter.target=Math.max(1,Math.min(10000,Math.round(+counter.target||100)));
+    counter.count=Math.max(0,Math.min(counter.target,Math.round(+counter.count||0)));
+    return counter;
+  }
+  function renderDhikrCounter(){
+    const counter=dhikrCounterState(), done=counter.count>=counter.target;
+    const text=document.getElementById("dhikrCounterText"), progress=document.getElementById("dhikrCounterProgress"), fill=document.getElementById("dhikrCounterFill"), button=document.getElementById("dhikrCountBtn");
+    if(!text||!progress||!fill||!button)return;
+    text.textContent=counter.text; progress.textContent=counter.count.toLocaleString("ar-EG")+" / "+counter.target.toLocaleString("ar-EG");
+    fill.style.width=Math.round(counter.count/counter.target*100)+"%"; button.textContent=done?"✓ اكتمل الذكر":"📿 اضغط للعد";button.classList.toggle("done",done);button.setAttribute("aria-label",done?"اكتمل الذكر":"عدّ: "+counter.text);
+  }
+  function dhikrCount(){
+    const counter=dhikrCounterState(); if(counter.count>=counter.target)return;
+    counter.count++; if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
+    save();renderDhikrCounter();
+  }
+  function openDhikrCounterSettings(){
+    const current=dhikrCounterState(), options=DHIKR_COUNTER_PRESETS.map(text=>'<option value="'+expEsc(text)+'"'+(text===current.text?" selected":"")+'>'+expEsc(text)+'</option>').join("");
+    const sheet=taskSheet("ضبط عداد الذكر",'<div class="task-fields"><label class="task-field-wide">ذكر جاهز<select id="dhikrPreset"><option value="">اختر ذكرًا</option>'+options+'</select></label><label class="task-field-wide">أو اكتب ذكرًا خاصًا<input id="dhikrCustomText" type="text" maxlength="120" placeholder="مثال: سبحان الله وبحمده" value="'+(DHIKR_COUNTER_PRESETS.includes(current.text)?"":expEsc(current.text))+'"></label><label class="task-field-wide">العدد المستهدف<input id="dhikrTarget" type="number" min="1" max="10000" inputmode="numeric" value="'+current.target+'"></label></div><div class="exp-err" id="dhikrCounterErr"></div><button type="button" class="task-sheet-save" id="dhikrCounterSave">حفظ وبدء عداد جديد</button><button type="button" class="task-sheet-save" id="dhikrCounterReset" style="background:var(--paper);color:var(--accent);border:1px solid var(--accent)">تصفير العداد الحالي</button>');
+    const preset=sheet.over.querySelector("#dhikrPreset"), custom=sheet.over.querySelector("#dhikrCustomText"), target=sheet.over.querySelector("#dhikrTarget"), err=sheet.over.querySelector("#dhikrCounterErr");
+    preset.onchange=()=>{if(preset.value)custom.value="";};
+    sheet.over.querySelector("#dhikrCounterSave").onclick=()=>{const text=(custom.value.trim()||preset.value||"").trim(), goal=Math.round(+target.value);if(!text){err.textContent="اختر ذكرًا أو اكتب ذكرًا خاصًا.";return;}if(!(goal>=1&&goal<=10000)){err.textContent="أدخل عددًا بين ١ و١٠٬٠٠٠.";return;}state.dhikrCounter={text,target:goal,count:0};save();renderDhikrCounter();sheet.close();};
+    sheet.over.querySelector("#dhikrCounterReset").onclick=()=>{dhikrCounterState().count=0;save();renderDhikrCounter();sheet.close();};
+    custom.focus();
+  }
   function renderWorship(){
     const custom = wCustom();
     const hidden = wHidden();
@@ -7668,6 +7714,7 @@
     });
 
     renderQuranCard();
+    renderDhikrCounter();
 
     /* إحصائيات البطاقة: الحلقة + العدّاد + المتبقي (الورد اليومي وقراءة السور المخصّصة لهما بطاقة مستقلة) */
     const all = ibOnlyItems();
@@ -7716,6 +7763,8 @@
     state.sunnahDone = !state.sunnahDone;
     save(); renderWorship();
   };
+  document.getElementById("dhikrCountBtn").onclick=dhikrCount;
+  document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   let habitEditingId=null;
   const habitOverlay=document.getElementById("habitOverlay");
   function habitGroupLabel(group){ return group==="adhkar"?"أذكار":group==="salah"?"الصلاة والنوافل":group==="awrad"?"الأوراد اليومية":"عادات مخصصة"; }
