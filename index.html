@@ -929,17 +929,13 @@
   .task-history-item{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.6rem .7rem;text-align:right;font-family:inherit;cursor:pointer}
   .task-history-item small{display:block;color:var(--muted);margin-top:.15rem}
   .task-history-empty{text-align:center;color:var(--muted);padding:1rem}
-  .template-manager-row{display:flex;align-items:center;justify-content:space-between;gap:.65rem;border:1px solid var(--line);background:var(--paper);border-radius:11px;padding:.65rem .7rem}
-  .template-manager-copy{min-width:0}.template-manager-copy small{display:block;color:var(--muted);margin-top:.15rem}.template-manager-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}.template-manager-actions button{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:8px;padding:.34rem .48rem;font-family:inherit;font-size:.68rem;font-weight:700;cursor:pointer}.template-manager-actions button.danger{border-color:var(--danger);color:var(--danger)}.template-manager-actions button.hidden-toggle{border-color:var(--accent);color:var(--accent)}
-  .task-sheet-inline-confirm{margin-top:.75rem;padding:.7rem;border:1px solid var(--danger);border-radius:11px;background:var(--chip-bg);font-size:.78rem;color:var(--ink)}
-  .task-sheet-inline-confirm p{margin:0 0 .55rem;line-height:1.6}.task-sheet-inline-confirm-actions{display:flex;gap:.45rem}.task-sheet-inline-confirm button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.4rem .65rem;font-family:inherit;font-weight:700;cursor:pointer}.task-sheet-inline-confirm .danger{background:var(--danger);border-color:var(--danger);color:#fff}
   .task-meta-link{color:var(--accent);text-decoration:none;border:1px solid var(--line)}
   .task-week-list{display:flex;flex-direction:column;gap:.55rem}
   .task-week-day{border:1px solid var(--line);border-radius:13px;padding:.65rem;background:var(--chip-bg)}
   .task-week-day h4{display:flex;justify-content:space-between;gap:.5rem;color:var(--accent);font-size:.84rem;margin-bottom:.35rem}
   .task-week-item{display:flex;align-items:center;justify-content:space-between;gap:.5rem;border:0;background:transparent;color:var(--ink);font-family:inherit;width:100%;padding:.38rem .1rem;text-align:right;cursor:pointer}
   .task-week-item small{color:var(--muted);white-space:nowrap}
-  @media(max-width:520px){.task-fields{grid-template-columns:1fr}.template-manager-row{align-items:flex-start;flex-direction:column}.template-manager-actions{width:100%;justify-content:flex-start}}
+  @media(max-width:520px){.task-fields{grid-template-columns:1fr}}
   /* مؤشّر الأولوية: شارة لونية خفيفة، ثانوية، منزاحة قليلًا للداخل فتبدو ملتصقة بالصفّ */
   .task-flag{width:5px;height:20px;border-radius:99px;flex-shrink:0;opacity:.8;margin-inline-end:.35rem}
   /* صفّ الإدخال المؤقّت: حقل النصّ وحده — يُخفى المربّع والشارة مع الحفاظ على المحاذاة */
@@ -2448,7 +2444,7 @@
       </div>
 
       <div class="card task-card" id="tasksCard">
-        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><div class="task-card-actions"><button type="button" class="task-history-btn" id="taskCalendarBtn">التقويم والقادمة</button><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div></div>
+        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><div class="task-card-actions"><button type="button" class="task-history-btn" id="taskWeekBtn">هذا الأسبوع</button><button type="button" class="task-history-btn" id="taskCalendarBtn">التقويم والقادمة</button><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div></div>
         <div class="task-summary" id="tasksSummary" hidden></div>
         <div id="tasks"></div>
       </div>
@@ -3263,7 +3259,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٨</div>
+    <div class="app-version">النسخة ١٠٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -8446,7 +8442,7 @@
     addFrom(1,"daily"); addFrom(7,"weekly");
     let changed=false;
     candidates.forEach(src=>{ if(taskStatus(src)==="cancelled") return; const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,repeat:src.repeat,category:src.category||"",link:src.link||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
-    if(changed){ localStorage.setItem(storageKey(dateStr),JSON.stringify(state)); invalidateAllDaysCache(); }
+    if(changed) localStorage.setItem(storageKey(dateStr),JSON.stringify(state));
   }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
@@ -8571,9 +8567,8 @@
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
       const metaBtn=document.createElement("button"); metaBtn.type="button"; metaBtn.className="task-meta-btn"; metaBtn.textContent="⋯"; metaBtn.title="الحالة والوقت والتكرار والمهام الفرعية"; metaBtn.setAttribute("aria-label","تفاصيل المهمة"); metaBtn.onclick=()=>taskOpenMeta(item,rerender);
-      const del=document.createElement("button"); del.type="button"; del.className="task-delete-btn"; del.textContent="🗑"; del.title="حذف المهمة"; del.setAttribute("aria-label","حذف المهمة: "+(item.text||"")); del.onclick=()=>deleteTask(item);
-      if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
-      else row.append(chk, input, metaBtn, del, flag);
+      if(handle){ row.append(handle, chk, input, metaBtn, flag); wireDrag(handle, row); }
+      else row.append(chk, input, metaBtn, flag);
       const metaParts=taskMetaText(item); if(metaParts.length||item.link){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
         if(item.link){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=item.link;a.target="_blank";a.rel="noopener noreferrer";a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
@@ -9047,7 +9042,7 @@
     const startKey=fmtDate(overdueStart), endKey=fmtDate(endDate), rows=new Map(), latestRecurring=new Map();
     Object.keys(days).sort().forEach(dayKey=>{
       const day=days[dayKey]||{};
-      (day.tasks||[]).filter(itemFilled).forEach(task=>{
+      (day.tasks||[]).filter(taskActive).forEach(task=>{
         const due=/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate||"")?task.dueDate:dayKey;
         const series=calendarTaskSeriesKey(task), rowKey=series+"|"+due;
         if(!task.done && due>=startKey && due<=endKey && !rows.has(rowKey)){
@@ -9074,7 +9069,7 @@
   function calendarTaskCounts(days){
     const counts={};
     Object.keys(days).forEach(dayKey=>{
-      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done).forEach(t=>{
+      (days[dayKey].tasks||[]).filter(t=>taskActive(t)&&!itemDone(t)).forEach(t=>{
         const due=/^\d{4}-\d{2}-\d{2}$/.test(t.dueDate||"")?t.dueDate:dayKey;
         counts[due]=(counts[due]||0)+1;
       });
@@ -9177,7 +9172,7 @@
   function notifyTaskRowsForToday(){
     const today=todayStr(), rows=[], seen=new Set(), days=allDays();
     Object.keys(days).forEach(dayKey=>{
-      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done&&t.dueTime).forEach(t=>{
+      (days[dayKey].tasks||[]).filter(t=>taskActive(t)&&!itemDone(t)&&t.dueTime).forEach(t=>{
         const due=t.dueDate||dayKey, key=(t.id||t.text)+"|"+due+"|"+t.dueTime;
         if(due===today&&!seen.has(key)){ seen.add(key); rows.push(t); }
       });
@@ -9195,7 +9190,7 @@
         if(notifyDue(hm,+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+p[1],"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
       });
     }
-    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ if(notifyDue(task.dueTime,0)) notifyShow("✅ موعد مهمة",task.text,"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime,today); });
+    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ const lead=+task.reminderMinutes||0; if(notifyDue(task.dueTime,lead)) notifyShow("✅ "+(lead?"تذكير بمهمة":"موعد مهمة"),task.text+(lead?" — بقي "+lead.toLocaleString("ar-EG")+" دقيقة":""),"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime+"|"+lead,today); });
     if(settings.water&&todayState.water<waterGoal()&&notifyDue(settings.waterTime,0)) notifyShow("💧 تذكير الماء","أكملت "+todayState.water.toLocaleString("ar-EG")+" من "+waterGoal().toLocaleString("ar-EG")+" أكواب اليوم.","water|"+today+"|"+settings.waterTime,today);
     if(settings.sport&&!sportDone(todayState)&&notifyDue(settings.sportTime,0)) notifyShow("🏃 وقت الحركة","هدفك اليومي "+sportGoal().toLocaleString("ar-EG")+" دقيقة — ابدأ بخطوة خفيفة.","sport|"+today+"|"+settings.sportTime,today);
     const q=qLoad(), readToday=Math.max(0,q.page-q.startPage);
@@ -9267,8 +9262,8 @@
     Object.keys(days).sort().forEach(date=>{
       const day=days[date]||{};
       (day.tasks||[]).filter(itemFilled).forEach(task=>{
-        const category=task.category||"";
-        rows.push({type:"task",date,id:task.id||"",title:task.text||"",detail:[category,task.dueTime||"",task.repeat==="daily"?"يومي":task.repeat==="weekly"?"أسبوعي":""].filter(Boolean).join(" · "),category,done:!!task.done});
+        const category=task.category||"", sub=(task.subtasks||[]).map(s=>s.text||"").filter(Boolean).join(" · ");
+        rows.push({type:"task",date,id:task.id||"",title:task.text||"",detail:[category,TASK_STATUS_LABELS[taskStatus(task)],task.dueTime||"",task.repeat==="daily"?"يومي":task.repeat==="weekly"?"أسبوعي":"",sub,task.link||""].filter(Boolean).join(" · "),category,done:itemDone(task)});
       });
       if(String(day.notes||"").trim()) rows.push({type:"note",date,title:globalSearchExcerpt(day.notes),detail:"ملاحظات اليوم",category:""});
       if(String(day.memory||"").trim()) rows.push({type:"memory",date,title:globalSearchExcerpt(day.memory),detail:"ذكرى اليوم",category:""});
@@ -13477,7 +13472,7 @@
   safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
   safeRun("personalizeInit", personalizeInit);
   safeRun("appViewInit", appViewInit);
-  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
+  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskWeekBtn").onclick=taskWeekOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);
   safeRun("globalSearchInit", globalSearchInit);
   safeRun("habitInit", habitInit);
