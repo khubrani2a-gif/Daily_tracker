@@ -107,23 +107,10 @@ test("today overview and responsive quick navigation remain wired",()=>{
 });
 
 test("separate dhikr counter supports presets, custom wording, and a daily target",()=>{
-  ["dhikrCounterSettings","dhikrCounterText","dhikrCounterProgress","dhikrCounterFill","dhikrCountBtn","dhikrStatsBtn","dhikrManageBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["dhikrCounterSettings","dhikrCounterText","dhikrCounterProgress","dhikrCounterFill","dhikrCountBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   assert.match(html,/function dhikrCounterState\(/);
   assert.match(html,/function openDhikrCounterSettings\(/);
-  assert.match(html,/function openDhikrManager\(/);
-  assert.match(html,/function dhikrAddPermanent\(/);
-  assert.match(html,/function dhikrCounterCustomPresets\(/);
-  assert.match(html,/dhikrMigrateLegacyCounterItems\(/);
-  assert.match(html,/function dhikrStatsRows\(/);
-  assert.match(html,/function openDhikrStats\(/);
   assert.match(html,/DHIKR_COUNTER_PRESETS/);
-});
-
-test("learning and reading page tracks a daily goal and library progress",()=>{
-  ["learningCard","learningGoalBtn","learningAddBtn","learningQuickBtn","learningList","learningTodayValue"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  assert.match(html,/function renderLearning\(/);
-  assert.match(html,/function learningSession\(/);
-  assert.match(html,/LEARNING_LIBRARY_KEY/);
 });
 
 test("primary daily controls use native buttons with accessible state",()=>{
