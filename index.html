@@ -664,6 +664,7 @@
   .dhikr-counter-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}.dhikr-counter-title{font-size:.86rem;font-weight:800;color:var(--accent)}.dhikr-counter-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}.dhikr-counter-settings{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.35rem .55rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
   .dhikr-counter-text{text-align:center;font-size:1.05rem;font-weight:800;color:var(--ink);margin:.7rem 0 .2rem}.dhikr-counter-progress{text-align:center;color:var(--muted);font-size:.74rem}.dhikr-counter-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.65rem 0}.dhikr-counter-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .2s}
   .dhikr-count-btn{display:block;width:min(220px,100%);margin:.1rem auto 0;border:0;border-radius:99px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-family:inherit;font-size:1.1rem;font-weight:800;padding:.75rem;cursor:pointer;box-shadow:var(--shadow-sm)}.dhikr-count-btn:active{transform:scale(.98)}.dhikr-count-btn.done{background:var(--paper);border:1px solid var(--accent);color:var(--accent)}
+  .learning-summary{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;background:var(--accent-soft);border-radius:13px;padding:.75rem;margin:.75rem 0}.learning-summary b{color:var(--accent);font-size:1.15rem}.learning-summary small{display:block;color:var(--muted);margin-top:.15rem}.learning-progress{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.45rem 0 .1rem}.learning-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px}.learning-list{display:flex;flex-direction:column;gap:.5rem}.learning-row{display:flex;align-items:center;justify-content:space-between;gap:.55rem;border:1px solid var(--line);border-radius:11px;padding:.6rem .65rem;background:var(--paper)}.learning-row-copy{min-width:0}.learning-row-copy b,.learning-row-copy small{display:block}.learning-row-copy small{color:var(--muted);font-size:.68rem;margin-top:.12rem}.learning-row-actions{display:flex;gap:.3rem;flex-shrink:0}.learning-row-actions button{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:8px;padding:.35rem .45rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}.learning-empty{text-align:center;color:var(--muted);padding:1rem;font-size:.78rem}
 
   /* ===== بطاقة القرآن ===== */
   .qc-werd{background:var(--accent-soft);border-radius:14px;padding:1rem;margin-bottom:1.1rem}
@@ -2344,6 +2345,19 @@
         </div>
       </div>
 
+      <div class="card" id="learningCard">
+        <div class="ib-head">
+          <div><h2 class="ib-title"><span class="ico">📚</span> العلم والقراءة</h2><div class="ib-sub">خطوات صغيرة نحو معرفة أعمق</div></div>
+          <div class="ib-head-actions"><button class="ib-cal-btn" id="learningGoalBtn">🎯 الهدف</button><button class="ib-cal-btn" id="learningAddBtn">＋ إضافة</button></div>
+        </div>
+        <div class="learning-summary">
+          <div><b id="learningTodayValue">٠ دقيقة</b><small id="learningGoalText">هدف اليوم: ٢٠ دقيقة</small><div class="learning-progress"><i id="learningFill"></i></div></div>
+          <button type="button" class="dhikr-count-btn" id="learningQuickBtn" style="width:auto;margin:0;padding:.55rem .7rem;font-size:.78rem">＋١٠ د</button>
+        </div>
+        <div class="learning-list" id="learningList"></div>
+        <div class="learning-empty" id="learningEmpty">أضف كتابًا أو دورة أو مادة تريد متابعتها.</div>
+      </div>
+
       <div class="card" id="sportCard">
         <h2><span class="ico">🏃</span> الرياضة</h2>
 
@@ -3712,6 +3726,7 @@
       rating: 0,
       istighfar: 0,
       dhikrCounter: {text:"استغفر الله", target:100, count:0},
+      learningMinutes: 0,
       wCounts: {},
       sport: {types:[], mins:0, km:0},
       mood: "ok",
@@ -7745,6 +7760,29 @@
     sheet.over.querySelectorAll("[data-dhikr-hide]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrHide), item=get(ref);if(!item)return;dhikrSetHidden(ref.kind,ref.id,!item.hidden);renderWorship();renderProgress();sheet.close();});
     sheet.over.querySelectorAll("[data-dhikr-delete]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrDelete), item=get(ref);if(!item)return;smartAskInTemplateManager(sheet,"حذف «"+item.label+"»؟",ref.kind==="builtin"?"سيُخفى الذكر الأساسي ويمكن إظهاره لاحقًا.":"سيُحذف الذكر نهائيًا من "+item.where+".",()=>{if(ref.kind==="custom")wCustomSave(wCustom().filter(entry=>entry.id!==ref.id));else if(ref.kind==="counter")dhikrCounterCustomPresetsSave(dhikrCounterCustomPresets().filter(entry=>entry.id!==ref.id));else dhikrSetHidden(ref.kind,ref.id,true);renderWorship();renderProgress();sheet.close();});});
   }
+  const LEARNING_LIBRARY_KEY="h2do-learning-library-v1", LEARNING_GOAL_KEY="h2do-learning-goal-v1";
+  function learningLibrary(){try{const rows=JSON.parse(localStorage.getItem(LEARNING_LIBRARY_KEY)||"[]");return Array.isArray(rows)?rows.filter(item=>item&&typeof item.id==="string"&&typeof item.title==="string").map(item=>({id:item.id,title:item.title.trim().slice(0,100),type:["كتاب","دورة","مقال","بحث"].includes(item.type)?item.type:"كتاب",total:Math.max(1,Math.min(100000,+item.total||1)),progress:Math.max(0,Math.min(Math.max(1,+item.total||1),+item.progress||0))})).filter(item=>item.title).slice(0,50):[];}catch(e){return [];}}
+  function learningSave(items){localStorage.setItem(LEARNING_LIBRARY_KEY,JSON.stringify(items.slice(0,50)));}
+  function learningGoal(){return Math.max(5,Math.min(240,+localStorage.getItem(LEARNING_GOAL_KEY)||20));}
+  function learningAddMinutes(minutes){state.learningMinutes=Math.max(0,(+state.learningMinutes||0)+minutes);save();renderLearning();}
+  function learningItemForm(id){
+    const item=id?learningLibrary().find(row=>row.id===id):null, sheet=taskSheet(item?"تعديل المادة":"إضافة مادة للعلم والقراءة",'<div class="task-fields"><label class="task-field-wide">العنوان<input id="learningTitle" maxlength="100" placeholder="مثال: كتاب الرحيق المختوم" value="'+expEsc(item?item.title:"")+'"></label><label>النوع<select id="learningType"><option'+(item&&item.type==="كتاب"?" selected":"")+'>كتاب</option><option'+(item&&item.type==="دورة"?" selected":"")+'>دورة</option><option'+(item&&item.type==="مقال"?" selected":"")+'>مقال</option><option'+(item&&item.type==="بحث"?" selected":"")+'>بحث</option></select></label><label>إجمالي الصفحات/الدروس<input id="learningTotal" type="number" min="1" max="100000" inputmode="numeric" value="'+(item?item.total:100)+'"></label></div><div class="exp-err" id="learningErr"></div><button type="button" class="task-sheet-save" id="learningSave">حفظ المادة</button>');
+    const title=sheet.over.querySelector("#learningTitle"), type=sheet.over.querySelector("#learningType"), total=sheet.over.querySelector("#learningTotal"), err=sheet.over.querySelector("#learningErr");
+    sheet.over.querySelector("#learningSave").onclick=()=>{const name=title.value.trim(), all=learningLibrary(), count=Math.max(1,Math.min(100000,Math.round(+total.value||0)));if(!name){err.textContent="اكتب عنوان المادة.";title.focus();return;}if(id){const pos=all.findIndex(row=>row.id===id);if(pos<0)return;all[pos]=Object.assign({},all[pos],{title:name,type:type.value,total:count,progress:Math.min(count,all[pos].progress)});}else{if(all.length>=50){err.textContent="وصلت إلى الحد الأقصى: ٥٠ مادة.";return;}all.push({id:newId(),title:name,type:type.value,total:count,progress:0});}learningSave(all);renderLearning();sheet.close();};
+    title.focus();
+  }
+  function learningSession(id){
+    const item=learningLibrary().find(row=>row.id===id);if(!item)return;const sheet=taskSheet("تسجيل جلسة: "+item.title,'<div class="task-fields"><label>دقائق القراءة/التعلم<input id="learningMinutesInput" type="number" min="0" max="1440" inputmode="numeric" value="10"></label><label>صفحات أو دروس منجزة<input id="learningUnitsInput" type="number" min="0" max="100000" inputmode="numeric" value="1"></label></div><div class="exp-err" id="learningSessionErr"></div><button type="button" class="task-sheet-save" id="learningSessionSave">تسجيل الجلسة</button>'), minutes=sheet.over.querySelector("#learningMinutesInput"), units=sheet.over.querySelector("#learningUnitsInput"), err=sheet.over.querySelector("#learningSessionErr");
+    sheet.over.querySelector("#learningSessionSave").onclick=()=>{const mins=Math.max(0,Math.min(1440,Math.round(+minutes.value||0))), done=Math.max(0,Math.min(100000,Math.round(+units.value||0)));if(!mins&&!done){err.textContent="أدخل دقائق أو تقدمًا واحدًا على الأقل.";return;}const all=learningLibrary(), pos=all.findIndex(row=>row.id===id);if(pos<0)return;all[pos].progress=Math.min(all[pos].total,all[pos].progress+done);learningSave(all);if(mins)learningAddMinutes(mins);else renderLearning();sheet.close();};
+  }
+  function learningDelete(id){const item=learningLibrary().find(row=>row.id===id);if(!item)return;hifzShowConfirm({title:"حذف «"+item.title+"»؟",body:"لن يؤثر ذلك على دقائق التعلم المسجلة اليوم.",okText:"حذف",cancelText:"إلغاء",onOk:()=>{learningSave(learningLibrary().filter(row=>row.id!==id));renderLearning();}});}
+  function renderLearning(){
+    const minutes=Math.max(0,+state.learningMinutes||0), goal=learningGoal(), items=learningLibrary(), value=document.getElementById("learningTodayValue");if(!value)return;
+    value.textContent=minutes.toLocaleString("ar-EG")+" دقيقة";document.getElementById("learningGoalText").textContent="هدف اليوم: "+goal.toLocaleString("ar-EG")+" دقيقة";document.getElementById("learningFill").style.width=Math.min(100,Math.round(minutes/goal*100))+"%";
+    const host=document.getElementById("learningList"), empty=document.getElementById("learningEmpty");host.textContent="";empty.hidden=!!items.length;
+    items.forEach(item=>{const row=document.createElement("div");row.className="learning-row";const copy=document.createElement("span");copy.className="learning-row-copy";const title=document.createElement("b");title.textContent=(item.type==="كتاب"?"📖 ":item.type==="دورة"?"🎓 ":"📄 ")+item.title;const sub=document.createElement("small");sub.textContent=item.progress.toLocaleString("ar-EG")+" / "+item.total.toLocaleString("ar-EG")+(item.type==="كتاب"?" صفحة/وحدة":" وحدة")+" · "+Math.round(item.progress/item.total*100).toLocaleString("ar-EG")+"٪";copy.append(title,sub);const actions=document.createElement("span");actions.className="learning-row-actions";const session=document.createElement("button");session.type="button";session.textContent="＋ جلسة";session.onclick=()=>learningSession(item.id);const edit=document.createElement("button");edit.type="button";edit.textContent="✏️";edit.setAttribute("aria-label","تعديل "+item.title);edit.onclick=()=>learningItemForm(item.id);const del=document.createElement("button");del.type="button";del.textContent="🗑️";del.setAttribute("aria-label","حذف "+item.title);del.onclick=()=>learningDelete(item.id);actions.append(session,edit,del);row.append(copy,actions);host.appendChild(row);});
+  }
+  function learningGoalEdit(){const sheet=taskSheet("هدف العلم والقراءة",'<label class="task-field-wide">هدف الدقائق اليومي<input id="learningGoalInput" type="number" min="5" max="240" inputmode="numeric" value="'+learningGoal()+'"></label><div class="exp-err" id="learningGoalErr"></div><button type="button" class="task-sheet-save" id="learningGoalSave">حفظ الهدف</button>'), input=sheet.over.querySelector("#learningGoalInput"), err=sheet.over.querySelector("#learningGoalErr");sheet.over.querySelector("#learningGoalSave").onclick=()=>{const value=Math.round(+input.value||0);if(value<5||value>240){err.textContent="أدخل هدفًا بين ٥ و٢٤٠ دقيقة.";return;}localStorage.setItem(LEARNING_GOAL_KEY,String(value));renderLearning();sheet.close();};input.focus();}
   function renderWorship(){
     dhikrMigrateLegacyCounterItems();
     const custom = wCustom();
@@ -7810,6 +7848,9 @@
   document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
   document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
+  document.getElementById("learningAddBtn").onclick=()=>learningItemForm(null);
+  document.getElementById("learningGoalBtn").onclick=learningGoalEdit;
+  document.getElementById("learningQuickBtn").onclick=()=>learningAddMinutes(10);
   let habitEditingId=null;
   const habitOverlay=document.getElementById("habitOverlay");
   function habitGroupLabel(group){ return group==="adhkar"?"أذكار":group==="salah"?"الصلاة والنوافل":group==="awrad"?"الأوراد اليومية":"عادات مخصصة"; }
@@ -9744,6 +9785,7 @@
     safeRun("renderWorship", renderWorship);
     safeRun("renderWater", renderWater);
     safeRun("renderSport", renderSport);
+    safeRun("renderLearning", renderLearning);
     safeRun("renderHealth", renderHealth);
     safeRun("renderTaskLists", renderTaskLists);
     safeRun("bindIntention", ()=> bindTextarea("intention","intention"));
@@ -12430,6 +12472,7 @@
     {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
     {id:"quranCard",icon:"📖",label:"القرآن"},
     {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
+    {id:"learningCard",icon:"📚",label:"العلم والقراءة"},
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
     {id:"healthCard",icon:"⚖️",label:"الصحة"},
     {id:"waterCard",icon:"💧",label:"شرب الماء"},
@@ -12552,7 +12595,7 @@
   /* ---------- تنقل الجوال بخمس وجهات ---------- */
   const APP_VIEW_KEY="h2do-mobile-view";
   const APP_VIEW_GROUPS={
-    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["intentionCard","memoryCard","notesCard","ratingCard"]
+    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["learningCard","intentionCard","memoryCard","notesCard","ratingCard"]
   };
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){

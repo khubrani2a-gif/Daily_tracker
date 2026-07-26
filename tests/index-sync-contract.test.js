@@ -119,6 +119,13 @@ test("separate dhikr counter supports presets, custom wording, and a daily targe
   assert.match(html,/DHIKR_COUNTER_PRESETS/);
 });
 
+test("learning and reading page tracks a daily goal and library progress",()=>{
+  ["learningCard","learningGoalBtn","learningAddBtn","learningQuickBtn","learningList","learningTodayValue"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  assert.match(html,/function renderLearning\(/);
+  assert.match(html,/function learningSession\(/);
+  assert.match(html,/LEARNING_LIBRARY_KEY/);
+});
+
 test("primary daily controls use native buttons with accessible state",()=>{
   assert.ok((html.match(/document\.createElement\("button"\)/g)||[]).length>=3);
   assert.match(html,/aria-pressed/);
