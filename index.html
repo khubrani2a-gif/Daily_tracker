@@ -2150,7 +2150,7 @@
 
   <nav class="quick-nav" aria-label="التنقل الرئيسي">
     <a href="#prayerCard" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
-    <a href="#quranCard" data-app-view="quran"><span>📖</span>القرآن</a>
+    <a href="#prayerCard" data-app-view="iman"><span>📿</span>إيمانيات</a>
     <a href="#sportCard" data-app-view="sport"><span>🏃</span>الرياضة</a>
     <a href="#expensesCard" data-app-view="expenses"><span>💰</span>المصاريف</a>
     <a href="#intentionCard" data-app-view="more"><span>•••</span>المزيد</a>
@@ -12552,15 +12552,15 @@
   /* ---------- تنقل الجوال بخمس وجهات ---------- */
   const APP_VIEW_KEY="h2do-mobile-view";
   const APP_VIEW_GROUPS={
-    today:["prayerCard","tasksCard","prioritiesCard","waterCard"], quran:["quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["ibadahCard","intentionCard","memoryCard","notesCard","ratingCard"]
+    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["intentionCard","memoryCard","notesCard","ratingCard"]
   };
-  let appView=localStorage.getItem(APP_VIEW_KEY)||"today";
+  let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
     const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(APP_VIEW_GROUPS[appView]||APP_VIEW_GROUPS.today);
     Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); window.scrollTo({top:document.querySelector(".today-overview").offsetTop-8,behavior:"smooth"}); }
+  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById(APP_VIEW_GROUPS[view][0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
   function appViewInit(){
     document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
     window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); appViewApply();
