@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v108",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v109",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٨/); assert.match(sw,/mufakkirati-v108/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٩/); assert.match(sw,/mufakkirati-v109/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -186,6 +186,16 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
   assert.match(html,/const occurrenceId="expr_"/);
   assert.match(html,/out\.savingsGoals = expMergeById/);
   assert.match(html,/out\.recurringTransactions = expMergeById/);
+});
+
+test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
+  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["taskStatus","taskActive","taskSetDone","taskWeekOpen"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  ["pending","in_progress","deferred","done","cancelled"].forEach(status=>assert.ok(html.includes(status),status));
+  assert.match(html,/item\.subtasks=lines\.map/);
+  assert.match(html,/task\.reminderMinutes/);
+  assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
+  assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{

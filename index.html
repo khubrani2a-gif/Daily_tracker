@@ -893,6 +893,10 @@
   .task-input::placeholder{color:var(--muted);opacity:.6}
   .task-meta-line{width:100%;padding-inline-start:2.4rem;margin-top:-.25rem;display:flex;gap:.3rem;flex-wrap:wrap;font-size:.68rem;color:var(--muted)}
   .task-meta-chip{background:var(--chip-bg);border-radius:99px;padding:.13rem .42rem}
+  .task-subtasks-line{width:100%;padding-inline-start:2.4rem;display:flex;gap:.3rem;flex-wrap:wrap}
+  .task-subtask{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.25rem .45rem;font-family:inherit;font-size:.68rem;cursor:pointer}
+  .task-subtask.done{color:var(--muted);background:var(--chip-bg)}
+  .task-row.status-cancelled{opacity:.58}
   .task-sheet-overlay{position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:10030;display:flex;align-items:flex-end;justify-content:center;padding:1rem}
   .task-sheet-overlay[hidden]{display:none}
   .task-sheet{width:min(560px,100%);background:var(--paper);color:var(--ink);border-radius:22px 22px 14px 14px;padding:1rem;box-shadow:0 24px 70px rgba(0,0,0,.3);max-height:88vh;overflow:auto}
@@ -902,12 +906,20 @@
   .task-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
   .task-fields input,.task-fields select,.task-history-search{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none}
+  .task-fields textarea{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none;resize:vertical;min-height:78px}
+  .task-field-wide{grid-column:1/-1}
   .task-sheet-save{width:100%;border:0;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:11px;padding:.65rem;font-family:inherit;font-weight:700;cursor:pointer;margin-top:.8rem}
   .task-history-search{width:100%;box-sizing:border-box;margin-bottom:.65rem}
   .task-history-list{display:flex;flex-direction:column;gap:.4rem}
   .task-history-item{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.6rem .7rem;text-align:right;font-family:inherit;cursor:pointer}
   .task-history-item small{display:block;color:var(--muted);margin-top:.15rem}
   .task-history-empty{text-align:center;color:var(--muted);padding:1rem}
+  .task-meta-link{color:var(--accent);text-decoration:none;border:1px solid var(--line)}
+  .task-week-list{display:flex;flex-direction:column;gap:.55rem}
+  .task-week-day{border:1px solid var(--line);border-radius:13px;padding:.65rem;background:var(--chip-bg)}
+  .task-week-day h4{display:flex;justify-content:space-between;gap:.5rem;color:var(--accent);font-size:.84rem;margin-bottom:.35rem}
+  .task-week-item{display:flex;align-items:center;justify-content:space-between;gap:.5rem;border:0;background:transparent;color:var(--ink);font-family:inherit;width:100%;padding:.38rem .1rem;text-align:right;cursor:pointer}
+  .task-week-item small{color:var(--muted);white-space:nowrap}
   @media(max-width:520px){.task-fields{grid-template-columns:1fr}}
   /* مؤشّر الأولوية: شارة لونية خفيفة، ثانوية، منزاحة قليلًا للداخل فتبدو ملتصقة بالصفّ */
   .task-flag{width:5px;height:20px;border-radius:99px;flex-shrink:0;opacity:.8;margin-inline-end:.35rem}
@@ -2341,7 +2353,7 @@
       </div>
 
       <div class="card task-card" id="tasksCard">
-        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><div class="task-card-actions"><button type="button" class="task-history-btn" id="taskCalendarBtn">التقويم والقادمة</button><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div></div>
+        <div class="task-card-head"><h2><span class="ico">📝</span> مهام اليوم</h2><div class="task-card-actions"><button type="button" class="task-history-btn" id="taskWeekBtn">هذا الأسبوع</button><button type="button" class="task-history-btn" id="taskCalendarBtn">التقويم والقادمة</button><button type="button" class="task-history-btn" id="taskHistoryBtn">بحث في المهام</button></div></div>
         <div class="task-summary" id="tasksSummary" hidden></div>
         <div id="tasks"></div>
       </div>
@@ -3125,7 +3137,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٨</div>
+    <div class="app-version">النسخة ١٠٩</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -3583,14 +3595,18 @@
   function taskById(id, arr){ return (arr || (state && state.tasks) || []).find(t=> t && t.id === id); }
   /* هل العنصر «مُستخدَم»؟ (مرتبط دائمًا مستخدَم، وإلا فبوجود نصّ) */
   function itemFilled(it){ return !!(it && (it.sourceTaskId || (it.text && it.text.trim()))); }
+  const TASK_STATUS_LABELS={pending:"جديدة",in_progress:"قيد التنفيذ",deferred:"مؤجلة",done:"مكتملة",cancelled:"ملغاة"};
+  function taskStatus(it){ if(!it) return "pending"; if(it.status&&TASK_STATUS_LABELS[it.status]) return it.status; return it.done?"done":"pending"; }
+  function taskActive(it){ return itemFilled(it)&&taskStatus(it)!=="cancelled"; }
+  function taskSetDone(it,done){ it.done=!!done; it.status=done?"done":"pending"; }
   /* حلّ النصّ/الإكمال: المرتبط يُقرأ من المهمة الأصلية؛ وإن غابت نعود لآخر قيمة محفوظة (إن وُجدت) */
   function itemText(it, tasksArr){
     if(it && it.sourceTaskId){ const t = taskById(it.sourceTaskId, tasksArr); return t ? (t.text||"") : (it.text||""); }
     return (it && it.text) || "";
   }
   function itemDone(it, tasksArr){
-    if(it && it.sourceTaskId){ const t = taskById(it.sourceTaskId, tasksArr); return t ? !!t.done : !!(it && it.done); }
-    return !!(it && it.done);
+    if(it && it.sourceTaskId){ const t = taskById(it.sourceTaskId, tasksArr); return t ? taskStatus(t)==="done" : taskStatus(it)==="done"; }
+    return taskStatus(it)==="done";
   }
   /* تحقّق دفاعي: أيّ أولوية مرتبطة بمصدر غير موجود ضمن نفس الحالة تُزال بأمان (لا مراجع مكسورة، لا تعطّل) */
   function validateLinks(st){
@@ -3660,7 +3676,7 @@
       }
     }
     if(!prev) return;
-    const pendingTasks = (prev.tasks||[]).filter(t=> t && t.text && t.text.trim() && !t.done);
+    const pendingTasks = (prev.tasks||[]).filter(t=> taskActive(t) && !itemDone(t));
     /* الأولويات المرتبطة تُحلّ من مهام اليوم السابق وتُنقل كأولويات مستقلّة (لا مراجع مكسورة عبر الأيام) */
     const pendingPr = (prev.priorities||[])
       .map(p=> ({ text: itemText(p, prev.tasks), done: itemDone(p, prev.tasks) }))
@@ -3668,7 +3684,7 @@
     const n = pendingTasks.length + pendingPr.length;
     if(!n) return;
     if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
-      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {id:newId(), text:t.text, done:false, dueDate:dateStr, dueTime:t.dueTime||"", repeat:t.repeat||"none", category:t.category||"", recurrenceRootId:t.recurrenceRootId||t.id}; });
+      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = {id:newId(), text:t.text, done:false, status:t.status==="in_progress"?"in_progress":"pending", dueDate:dateStr, dueTime:t.dueTime||"", reminderMinutes:+t.reminderMinutes||0, repeat:t.repeat||"none", category:t.category||"", link:t.link||"", subtasks:(t.subtasks||[]).map(s=>Object.assign({},s)), recurrenceRootId:t.recurrenceRootId||t.id}; });
       pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {id:newId(), text:t.text, done:false}; });
     }
     ensureIds(state);   /* ضمان معرّف لكلّ عنصر قبل الحفظ */
@@ -8098,11 +8114,15 @@
   const TASK_CATEGORIES = ["شخصي","عمل","عبادة","صحة","تعلم","منزل","أخرى"];
   function taskMetaText(item){
     const parts=[];
+    const status=taskStatus(item);
+    if(status!=="pending") parts.push("◉ "+TASK_STATUS_LABELS[status]);
     if(item.dueDate) parts.push("📅 "+item.dueDate);
     if(item.dueTime) parts.push("🕐 "+item.dueTime);
+    if(item.dueTime&&item.reminderMinutes) parts.push("🔔 قبل "+(+item.reminderMinutes).toLocaleString("ar-EG")+" د");
     if(item.repeat==="daily") parts.push("↻ يوميًا");
     if(item.repeat==="weekly") parts.push("↻ أسبوعيًا");
     if(item.category) parts.push("# "+item.category);
+    if(Array.isArray(item.subtasks)&&item.subtasks.length) parts.push("☑ "+item.subtasks.filter(s=>s.done).length.toLocaleString("ar-EG")+"/"+item.subtasks.length.toLocaleString("ar-EG"));
     return parts;
   }
   function taskSheet(title, bodyHtml){
@@ -8117,10 +8137,26 @@
   }
   function taskOpenMeta(item, rerender){
     const cats=TASK_CATEGORIES.map(c=>'<option value="'+c+'"'+(item.category===c?' selected':'')+'>'+c+'</option>').join("");
-    const sheet=taskSheet("تفاصيل المهمة",'<div class="task-fields"><label>التاريخ<input id="tmDate" type="date" value="'+(item.dueDate||"")+'"></label><label>الوقت<input id="tmTime" type="time" value="'+(item.dueTime||"")+'"></label><label>التكرار<select id="tmRepeat"><option value="none">بدون تكرار</option><option value="daily"'+(item.repeat==="daily"?' selected':'')+'>يومي</option><option value="weekly"'+(item.repeat==="weekly"?' selected':'')+'>أسبوعي</option></select></label><label>التصنيف<select id="tmCategory"><option value="">بدون تصنيف</option>'+cats+'</select></label></div><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
+    const status=taskStatus(item), subtasks=(item.subtasks||[]).map(s=>s.text||"").filter(Boolean).join("\n");
+    const sheet=taskSheet("تفاصيل المهمة",'<div class="task-fields">'+
+      '<label>الحالة<select id="tmStatus"><option value="pending"'+(status==="pending"?' selected':'')+'>جديدة</option><option value="in_progress"'+(status==="in_progress"?' selected':'')+'>قيد التنفيذ</option><option value="deferred"'+(status==="deferred"?' selected':'')+'>مؤجلة</option><option value="done"'+(status==="done"?' selected':'')+'>مكتملة</option><option value="cancelled"'+(status==="cancelled"?' selected':'')+'>ملغاة</option></select></label>'+
+      '<label>التصنيف<select id="tmCategory"><option value="">بدون تصنيف</option>'+cats+'</select></label>'+
+      '<label>التاريخ<input id="tmDate" type="date" value="'+(item.dueDate||"")+'"></label><label>الوقت<input id="tmTime" type="time" value="'+(item.dueTime||"")+'"></label>'+
+      '<label>التكرار<select id="tmRepeat"><option value="none">بدون تكرار</option><option value="daily"'+(item.repeat==="daily"?' selected':'')+'>يومي</option><option value="weekly"'+(item.repeat==="weekly"?' selected':'')+'>أسبوعي</option></select></label>'+
+      '<label>التذكير<select id="tmReminder"><option value="0">عند الموعد</option><option value="5"'+(+item.reminderMinutes===5?' selected':'')+'>قبل ٥ دقائق</option><option value="15"'+(+item.reminderMinutes===15?' selected':'')+'>قبل ١٥ دقيقة</option><option value="30"'+(+item.reminderMinutes===30?' selected':'')+'>قبل ٣٠ دقيقة</option><option value="60"'+(+item.reminderMinutes===60?' selected':'')+'>قبل ساعة</option></select></label>'+
+      '<label class="task-field-wide">رابط مرتبط<input id="tmLink" type="url" inputmode="url" placeholder="https://…" value="'+expEsc(item.link||"")+'"></label>'+
+      '<label class="task-field-wide">المهام الفرعية — مهمة في كل سطر<textarea id="tmSubtasks" placeholder="الخطوة الأولى&#10;الخطوة الثانية">'+expEsc(subtasks)+'</textarea></label>'+
+      '</div><div class="exp-err" id="tmErr"></div><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
     sheet.over.querySelector("#tmSave").onclick=()=>{
+      const link=sheet.over.querySelector("#tmLink").value.trim(), err=sheet.over.querySelector("#tmErr");
+      if(link){ try{ const u=new URL(link); if(!/^https?:$/.test(u.protocol)) throw new Error(); }catch(e){ err.textContent="أدخل رابطًا صحيحًا يبدأ بـ http أو https."; return; } }
       item.dueDate=sheet.over.querySelector("#tmDate").value||""; item.dueTime=sheet.over.querySelector("#tmTime").value||"";
       item.repeat=sheet.over.querySelector("#tmRepeat").value; item.category=sheet.over.querySelector("#tmCategory").value||"";
+      item.reminderMinutes=+sheet.over.querySelector("#tmReminder").value||0; item.link=link;
+      item.status=sheet.over.querySelector("#tmStatus").value; item.done=item.status==="done";
+      const old=new Map((item.subtasks||[]).map(s=>[(s.text||"").trim(),s]));
+      const lines=[...new Set(sheet.over.querySelector("#tmSubtasks").value.split(/\n+/).map(s=>s.trim()).filter(Boolean))];
+      item.subtasks=lines.map(text=>{const prev=old.get(text);return prev?Object.assign({},prev,{text}):{id:newId(),text,done:false};});
       if(item.repeat==="none") delete item.recurrenceRootId;
       save(); sheet.close(); rerender();
     };
@@ -8131,19 +8167,52 @@
     const rows=[];
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i)||""; if(!key.startsWith("h2do-tracker:")) continue;
-      try{ const day=JSON.parse(localStorage.getItem(key)); (day.tasks||[]).filter(itemFilled).forEach(t=>rows.push({date:key.slice("h2do-tracker:".length),text:t.text||"",category:t.category||"",done:!!t.done})); }catch(e){}
+      try{ const day=JSON.parse(localStorage.getItem(key)); (day.tasks||[]).filter(itemFilled).forEach(t=>rows.push({date:key.slice("h2do-tracker:".length),text:t.text||"",category:t.category||"",status:taskStatus(t),done:itemDone(t)})); }catch(e){}
     }
     rows.sort((a,b)=>a.date<b.date?1:-1);
     const input=sheet.over.querySelector("#taskHistorySearch"), list=sheet.over.querySelector("#taskHistoryList");
-    const render=()=>{ const q=input.value.trim().toLowerCase(); const found=rows.filter(r=>!q||(r.text+" "+r.category+" "+r.date).toLowerCase().includes(q)).slice(0,80); list.innerHTML=found.length?found.map(r=>'<button type="button" class="task-history-item" data-date="'+r.date+'">'+(r.done?'✅ ':'○ ')+expEsc(r.text)+'<small>'+r.date+(r.category?' · '+expEsc(r.category):'')+'</small></button>').join(""):'<div class="task-history-empty">لا توجد نتائج.</div>'; list.querySelectorAll("[data-date]").forEach(b=>b.onclick=()=>{ const d=b.dataset.date; sheet.close(); goto(d); }); };
+    const render=()=>{ const q=input.value.trim().toLowerCase(); const found=rows.filter(r=>!q||(r.text+" "+r.category+" "+r.date+" "+(TASK_STATUS_LABELS[r.status]||"")).toLowerCase().includes(q)).slice(0,80); list.innerHTML=found.length?found.map(r=>'<button type="button" class="task-history-item" data-date="'+r.date+'">'+(r.done?'✅ ':r.status==="cancelled"?'✕ ':'○ ')+expEsc(r.text)+'<small>'+r.date+(r.category?' · '+expEsc(r.category):'')+' · '+(TASK_STATUS_LABELS[r.status]||"جديدة")+'</small></button>').join(""):'<div class="task-history-empty">لا توجد نتائج.</div>'; list.querySelectorAll("[data-date]").forEach(b=>b.onclick=()=>{ const d=b.dataset.date; sheet.close(); goto(d); }); };
     input.oninput=render; render(); input.focus();
+  }
+  function taskWeekOpen(){
+    const days=allDays(), anchor=new Date(currentDate+"T12:00:00"), offset=(anchor.getDay()-6+7)%7;
+    anchor.setDate(anchor.getDate()-offset);
+    const dates=Array.from({length:7},(_,i)=>{const d=new Date(anchor);d.setDate(d.getDate()+i);return fmtDate(d);});
+    const byDate=Object.fromEntries(dates.map(d=>[d,[]])), recurring=new Map();
+    Object.keys(days).sort().forEach(dayKey=>{
+      (days[dayKey].tasks||[]).filter(itemFilled).forEach(task=>{
+        const due=/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate||"")?task.dueDate:dayKey;
+        if(byDate[due]) byDate[due].push({task,projected:false});
+        if(task.repeat==="daily"||task.repeat==="weekly"){
+          const key=task.recurrenceRootId||task.id, prev=recurring.get(key);
+          if(!prev||due>prev.due) recurring.set(key,{task,due});
+        }
+      });
+    });
+    recurring.forEach(({task,due},key)=>{
+      if(taskStatus(task)==="cancelled") return;
+      dates.forEach(date=>{
+        const diff=Math.round((new Date(date+"T12:00:00")-new Date(due+"T12:00:00"))/86400000);
+        const occurs=diff>=0&&(task.repeat==="daily"||diff%7===0);
+        if(occurs&&!byDate[date].some(x=>(x.task.recurrenceRootId||x.task.id)===key)) byDate[date].push({task:Object.assign({},task,{done:false,status:"pending",dueDate:date}),projected:true});
+      });
+    });
+    const html=dates.map(date=>{
+      const d=new Date(date+"T12:00:00"), rows=byDate[date].sort((a,b)=>(a.task.dueTime||"99:99").localeCompare(b.task.dueTime||"99:99"));
+      const countLabel=rows.length===0?"لا مهام":rows.length===1?"مهمة واحدة":rows.length.toLocaleString("ar-EG")+" مهام";
+      return '<section class="task-week-day"><h4><span>'+d.toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"short"})+'</span><span>'+countLabel+'</span></h4>'+
+        (rows.length?rows.map(x=>'<button type="button" class="task-week-item" data-week-date="'+date+'"><span>'+(itemDone(x.task)?"✅ ":taskStatus(x.task)==="cancelled"?"✕ ":"○ ")+expEsc(x.task.text)+'</span><small>'+[x.task.dueTime||"",x.projected?"متكررة":TASK_STATUS_LABELS[taskStatus(x.task)]].filter(Boolean).join(" · ")+'</small></button>').join(""):'<div class="task-history-empty">لا توجد مهام</div>')+
+        '</section>';
+    }).join("");
+    const sheet=taskSheet("مهام هذا الأسبوع",'<div class="task-week-list">'+html+'</div>');
+    sheet.over.querySelectorAll("[data-week-date]").forEach(b=>b.onclick=()=>{const date=b.dataset.weekDate;sheet.close();goto(date);});
   }
   function seedRecurringTasks(dateStr){
     const candidates=[];
     const addFrom=(days,kind)=>{ const d=new Date(dateStr+"T12:00:00"); d.setDate(d.getDate()-days); try{ const old=JSON.parse(localStorage.getItem(storageKey(fmtDate(d)))||"null"); (old&&old.tasks||[]).filter(t=>itemFilled(t)&&t.repeat===kind).forEach(t=>candidates.push(t)); }catch(e){} };
     addFrom(1,"daily"); addFrom(7,"weekly");
     let changed=false;
-    candidates.forEach(src=>{ const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,dueDate:dateStr,dueTime:src.dueTime||"",repeat:src.repeat,category:src.category||"",recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
+    candidates.forEach(src=>{ if(taskStatus(src)==="cancelled") return; const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,repeat:src.repeat,category:src.category||"",link:src.link||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
     if(changed) localStorage.setItem(storageKey(dateStr),JSON.stringify(state));
   }
   function renderRows(containerId, items, colors, opts){
@@ -8213,17 +8282,17 @@
     /* صفّ مستقلّ: مربّع اختيار + عنوان قابل للتحرير + شارة لون */
     const standardRow = (item, idx)=>{
       const snapText = item.text || "";   /* لقطة وقت الرسم لاستعادة النصّ عند الحذف (oninput يفرّغه حيًّا) */
-      const snapDone = !!item.done;
+      const snapDone = itemDone(item);
       const row = document.createElement("div");
-      row.className = "task-row"+(item.done?" done":"");
+      row.className = "task-row"+(itemDone(item)?" done":"")+" status-"+taskStatus(item);
       row.dataset.idx = String(idx);
       const handle = mkHandle();
       const chk = document.createElement("button");
       chk.type = "button";
-      chk.className = "chk"+(item.done?" on":"");
+      chk.className = "chk"+(itemDone(item)?" on":"");
       chk.textContent = "✔";
-      chk.setAttribute("aria-label",item.done?"إعادة فتح المهمة":"إكمال المهمة"); chk.setAttribute("aria-pressed",String(!!item.done));
-      chk.onclick = ()=>{ item.done = !item.done; save(); rerender(); };  /* المهام: rerender=القائمتان معًا لتحديث الأولويات المرتبطة */
+      chk.setAttribute("aria-label",itemDone(item)?"إعادة فتح المهمة":"إكمال المهمة"); chk.setAttribute("aria-pressed",String(itemDone(item)));
+      chk.onclick = ()=>{ taskSetDone(item,!itemDone(item)); save(); rerender(); };  /* المهام: rerender=القائمتان معًا لتحديث الأولويات المرتبطة */
       const input = document.createElement("input");
       input.type = "text";
       input.className = "task-input";
@@ -8259,10 +8328,12 @@
       const flag = document.createElement("span");
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
-      const metaBtn=document.createElement("button"); metaBtn.type="button"; metaBtn.className="task-meta-btn"; metaBtn.textContent="⋯"; metaBtn.title="تاريخ ووقت وتكرار وتصنيف"; metaBtn.setAttribute("aria-label","تفاصيل المهمة"); metaBtn.onclick=()=>taskOpenMeta(item,rerender);
+      const metaBtn=document.createElement("button"); metaBtn.type="button"; metaBtn.className="task-meta-btn"; metaBtn.textContent="⋯"; metaBtn.title="الحالة والوقت والتكرار والمهام الفرعية"; metaBtn.setAttribute("aria-label","تفاصيل المهمة"); metaBtn.onclick=()=>taskOpenMeta(item,rerender);
       if(handle){ row.append(handle, chk, input, metaBtn, flag); wireDrag(handle, row); }
       else row.append(chk, input, metaBtn, flag);
-      const metaParts=taskMetaText(item); if(metaParts.length){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join(""); row.appendChild(meta); }
+      const metaParts=taskMetaText(item); if(metaParts.length||item.link){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
+        if(item.link){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=item.link;a.target="_blank";a.rel="noopener noreferrer";a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
+      if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
       box.appendChild(row);
     };
     /* صفّ أولوية مرتبطة مبسّط: ☐ العنوان 🔗 — النقر على 🔗 يفكّ الربط بعد تأكيد خفيف؛
@@ -8270,7 +8341,7 @@
     const linkedRow = (item, idx)=>{
       const src = taskById(item.sourceTaskId);
       const text = src ? (src.text||"") : (item.text||"");
-      const done = src ? !!src.done : !!item.done;
+      const done = src ? itemDone(src) : itemDone(item);
       const row = document.createElement("div");
       row.className = "task-row linked"+(done?" done":"");
       row.dataset.idx = String(idx);
@@ -8280,7 +8351,7 @@
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
       chk.setAttribute("aria-label",done?"إعادة فتح المهمة المرتبطة":"إكمال المهمة المرتبطة"); chk.setAttribute("aria-pressed",String(done));
-      chk.onclick = ()=>{ if(src){ src.done = !src.done; } else { item.done = !item.done; } save(); rerenderBoth(); };  /* إكمال الأولوية المرتبطة يُبدّل حالة المهمة الأصلية */
+      chk.onclick = ()=>{ if(src){ taskSetDone(src,!itemDone(src)); } else { taskSetDone(item,!itemDone(item)); } save(); rerenderBoth(); };  /* إكمال الأولوية المرتبطة يُبدّل حالة المهمة الأصلية */
       const wrap = document.createElement("div");
       wrap.className = "task-linkwrap";
       const txt = document.createElement("span");
@@ -8423,7 +8494,7 @@
     const el = document.getElementById(summaryId);
     if(!el) return;
     const arn = n => n.toLocaleString("ar-EG");
-    const filled = items.filter(itemFilled);
+    const filled = items===state.tasks?items.filter(taskActive):items.filter(itemFilled);
     const done = filled.filter(it=> itemDone(it)).length;
     if(filled.length){
       let html = "📊 <b>"+arn(done)+"</b> من <b>"+arn(filled.length)+"</b> مكتملة";
@@ -8495,7 +8566,7 @@
     };
 
     const prayerDone = state.prayers.filter(isPrayed).length;
-    const tasks = (state.tasks||[]).filter(itemFilled);
+    const tasks = (state.tasks||[]).filter(taskActive);
     const priorities = (state.priorities||[]).filter(itemFilled);
     const taskDone = tasks.filter(t=>itemDone(t)).length + priorities.filter(p=>itemDone(p)).length;
     const taskTotal = tasks.length + priorities.length;
@@ -8535,8 +8606,8 @@
     total += ibItems.length; done += ibItems.filter(w=>!!state.worship[w.id]).length;
     total += 1; if(state.water >= waterGoal()) done += 1;
     total += 1; if(sportDone(state)) done += 1;
-    const filledTasks = state.tasks.filter(t=>t.text.trim());
-    total += filledTasks.length; done += filledTasks.filter(t=>t.done).length;
+    const filledTasks = state.tasks.filter(taskActive);
+    total += filledTasks.length; done += filledTasks.filter(itemDone).length;
     const filledPr = state.priorities.filter(itemFilled);
     total += filledPr.length; done += filledPr.filter(p=> itemDone(p)).length;
     const pct = total ? Math.round(done/total*100) : 0;
@@ -8588,8 +8659,8 @@
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= waterGoal()) done += 1;
     total += 1; if(sportDone(s)) done += 1;
-    const ft = (s.tasks || []).filter(t=>t && t.text && t.text.trim());
-    total += ft.length; done += ft.filter(t=>t.done).length;
+    const ft = (s.tasks || []).filter(taskActive);
+    total += ft.length; done += ft.filter(itemDone).length;
     const fp = (s.priorities || []).filter(p=> p && (p.sourceTaskId || (p.text && p.text.trim())));
     total += fp.length; done += fp.filter(p=> itemDone(p, s.tasks)).length;
     return total ? Math.round(done/total*100) : 0;
@@ -8619,7 +8690,7 @@
     const startKey=fmtDate(overdueStart), endKey=fmtDate(endDate), rows=new Map(), latestRecurring=new Map();
     Object.keys(days).sort().forEach(dayKey=>{
       const day=days[dayKey]||{};
-      (day.tasks||[]).filter(itemFilled).forEach(task=>{
+      (day.tasks||[]).filter(taskActive).forEach(task=>{
         const due=/^\d{4}-\d{2}-\d{2}$/.test(task.dueDate||"")?task.dueDate:dayKey;
         const series=calendarTaskSeriesKey(task), rowKey=series+"|"+due;
         if(!task.done && due>=startKey && due<=endKey && !rows.has(rowKey)){
@@ -8646,7 +8717,7 @@
   function calendarTaskCounts(days){
     const counts={};
     Object.keys(days).forEach(dayKey=>{
-      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done).forEach(t=>{
+      (days[dayKey].tasks||[]).filter(t=>taskActive(t)&&!itemDone(t)).forEach(t=>{
         const due=/^\d{4}-\d{2}-\d{2}$/.test(t.dueDate||"")?t.dueDate:dayKey;
         counts[due]=(counts[due]||0)+1;
       });
@@ -8749,7 +8820,7 @@
   function notifyTaskRowsForToday(){
     const today=todayStr(), rows=[], seen=new Set(), days=allDays();
     Object.keys(days).forEach(dayKey=>{
-      (days[dayKey].tasks||[]).filter(t=>itemFilled(t)&&!t.done&&t.dueTime).forEach(t=>{
+      (days[dayKey].tasks||[]).filter(t=>taskActive(t)&&!itemDone(t)&&t.dueTime).forEach(t=>{
         const due=t.dueDate||dayKey, key=(t.id||t.text)+"|"+due+"|"+t.dueTime;
         if(due===today&&!seen.has(key)){ seen.add(key); rows.push(t); }
       });
@@ -8767,7 +8838,7 @@
         if(notifyDue(hm,+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+p[1],"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
       });
     }
-    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ if(notifyDue(task.dueTime,0)) notifyShow("✅ موعد مهمة",task.text,"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime,today); });
+    if(settings.tasks) notifyTaskRowsForToday().forEach(task=>{ const lead=+task.reminderMinutes||0; if(notifyDue(task.dueTime,lead)) notifyShow("✅ "+(lead?"تذكير بمهمة":"موعد مهمة"),task.text+(lead?" — بقي "+lead.toLocaleString("ar-EG")+" دقيقة":""),"task|"+today+"|"+(task.id||task.text)+"|"+task.dueTime+"|"+lead,today); });
     if(settings.water&&todayState.water<waterGoal()&&notifyDue(settings.waterTime,0)) notifyShow("💧 تذكير الماء","أكملت "+todayState.water.toLocaleString("ar-EG")+" من "+waterGoal().toLocaleString("ar-EG")+" أكواب اليوم.","water|"+today+"|"+settings.waterTime,today);
     if(settings.sport&&!sportDone(todayState)&&notifyDue(settings.sportTime,0)) notifyShow("🏃 وقت الحركة","هدفك اليومي "+sportGoal().toLocaleString("ar-EG")+" دقيقة — ابدأ بخطوة خفيفة.","sport|"+today+"|"+settings.sportTime,today);
     const q=qLoad(), readToday=Math.max(0,q.page-q.startPage);
@@ -8839,8 +8910,8 @@
     Object.keys(days).sort().forEach(date=>{
       const day=days[date]||{};
       (day.tasks||[]).filter(itemFilled).forEach(task=>{
-        const category=task.category||"";
-        rows.push({type:"task",date,id:task.id||"",title:task.text||"",detail:[category,task.dueTime||"",task.repeat==="daily"?"يومي":task.repeat==="weekly"?"أسبوعي":""].filter(Boolean).join(" · "),category,done:!!task.done});
+        const category=task.category||"", sub=(task.subtasks||[]).map(s=>s.text||"").filter(Boolean).join(" · ");
+        rows.push({type:"task",date,id:task.id||"",title:task.text||"",detail:[category,TASK_STATUS_LABELS[taskStatus(task)],task.dueTime||"",task.repeat==="daily"?"يومي":task.repeat==="weekly"?"أسبوعي":"",sub,task.link||""].filter(Boolean).join(" · "),category,done:itemDone(task)});
       });
       if(String(day.notes||"").trim()) rows.push({type:"note",date,title:globalSearchExcerpt(day.notes),detail:"ملاحظات اليوم",category:""});
       if(String(day.memory||"").trim()) rows.push({type:"memory",date,title:globalSearchExcerpt(day.memory),detail:"ذكرى اليوم",category:""});
@@ -12146,7 +12217,7 @@
   safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
   safeRun("personalizeInit", personalizeInit);
   safeRun("appViewInit", appViewInit);
-  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
+  safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskWeekBtn").onclick=taskWeekOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);
   safeRun("globalSearchInit", globalSearchInit);
   safeRun("habitInit", habitInit);
