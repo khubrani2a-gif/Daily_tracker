@@ -2617,6 +2617,67 @@
     </div>
   </div>
 
+  <div class="habit-overlay" id="habitOverlay" hidden>
+    <section class="habit-sheet" role="dialog" aria-modal="true" aria-labelledby="habitTitle">
+      <div class="habit-head"><h2 id="habitTitle">🌱 إدارة العادات</h2><button type="button" class="habit-close" id="habitClose" aria-label="إغلاق">✕</button></div>
+      <div class="habit-list-view" id="habitListView">
+        <p class="habit-list-intro">أنشئ عادة، اختر أيامها، وحدد هدفًا أسبوعيًا أو شهريًا. يحسب التطبيق تقدمك وسلسلة التزامك تلقائيًا.</p>
+        <div class="habit-list" id="habitManageList"></div>
+        <button type="button" class="habit-main-action" id="habitAddBtn">＋ عادة جديدة</button>
+      </div>
+      <div class="habit-edit-view" id="habitEditView" hidden>
+        <label class="habit-field">اسم العادة<input id="habitName" maxlength="80" placeholder="مثال: المشي ٢٠ دقيقة"></label>
+        <div class="habit-grid2">
+          <label class="habit-field">القسم<select id="habitGroup"><option value="habit">عادات مخصصة</option><option value="adhkar">أذكار</option><option value="salah">الصلاة والنوافل</option><option value="awrad">الأوراد اليومية</option></select></label>
+          <label class="habit-field">عدد المرات في اليوم<input id="habitDailyTarget" type="number" inputmode="numeric" min="1" max="9999" value="1"></label>
+        </div>
+        <div class="habit-days-title">أيام التكرار</div>
+        <div class="habit-days" id="habitDays">
+          <label class="habit-day"><input type="checkbox" value="0"><span>الأحد</span></label><label class="habit-day"><input type="checkbox" value="1"><span>الاثنين</span></label><label class="habit-day"><input type="checkbox" value="2"><span>الثلاثاء</span></label><label class="habit-day"><input type="checkbox" value="3"><span>الأربعاء</span></label><label class="habit-day"><input type="checkbox" value="4"><span>الخميس</span></label><label class="habit-day"><input type="checkbox" value="5"><span>الجمعة</span></label><label class="habit-day"><input type="checkbox" value="6"><span>السبت</span></label>
+        </div>
+        <div class="habit-goal-box">
+          <p>الهدف الدوري اختياري، مثل إكمال العادة ٣ مرات أسبوعيًا أو ٢٠ مرة شهريًا.</p>
+          <div class="habit-grid2">
+            <label class="habit-field">الفترة<select id="habitGoalPeriod"><option value="none">بدون هدف دوري</option><option value="weekly">أسبوعي</option><option value="monthly">شهري</option></select></label>
+            <label class="habit-field">عدد مرات الإنجاز<input id="habitGoalTarget" type="number" inputmode="numeric" min="1" max="99" value="3"></label>
+          </div>
+        </div>
+        <div class="habit-edit-error" id="habitEditError" role="alert"></div>
+        <div class="habit-edit-actions"><button type="button" id="habitEditCancel">رجوع</button><button type="button" class="primary" id="habitEditSave">حفظ العادة</button></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="data-overlay" id="dataOverlay" hidden>
+    <section class="data-sheet" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+      <div class="data-head"><h2 id="dataTitle">🗄️ إدارة البيانات</h2><button type="button" class="data-close" id="dataClose" aria-label="إغلاق">✕</button></div>
+      <div class="data-body">
+        <div class="data-status-grid">
+          <div class="data-status-card"><small>الأيام المحفوظة</small><b id="dataDaysCount">٠</b></div>
+          <div class="data-status-card"><small>النسخ المحلية</small><b id="dataBackupsCount">٠</b></div>
+          <div class="data-status-card"><small>تعارضات تحتاج مراجعة</small><b id="dataConflictsCount">٠</b></div>
+        </div>
+        <div class="data-actions">
+          <button type="button" class="data-action primary" id="dataCreateBackup">＋ إنشاء نسخة الآن</button>
+          <button type="button" class="data-action" id="exportBtn">⬇️ JSON</button>
+          <button type="button" class="data-action" id="importBtn">⬆️ استيراد نسخة</button>
+          <button type="button" class="data-action" id="dataExportExcel">📊 Excel</button>
+          <button type="button" class="data-action" id="dataExportPdf">📄 PDF / طباعة</button>
+          <button type="button" class="data-action" id="dataClearReviewed">✓ مسح المراجَعة</button>
+        </div>
+        <div class="data-section">
+          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٥ نسخ على هذا الجهاز</span></div>
+          <div class="data-list" id="dataBackupList"></div>
+        </div>
+        <div class="data-section">
+          <div class="data-section-head"><h3>تعارضات المزامنة</h3><span>تُكتشف قبل اعتماد الدمج</span></div>
+          <div class="data-list" id="dataConflictList"></div>
+        </div>
+        <div class="data-note">تُنشأ نسخة أمان تلقائيًا قبل الاستعادة وقبل دمج أي تعارض مكتشف. تبقى النسخ محليًا ما لم تُنزّلها بنفسك.</div>
+      </div>
+    </section>
+  </div>
+
   <!-- ===== شاشة الأذكار ===== -->
   <div class="adhkar-overlay" id="adhkarOverlay" hidden>
     <div class="adhkar-sheet">
@@ -3202,7 +3263,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٠٥</div>
+    <div class="app-version">النسخة ١٠٧</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -3321,8 +3382,61 @@
   }
   function wAllItemsForDate(dateStr){ return wAllItems().filter(item=>habitScheduledOn(item,dateStr)); }
   /* بنود بطاقة «العبادات» فقط (أذكار/صلاة/أوراد عادية) — الورد اليومي وقراءة السور المخصّصة لها بطاقة «القرآن» المستقلة */
-  function ibOnlyItems(date){
-    return wAllItems(date).filter(w=> w.id !== "werd" && w.kind !== "quran");
+  function ibOnlyItems(dateStr){
+    return wAllItemsForDate(dateStr||currentDate).filter(w=> w.id !== "werd" && w.kind !== "quran");
+  }
+  function habitStateForDate(dateStr){
+    if(dateStr===currentDate&&state) return state;
+    try{ return JSON.parse(localStorage.getItem(storageKey(dateStr))||"null"); }catch(e){ return null; }
+  }
+  function habitCompletedOn(item,dateStr){
+    const saved=habitStateForDate(dateStr);
+    return !!(saved&&saved.worship&&saved.worship[item.id]);
+  }
+  function habitPeriodRange(item,dateStr){
+    const date=new Date((dateStr||currentDate)+"T12:00:00"), start=new Date(date), end=new Date(date);
+    if(item.goalPeriod==="monthly"){ start.setDate(1); end.setMonth(end.getMonth()+1,0); }
+    else{ start.setDate(start.getDate()-start.getDay()); end.setDate(start.getDate()+6); }
+    return {start:fmtDate(start),end:fmtDate(end)};
+  }
+  function habitPeriodProgress(item,dateStr){
+    if(item.goalPeriod!=="weekly"&&item.goalPeriod!=="monthly") return null;
+    const range=habitPeriodRange(item,dateStr||currentDate), cursor=new Date(range.start+"T12:00:00"), stop=new Date(range.end+"T12:00:00");
+    let done=0,scheduled=0;
+    while(cursor<=stop){
+      const key=fmtDate(cursor);
+      if(habitScheduledOn(item,key)){ scheduled++; if(habitCompletedOn(item,key)) done++; }
+      cursor.setDate(cursor.getDate()+1);
+    }
+    const target=Math.max(1,Math.min(99,+item.goalTarget||scheduled||1));
+    return {done,target,period:item.goalPeriod};
+  }
+  function habitStreak(item,dateStr){
+    const cursor=new Date((dateStr||currentDate)+"T12:00:00"), selected=fmtDate(cursor), isCurrentToday=selected===todayStr();
+    let streak=0,scheduledSeen=0;
+    for(let i=0;i<730;i++){
+      const key=fmtDate(cursor);
+      if(habitScheduledOn(item,key)){
+        scheduledSeen++;
+        if(habitCompletedOn(item,key)) streak++;
+        else if(!(isCurrentToday&&key===selected)){ break; }
+      }
+      cursor.setDate(cursor.getDate()-1);
+    }
+    return streak;
+  }
+  function habitDaysText(item){
+    const days=Array.isArray(item.scheduleDays)?item.scheduleDays.map(Number).filter(n=>n>=0&&n<=6):[];
+    if(!days.length||days.length===7) return "يوميًا";
+    return days.map(day=>HABIT_DAY_NAMES[day]).join("، ");
+  }
+  function habitRowMeta(item){
+    if(!item||!item.custom) return null;
+    const progress=habitPeriodProgress(item,currentDate), streak=habitStreak(item,currentDate), chip=document.createElement("span");
+    chip.className="habit-progress-chip";
+    chip.textContent=(streak?"🔥 "+streak.toLocaleString("ar-EG"):"بداية جديدة")+(progress?" · "+progress.done.toLocaleString("ar-EG")+"/"+progress.target.toLocaleString("ar-EG"):"");
+    chip.title="السلسلة الحالية"+(progress?" · تقدم الهدف "+(progress.period==="weekly"?"الأسبوعي":"الشهري"):"");
+    return chip;
   }
   /* حذف بند: مخصّص يُزال نهائيًا، أصلي في مجموعة الأوراد يُخفى فقط (قابل لإرجاعه مستقبلًا لو احتجنا) */
   function ibRemoveItem(w){
@@ -7710,8 +7824,8 @@
     IB_GROUPS.forEach(g=>{
       const ul = document.getElementById("ibList-"+g);
       ul.innerHTML = "";
-      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd" && (w.id !== "reading" || currentDate < READING_LAUNCH_DATE)).forEach(w=> ibRenderItem(w, ul));
-      custom.filter(w=>w.group === g && w.kind !== "quran").forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
+      WORSHIP.filter(w=>w.group === g && hidden.indexOf(w.id) === -1 && w.id !== "werd").forEach(w=> ibRenderItem(w, ul));
+      custom.filter(w=>w.group === g && w.kind !== "quran" && habitScheduledOn(w,currentDate)).forEach(w=> ibRenderItem(Object.assign({custom:true}, w), ul));
     });
 
     renderQuranCard();
@@ -7764,13 +7878,6 @@
     state.sunnahDone = !state.sunnahDone;
     save(); renderWorship();
   };
-  document.getElementById("dhikrCountBtn").onclick=dhikrCount;
-  document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
-  document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
-  document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
-  document.getElementById("learningAddBtn").onclick=()=>learningItemForm(null);
-  document.getElementById("learningGoalBtn").onclick=learningGoalEdit;
-  document.getElementById("learningQuickBtn").onclick=()=>learningAddMinutes(10);
   let habitEditingId=null;
   const habitOverlay=document.getElementById("habitOverlay");
   function habitGroupLabel(group){ return group==="adhkar"?"أذكار":group==="salah"?"الصلاة والنوافل":group==="awrad"?"الأوراد اليومية":"عادات مخصصة"; }
@@ -8895,12 +9002,12 @@
   }
 
   /* ---------- الإحصائيات وشبكة السنة ---------- */
-  function dayPct(s, date){
+  function dayPct(s,dateStr){
     let total = 0, done = 0;
     const pr = s.prayers || [];
     total += (pr.length || PRAYERS.length); done += pr.filter(isPrayed).length;
     const wsh = s.worship || {};
-    const ibAll = wAllItems(date);
+    const ibAll = wAllItemsForDate(dateStr||currentDate);
     total += ibAll.length; done += ibAll.filter(w=>!!wsh[w.id]).length;
     total += 1; if((s.water || 0) >= waterGoal()) done += 1;
     total += 1; if(sportDone(s)) done += 1;
@@ -9006,7 +9113,7 @@
     for(let i=0;i<first.getDay();i++){ const blank=document.createElement("span"); blank.className="calendar-day outside"; blank.setAttribute("aria-hidden","true"); grid.appendChild(blank); }
     let recorded=0, high=0, focus=0;
     for(let day=1;day<=total;day++){
-      const date=new Date(y,m,day,12), key=fmtDate(date), saved=days[key], pct=saved?dayPct(saved):0, tasks=taskCounts[key]||0;
+      const date=new Date(y,m,day,12), key=fmtDate(date), saved=days[key], pct=saved?dayPct(saved,key):0, tasks=taskCounts[key]||0;
       if(saved){ recorded++; if(pct>=80)high++; if(pct<40)focus++; }
       const btn=document.createElement("button"); btn.type="button"; btn.className="calendar-day";
       if(saved) btn.classList.add(pct>=80?"done":pct>=40?"partial":"low");
@@ -9297,7 +9404,7 @@
       const tasks=(s.tasks||[]).filter(taskActive);
       const priorities=(s.priorities||[]).filter(p=>p&&(p.sourceTaskId||(p.text&&p.text.trim())));
       taskTotal+=tasks.length+priorities.length;
-      taskDone+=tasks.filter(itemDone).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
+      taskDone+=tasks.filter(t=>t.done).length+priorities.filter(p=>itemDone(p,s.tasks)).length;
       const ibItems=ibOnlyItems(r.key); worshipTotal+=ibItems.length; worshipDone+=ibItems.filter(w=>!!(s.worship||{})[w.id]).length;
       const mins=statsSportMinutes(s); sportMinutes+=mins; if(mins>0)sportActive++; if(sportDone(s))sportGoalDays++;
       if((s.water||0)>=waterGoal()) waterDays++;
@@ -9493,7 +9600,7 @@
       const dt = new Date(d+"T12:00:00");
       const ws = new Date(dt); ws.setDate(ws.getDate() - ws.getDay());
       const wk = fmtDate(ws);
-      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d], d));
+      (weeks[wk] = weeks[wk] || []).push(dayPct(days[d],d));
     }
     let bestWk = null, bestAvg = 0;
     for(const wk in weeks){
@@ -9541,7 +9648,7 @@
       const cell = document.createElement("span");
       cell.className = "hm-cell";
       if(days[key]){
-        const pct = dayPct(days[key], key);
+        const pct = dayPct(days[key],key);
         const lvl = pct === 0 ? 0 : pct <= 25 ? 1 : pct <= 50 ? 2 : pct <= 75 ? 3 : 4;
         if(lvl) cell.classList.add("p"+lvl);
         cell.title = key+" — "+arn(pct)+"٪";
@@ -9748,8 +9855,6 @@
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
   const DATA_VERSION=1;
-  const DATA_MAX_IMPORT_BYTES=5*1024*1024;
-  const DATA_MAX_IMPORT_ENTRIES=1000;
   function dataOwnedKey(key){ return !!key&&key.startsWith("h2do-"); }
   function dataLoadJson(key,fallback){ try{ return JSON.parse(localStorage.getItem(key)||"")||fallback; }catch(e){ return fallback; } }
   function dataSnapshotStats(snapshot){
@@ -9763,7 +9868,7 @@
       const key=localStorage.key(i);
       if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) entries[key]=localStorage.getItem(key);
     }
-    return {schema:DATA_VERSION,appVersion:112,createdAt:Date.now(),reason:reason||"يدوية",entries};
+    return {schema:DATA_VERSION,appVersion:107,createdAt:Date.now(),reason:reason||"يدوية",entries};
   }
   function dataLoadBackups(){
     const list=dataLoadJson(DATA_BACKUP_KEY,[]);
@@ -9790,11 +9895,7 @@
   }
   function dataNormalizeImported(raw,name){
     if(raw&&raw.schema&&raw.entries&&typeof raw.entries==="object"){
-      if(+raw.schema>DATA_VERSION) throw new Error("newer backup");
-      const keys=Object.keys(raw.entries);
-      if(keys.length>DATA_MAX_IMPORT_ENTRIES) throw new Error("too many entries");
-      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
-      if(!Object.keys(entries).length) throw new Error("empty backup");
+      const entries={}; Object.keys(raw.entries).forEach(key=>{ const value=raw.entries[key]; entries[key]=typeof value==="string"?value:JSON.stringify(value); });
       return {schema:DATA_VERSION,appVersion:+raw.appVersion||0,createdAt:+raw.createdAt||Date.now(),reason:"مستوردة: "+(name||"ملف"),entries};
     }
     if(raw&&typeof raw==="object"&&!Array.isArray(raw)){
@@ -9816,67 +9917,107 @@
     const value=snapshot||dataBuildSnapshot("تصدير JSON");
     dataDownload(JSON.stringify(value,null,2),"application/json;charset=utf-8","daily-tracker-backup-"+todayStr()+".json");
   }
-  function dataHealthCheck(){
-    let daily=0, invalidDaily=0, invalidExpenses=0;
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      if(key&&key.startsWith(PREFIX)){
-        daily++;
-        try{ const parsed=JSON.parse(localStorage.getItem(key)); if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)) invalidDaily++; }catch(e){ invalidDaily++; }
-      }
+  function dataApplySnapshot(snapshot){
+    const entries=(snapshot&&snapshot.entries)||{}, remove=[];
+    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!Object.prototype.hasOwnProperty.call(entries,key)) remove.push(key); }
+    remove.forEach(key=>localStorage.removeItem(key));
+    Object.keys(entries).forEach(key=>{ if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) localStorage.setItem(key,String(entries[key])); });
+  }
+  function dataRestoreBackup(id){
+    const record=dataLoadBackups().find(item=>item.id===id); if(!record) return;
+    if(!confirm("استعادة «"+record.reason+"»؟ ستُستبدل بيانات التطبيق الحالية، وستُنشأ نسخة أمان منها أولًا.")) return;
+    const safety=dataSaveBackup("قبل استعادة "+record.reason,true);
+    if(!safety){ alert("تعذّر إنشاء نسخة الأمان، لذلك أُلغيت الاستعادة حفاظًا على بياناتك."); return; }
+    try{ dataApplySnapshot(record.snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
+  }
+  function dataDeleteBackup(id){
+    const record=dataLoadBackups().find(item=>item.id===id); if(!record||!confirm("حذف النسخة «"+record.reason+"» من هذا الجهاز؟")) return;
+    dataStoreBackups(dataLoadBackups().filter(item=>item.id!==id)); dataRenderCenter();
+  }
+  function dataXml(value){ return String(value==null?"":value).replace(/[<>&'"]/g,char=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[char])); }
+  function dataExcelCell(value,type){ return '<Cell><Data ss:Type="'+(type||"String")+'">'+dataXml(value)+'</Data></Cell>'; }
+  function dataExportExcel(){
+    const days=allDays(), dailyRows=[["التاريخ","الصلوات المكتملة","المهام المكتملة","إجمالي المهام","الماء","دقائق الرياضة","الملاحظات","الذكريات"]];
+    Object.keys(days).sort().forEach(date=>{ const day=days[date]||{}, tasks=(day.tasks||[]).filter(itemFilled); dailyRows.push([date,(day.prayers||[]).filter(isPrayed).length,tasks.filter(item=>item.done).length,tasks.length,day.water||0,(day.sport&&day.sport.mins)||0,day.notes||"",day.memory||""]); });
+    const expenseRows=[["التاريخ","الفئة","النوع","المبلغ ر.س","التفصيل","الملاحظة"]];
+    expActiveTx().sort((a,b)=>(a.transactionDate||"").localeCompare(b.transactionDate||"")).forEach(tx=>expenseRows.push([tx.transactionDate||"",(expCatById(tx.categoryId)||{}).name||"غير مصنف",tx.transactionType||"expense",(expToMinor(tx.amountMinor)/100),tx.subcategory||"",tx.description||""]));
+    const sheet=(name,rows)=>'<Worksheet ss:Name="'+dataXml(name)+'"><Table>'+rows.map((row,rowIndex)=>'<Row>'+row.map((cell,index)=>dataExcelCell(cell,rowIndex>0&&[1,2,3,4,5].includes(index)&&typeof cell==="number"?"Number":"String")).join("")+'</Row>').join("")+'</Table></Worksheet>';
+    const xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+sheet("اليوميات",dailyRows)+sheet("المصاريف",expenseRows)+'</Workbook>';
+    dataDownload("\ufeff"+xml,"application/vnd.ms-excel;charset=utf-8","daily-tracker-"+todayStr()+".xls");
+  }
+  function dataEsc(value){ return String(value==null?"":value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char])); }
+  function dataExportPdf(){
+    const days=allDays(), dates=Object.keys(days).sort().reverse(), tx=expActiveTx(), tasks=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(itemFilled).length,0), done=dates.reduce((sum,date)=>sum+(days[date].tasks||[]).filter(item=>itemFilled(item)&&item.done).length,0);
+    const dayRows=dates.slice(0,60).map(date=>{ const day=days[date]||{}, list=(day.tasks||[]).filter(itemFilled); return "<tr><td>"+dataEsc(date)+"</td><td>"+list.filter(item=>item.done).length+" / "+list.length+"</td><td>"+(day.prayers||[]).filter(isPrayed).length+" / "+PRAYERS.length+"</td><td>"+dataEsc(day.notes||"")+"</td></tr>"; }).join("");
+    const html='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير مفكرتي اليومية</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#173d38;line-height:1.6}h1{font-size:22px}h2{font-size:16px;margin-top:24px}.meta{color:#667}.cards{display:flex;gap:8px}.card{border:1px solid #ccd9d6;border-radius:8px;padding:10px;flex:1}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d9e2e0;padding:5px;text-align:right;vertical-align:top}th{background:#edf6f4}</style></head><body><h1>مفكرتي اليومية — تقرير البيانات</h1><p class="meta">تاريخ الإنشاء: '+dataEsc(new Date().toLocaleString("ar-SA"))+'</p><div class="cards"><div class="card">الأيام المحفوظة<br><b>'+dates.length+'</b></div><div class="card">المهام المكتملة<br><b>'+done+" / "+tasks+'</b></div><div class="card">المعاملات المالية<br><b>'+tx.length+'</b></div></div><h2>آخر الأيام</h2><table><thead><tr><th>التاريخ</th><th>المهام</th><th>الصلوات</th><th>الملاحظات</th></tr></thead><tbody>'+dayRows+'</tbody></table></body></html>';
+    const printWindow=window.open("","_blank"); if(!printWindow){ alert("اسمح بالنوافذ المنبثقة لإعداد ملف PDF."); return; }
+    printWindow.document.open(); printWindow.document.write(html); printWindow.document.close(); setTimeout(()=>{ printWindow.focus(); printWindow.print(); },300);
+  }
+  function dataBaselineLoad(){ const value=dataLoadJson(DATA_BASELINE_KEY,{}); return value&&typeof value==="object"?value:{}; }
+  function dataBaselineId(module,key){ return module+"|"+(key||"all"); }
+  function dataChangedFields(local,remote){
+    const labels={prayers:"الصلاة",worship:"العبادات والعادات",water:"الماء",tasks:"المهام",priorities:"الأولويات",notes:"الملاحظات",memory:"الذكريات",sport:"الرياضة",rating:"التقييم",page:"صفحة القرآن",items:"العناصر",favorites:"المفضلة",history:"السجل"};
+    return [...new Set(Object.keys(Object.assign({},local||{},remote||{})).filter(key=>key!=="updatedAt"&&JSON.stringify(local&&local[key])!==JSON.stringify(remote&&remote[key])).map(key=>labels[key]||key))].slice(0,8);
+  }
+  function dataConflictLoad(){ const list=dataLoadJson(DATA_CONFLICT_KEY,[]); return Array.isArray(list)?list:[]; }
+  function dataRecordConflict(module,key,localTs,remoteTs,fields,resolution){
+    const list=dataConflictLoad(), signature=[module,key,localTs,remoteTs,(fields||[]).join(",")].join("|");
+    if(list.some(item=>item.signature===signature)) return;
+    dataSaveBackup("قبل دمج تعارض",true);
+    list.unshift({id:"conf_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,5),signature,module,key:key||"",createdAt:Date.now(),localUpdatedAt:localTs,remoteUpdatedAt:remoteTs,fields:fields||[],resolution:resolution||"اعتماد الأحدث",reviewed:false});
+    localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.slice(0,50)));
+    if(typeof dataRenderCenter==="function"&&!document.getElementById("dataOverlay").hidden) dataRenderCenter();
+  }
+  function dataDetectConflict(module,key,local,remote,resolution){
+    const localTs=+(local&&local.updatedAt)||0, remoteTs=+(remote&&remote.updatedAt)||0, baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id];
+    if(baseline!==undefined&&localTs>baseline&&remoteTs>baseline&&JSON.stringify(local)!==JSON.stringify(remote)){
+      dataRecordConflict(module,key,localTs,remoteTs,dataChangedFields(local,remote),resolution||((remoteTs>localTs)?"اعتماد نسخة السحابة الأحدث":"اعتماد نسخة الجهاز الأحدث"));
     }
-    /* غلاف متوافق مع النُسخ القديمة (كائن أيام مباشر بلا صيغة): v2 يضيف صيغة/إصدار ووحدة القراءة دون كسر الاستيراد القديم */
-    const payload = { format:"mufakkirati-backup", version:2, exportedAt:Date.now(), days:data,
-      modules:{ reading: (typeof rdExportPayload==="function") ? rdExportPayload() : {settings:null, items:[], sessions:[]} } };
-    const blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "daily-tracker-backup-"+todayStr()+".json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
+    baselines[id]=Math.max(+baseline||0,localTs,remoteTs); localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
+  }
+  function dataDetectCollectionConflicts(module,key,localRows,remoteRows,resolution){
+    const baselines=dataBaselineLoad(), id=dataBaselineId(module,key), baseline=baselines[id], localMap=new Map((localRows||[]).filter(Boolean).map(row=>[String(row.id||""),row])), conflicts=[], times=[];
+    const maxUpdatedAt=rows=>Math.max(0,...(rows||[]).map(row=>(+(row&&row.updatedAt)||0)));
+    (localRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0)); (remoteRows||[]).forEach(row=>times.push(+(row&&row.updatedAt)||0));
+    (remoteRows||[]).forEach(remote=>{ const local=localMap.get(String(remote&&remote.id||"")); if(local&&baseline!==undefined&&(local.updatedAt||0)>baseline&&(remote.updatedAt||0)>baseline&&JSON.stringify(local)!==JSON.stringify(remote)) conflicts.push(String(remote.id||"سجل")); });
+    const next=Math.max(+baseline||0,...times,0);
+    if(conflicts.length) dataRecordConflict(module,key,maxUpdatedAt(localRows),maxUpdatedAt(remoteRows),["سجلات: "+conflicts.slice(0,6).join("، ")],resolution||"دمج كل سجل حسب آخر تحديث");
+    baselines[id]=next; localStorage.setItem(DATA_BASELINE_KEY,JSON.stringify(baselines));
+  }
+  function dataReviewConflict(id){ const list=dataConflictLoad(), item=list.find(entry=>entry.id===id); if(item){ item.reviewed=true; localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list)); dataRenderCenter(); } }
+  function dataClearReviewed(){ const list=dataConflictLoad(), reviewed=list.filter(item=>item.reviewed).length; if(!reviewed){ alert("لا توجد تعارضات مراجَعة لمسحها."); return; } localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.filter(item=>!item.reviewed))); dataRenderCenter(); }
+  const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية"};
+  function dataFormatBytes(bytes){ if(bytes<1024) return bytes+" ب"; if(bytes<1048576) return (bytes/1024).toFixed(1)+" ك.ب"; return (bytes/1048576).toFixed(1)+" م.ب"; }
+  function dataRenderCenter(){
+    const backups=dataLoadBackups(), conflicts=dataConflictLoad(), unresolved=conflicts.filter(item=>!item.reviewed), days=Object.keys(allDays()).length;
+    document.getElementById("dataDaysCount").textContent=days.toLocaleString("ar-EG"); document.getElementById("dataBackupsCount").textContent=backups.length.toLocaleString("ar-EG"); document.getElementById("dataConflictsCount").textContent=unresolved.length.toLocaleString("ar-EG");
+    const backupHost=document.getElementById("dataBackupList"); backupHost.innerHTML="";
+    if(!backups.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد نسخ محلية بعد. أنشئ أول نسخة قبل أي تغيير كبير."; backupHost.appendChild(empty); }
+    backups.forEach(record=>{ const row=document.createElement("div"); row.className="data-row"; const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=record.reason; const small=document.createElement("small"); const stats=record.stats||dataSnapshotStats(record.snapshot); small.textContent=new Date(record.createdAt).toLocaleString("ar-SA")+" · "+stats.days.toLocaleString("ar-EG")+" يوم · "+stats.expenses.toLocaleString("ar-EG")+" معاملة · "+dataFormatBytes(stats.size||0); copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions";
+      const restore=document.createElement("button"); restore.type="button"; restore.className="restore"; restore.textContent="استعادة"; restore.onclick=()=>dataRestoreBackup(record.id);
+      const download=document.createElement("button"); download.type="button"; download.textContent="تنزيل"; download.onclick=()=>dataExportJson(record.snapshot);
+      const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="حذف"; del.onclick=()=>dataDeleteBackup(record.id); actions.append(restore,download,del); row.append(copy,actions); backupHost.appendChild(row); });
+    const conflictHost=document.getElementById("dataConflictList"); conflictHost.innerHTML="";
+    if(!conflicts.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد تعارضات مسجّلة. عند تعديل البيانات نفسها على جهازين دون مزامنة، سيظهر التنبيه هنا قبل الدمج."; conflictHost.appendChild(empty); }
+    conflicts.forEach(item=>{ const row=document.createElement("div"); row.className="data-row data-conflict-row"+(item.reviewed?" reviewed":""); const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=(DATA_MODULE_LABELS[item.module]||item.module)+(item.key?" — "+item.key:""); if(!item.reviewed){ const badge=document.createElement("span"); badge.className="data-conflict-badge"; badge.textContent="يحتاج مراجعة"; title.appendChild(badge); } const small=document.createElement("small"); small.textContent=new Date(item.createdAt).toLocaleString("ar-SA")+" · "+(item.fields||[]).join("، ")+" · "+item.resolution; copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions"; if(!item.reviewed){ const review=document.createElement("button"); review.type="button"; review.className="restore"; review.textContent="تمت المراجعة"; review.onclick=()=>dataReviewConflict(item.id); actions.appendChild(review); } row.append(copy,actions); conflictHost.appendChild(row); });
+  }
+  function dataOpen(){ dataRenderCenter(); document.getElementById("dataOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("dataClose").focus(); }
+  function dataClose(){ document.getElementById("dataOverlay").hidden=true; document.body.style.overflow=""; document.getElementById("dataManageBtn").focus(); }
   const importFile = document.getElementById("importFile");
   function dataImportSelected(){
     const f = importFile.files[0];
     if(!f) return;
     if(f.size>DATA_MAX_IMPORT_BYTES){ alert("حجم النسخة أكبر من ٥ م.ب. اختر نسخة JSON أصغر لحماية مساحة التطبيق."); importFile.value=""; return; }
     f.text().then(txt=>{
-      const raw = JSON.parse(txt);
-      /* توافق النُسخ القديمة: بلا "format" → كائن أيام مباشر كما كان دائمًا */
-      const isEnvelope = raw && typeof raw === "object" && raw.format === "mufakkirati-backup";
-      const data = isEnvelope ? (raw.days || {}) : raw;
-      let n = 0;
-      for(const date in data){
-        const incoming = data[date];
-        if(!incoming || typeof incoming !== "object") continue;
-        let write = true;
-        const existingRaw = localStorage.getItem(storageKey(date));
-        if(existingRaw){
-          try{
-            const existing = JSON.parse(existingRaw);
-            if((existing.updatedAt||0) >= (incoming.updatedAt||0)) write = false;
-          }catch(e){}
-        }
-        if(write){ localStorage.setItem(storageKey(date), JSON.stringify(incoming)); n++; }
-      }
-      let readingMsg = "";
-      if(isEnvelope && raw.modules && raw.modules.reading && typeof rdImportModule === "function"){
-        safeRun("rdImport", ()=> rdImportModule(raw.modules.reading));
-        readingMsg = " وبيانات وحدة القراءة";
-        safeRun("rdImport:render", ()=>{ renderReadingCard(); if(typeof rdOverlay!=="undefined" && rdOverlay && !rdOverlay.hidden) rdRenderCurrentView(); });
-      }
-      alert("تم استيراد بيانات "+n+" يوم"+readingMsg+" (الأحدث على هذا الجهاز لم يُستبدل)");
-      load(currentDate);
-      renderAll();
-    }).catch(()=> alert("الملف غير صالح — اختر ملف نسخة احتياطية صحيحًا"));
+      const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
+    }).catch(()=> alert("الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
     importFile.value = "";
   }
   function dataInit(){
     const overlay=document.getElementById("dataOverlay");
     document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackup("نسخة يدوية",false);
     document.getElementById("exportBtn").onclick=()=>dataExportJson(); document.getElementById("importBtn").onclick=()=>importFile.click(); importFile.onchange=dataImportSelected;
-    document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataHealthCheck").onclick=dataHealthCheck; document.getElementById("dataClearReviewed").onclick=dataClearReviewed;
+    document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataClearReviewed").onclick=dataClearReviewed;
     overlay.onclick=event=>{ if(event.target===overlay) dataClose(); }; document.addEventListener("keydown",event=>{ if(event.key==="Escape"&&!overlay.hidden) dataClose(); });
   }
 
@@ -10696,7 +10837,7 @@
       }
       if(!cache){
         dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
-        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
+        ["categories","fixedTemplates","transactions","trips"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -12333,46 +12474,32 @@
     expRenderSyncRow();
   }
 
-
-  /* ==================================================================
-     وحدة القراءة (v100) — كتب/مقالات/بحوث/مواد دراسية/تقارير
-     مستقلة تمامًا عن القرآن والحفظ؛ لا تشارك سجلات معهما.
-     تخزين محلي أولًا (rd- بادئة) + مزامنة اختيارية كوحدة سابعة مستقلة.
-     ================================================================== */
-  const RD_SETTINGS_KEY = "h2do-reading-settings";
-  const RD_ITEMS_KEY = "h2do-reading-items";
-  const RD_SESSIONS_KEY = "h2do-reading-sessions";
-  const RD_ACTIVE_KEY = "h2do-reading-active-session";
-  const RD_SYNCMETA_KEY = "h2do-reading-syncmeta";
-  const RD_STATS_CACHE_KEY = "h2do-reading-stats-cache";
-  const RD_SCHEMA_VERSION = 1;
-  const RD_CACHE_SCHEMA_VERSION = 1;
-  /* تاريخ إطلاق الوحدة: يفصل بين نطاق التسجيل القديم (صفحة قراءة ضمن العبادات) والوحدة الجديدة */
-  const READING_LAUNCH_DATE = "2026-07-14";
-  const RD_MATERIAL_TYPES = ["book","article","research","study","report","other"];
-  const RD_UNITS = ["page","chapter","section","percent","time"];
-  const RD_STATUSES = ["queued","active","paused","completed","abandoned"];
-  const RD_MATERIAL_LABELS = {book:"📘 كتاب",article:"📰 مقال",research:"🔬 بحث",study:"📑 مادة دراسية",report:"📊 تقرير",other:"📄 أخرى"};
-  const RD_UNIT_LABELS = {page:"صفحة",chapter:"فصل",section:"قسم",percent:"٪",time:"وقت فقط"};
-  const RD_STATUS_LABELS = {queued:"قائمة الانتظار",active:"نشطة",paused:"متوقفة",completed:"مكتملة",abandoned:"مهجورة"};
-
-  /* ---------- تطبيع دفاعي: يتحمّل JSON فاسدًا/قيمًا فارغة/أوّليّة/حقولًا ناقصة، ولا يرمي أبدًا ---------- */
-  function rdDefaultSettings(){ return {schemaVersion:RD_SCHEMA_VERSION, focusItemId:null, dailyGoal:null, createdAt:Date.now(), updatedAt:0}; }
-  function rdNormalizeSettings(raw){
-    const s = rdDefaultSettings();
-    if(!raw || typeof raw !== "object") return s;
-    s.focusItemId = (typeof raw.focusItemId === "string" && raw.focusItemId) ? raw.focusItemId : null;
-    if(raw.dailyGoal && typeof raw.dailyGoal === "object"){
-      const g = raw.dailyGoal;
-      if((g.mode === "minutes" || g.mode === "focusUnits") && typeof g.value === "number" && isFinite(g.value) && g.value > 0){
-        s.dailyGoal = { mode:g.mode, value:g.value,
-          itemId: (g.mode === "focusUnits" && typeof g.itemId === "string") ? g.itemId : null,
-          unit: (g.mode === "focusUnits" && RD_UNITS.indexOf(g.unit) !== -1) ? g.unit : null };
-      }
-    }
-    s.createdAt = (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now();
-    s.updatedAt = (typeof raw.updatedAt === "number" && isFinite(raw.updatedAt)) ? raw.updatedAt : 0;
-    return s;
+  /* ---------- تخصيص بطاقات الصفحة ---------- */
+  const CARD_PREF_KEY = "h2do-card-layout-v1";
+  const CARD_DEFS = [
+    {id:"prayerCard",icon:"🕌",label:"الصلاة"},
+    {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
+    {id:"quranCard",icon:"📖",label:"القرآن"},
+    {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
+    {id:"sportCard",icon:"🏃",label:"الرياضة"},
+    {id:"healthCard",icon:"⚖️",label:"الصحة"},
+    {id:"waterCard",icon:"💧",label:"شرب الماء"},
+    {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
+    {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
+    {id:"prioritiesCard",icon:"⭐",label:"الأولويات"},
+    {id:"memoryCard",icon:"📌",label:"ذكرى اليوم"},
+    {id:"notesCard",icon:"🗒️",label:"الملاحظات"},
+    {id:"ratingCard",icon:"🌟",label:"تقييم اليوم"}
+  ];
+  function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[]}; }
+  function personalizeLoad(){
+    let raw={};
+    try{ raw=JSON.parse(localStorage.getItem(CARD_PREF_KEY)||"{}"); }catch(e){}
+    const valid=new Set(CARD_DEFS.map(d=>d.id)), seen=new Set();
+    const order=(Array.isArray(raw.order)?raw.order:[]).filter(id=>valid.has(id)&&!seen.has(id)&&seen.add(id));
+    CARD_DEFS.forEach(d=>{ if(!seen.has(d.id)) order.push(d.id); });
+    const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
+    return {order,hidden};
   }
   function rdNormalizeItem(raw){
     if(!raw || typeof raw !== "object" || typeof raw.id !== "string" || !raw.id) return null;
@@ -13353,6 +13480,8 @@
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);
   safeRun("globalSearchInit", globalSearchInit);
+  safeRun("habitInit", habitInit);
+  safeRun("dataInit", dataInit);
   safeRun("goto:init", ()=> goto(initialDay));
   safeRun("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);

@@ -45,9 +45,9 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v105",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in v107",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١٠٥/); assert.match(sw,/mufakkirati-v105/); assert.match(sw,/sync-core\.js/);
+  assert.match(html,/النسخة ١٠٧/); assert.match(sw,/mufakkirati-v107/); assert.match(sw,/sync-core\.js/);
 });
 
 test("mobile scroll containers clear the fixed navigation and iPhone safe area",()=>{
@@ -189,6 +189,28 @@ test("global search indexes daily content and expenses with filters",()=>{
   assert.match(html,/expActiveTx\(\)/);
   assert.match(html,/appViewSet\(view\)/);
   assert.match(html,/expOpenExpenseForm\(row\.id\)/);
+});
+
+test("custom habits support schedules, streaks, and periodic goals",()=>{
+  ["habitManageBtn","habitOverlay","habitManageList","habitAddBtn","habitEditView","habitName","habitGroup","habitDailyTarget","habitDays","habitGoalPeriod","habitGoalTarget","habitEditSave"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["habitScheduledOn","habitPeriodRange","habitPeriodProgress","habitStreak","habitDaysText","habitRenderManager","habitOpenEditor","habitSaveEditor","habitDelete","habitInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/scheduleDays/);
+  assert.match(html,/goalPeriod==="weekly"/);
+  assert.match(html,/goalPeriod==="monthly"/);
+  assert.match(html,/kind:"habit"/);
+  assert.match(html,/safeRun\("habitInit", habitInit\)/);
+});
+
+test("data management provides backups, restore, exports, and conflict review",()=>{
+  ["dataManageBtn","dataOverlay","dataCreateBackup","dataBackupList","dataConflictList","dataExportExcel","dataExportPdf","dataClearReviewed","exportBtn","importBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["dataBuildSnapshot","dataSaveBackup","dataNormalizeImported","dataRestoreBackup","dataApplySnapshot","dataExportExcel","dataExportPdf","dataDetectConflict","dataDetectCollectionConflicts","dataRecordConflict","dataRenderCenter","dataInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/h2do-backup-library-v1/);
+  assert.match(html,/h2do-sync-conflicts-v1/);
+  assert.match(html,/application\/vnd\.ms-excel/);
+  assert.match(html,/printWindow\.print\(\)/);
+  assert.match(html,/dataDetectConflict\("daily"/);
+  assert.match(html,/dataDetectCollectionConflicts\("expenses"/);
+  assert.match(html,/safeRun\("dataInit", dataInit\)/);
 });
 
 test("weekly review turns statistics into a synced next goal",()=>{
