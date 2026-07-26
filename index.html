@@ -3164,7 +3164,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١١٠</div>
+    <div class="app-version">النسخة ١١١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -3671,6 +3671,7 @@
   }
 
   function load(date){
+    invalidateAllDaysCache();
     try{
       const raw = localStorage.getItem(storageKey(date));
       if(raw){
@@ -3720,6 +3721,7 @@
 
   function save(){
     state.updatedAt = Date.now();
+    invalidateAllDaysCache();
     const date = currentDate, snapshot = state;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{
@@ -4109,6 +4111,7 @@
           if((remote.updatedAt||0) > (state.updatedAt||0)){
             state = Object.assign(blankState(), remote);
             localStorage.setItem(storageKey(date), JSON.stringify(state));
+            invalidateAllDaysCache();
             safeRun("pullRemote:renderAll", renderAll);   /* الرسم معزول — فشله لا يُفشل المزامنة */
           }else if((state.updatedAt||0) > (remote.updatedAt||0) && !cache){   /* لا ندفع فوق كاش: قد يكون الخادم أحدث */
             reconcile = pushRemote(date, state);
@@ -4198,6 +4201,7 @@
     s.worship.werd = true;
     s.updatedAt = Date.now();
     localStorage.setItem(storageKey(today), JSON.stringify(s));
+    invalidateAllDaysCache();
     pushRemote(today, s);
   }
 
@@ -8240,7 +8244,7 @@
     addFrom(1,"daily"); addFrom(7,"weekly");
     let changed=false;
     candidates.forEach(src=>{ if(taskStatus(src)==="cancelled") return; const root=src.recurrenceRootId||src.id; if(state.tasks.some(t=>itemFilled(t)&&((t.recurrenceRootId||t.id)===root||(t.text===src.text&&t.repeat===src.repeat)))) return; const copy={id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,repeat:src.repeat,category:src.category||"",link:src.link||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}; const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
-    if(changed) localStorage.setItem(storageKey(dateStr),JSON.stringify(state));
+    if(changed){ localStorage.setItem(storageKey(dateStr),JSON.stringify(state)); invalidateAllDaysCache(); }
   }
   function renderRows(containerId, items, colors, opts){
     opts = opts || {};
@@ -8693,16 +8697,21 @@
     return total ? Math.round(done/total*100) : 0;
   }
 
+  let allDaysCache = null;
+  function invalidateAllDaysCache(){ allDaysCache = null; }
   function allDays(){
-    const out = {};
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.startsWith(PREFIX)){
-        const date = k.slice(PREFIX.length);
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
-        try{ out[date] = JSON.parse(localStorage.getItem(k)); }catch(e){}
+    if(allDaysCache === null){
+      allDaysCache = {};
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith(PREFIX)){
+          const date = k.slice(PREFIX.length);
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+          try{ allDaysCache[date] = JSON.parse(localStorage.getItem(k)); }catch(e){}
+        }
       }
     }
+    const out = Object.assign({}, allDaysCache);
     if(state) out[currentDate] = state;
     return out;
   }
@@ -9665,6 +9674,7 @@
   document.getElementById("resetDay").onclick = ()=>{
     if(confirm("هل تريد مسح جميع بيانات هذا اليوم؟")){
       localStorage.removeItem(storageKey(currentDate));
+      invalidateAllDaysCache();
       load(currentDate);
       renderAll();
     }
@@ -10106,6 +10116,11 @@
   }catch(e){}
   /* غلاف رسم آمن: فشل رسم قسم لا يوقف بقية الأقسام */
   function safeRun(name, fn){ try{ return fn(); }catch(e){ diagErr(name, e); return undefined; } }
+  function deferNonCriticalRender(name, fn){
+    const run = ()=>safeRun(name, fn);
+    if("requestIdleCallback" in window) window.requestIdleCallback(run,{timeout:1000});
+    else setTimeout(run,0);
+  }
 
   const EXP_KEY = "h2do-expenses";
   const EXP_SCHEMA = 3;   /* v3: أهداف الادخار + المعاملات المتكررة */
@@ -12302,7 +12317,7 @@
   safeRun("habitInit", habitInit);
   safeRun("dataInit", dataInit);
   safeRun("goto:init", ()=> goto(initialDay));
-  safeRun("renderHifzCard:init", renderHifzCard);
+  deferNonCriticalRender("renderHifzCard:init", renderHifzCard);
   safeRun("expInit", expInit);
   safeRun("onboardInit", onboardInit);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
