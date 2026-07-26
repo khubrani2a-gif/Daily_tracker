@@ -1119,6 +1119,8 @@
   .stats-month-col span{font-size:.62rem;color:var(--muted);white-space:nowrap}
   .stats-auto-goal{display:flex;align-items:center;justify-content:space-between;gap:.6rem;background:var(--accent-soft);border-radius:12px;padding:.65rem .7rem;margin-bottom:.65rem;font-size:.73rem;line-height:1.55}
   .stats-auto-goal button{border:0;background:var(--accent);color:#fff;border-radius:9px;padding:.42rem .6rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  .stats-goal-extra-actions{display:flex;justify-content:flex-end;gap:.45rem;margin-top:.15rem}.stats-goal-extra-actions button{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;padding:.42rem .6rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}.stats-goal-extra-actions button.danger{color:var(--danger)}
+  .stats-auto-goal .stats-suggestion-alt{background:var(--paper);color:var(--accent);border:1px solid var(--accent-2)}
   .stats-kpi-options{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}
   .stats-kpi-option{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line);border-radius:10px;padding:.55rem;font-size:.78rem;color:var(--ink)}
   .stats-kpi-option input{accent-color:var(--accent)}
@@ -9158,6 +9160,33 @@
     use.onclick=()=>{input.value=suggestion.goal;document.querySelectorAll(".stats-goal-step-plan").forEach((row,index)=>{row.querySelector("input").value=suggestion.steps[index]||"";row.querySelector("select").value=Number.isInteger(suggestion.days[index])?String(suggestion.days[index]):"";});document.getElementById("statsGoalStatus").textContent="تم تطبيق الاقتراح؛ اضغط حفظ الهدف لاعتماده.";};
     document.getElementById("statsGoalStatus").textContent=saved.goal?"محفوظ للأسبوع القادم وسيظهر في ملخصك اليومي عند بدايته.":"";
   }
+  function statsInstallWeeklyGoalControls(){
+    const auto=document.getElementById("statsAutoGoal"), input=document.getElementById("statsNextGoal"), status=document.getElementById("statsGoalStatus");
+    if(!auto||!input||!status) return;
+    if(!document.getElementById("statsSuggestionAlt")){
+      const alt=document.createElement("button"); alt.type="button"; alt.id="statsSuggestionAlt"; alt.className="stats-suggestion-alt"; alt.textContent="اقتراح آخر";
+      const alternatives=[
+        {goal:"إكمال أهم ٣ مهام خلال الأسبوع",steps:["اختيار المهمة الأولى","إنهاء المهمة الثانية","إغلاق المهمة الثالثة"],days:[6,2,4]},
+        {goal:"إكمال هدف الماء في ٥ أيام",steps:["تجهيز الماء صباحًا","فحص الهدف منتصف الأسبوع","إكمال خمسة أيام"],days:[6,2,5]},
+        {goal:"تنفيذ ٣ جلسات رياضية هذا الأسبوع",steps:["الجلسة الأولى","الجلسة الثانية","الجلسة الثالثة"],days:[0,2,4]},
+        {goal:"إكمال ورد القرآن في ٥ أيام",steps:["بدء الورد أول الأسبوع","تثبيت وقت القراءة","إكمال خمسة أوراد"],days:[6,2,5]}
+      ];
+      alt.onclick=()=>{
+        const next=(+(alt.dataset.index||"0"))%alternatives.length, plan=alternatives[next]; alt.dataset.index=String(next+1);
+        document.getElementById("statsAutoGoalText").textContent="اقتراح بديل: "+plan.goal;
+        input.value=plan.goal;
+        document.querySelectorAll(".stats-goal-step-plan").forEach((row,index)=>{ row.querySelector("input").value=plan.steps[index]||""; row.querySelector("select").value=String(plan.days[index]??""); });
+        status.textContent="تم تطبيق اقتراح بديل؛ عدّله أو احفظه لاعتماده.";
+      };
+      auto.appendChild(alt);
+    }
+    if(!document.getElementById("statsGoalExtraActions")){
+      const actions=document.createElement("div"); actions.id="statsGoalExtraActions"; actions.className="stats-goal-extra-actions";
+      const edit=document.createElement("button"); edit.type="button"; edit.id="statsGoalEdit"; edit.textContent="تعديل الهدف"; edit.onclick=()=>{ input.focus(); input.select(); status.textContent="عدّل الهدف أو الخطوات ثم اضغط حفظ الهدف."; };
+      const cancel=document.createElement("button"); cancel.type="button"; cancel.id="statsGoalCancel"; cancel.className="danger"; cancel.textContent="إلغاء الهدف"; cancel.onclick=()=>{ if(!confirm("إلغاء هدف الأسبوع القادم وخطواته؟")) return; document.getElementById("statsNextGoal").value=""; document.querySelectorAll(".stats-goal-step-plan").forEach(row=>{ row.querySelector("input").value=""; row.querySelector("select").value=""; }); statsSaveWeeklyGoal(); };
+      actions.append(edit,cancel); status.before(actions);
+    }
+  }
   function statsSaveWeeklyGoal(){
     const input=document.getElementById("statsNextGoal"), goal=input.value.trim(), status=document.getElementById("statsGoalStatus");
     const steps=Array.from(document.querySelectorAll(".stats-goal-step-plan")).map(row=>({text:row.querySelector("input").value,day:row.querySelector("select").value}));
@@ -9219,7 +9248,7 @@
     statsRenderDayAnalysis(rows);
     const monthPanel=document.getElementById("statsMonthComparePanel");monthPanel.hidden=period!=="month";if(period==="month")statsRenderMonthComparison(days);
     const review=document.getElementById("statsWeeklyReview");
-    if(period==="week") statsRenderWeeklyReview(cur,metrics); else review.hidden=true;
+    if(period==="week"){ statsRenderWeeklyReview(cur,metrics); statsInstallWeeklyGoalControls(); } else review.hidden=true;
   }
   function renderStatsPeriod(period){
     statsPeriod=period;

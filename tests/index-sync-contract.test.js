@@ -238,7 +238,7 @@ test("weekly review turns statistics into a synced next goal",()=>{
   assert.match(html,/function statsRenderWeeklyReview\(/);
   assert.match(html,/function statsSaveWeeklyGoal\(/);
   assert.match(html,/wgSetGoal\(target,goal,steps\)/);
-  assert.match(html,/if\(period==="week"\) statsRenderWeeklyReview\(cur,metrics\)/);
+  assert.match(html,/if\(period==="week"\)\{ statsRenderWeeklyReview\(cur,metrics\)/);
 });
 
 test("weekly goals persist by week, merge by item timestamp, and render on home",()=>{
@@ -266,4 +266,11 @@ test("weekly execution steps can be scheduled and highlight their due day",()=>{
   assert.match(html,/const matchesSelectedDay=!preview&&step\.day===/);
   assert.match(html,/if\(matchesSelectedDay\) control\.classList\.add\("today"\)/);
   assert.match(html,/className="weekly-goal-step-day"/);
+});
+
+test("weekly goal review offers alternate, edit, and cancellation controls",()=>{
+  ["statsSuggestionAlt","statsGoalEdit","statsGoalCancel"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  assert.match(html,/function statsInstallWeeklyGoalControls\(\)/);
+  assert.match(html,/statsInstallWeeklyGoalControls\(\)/);
+  assert.match(html,/statsSaveWeeklyGoal\(\);/);
 });
