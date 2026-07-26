@@ -2660,6 +2660,7 @@
           <button type="button" class="data-action" id="dataClearReviewed">✓ مسح المراجَعة</button>
         </div>
         <div class="data-section">
+          <button type="button" class="data-action" id="dataHealthCheck">🩺 فحص سلامة البيانات</button>
           <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٥ نسخ على هذا الجهاز</span></div>
           <div class="data-list" id="dataBackupList"></div>
         </div>
@@ -9917,6 +9918,20 @@
     const value=snapshot||dataBuildSnapshot("تصدير JSON");
     dataDownload(JSON.stringify(value,null,2),"application/json;charset=utf-8","daily-tracker-backup-"+todayStr()+".json");
   }
+  function dataHealthCheck(){
+    let daily=0, invalidDaily=0, invalidExpenses=0;
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(key&&key.startsWith(PREFIX)){
+        daily++;
+        try{ const parsed=JSON.parse(localStorage.getItem(key)); if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)) invalidDaily++; }catch(e){ invalidDaily++; }
+      }
+    }
+    try{ const expenses=localStorage.getItem("h2do-expenses"); if(expenses){ const parsed=JSON.parse(expenses); if(!parsed||typeof parsed!=="object") invalidExpenses++; } }catch(e){ invalidExpenses++; }
+    const backups=dataLoadBackups().length, size=dataFormatBytes(dataSnapshotStats(dataBuildSnapshot("فحص سلامة")).size||0);
+    const problems=invalidDaily+invalidExpenses;
+    alert(problems?"اكتمل الفحص: وُجدت "+problems.toLocaleString("ar-EG")+" بيانات تحتاج مراجعة. أنشئ نسخة JSON قبل أي استعادة أو تعديل.\n\nالأيام السليمة: "+(daily-invalidDaily).toLocaleString("ar-EG")+" · النسخ المحلية: "+backups.toLocaleString("ar-EG")+" · الحجم التقريبي: "+size:"اكتمل الفحص بنجاح ✓\n\nالأيام المحفوظة: "+daily.toLocaleString("ar-EG")+" · النسخ المحلية: "+backups.toLocaleString("ar-EG")+" · الحجم التقريبي: "+size);
+  }
   function dataApplySnapshot(snapshot){
     const entries=(snapshot&&snapshot.entries)||{}, remove=[];
     for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i); if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!Object.prototype.hasOwnProperty.call(entries,key)) remove.push(key); }
@@ -10017,7 +10032,7 @@
     const overlay=document.getElementById("dataOverlay");
     document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackup("نسخة يدوية",false);
     document.getElementById("exportBtn").onclick=()=>dataExportJson(); document.getElementById("importBtn").onclick=()=>importFile.click(); importFile.onchange=dataImportSelected;
-    document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataClearReviewed").onclick=dataClearReviewed;
+    document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataHealthCheck").onclick=dataHealthCheck; document.getElementById("dataClearReviewed").onclick=dataClearReviewed;
     overlay.onclick=event=>{ if(event.target===overlay) dataClose(); }; document.addEventListener("keydown",event=>{ if(event.key==="Escape"&&!overlay.hidden) dataClose(); });
   }
 
