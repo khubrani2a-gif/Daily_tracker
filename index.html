@@ -12482,10 +12482,10 @@
     {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
     {id:"quranCard",icon:"📖",label:"القرآن"},
     {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
-    {id:"readingCard",icon:"📚",label:"القراءة"},
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
     {id:"healthCard",icon:"⚖️",label:"الصحة"},
     {id:"waterCard",icon:"💧",label:"شرب الماء"},
+    {id:"readingCard",icon:"📚",label:"القراءة"},
     {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
     {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
     {id:"prioritiesCard",icon:"⭐",label:"الأولويات"},
@@ -12500,6 +12500,12 @@
     const valid=new Set(CARD_DEFS.map(d=>d.id)), seen=new Set();
     const order=(Array.isArray(raw.order)?raw.order:[]).filter(id=>valid.has(id)&&!seen.has(id)&&seen.add(id));
     CARD_DEFS.forEach(d=>{ if(!seen.has(d.id)) order.push(d.id); });
+    /* ترحيل لمرة واحدة: صفحة القراءة تسبق النية والأفعال الحسنة كما في الترتيب الجديد. */
+    const readingAt=order.indexOf("readingCard"), intentionAt=order.indexOf("intentionCard");
+    if(readingAt!==-1 && intentionAt!==-1 && readingAt>intentionAt && !localStorage.getItem("h2do-reading-card-position-v1")){
+      order.splice(readingAt,1); order.splice(order.indexOf("intentionCard"),0,"readingCard");
+      localStorage.setItem("h2do-reading-card-position-v1","1");
+    }
     const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
     return {order,hidden};
   }
