@@ -225,6 +225,7 @@
   .smart-actions button,.quick-template-bar button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.44rem .62rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
   .smart-actions button:hover,.smart-actions button:focus-visible,.quick-template-bar button:hover,.quick-template-bar button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
   .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
+  .quick-template-status{width:100%;margin:0;padding:.15rem .1rem 0;color:var(--accent);font-size:.7rem;font-weight:700;line-height:1.55}
   .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
   .tomorrow-panel h3{font-size:.86rem;color:var(--accent);margin:0 0 .4rem}.tomorrow-panel p{margin:0;color:var(--muted);font-size:.7rem;line-height:1.7}
   .tomorrow-items{display:flex;gap:.4rem;flex-wrap:wrap}.tomorrow-item{background:var(--chip-bg);border-radius:9px;padding:.32rem .45rem;font-size:.68rem;color:var(--ink)}
@@ -2145,6 +2146,7 @@
       <button type="button" data-quick-template="task">✅ مهمة مركّزة</button>
       <button type="button" data-quick-template="recurring">🔁 مصروف متكرر</button>
       <button type="button" id="quickTemplateUndoBtn" hidden>↶ تراجع عن آخر قالب</button>
+      <p class="quick-template-status" id="quickTemplateStatus" role="status" aria-live="polite"></p>
     </div>
     <section class="tomorrow-panel" aria-labelledby="tomorrowTitle">
       <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
@@ -8860,6 +8862,7 @@
   function smartUndoLoad(){try{return JSON.parse(localStorage.getItem(SMART_TEMPLATE_UNDO_KEY)||"[]");}catch(e){return [];}}
   function smartUndoSave(rows){localStorage.setItem(SMART_TEMPLATE_UNDO_KEY,JSON.stringify(rows.slice(-12))); smartRenderUndo();}
   function smartRenderUndo(){const b=document.getElementById("quickTemplateUndoBtn");if(!b)return; b.hidden=!smartUndoLoad().some(x=>x&&x.date===currentDate&&Array.isArray(x.ids)&&x.ids.length);}
+  function smartTemplateNotice(text){const status=document.getElementById("quickTemplateStatus");if(status)status.textContent=text||"";}
   function smartTomorrowDate(){ const d=new Date(currentDate+"T12:00:00"); d.setDate(d.getDate()+1); return fmtDate(d); }
   function smartReadDay(date){ try{return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(date))||"{}"));}catch(e){return blankState();} }
   function renderTomorrowPanel(){
@@ -8884,7 +8887,7 @@
     const free=()=>state.tasks.find(t=>!itemFilled(t)); let added=0;
     const ids=[];
     rows.forEach(row=>{ const slot=free(); const item={id:newId(),text:row,done:false,status:"pending",dueDate:currentDate,dueTime:"",reminderMinutes:0,repeat:"none",category:"",link:"",subtasks:[],templateSource:templateName||null}; if(slot) Object.assign(slot,item); else state.tasks.push(item); ids.push(item.id); added++; });
-    if(added){ if(templateName){const history=smartUndoLoad();history.push({date:currentDate,ids,templateName,createdAt:Date.now()});smartUndoSave(history);} save(); renderTaskLists(); renderProgress(); }
+    if(added){ if(templateName){const history=smartUndoLoad();history.push({date:currentDate,ids,templateName,createdAt:Date.now()});smartUndoSave(history);smartTemplateNotice("تمت إضافة "+added.toLocaleString("ar-EG")+" مهام من قالب «"+templateName+"» إلى مهام اليوم.");} save(); renderTaskLists(); renderProgress(); }
     return added;
   }
   function smartUndoLastTemplate(){
@@ -8892,7 +8895,7 @@
     if(!index){smartRenderUndo();return;}
     const entry=index.x, ids=new Set(entry.ids), count=(state.tasks||[]).filter(t=>ids.has(t.id)&&itemFilled(t)).length;
     if(!count){history.splice(index.i,1);smartUndoSave(history);return;}
-    hifzShowConfirm({title:"التراجع عن «"+entry.templateName+"»؟",body:"سيتم حذف "+count.toLocaleString("ar-EG")+" مهام أضيفت من هذا القالب فقط.",okText:"تراجع",cancelText:"إلغاء",onOk:()=>{state.priorities=state.priorities.filter(p=>!ids.has(p.sourceTaskId));state.tasks.forEach(t=>{if(ids.has(t.id)){t.text="";t.done=false;t.status="pending";t.subtasks=[];t.templateSource=null;}});history.splice(index.i,1);smartUndoSave(history);save();renderTaskLists();renderProgress();}});
+    hifzShowConfirm({title:"التراجع عن «"+entry.templateName+"»؟",body:"سيتم حذف "+count.toLocaleString("ar-EG")+" مهام أضيفت من هذا القالب فقط.",okText:"تراجع",cancelText:"إلغاء",onOk:()=>{state.priorities=state.priorities.filter(p=>!ids.has(p.sourceTaskId));state.tasks.forEach(t=>{if(ids.has(t.id)){t.text="";t.done=false;t.status="pending";t.subtasks=[];t.templateSource=null;}});history.splice(index.i,1);smartUndoSave(history);smartTemplateNotice("تم التراجع عن قالب «"+entry.templateName+"».");save();renderTaskLists();renderProgress();}});
   }
   function smartWeekSummary(){
     const range=expWeekRange(todayStr()), days=allDays(), cursor=new Date(range.start+"T12:00:00"); let prayers=0, tasksDone=0, tasksTotal=0, waterDays=0;
