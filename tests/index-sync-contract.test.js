@@ -242,6 +242,12 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
   assert.match(html,/out\.recurringTransactions = expMergeById/);
 });
 
+test("family hub keeps finance, shopping, and household-task entry points",()=>{
+  ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["familyShoppingLoad","familyRenderOverview","familyRenderShopping","FAMILY_SHOP_KEY"].forEach(name=>assert.ok(html.includes(name),name));
+  assert.match(html,/data-app-view="expenses"[^>]*>[^<]*<span>👨‍👩‍👧<\/span>العائلة/);
+});
+
 test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
   ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["taskStatus","taskActive","taskSetDone","taskWeekOpen"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));

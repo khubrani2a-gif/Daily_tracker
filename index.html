@@ -2165,7 +2165,7 @@
     <a href="#prayerCard" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
     <a href="#prayerCard" data-app-view="iman"><span>📿</span>إيمانيات</a>
     <a href="#sportCard" data-app-view="sport"><span>❤️</span>الصحة</a>
-    <a href="#expensesCard" data-app-view="expenses"><span>💰</span>المصاريف</a>
+    <a href="#expensesCard" data-app-view="expenses"><span>👨‍👩‍👧</span>العائلة</a>
     <a href="#readingCard" data-app-view="more"><span>•••</span>المزيد</a>
   </nav>
 
@@ -2482,16 +2482,17 @@
 
   </div>
 
-  <!-- ===== المصاريف (بطاقة الدخول) ===== -->
+  <!-- ===== العائلة والمالية (بطاقة الدخول) ===== -->
   <section class="card exp-launch" id="expensesCard">
-    <h2><span class="ico">💰</span> المصاريف</h2>
-    <div class="hint">تابع صرفك اليومي والالتزامات الشهرية والميزانيات الأسبوعية</div>
+    <h2><span class="ico">👨‍👩‍👧</span> العائلة</h2>
+    <div class="hint">ملخص المنزل، المشتريات، المهام العائلية، والمالية</div>
+    <div class="exp-sumgrid" id="familyLaunchSummary"></div>
     <div class="exp-sumgrid" id="expLaunchSummary"></div>
     <div class="exp-budget-alert" id="expBudgetAlert" hidden></div>
     <div id="expLaunchBanner" hidden></div>
     <div class="exp-launch-actions">
-      <button class="exp-primary" id="expQuickAdd">＋ إضافة مصروف</button>
-      <button class="exp-secondary" id="expOpenBtn">إدارة المصاريف</button>
+      <button class="exp-primary" id="familyQuickShop">＋ إضافة للمشتريات</button>
+      <button class="exp-secondary" id="expOpenBtn">إدارة العائلة</button>
     </div>
   </section>
 
@@ -3101,12 +3102,14 @@
       <div class="adhkar-top">
         <div class="adhkar-head">
           <button class="ad-btn ad-close" id="expClose" title="إغلاق">✕ إغلاق</button>
-          <h2>💰 المصاريف</h2>
+          <h2>👨‍👩‍👧 العائلة</h2>
           <span></span>
         </div>
       </div>
       <div class="exp-tabs">
-        <button class="exp-tab active" data-view="dash">اللوحة</button>
+        <button class="exp-tab active" data-view="family">العائلة</button>
+        <button class="exp-tab" data-view="dash">المالية</button>
+        <button class="exp-tab" data-view="shopping">التسوق</button>
         <button class="exp-tab" data-view="trips">الرحلات</button>
         <button class="exp-tab" data-view="reports">المراجعة</button>
         <button class="exp-tab" data-view="settings">الإعدادات</button>
@@ -3114,6 +3117,9 @@
       <div class="exp-sync-row" id="expSyncRow">
         <span class="exp-sync-text" id="expSyncText"></span>
         <button class="exp-sync-btn" id="expSyncBtn">🔄 تحديث</button>
+      </div>
+      <div class="exp-view" id="expViewFamily">
+        <div id="familyOverviewBody"></div>
       </div>
       <div class="exp-view" id="expViewDash">
         <div class="exp-sumgrid" id="expDashSummary"></div>
@@ -3129,6 +3135,9 @@
           <div class="exp-card" id="expCategoryChartCard"></div>
           <div class="exp-card" id="expRecurringCard"></div>
         </div>
+      </div>
+      <div class="exp-view" id="expViewShopping" hidden>
+        <div id="familyShoppingBody"></div>
       </div>
       <div class="exp-view" id="expViewTrips" hidden>
         <div id="expTripsBody"></div>
@@ -11320,6 +11329,45 @@
   let expRepDate = todayStr();
   let expSaving = false;
   let expUndoTimer = null;
+  const FAMILY_SHOP_KEY="h2do-family-shopping-v1";
+  const FAMILY_SHOP_CATEGORIES=["بقالة","صيدلية","المنزل","الأطفال","أخرى"];
+  function familyShoppingLoad(){ try{ const list=JSON.parse(localStorage.getItem(FAMILY_SHOP_KEY)||"[]"); return Array.isArray(list)?list.filter(x=>x&&typeof x.text==="string").slice(0,200):[]; }catch(e){ return []; } }
+  function familyShoppingSave(list){ localStorage.setItem(FAMILY_SHOP_KEY,JSON.stringify(list.slice(0,200))); }
+  function familyPendingShopping(){ return familyShoppingLoad().filter(item=>!item.done); }
+  function familyPendingTasks(){ return (state&&Array.isArray(state.tasks)?state.tasks:[]).filter(task=>itemFilled(task)&&!task.done&&taskStatus(task)!=="cancelled"); }
+  function familyRenderLaunch(){
+    const box=document.getElementById("familyLaunchSummary"); if(!box) return;
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), savings=(expState&&expState.savingsGoals||[]).filter(goal=>!goal.archivedAt&&!goal.completedAt).length;
+    box.innerHTML=[
+      {label:"قائمة التسوق",val:_arn(shopping.length)+" عناصر"},
+      {label:"مهام المنزل",val:_arn(tasks.length)+" مهام"},
+      {label:"أهداف عائلية",val:_arn(savings)+" أهداف"}
+    ].map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("");
+  }
+  function familyRenderOverview(){
+    const box=document.getElementById("familyOverviewBody"); if(!box) return;
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), finance=expSummaryCards();
+    box.innerHTML='<div class="exp-sumgrid">'+finance.slice(1,3).map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("")+'</div>'
+      +'<div class="exp-cards" style="margin-top:.8rem"><div class="exp-card"><h3>🛒 قائمة التسوق</h3><p class="exp-card-hint">'+(shopping.length?shopping.slice(0,3).map(item=>expEsc(item.text)).join(" · "):"لا توجد عناصر متبقية")+'</p><button class="exp-secondary" id="familyOpenShopping" style="margin-top:.7rem">إدارة المشتريات</button></div>'
+      +'<div class="exp-card"><h3>🏠 مهام المنزل</h3><p class="exp-card-hint">'+(tasks.length?tasks.slice(0,3).map(task=>expEsc(task.text)).join(" · "):"لا توجد مهام مفتوحة اليوم")+'</p><button class="exp-secondary" id="familyAddTask" style="margin-top:.7rem">＋ مهمة منزلية</button></div></div>'
+      +'<div class="exp-card" style="margin-top:1rem"><h3>🎯 أهداف العائلة</h3><p class="exp-card-hint">استخدم أهداف الادخار الموجودة للرحلة، الطوارئ، الأثاث أو أي هدف مشترك.</p><button class="exp-secondary" id="familyOpenFinance" style="margin-top:.7rem">فتح المالية والأهداف</button></div>';
+    document.getElementById("familyOpenShopping").onclick=()=>expSetView("shopping");
+    document.getElementById("familyAddTask").onclick=()=>smartOpenQuickTask();
+    document.getElementById("familyOpenFinance").onclick=()=>expSetView("dash");
+  }
+  function familyRenderShopping(){
+    const box=document.getElementById("familyShoppingBody"); if(!box) return;
+    const list=familyShoppingLoad(), pending=list.filter(item=>!item.done), done=list.filter(item=>item.done);
+    const row=item=>'<div class="exp-row"><button type="button" class="exp-mini" data-family-done="'+item.id+'">'+(item.done?"↩":"✓")+'</button><div class="exp-row-main"><div class="exp-row-name">'+expEsc(item.text)+'</div><div class="exp-row-sub">'+expEsc(item.category||"أخرى")+(item.quantity?" · "+expEsc(item.quantity):"")+'</div></div><button type="button" class="exp-mini" data-family-delete="'+item.id+'">🗑️</button></div>';
+    box.innerHTML='<div class="exp-card"><h3>🛒 قائمة التسوق المشتركة</h3><div class="exp-grid2" style="margin:.75rem 0"><input id="familyShopText" placeholder="مثال: حليب" maxlength="120" aria-label="عنصر التسوق"><select id="familyShopCategory">'+FAMILY_SHOP_CATEGORIES.map(category=>'<option>'+category+'</option>').join("")+'</select><input id="familyShopQty" placeholder="الكمية (اختياري)" maxlength="50"></div><button class="exp-primary" id="familyShopAdd" style="width:100%">＋ إضافة للقائمة</button></div>'
+      +'<div class="exp-card" style="margin-top:1rem"><h3>المتبقي ('+_arn(pending.length)+')</h3>'+(pending.length?pending.map(row).join(""):'<div class="exp-empty">قائمة التسوق مكتملة 🎉</div>')+'</div>'
+      +(done.length?'<div class="exp-card" style="margin-top:1rem"><h3>تم شراؤه</h3>'+done.map(row).join("")+'</div>':"");
+    const add=()=>{ const text=document.getElementById("familyShopText").value.trim(); if(!text) return; const list=familyShoppingLoad(); list.unshift({id:newId(),text,category:document.getElementById("familyShopCategory").value,quantity:document.getElementById("familyShopQty").value.trim(),done:false,createdAt:Date.now()}); familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch(); };
+    document.getElementById("familyShopAdd").onclick=add;
+    document.getElementById("familyShopText").onkeydown=e=>{ if(e.key==="Enter") add(); };
+    box.querySelectorAll("[data-family-done]").forEach(button=>button.onclick=()=>{ const list=familyShoppingLoad(); const item=list.find(entry=>entry.id===button.dataset.familyDone); if(item){item.done=!item.done; familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch();} });
+    box.querySelectorAll("[data-family-delete]").forEach(button=>button.onclick=()=>{ familyShoppingSave(familyShoppingLoad().filter(item=>item.id!==button.dataset.familyDelete)); familyRenderShopping(); familyRenderLaunch(); });
+  }
   let expActiveTripId = null;   /* آخر رحلة نشطة مختارة للجلسة (عند تداخل الرحلات) */
   let expTripDetailId = null;   /* الرحلة المفتوحة في صفحة التفاصيل */
   /* الرحلة النشطة المفضّلة للجلسة (بلا تخمين صامت عند التداخل) */
@@ -11335,7 +11383,9 @@
     expApplyRecurringDue();
     expRenderLaunch();
     if(!expOverlay.hidden){
-      if(expCurView==="dash") expRenderDash();
+      if(expCurView==="family") familyRenderOverview();
+      else if(expCurView==="shopping") familyRenderShopping();
+      else if(expCurView==="dash") expRenderDash();
       else if(expCurView==="trips"){ if(expTripDetailId) expRenderTripDetail(); else expRenderTrips(); }
       else if(expCurView==="reports") expRenderReport();
       else if(expCurView==="settings") expRenderSettings();
@@ -11358,6 +11408,7 @@
   }
   function expRenderLaunch(){
     const box = document.getElementById("expLaunchSummary"); if(!box) return;
+    familyRenderLaunch();
     if(expLoadFailed){
       box.innerHTML = '<div class="exp-empty" style="grid-column:1/-1">تعذّر تحميل المصاريف. بياناتك محفوظة ولم تُمس. <button class="exp-sync-btn" id="expReloadBtn">إعادة المحاولة</button></div>';
       const rb=document.getElementById("expReloadBtn"); if(rb) rb.onclick=expRetryLoad;
@@ -12445,16 +12496,20 @@
   }
 
   /* ---------- فتح/تبويب الشاشة ---------- */
-  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("dash"); document.body.style.overflow="hidden"; expRenderSyncRow(); expTriggerPull(); /* مزامنة عند فتح الوحدة */ }
+  function expOpenOverlay(){ expOverlay.hidden=false; expSetView("family"); document.body.style.overflow="hidden"; expRenderSyncRow(); expTriggerPull(); /* مزامنة عند فتح الوحدة */ }
   function expCloseOverlay(){ expOverlay.hidden=true; document.body.style.overflow=""; }
   function expSetView(v){
     expCurView=v;
+    document.getElementById("expViewFamily").hidden = v!=="family";
     document.getElementById("expViewDash").hidden = v!=="dash";
+    document.getElementById("expViewShopping").hidden = v!=="shopping";
     document.getElementById("expViewTrips").hidden = v!=="trips";
     document.getElementById("expViewReports").hidden = v!=="reports";
     document.getElementById("expViewSettings").hidden = v!=="settings";
     expOverlay.querySelectorAll(".exp-tabs .exp-tab[data-view]").forEach(b=> b.classList.toggle("active", b.dataset.view===v));
-    if(v==="dash") expRenderDash();
+    if(v==="family") familyRenderOverview();
+    else if(v==="shopping") familyRenderShopping();
+    else if(v==="dash") expRenderDash();
     else if(v==="trips"){ expTripDetailId=null; expRenderTrips(); }
     else if(v==="reports") expRenderReport();
     else expRenderSettings();
@@ -12462,6 +12517,7 @@
   function expInit(){
     document.getElementById("expOpenBtn").onclick=expOpenOverlay;
     document.getElementById("expQuickAdd").onclick=()=> expOpenExpenseForm(null);
+    document.getElementById("familyQuickShop").onclick=()=>{ expOpenOverlay(); expSetView("shopping"); };
     document.getElementById("expClose").onclick=expCloseOverlay;
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
     expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
@@ -12486,7 +12542,7 @@
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
     {id:"healthCard",icon:"⚖️",label:"الصحة"},
     {id:"waterCard",icon:"💧",label:"شرب الماء"},
-    {id:"expensesCard",icon:"💰",label:"المصاريف"},
+    {id:"expensesCard",icon:"👨‍👩‍👧",label:"العائلة"},
     {id:"readingCard",icon:"📚",label:"القراءة"},
     {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
     {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
@@ -12583,7 +12639,7 @@
     {view:"today",icon:"☀️",label:"اليوم",locked:true},
     {view:"iman",icon:"📿",label:"إيمانيات"},
     {view:"sport",icon:"❤️",label:"الصحة"},
-    {view:"expenses",icon:"💰",label:"المصاريف"},
+    {view:"expenses",icon:"👨‍👩‍👧",label:"العائلة"},
     {view:"more",icon:"•••",label:"المزيد",locked:true}
   ];
   function navDefault(){ return {order:NAV_DEFS.map(d=>d.view),hidden:[]}; }
