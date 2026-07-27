@@ -243,7 +243,7 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
 });
 
 test("salary-cycle budgeting supports a configurable payday",()=>{
-  ["salaryCycleStartDay","salaryAmountMinor","stSalaryDay","stSalaryAmount"].forEach(name=>assert.ok(html.includes(name),name));
+  ["salaryCycleStartDay","salaryAmountMinor","stSalaryDay","stSalaryAmount","expSalaryCycleStatus","خطة دورة الراتب"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/function expSalaryCycleRange\(/);
 });
 
