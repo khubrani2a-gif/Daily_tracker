@@ -11890,9 +11890,9 @@
       const amt=expParseAmount(g("#pfAmt").value);
       if(isNaN(amt)||amt<=0){ g("#pfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
       const proceed=(adoptPlan)=>{ expSaving=true; g("#pfSave").disabled=true; if(adoptPlan) expAdoptPaymentPlan(instId, amt); expRecordPayment(instId, amt, g("#pfDate").value||todayStr(), g("#pfPay").value||null); expCloseForm(); expRefresh(); };
-      if(amt > remain && remain>=0){
-        hifzShowConfirm({title:"تحديث مبلغ الالتزام", body:"الدفعة ("+expMoney(amt)+") أكبر من المتبقي المسجل ("+expMoney(remain)+"). عند التسجيل سيُعتمد المبلغ الجديد لهذه الدورة ويُسجل الدفع.", okText:"اعتماد وتسجيل", cancelText:"مراجعة", onOk:()=>proceed(true)});
-      } else proceed(false);
+      /* الإدخال الأعلى هنا يعني غالبًا تعديل مبلغ الالتزام (مثل الإيجار).
+         نعتمد المبلغ للدورة الحالية ونسجل الدفعة مباشرة بدل وضع تأكيد ثانٍ قد يحجب الحفظ. */
+      proceed(amt > remain && remain>=0);
     };
   }
   function expShowPaymentHistory(tplId){
