@@ -82,9 +82,10 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
-  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickTemplatesBtn","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
+  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickTemplateFeedback","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
+  assert.match(html,/<div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">/);
   ["today","iman","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
   assert.match(html,/const APP_VIEW_GROUPS=/);
   assert.match(html,/function renderTodayOverview\(/);
@@ -102,7 +103,8 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/data-smart-template-hide/);
   assert.match(html,/SMART_CUSTOM_TEMPLATES_KEY/);
   assert.match(html,/SMART_TEMPLATE_SETTINGS_KEY/);
-  assert.match(html,/quickTemplatesBtn"\)\.onclick=[\s\S]*?scrollIntoView/);
+  assert.match(html,/اختر قالبًا لإضافته إلى مهام اليوم\./);
+  assert.doesNotMatch(html,/quickTemplatesBtn/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
 });
 

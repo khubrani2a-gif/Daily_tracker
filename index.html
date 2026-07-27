@@ -226,6 +226,7 @@
   .smart-actions button:hover,.smart-actions button:focus-visible,.quick-template-bar button:hover,.quick-template-bar button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
   .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
   .quick-template-status{width:100%;margin:0;padding:.15rem .1rem 0;color:var(--accent);font-size:.7rem;font-weight:700;line-height:1.55}
+  .quick-template-feedback{width:100%;margin:0;color:var(--muted);font-size:.68rem;line-height:1.5}
   .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
   .tomorrow-panel h3{font-size:.86rem;color:var(--accent);margin:0 0 .4rem}.tomorrow-panel p{margin:0;color:var(--muted);font-size:.7rem;line-height:1.7}
   .tomorrow-items{display:flex;gap:.4rem;flex-wrap:wrap}.tomorrow-item{background:var(--chip-bg);border-radius:9px;padding:.32rem .45rem;font-size:.68rem;color:var(--ink)}
@@ -2140,10 +2141,9 @@
       <button type="button" id="quickTaskBtn">＋ مهمة</button>
       <button type="button" id="quickExpenseBtn">＋ مصروف</button>
       <button type="button" id="quickWaterBtn">💧 كوب ماء</button>
-      <button type="button" id="quickTemplatesBtn">✨ قوالب</button>
       <button type="button" id="shareWeekBtn">↗ مشاركة الأسبوع</button>
     </div>
-    <div class="quick-template-bar" id="quickTemplateBar" hidden aria-label="قوالب سريعة">
+    <div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">
       <button type="button" data-quick-template="morning">☀️ روتين صباحي</button>
       <button type="button" data-quick-template="evening">🌙 روتين مسائي</button>
       <button type="button" data-quick-template="task">✅ مهمة مركّزة</button>
@@ -2152,7 +2152,8 @@
       <button type="button" id="quickManageTemplatesBtn">⚙ إدارة القوالب</button>
       <span id="quickCustomTemplateList"></span>
       <button type="button" id="quickTemplateUndoBtn" hidden>↶ تراجع عن آخر قالب</button>
-      <p class="quick-template-status" id="quickTemplateStatus" role="status" aria-live="polite"></p>
+      <p class="quick-template-status" id="quickTemplateStatus">اختر قالبًا لإضافته إلى مهام اليوم.</p>
+      <p class="quick-template-feedback" id="quickTemplateFeedback" role="status" aria-live="polite"></p>
     </div>
     <section class="tomorrow-panel" aria-labelledby="tomorrowTitle">
       <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
@@ -8863,7 +8864,7 @@
   function smartUndoLoad(){try{return JSON.parse(localStorage.getItem(SMART_TEMPLATE_UNDO_KEY)||"[]");}catch(e){return [];}}
   function smartUndoSave(rows){localStorage.setItem(SMART_TEMPLATE_UNDO_KEY,JSON.stringify(rows.slice(-12))); smartRenderUndo();}
   function smartRenderUndo(){const b=document.getElementById("quickTemplateUndoBtn");if(!b)return; b.hidden=!smartUndoLoad().some(x=>x&&x.date===currentDate&&Array.isArray(x.ids)&&x.ids.length);}
-  function smartTemplateNotice(text){const status=document.getElementById("quickTemplateStatus");if(status)status.textContent=text||"";}
+  function smartTemplateNotice(text){const status=document.getElementById("quickTemplateFeedback");if(status)status.textContent=text||"";}
   function smartTemplateSettingsLoad(){try{const data=JSON.parse(localStorage.getItem(SMART_TEMPLATE_SETTINGS_KEY)||"{}");return data&&typeof data==="object"&&!Array.isArray(data)?data:{};}catch(e){return {};}}
   function smartTemplateSettingsSave(data){localStorage.setItem(SMART_TEMPLATE_SETTINGS_KEY,JSON.stringify(data));smartRenderBuiltinTemplates();}
   function smartBuiltinTemplate(id){const base=SMART_BUILTIN_TEMPLATES[id], setting=smartTemplateSettingsLoad()[id]||{};if(!base)return null;return {id,name:typeof setting.name==="string"&&setting.name.trim()?setting.name.trim().slice(0,50):base.name,icon:base.icon,action:base.action||"tasks",tasks:Array.isArray(setting.tasks)&&setting.tasks.length?setting.tasks.filter(x=>typeof x==="string").map(x=>x.trim()).filter(Boolean).slice(0,12):base.tasks||[],hidden:!!setting.hidden};}
@@ -8950,7 +8951,6 @@
     byId("quickTaskBtn").onclick=smartOpenQuickTask;
     byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
     byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
-    byId("quickTemplatesBtn").onclick=()=>{const box=byId("quickTemplateBar");box.hidden=!box.hidden;if(!box.hidden){smartTemplateNotice("اختر قالبًا لإضافته إلى مهام اليوم.");box.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>box.querySelector("button")?.focus(),300);}};
     document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const template=smartBuiltinTemplate(button.dataset.quickTemplate);if(!template||template.hidden)return;if(template.action==="recurring")expOpenRecurringForm(null);else smartAddTasks(template.tasks,template.name);});
     byId("quickCustomTemplateBtn").onclick=smartOpenCustomTemplate;
     byId("quickManageTemplatesBtn").onclick=smartManageCustomTemplates;
