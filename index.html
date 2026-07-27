@@ -186,6 +186,8 @@
     margin-bottom:.75rem;box-shadow:var(--shadow-sm)
   }
   .today-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+  .today-mode{border:1px solid var(--line);background:var(--paper);color:var(--accent);border-radius:10px;padding:.42rem .58rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .today-mode[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   .today-overview-title{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.12rem}
   .today-overview-date{display:block;color:var(--muted);font-size:.72rem;font-weight:400;margin-top:.1rem}
   .today-focus{max-width:52%;font-size:.8rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:.45rem .7rem;line-height:1.5}
@@ -229,6 +231,9 @@
   .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
   .quick-template-status{width:100%;margin:0;padding:.15rem .1rem 0;color:var(--accent);font-size:.7rem;font-weight:700;line-height:1.55}
   .quick-template-feedback{width:100%;margin:0;color:var(--muted);font-size:.68rem;line-height:1.5}
+  body.home-compact-today .grid .card:not(#prayerCard):not(#tasksCard):not(#waterCard){display:none!important}
+  body.home-compact-today #tasksCard{order:2}
+  body.home-compact-today #waterCard{order:3}
   .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
   .tomorrow-panel h3{font-size:.86rem;color:var(--accent);margin:0 0 .4rem}.tomorrow-panel p{margin:0;color:var(--muted);font-size:.7rem;line-height:1.7}
   .tomorrow-items{display:flex;gap:.4rem;flex-wrap:wrap}.tomorrow-item{background:var(--chip-bg);border-radius:9px;padding:.32rem .45rem;font-size:.68rem;color:var(--ink)}
@@ -2108,6 +2113,7 @@
       <div class="today-overview-title" id="todayOverviewTitle">ملخص اليوم
         <span class="today-overview-date" id="todayOverviewDate"></span>
       </div>
+      <button type="button" class="today-mode" id="homeModeBtn" aria-pressed="false">عرض مختصر</button>
       <div class="today-focus" id="todayFocus" aria-live="polite"></div>
     </div>
     <div class="today-metrics">
@@ -12664,6 +12670,14 @@
   }
 
   /* ---------- تخصيص بطاقات الصفحة ---------- */
+  const HOME_MODE_KEY="h2do-home-mode-v1";
+  let homeCompact=localStorage.getItem(HOME_MODE_KEY)==="compact";
+  function homeModeRender(){
+    const onToday=typeof appView==="undefined"||appView==="today", compact=homeCompact&&onToday, button=document.getElementById("homeModeBtn");
+    document.body.classList.toggle("home-compact-today",compact);
+    if(button){button.setAttribute("aria-pressed",homeCompact?"true":"false");button.textContent=homeCompact?"عرض كامل":"عرض مختصر";button.title=homeCompact?"إظهار جميع البطاقات":"إظهار الصلاة والمهام والماء فقط";}
+  }
+  function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();};homeModeRender();}
   const CARD_PREF_KEY = "h2do-card-layout-v1";
   const CARD_DEFS = [
     {id:"prayerCard",icon:"🕌",label:"الصلاة"},
@@ -12817,6 +12831,7 @@
   }
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
+    if(typeof homeModeRender==="function") homeModeRender();
     const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(navCardsForView(appView));
     Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
@@ -13875,6 +13890,7 @@
   safeRun("initFirebase", initFirebase);
   safeRun("syncStatus:init", ()=> renderGlobalSyncStatus(null,false));
   safeRun("personalizeInit", personalizeInit);
+  safeRun("homeMode:init", homeModeInit);
   safeRun("appViewInit", appViewInit);
   safeRun("taskHistory:init", ()=>{ document.getElementById("taskHistoryBtn").onclick=taskHistoryOpen; document.getElementById("taskWeekBtn").onclick=taskWeekOpen; document.getElementById("taskCalendarBtn").onclick=openCalendarView; });
   safeRun("notifyInit", notifyInit);

@@ -145,7 +145,10 @@ test("card personalization supports persistent visibility and ordering",()=>{
   assert.match(html,/function personalizeMove\(/);
   assert.match(html,/function personalizeDrop\(/);
   assert.match(html,/row\.draggable=true/);
-  assert.match(html,/safeRun\("personalizeInit", personalizeInit\);\s*\n\s*safeRun\("appViewInit", appViewInit\);/);
+  assert.match(html,/id="homeModeBtn"/);
+  assert.match(html,/function homeModeInit\(/);
+  assert.match(html,/home-compact-today/);
+  assert.match(html,/safeRun\("personalizeInit", personalizeInit\);\s*\n\s*safeRun\("homeMode:init", homeModeInit\);\s*\n\s*safeRun\("appViewInit", appViewInit\);/);
 });
 
 test("onboarding, task planning, and expense tools are wired",()=>{
