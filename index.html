@@ -10486,7 +10486,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 4;   /* v4: أهداف الادخار + المعاملات المتكررة + قائمة التسوق العائلية */
+  const EXP_SCHEMA = 5;   /* v5: بيانات العائلة المتزامنة (التسوق والمواعيد) */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10512,7 +10512,7 @@
       version:EXP_SCHEMA,
       settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null,
                  currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
-      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[]
+      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[]
     };
   }
   function expData(){
@@ -10539,11 +10539,13 @@
     raw.savingsGoals = objArr(raw.savingsGoals);
     raw.recurringTransactions = objArr(raw.recurringTransactions);
     raw.familyShopping = objArr(raw.familyShopping);
+    raw.familyEvents = objArr(raw.familyEvents);
     /* ترحيل قائمة التسوق المحلية الأولى إلى بيانات العائلة المتزامنة، بلا فقدان للعناصر القديمة. */
     if(!raw.familyShopping.length){
       try{ const legacy=JSON.parse(localStorage.getItem("h2do-family-shopping-v1")||"[]"); if(Array.isArray(legacy)) raw.familyShopping=legacy.filter(x=>x&&typeof x.text==="string").slice(0,200).map(x=>Object.assign({id:newId(),category:"أخرى",quantity:"",done:false,createdAt:Date.now(),updatedAt:Date.now(),deletedAt:null},x)); }catch(e){}
     }
     raw.familyShopping.forEach(item=>{ if(!item.id) item.id=newId(); if(typeof item.text!=="string") item.text=""; if(item.category===undefined) item.category="أخرى"; if(item.quantity===undefined) item.quantity=""; if(item.done===undefined) item.done=false; if(item.createdAt===undefined) item.createdAt=Date.now(); if(item.updatedAt===undefined) item.updatedAt=item.createdAt; if(item.deletedAt===undefined) item.deletedAt=null; });
+    raw.familyEvents.forEach(item=>{ if(!item.id) item.id=newId(); if(typeof item.title!=="string") item.title=""; if(typeof item.date!=="string") item.date=""; if(item.note===undefined) item.note=""; if(item.createdAt===undefined) item.createdAt=Date.now(); if(item.updatedAt===undefined) item.updatedAt=item.createdAt; if(item.deletedAt===undefined) item.deletedAt=null; });
     raw.categories.forEach(c=>{ c.budgets = objArr(c.budgets); if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
@@ -10771,6 +10773,7 @@
     out.savingsGoals = expMergeById(localD.savingsGoals, remoteD.savingsGoals, g=>g.id);
     out.recurringTransactions = expMergeById(localD.recurringTransactions, remoteD.recurringTransactions, r=>r.id);
     out.familyShopping = expMergeById(localD.familyShopping, remoteD.familyShopping, item=>item.id, expTripTie);
+    out.familyEvents = expMergeById(localD.familyEvents, remoteD.familyEvents, item=>item.id, expTripTie);
     /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
     out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
     /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
@@ -10787,7 +10790,7 @@
     return out;
   }
   /* توقيع خفيف لكشف مساهمة المحلي (سجلات إضافية/أحدث) لتقرير الدفع العكسي دون تراشق لا نهائي */
-  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions","familyShopping"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
+  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
   /* هل الحالة المحلية «بذرة افتراضية نقية» لم تُستخدم بعد؟ (فئات افتراضية فقط، بلا معاملات/رحلات/التزامات) */
   function expIsPristine(d){ return !!(d && d.settings && d.settings.pristineSeed) && !(d.transactions&&d.transactions.length) && !(d.trips&&d.trips.length) && !(d.fixedTemplates&&d.fixedTemplates.length) && !(d.savingsGoals&&d.savingsGoals.length) && !(d.recurringTransactions&&d.recurringTransactions.length); }
   /* إزالة تكرار الفئات الافتراضية المتباينة المعرّفات (من أجهزة بذرت قبل الإصلاح) مع إعادة ربط المراجع — بلا فقدان مالي */
@@ -10847,7 +10850,7 @@
       /* جهاز جديد ما زال على «البذرة النقية» → يتبنّى الخادم كاملًا بلا حقن فئاته الافتراضية (يمنع تكرار الفئات) */
       if(expIsPristine(local)){
         const adopt = Object.assign({}, remote);
-        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
+        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
         safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
@@ -10855,7 +10858,7 @@
       }
       if(!cache){
         dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
-        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions","familyShopping"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
+        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -10882,7 +10885,7 @@
     expLoadFailed = true; diagErr("expData:init", e);
     /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
     expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
-      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[] };
+      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[] };
   }
   /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
   function expRetryLoad(){
@@ -11340,27 +11343,39 @@
   function familyShoppingAll(){ return (expState&&Array.isArray(expState.familyShopping)?expState.familyShopping:[]).filter(item=>item&&typeof item.text==="string").slice(0,200); }
   function familyShoppingLoad(){ return familyShoppingAll().filter(item=>!item.deletedAt); }
   function familyShoppingSave(list){ if(!expState) return; expState.familyShopping=list.slice(0,200); expSave(expState); }
+  function familyEventsAll(){ return (expState&&Array.isArray(expState.familyEvents)?expState.familyEvents:[]).filter(item=>item&&typeof item.title==="string"&&!item.deletedAt&&/^\d{4}-\d{2}-\d{2}$/.test(item.date||"")).sort((a,b)=>a.date.localeCompare(b.date)); }
+  function familyUpcomingEvent(){ return familyEventsAll().find(item=>item.date>=todayStr())||null; }
+  function familySaveEvents(list){ if(!expState) return; expState.familyEvents=list.slice(0,200); expSave(expState); }
   function familyPendingShopping(){ return familyShoppingLoad().filter(item=>!item.done); }
   function familyPendingTasks(){ return (state&&Array.isArray(state.tasks)?state.tasks:[]).filter(task=>itemFilled(task)&&!task.done&&taskStatus(task)!=="cancelled"); }
   function familyRenderLaunch(){
     const box=document.getElementById("familyLaunchSummary"); if(!box) return;
-    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), savings=(expState&&expState.savingsGoals||[]).filter(goal=>!goal.archivedAt&&!goal.completedAt).length;
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), savings=(expState&&expState.savingsGoals||[]).filter(goal=>!goal.archivedAt&&!goal.completedAt).length, next=familyUpcomingEvent();
     box.innerHTML=[
       {label:"قائمة التسوق",val:_arn(shopping.length)+" عناصر"},
       {label:"مهام المنزل",val:_arn(tasks.length)+" مهام"},
-      {label:"أهداف عائلية",val:_arn(savings)+" أهداف"}
+      {label:"أهداف عائلية",val:_arn(savings)+" أهداف"},
+      {label:"الموعد القادم",val:next?next.title:"لا يوجد"}
     ].map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("");
   }
   function familyRenderOverview(){
     const box=document.getElementById("familyOverviewBody"); if(!box) return;
-    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), finance=expSummaryCards();
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), finance=expSummaryCards(), next=familyUpcomingEvent();
     box.innerHTML='<div class="exp-sumgrid">'+finance.slice(1,3).map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("")+'</div>'
       +'<div class="exp-cards" style="margin-top:.8rem"><div class="exp-card"><h3>🛒 قائمة التسوق</h3><p class="exp-card-hint">'+(shopping.length?shopping.slice(0,3).map(item=>expEsc(item.text)).join(" · "):"لا توجد عناصر متبقية")+'</p><button class="exp-secondary" id="familyOpenShopping" style="margin-top:.7rem">إدارة المشتريات</button></div>'
       +'<div class="exp-card"><h3>🏠 مهام المنزل</h3><p class="exp-card-hint">'+(tasks.length?tasks.slice(0,3).map(task=>expEsc(task.text)).join(" · "):"لا توجد مهام مفتوحة اليوم")+'</p><button class="exp-secondary" id="familyAddTask" style="margin-top:.7rem">＋ مهمة منزلية</button></div></div>'
-      +'<div class="exp-card" style="margin-top:1rem"><h3>🎯 أهداف العائلة</h3><p class="exp-card-hint">استخدم أهداف الادخار الموجودة للرحلة، الطوارئ، الأثاث أو أي هدف مشترك.</p><button class="exp-secondary" id="familyOpenFinance" style="margin-top:.7rem">فتح المالية والأهداف</button></div>';
+      +'<div class="exp-cards" style="margin-top:1rem"><div class="exp-card"><h3>📅 مواعيد العائلة</h3><p class="exp-card-hint">'+(next?expEsc(next.title)+" · "+next.date:"لا توجد مواعيد قادمة")+'</p><button class="exp-secondary" id="familyOpenEvents" style="margin-top:.7rem">إدارة المواعيد</button></div><div class="exp-card"><h3>🎯 أهداف العائلة</h3><p class="exp-card-hint">استخدم أهداف الادخار للرحلة، الطوارئ، الأثاث أو أي هدف مشترك.</p><button class="exp-secondary" id="familyOpenFinance" style="margin-top:.7rem">فتح المالية والأهداف</button></div></div>';
     document.getElementById("familyOpenShopping").onclick=()=>expSetView("shopping");
     document.getElementById("familyAddTask").onclick=()=>smartOpenQuickTask();
+    document.getElementById("familyOpenEvents").onclick=familyOpenEvents;
     document.getElementById("familyOpenFinance").onclick=()=>expSetView("dash");
+  }
+  function familyOpenEvents(){
+    const list=familyEventsAll();
+    const rows=list.length?list.map(item=>'<div class="template-manager-row"><span class="template-manager-copy">📅 '+expEsc(item.title)+'<small>'+item.date+(item.note?" · "+expEsc(item.note):"")+'</small></span><span class="template-manager-actions"><button type="button" class="danger" data-family-event-delete="'+item.id+'">حذف</button></span></div>').join(""):'<div class="task-history-empty">لا توجد مواعيد عائلية بعد.</div>';
+    const sheet=taskSheet("مواعيد العائلة",'<div class="exp-grid2"><input id="familyEventTitle" maxlength="120" placeholder="مثال: زيارة العائلة"><input id="familyEventDate" type="date"><input id="familyEventNote" maxlength="160" placeholder="ملاحظة اختيارية"></div><button type="button" class="task-sheet-save" id="familyEventAdd">＋ إضافة موعد</button><div class="task-history-list" style="margin-top:1rem">'+rows+'</div>');
+    sheet.over.querySelector("#familyEventAdd").onclick=()=>{ const title=sheet.over.querySelector("#familyEventTitle").value.trim(), date=sheet.over.querySelector("#familyEventDate").value; if(!title||!date) return; const now=Date.now(), all=(expState.familyEvents||[]).slice(); all.push({id:newId(),title,date,note:sheet.over.querySelector("#familyEventNote").value.trim(),createdAt:now,updatedAt:now,deletedAt:null}); familySaveEvents(all); sheet.close(); familyRenderOverview(); familyRenderLaunch(); };
+    sheet.over.querySelectorAll("[data-family-event-delete]").forEach(button=>button.onclick=()=>{ const item=(expState.familyEvents||[]).find(entry=>entry.id===button.dataset.familyEventDelete); if(item){item.deletedAt=Date.now();item.updatedAt=item.deletedAt;familySaveEvents(expState.familyEvents);sheet.close();familyOpenEvents();familyRenderOverview();familyRenderLaunch();} });
   }
   function familyRenderShopping(){
     const box=document.getElementById("familyShoppingBody"); if(!box) return;
