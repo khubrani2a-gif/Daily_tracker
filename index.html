@@ -12573,7 +12573,7 @@
   /* ---------- تنقل الجوال بخمس وجهات ---------- */
   const APP_VIEW_KEY="h2do-mobile-view";
   const APP_VIEW_GROUPS={
-    today:["tasksCard","prioritiesCard","waterCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard"], expenses:["expensesCard"], more:["readingCard","intentionCard","memoryCard","notesCard","ratingCard"]
+    today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","intentionCard","memoryCard","notesCard","ratingCard"]
   };
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
