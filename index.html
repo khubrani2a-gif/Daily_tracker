@@ -12516,7 +12516,8 @@
   }
   function expInit(){
     document.getElementById("expOpenBtn").onclick=expOpenOverlay;
-    document.getElementById("expQuickAdd").onclick=()=> expOpenExpenseForm(null);
+    const quickExpense=document.getElementById("expQuickAdd");
+    if(quickExpense) quickExpense.onclick=()=> expOpenExpenseForm(null);
     document.getElementById("familyQuickShop").onclick=()=>{ expOpenOverlay(); expSetView("shopping"); };
     document.getElementById("expClose").onclick=expCloseOverlay;
     document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
