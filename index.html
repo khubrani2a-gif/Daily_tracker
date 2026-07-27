@@ -234,6 +234,15 @@
   body.home-compact-today .grid .card:not(#prayerCard):not(#tasksCard):not(#waterCard){display:none!important}
   body.home-compact-today #tasksCard{order:2}
   body.home-compact-today #waterCard{order:3}
+  body.home-compact-today .today-metric:nth-child(3),
+  body.home-compact-today #weeklyGoalBanner,
+  body.home-compact-today .smart-actions,
+  body.home-compact-today .quick-action-feedback,
+  body.home-compact-today .quick-template-bar,
+  body.home-compact-today .tomorrow-panel{display:none}
+  body.home-compact-today .today-metrics{grid-template-columns:repeat(3,1fr)}
+  .home-mode-status{display:none;margin:.65rem 0 0;color:var(--muted);font-size:.7rem;line-height:1.6}
+  body.home-compact-today .home-mode-status{display:block}
   .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
   .tomorrow-panel h3{font-size:.86rem;color:var(--accent);margin:0 0 .4rem}.tomorrow-panel p{margin:0;color:var(--muted);font-size:.7rem;line-height:1.7}
   .tomorrow-items{display:flex;gap:.4rem;flex-wrap:wrap}.tomorrow-item{background:var(--chip-bg);border-radius:9px;padding:.32rem .45rem;font-size:.68rem;color:var(--ink)}
@@ -2139,6 +2148,7 @@
       <span id="todayPriorityItems"></span>
       <span class="today-remaining" id="todayRemaining"></span>
     </div>
+    <p class="home-mode-status" id="homeModeStatus">العرض المختصر نشط: الصلاة، المهام، والماء فقط. استخدم «عرض كامل» لإظهار بقية الأدوات.</p>
     <div class="weekly-goal-banner" id="weeklyGoalBanner" hidden>
       <span class="weekly-goal-ico" aria-hidden="true">🎯</span>
       <div class="weekly-goal-copy"><small id="weeklyGoalLabel">هدف هذا الأسبوع</small><b id="weeklyGoalText"></b></div>
@@ -12675,7 +12685,7 @@
   function homeModeRender(){
     const onToday=typeof appView==="undefined"||appView==="today", compact=homeCompact&&onToday, button=document.getElementById("homeModeBtn");
     document.body.classList.toggle("home-compact-today",compact);
-    if(button){button.setAttribute("aria-pressed",homeCompact?"true":"false");button.textContent=homeCompact?"عرض كامل":"عرض مختصر";button.title=homeCompact?"إظهار جميع البطاقات":"إظهار الصلاة والمهام والماء فقط";}
+    if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار جميع البطاقات":"إظهار الصلاة والمهام والماء فقط";}
   }
   function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();};homeModeRender();}
   const CARD_PREF_KEY = "h2do-card-layout-v1";
