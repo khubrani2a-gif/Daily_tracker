@@ -10510,7 +10510,7 @@
     }));
     return {
       version:EXP_SCHEMA,
-      settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null,
+      settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null,
                  currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
       categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[]
     };
@@ -10526,7 +10526,7 @@
       return d;
     }
     /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) — دالة كليّة لا ترمي مهما كان شكل البيانات */
-    raw.settings = Object.assign({ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG",
+    raw.settings = Object.assign({ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG",
       defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() },
       (raw.settings && typeof raw.settings==="object") ? raw.settings : {});
     /* أزِل عناصر القمامة (null/غير كائن) فقط — لا نحذف أي سجلّ حقيقي */
@@ -10884,7 +10884,7 @@
   catch(e){
     expLoadFailed = true; diagErr("expData:init", e);
     /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
-    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
+    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
       categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[] };
   }
   /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
@@ -10947,6 +10947,14 @@
   function expMonthRange(dateStr){
     const d = new Date(dateStr+"T12:00:00"); const y=d.getFullYear(), m=d.getMonth();
     return {start: y+"-"+_pad2(m+1)+"-01", end: y+"-"+_pad2(m+1)+"-"+_pad2(new Date(y,m+1,0).getDate())};
+  }
+  function expSalaryCycleRange(dateStr, startDay){
+    const d=new Date(dateStr+"T12:00:00"), day=Math.max(1,Math.min(28,parseInt(startDay,10)||27));
+    const startFor=(year,month)=>new Date(year,month,Math.min(day,new Date(year,month+1,0).getDate()));
+    let start=startFor(d.getFullYear(),d.getMonth());
+    if(d<start) start=startFor(d.getFullYear(),d.getMonth()-1);
+    const end=new Date(start); end.setMonth(end.getMonth()+1); end.setDate(end.getDate()-1);
+    return {start:fmtDate(start),end:fmtDate(end),day};
   }
   function expYearRange(dateStr){ const y=new Date(dateStr+"T12:00:00").getFullYear(); return {start:y+"-01-01", end:y+"-12-31"}; }
   function expMonthKeyOf(dateStr){ return dateStr.slice(0,7); }
@@ -11417,15 +11425,14 @@
   function expSummaryCards(){
     const today = todayStr();
     const dayNet = expNetInRange(expDayRange(today));
-    const wr = expWeekRange(today), mr = expMonthRange(today);
-    const weekNet = expNetInRange(wr), monthNet = expNetInRange(mr);
+    const wr = expWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
+    const weekNet = expNetInRange(wr), cycleNet = expNetInRange(cycle), salary=expToMinor(expState.settings.salaryAmountMinor), remaining=salary-cycleNet;
     const budget = expWeeklyBudgetTotal(wr.start), varSpent = expVarNetInWeek(wr);
-    const remain = budget - varSpent;
     return [
       {label:"صرف اليوم", val:expMoney(dayNet)},
       {label:"هذا الأسبوع", val:expMoney(weekNet)},
-      {label:"هذا الشهر", val:expMoney(monthNet)},
-      {label:"المتبقي هذا الأسبوع", val:expMoney(remain), over:remain<0}
+      {label:"دورة الراتب "+_arn(cycle.day)+"–"+_arn(+cycle.end.slice(-2)), val:expMoney(cycleNet)},
+      salary>0 ? {label:"المتبقي حتى "+cycle.end, val:expMoney(remaining), over:remaining<0} : {label:"راتب الدورة", val:"حدده من الإعدادات"}
     ];
   }
   function expRenderLaunch(){
@@ -12281,6 +12288,8 @@
     body.innerHTML=
       '<div class="exp-card"><h3>⚙️ إعدادات المصاريف</h3>'+
       '<div class="exp-field"><label>بداية الأسبوع</label><select id="stWeek">'+days.map((d,i)=>'<option value="'+i+'"'+(i===s.weekStartDay?" selected":"")+'>'+d+'</option>').join("")+'</select></div>'+
+      '<div class="exp-field"><label>يوم بداية دورة الراتب</label><input id="stSalaryDay" type="number" min="1" max="28" value="'+(s.salaryCycleStartDay||27)+'"></div>'+
+      '<div class="exp-field"><label>راتب الدورة (اختياري)</label><input id="stSalaryAmount" type="number" min="0" step="0.01" value="'+((expToMinor(s.salaryAmountMinor)/100)||"")+'" placeholder="مثال: 8000"></div>'+
       '<div class="exp-field"><label>طريقة الدفع الافتراضية</label><select id="stPay">'+expOptions(EXP_PAYMENTS, s.defaultPaymentMethod)+'</select></div>'+
       '<div class="exp-card-hint">العملة: ريال سعودي (ر.س) · الأرقام: عربية</div>'+
       '</div>'+
@@ -12293,6 +12302,8 @@
         '<div id="expModStatus" style="margin-top:.7rem">'+expModStatusHtml()+'</div>'+
       '</div>';
     body.querySelector("#stWeek").onchange=e=>{ s.weekStartDay=parseInt(e.target.value,10); expSave(expState); expRefresh(); };
+    body.querySelector("#stSalaryDay").onchange=e=>{ s.salaryCycleStartDay=Math.max(1,Math.min(28,parseInt(e.target.value,10)||27)); expSave(expState); expRefresh(); };
+    body.querySelector("#stSalaryAmount").onchange=e=>{ s.salaryAmountMinor=expToMinor(e.target.value); expSave(expState); expRefresh(); };
     body.querySelector("#stPay").onchange=e=>{ s.defaultPaymentMethod=e.target.value||null; expSave(expState); };
     const gsb=body.querySelector("#expGlobalSyncBtn"), gst=body.querySelector("#expGlobalSyncText");
     if(gsb) gsb.onclick=()=>{

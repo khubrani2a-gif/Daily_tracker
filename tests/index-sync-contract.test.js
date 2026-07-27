@@ -242,6 +242,11 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
   assert.match(html,/out\.recurringTransactions = expMergeById/);
 });
 
+test("salary-cycle budgeting supports a configurable payday",()=>{
+  ["salaryCycleStartDay","salaryAmountMinor","stSalaryDay","stSalaryAmount"].forEach(name=>assert.ok(html.includes(name),name));
+  assert.match(html,/function expSalaryCycleRange\(/);
+});
+
 test("family hub keeps finance, shopping, and household-task entry points",()=>{
   ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["familyShoppingAll","familyShoppingLoad","familyRenderOverview","familyRenderShopping","familyShopping","familyEvents","familyOpenEvents"].forEach(name=>assert.ok(html.includes(name),name));
