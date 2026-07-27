@@ -82,7 +82,7 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
-  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickTemplateFeedback","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
+  ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickCustomActionBtn","quickManageActionsBtn","quickCustomActions","quickActionFeedback","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickTemplateFeedback","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
   assert.match(html,/<div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">/);
@@ -103,6 +103,9 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/data-smart-template-hide/);
   assert.match(html,/SMART_CUSTOM_TEMPLATES_KEY/);
   assert.match(html,/SMART_TEMPLATE_SETTINGS_KEY/);
+  assert.match(html,/SMART_CUSTOM_ACTIONS_KEY/);
+  assert.match(html,/function smartOpenCustomAction\(/);
+  assert.match(html,/function smartManageCustomActions\(/);
   assert.match(html,/اختر قالبًا لإضافته إلى مهام اليوم\./);
   assert.doesNotMatch(html,/quickTemplatesBtn/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);

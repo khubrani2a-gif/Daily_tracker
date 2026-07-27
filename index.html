@@ -222,6 +222,8 @@
   .today-priority-chip{max-width:220px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:.3rem .55rem;font-size:.7rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .today-remaining{margin-right:auto;font-size:.7rem;color:var(--accent);font-weight:700}
   .smart-actions{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.75rem}
+  .quick-custom-actions{display:contents}
+  .quick-action-feedback{margin:.3rem 0 0;color:var(--muted);font-size:.68rem;line-height:1.5}
   .smart-actions button,.quick-template-bar button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.44rem .62rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
   .smart-actions button:hover,.smart-actions button:focus-visible,.quick-template-bar button:hover,.quick-template-bar button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
   .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
@@ -2141,8 +2143,12 @@
       <button type="button" id="quickTaskBtn">＋ مهمة</button>
       <button type="button" id="quickExpenseBtn">＋ مصروف</button>
       <button type="button" id="quickWaterBtn">💧 كوب ماء</button>
+      <span class="quick-custom-actions" id="quickCustomActions"></span>
+      <button type="button" id="quickCustomActionBtn">＋ اختصار سريع</button>
+      <button type="button" id="quickManageActionsBtn">⚙ إدارة الاختصارات</button>
       <button type="button" id="shareWeekBtn">↗ مشاركة الأسبوع</button>
     </div>
+    <p class="quick-action-feedback" id="quickActionFeedback" role="status" aria-live="polite"></p>
     <div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">
       <button type="button" data-quick-template="morning">☀️ روتين صباحي</button>
       <button type="button" data-quick-template="evening">🌙 روتين مسائي</button>
@@ -8859,6 +8865,7 @@
   const SMART_TEMPLATE_UNDO_KEY="h2do-template-undo-v1";
   const SMART_CUSTOM_TEMPLATES_KEY="h2do-custom-templates-v1";
   const SMART_TEMPLATE_SETTINGS_KEY="h2do-template-settings-v1";
+  const SMART_CUSTOM_ACTIONS_KEY="h2do-custom-actions-v1";
   const SMART_TEMPLATE_PRESETS={morning:{name:"روتين صباحي",tasks:["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"]},evening:{name:"روتين مسائي",tasks:["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"]},focus:{name:"مهمة مركّزة",tasks:["جلسة تركيز لمدة ٣٠ دقيقة"]}};
   const SMART_BUILTIN_TEMPLATES={morning:{name:"روتين صباحي",icon:"☀️",tasks:["أذكار الصباح","تحديد أهم ٣ أولويات","شرب كوب ماء"]},evening:{name:"روتين مسائي",icon:"🌙",tasks:["أذكار المساء","مراجعة اليوم","تجهيز أولويات الغد"]},task:{name:"مهمة مركّزة",icon:"✅",tasks:["جلسة تركيز لمدة ٣٠ دقيقة"]},recurring:{name:"مصروف متكرر",icon:"🔁",action:"recurring"}};
   function smartUndoLoad(){try{return JSON.parse(localStorage.getItem(SMART_TEMPLATE_UNDO_KEY)||"[]");}catch(e){return [];}}
@@ -8872,6 +8879,15 @@
   function smartCustomTemplatesLoad(){try{const rows=JSON.parse(localStorage.getItem(SMART_CUSTOM_TEMPLATES_KEY)||"[]");return Array.isArray(rows)?rows.filter(row=>row&&typeof row.id==="string"&&typeof row.name==="string"&&Array.isArray(row.tasks)).map(row=>({id:row.id,name:row.name.slice(0,50),tasks:row.tasks.filter(x=>typeof x==="string").map(x=>x.trim()).filter(Boolean).slice(0,12),hidden:!!row.hidden})).filter(row=>row.name&&row.tasks.length).slice(0,20):[];}catch(e){return [];}}
   function smartCustomTemplatesSave(rows){localStorage.setItem(SMART_CUSTOM_TEMPLATES_KEY,JSON.stringify(rows.slice(0,20)));smartRenderCustomTemplates();}
   function smartRenderCustomTemplates(){const host=document.getElementById("quickCustomTemplateList");if(!host)return;host.textContent="";smartCustomTemplatesLoad().filter(template=>!template.hidden).forEach(template=>{const button=document.createElement("button");button.type="button";button.className="quick-custom-template";button.textContent="📌 "+template.name;button.title=template.tasks.join(" · ");button.onclick=()=>smartAddTasks(template.tasks,template.name);host.appendChild(button);});}
+  function smartCustomActionsLoad(){try{const rows=JSON.parse(localStorage.getItem(SMART_CUSTOM_ACTIONS_KEY)||"[]");const kinds=["task","expense","water","share"];return Array.isArray(rows)?rows.filter(row=>row&&typeof row.id==="string"&&typeof row.name==="string"&&kinds.includes(row.kind)).map(row=>({id:row.id,name:row.name.trim().slice(0,40),kind:row.kind,task:typeof row.task==="string"?row.task.trim().slice(0,160):"",hidden:!!row.hidden})).filter(row=>row.name&&(row.kind!=="task"||row.task)).slice(0,20):[];}catch(e){return [];}}
+  function smartCustomActionsSave(rows){localStorage.setItem(SMART_CUSTOM_ACTIONS_KEY,JSON.stringify(rows.slice(0,20)));smartRenderCustomActions();}
+  function smartActionIcon(kind){return ({task:"✅",expense:"💳",water:"💧",share:"↗"})[kind]||"⚡";}
+  function smartActionDescription(action){return action.kind==="task"?"يضيف مهمة: "+action.task:action.kind==="expense"?"يفتح إضافة مصروف":action.kind==="water"?"يضيف كوب ماء":"يفتح مشاركة الأسبوع";}
+  function smartRunCustomAction(action){if(!action||action.hidden)return;if(action.kind==="task"){smartAddTasks([action.task],action.name);return;}if(action.kind==="expense"){expOpenExpenseForm(null);return;}if(action.kind==="water"){state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();smartActionNotice("تمت إضافة كوب ماء.");return;}if(action.kind==="share")smartShareWeek();}
+  function smartActionNotice(text){const status=document.getElementById("quickActionFeedback");if(status)status.textContent=text||"";}
+  function smartRenderCustomActions(){const host=document.getElementById("quickCustomActions");if(!host)return;host.textContent="";smartCustomActionsLoad().filter(action=>!action.hidden).forEach(action=>{const button=document.createElement("button");button.type="button";button.className="quick-custom-action";button.textContent=smartActionIcon(action.kind)+" "+action.name;button.title=smartActionDescription(action);button.onclick=()=>smartRunCustomAction(action);host.appendChild(button);});}
+  function smartOpenCustomAction(id){const existing=id?smartCustomActionsLoad().find(action=>action.id===id):null, action=existing||{name:"",kind:"task",task:""};const sheet=taskSheet(existing?"تعديل اختصار سريع":"إضافة اختصار سريع",'<div class="task-fields"><label class="task-field-wide">اسم الزر<input id="smartActionName" type="text" maxlength="40" placeholder="مثال: اتصال بالوالدين" value="'+expEsc(action.name)+'"></label><label class="task-field-wide">الإجراء<select id="smartActionKind"><option value="task"'+(action.kind==="task"?" selected":"")+'>إضافة مهمة محددة</option><option value="expense"'+(action.kind==="expense"?" selected":"")+'>فتح إضافة مصروف</option><option value="water"'+(action.kind==="water"?" selected":"")+'>إضافة كوب ماء</option><option value="share"'+(action.kind==="share"?" selected":"")+'>مشاركة ملخص الأسبوع</option></select></label><label class="task-field-wide" id="smartActionTaskWrap">اسم المهمة التي ستُضاف<input id="smartActionTask" type="text" maxlength="160" placeholder="مثال: الاتصال بالوالدين" value="'+expEsc(action.task)+'"></label></div><div class="exp-err" id="smartActionErr"></div><button type="button" class="task-sheet-save" id="smartActionSave">'+(existing?"حفظ التعديل":"إضافة الاختصار")+'</button>'), name=sheet.over.querySelector("#smartActionName"), kind=sheet.over.querySelector("#smartActionKind"), task=sheet.over.querySelector("#smartActionTask"), wrap=sheet.over.querySelector("#smartActionTaskWrap"), err=sheet.over.querySelector("#smartActionErr");const sync=()=>{wrap.hidden=kind.value!=="task";};kind.onchange=sync;sync();sheet.over.querySelector("#smartActionSave").onclick=()=>{const label=name.value.trim(), text=task.value.trim();if(!label){err.textContent="اكتب اسمًا للاختصار.";name.focus();return;}if(kind.value==="task"&&!text){err.textContent="اكتب المهمة التي سيضيفها الاختصار.";task.focus();return;}const all=smartCustomActionsLoad();if(!existing&&all.length>=20){err.textContent="وصلت إلى الحد الأقصى: ٢٠ اختصارًا.";return;}const row={id:existing?existing.id:newId(),name:label,kind:kind.value,task:kind.value==="task"?text:"",hidden:existing?existing.hidden:false};const pos=all.findIndex(item=>item.id===row.id);if(pos>=0)all[pos]=row;else all.push(row);smartCustomActionsSave(all);sheet.close();smartActionNotice(existing?"تم تعديل الاختصار.":"تمت إضافة الاختصار السريع.");};name.focus();}
+  function smartManageCustomActions(){const actions=smartCustomActionsLoad(), rows=actions.length?actions.map(action=>'<div class="template-manager-row"><span class="template-manager-copy">'+smartActionIcon(action.kind)+' '+expEsc(action.name)+'<small>'+(action.hidden?"مخفي":expEsc(smartActionDescription(action)))+'</small></span><span class="template-manager-actions"><button type="button" data-smart-action-edit="'+action.id+'">تعديل</button><button type="button" class="hidden-toggle" data-smart-action-hide="'+action.id+'">'+(action.hidden?"إظهار":"إخفاء")+'</button><button type="button" class="danger" data-smart-action-delete="'+action.id+'">حذف</button></span></div>').join(""):'<div class="task-history-empty">لا توجد اختصارات مضافة بعد.</div>';const sheet=taskSheet("إدارة الاختصارات",'<p class="task-history-empty">الأزرار الأساسية تبقى كما هي، وهنا تدير اختصاراتك التي أضفتها.</p><div class="task-history-list">'+rows+'</div><button type="button" class="task-sheet-save" id="smartActionNew">＋ اختصار سريع</button>');sheet.over.querySelector("#smartActionNew").onclick=()=>{sheet.close();smartOpenCustomAction();};sheet.over.querySelectorAll("[data-smart-action-edit]").forEach(button=>button.onclick=()=>{sheet.close();smartOpenCustomAction(button.dataset.smartActionEdit);});sheet.over.querySelectorAll("[data-smart-action-hide]").forEach(button=>button.onclick=()=>{const all=smartCustomActionsLoad(), item=all.find(action=>action.id===button.dataset.smartActionHide);if(!item)return;item.hidden=!item.hidden;smartCustomActionsSave(all);sheet.close();smartActionNotice(item.hidden?"تم إخفاء الاختصار.":"تم إظهار الاختصار.");});sheet.over.querySelectorAll("[data-smart-action-delete]").forEach(button=>button.onclick=()=>{const all=smartCustomActionsLoad(), item=all.find(action=>action.id===button.dataset.smartActionDelete);if(!item)return;smartAskInTemplateManager(sheet,"حذف اختصار «"+item.name+"»؟","لن يؤثر ذلك على مهامك أو بياناتك السابقة.",()=>{smartCustomActionsSave(all.filter(action=>action.id!==item.id));sheet.close();smartActionNotice("تم حذف الاختصار.");});});}
   function smartOpenCustomTemplate(){
     const sheet=taskSheet("إنشاء قالب خاص",'<div class="task-fields"><label class="task-field-wide">اسم القالب<input id="smartTemplateName" type="text" maxlength="50" placeholder="مثال: روتين قبل النوم" autocomplete="off"></label><label class="task-field-wide">ابدأ من قالب جاهز<select id="smartTemplatePreset"><option value="">ابدأ من الصفر</option><option value="morning">روتين صباحي</option><option value="evening">روتين مسائي</option><option value="focus">مهمة مركّزة</option></select></label><label class="task-field-wide">المهام — مهمة في كل سطر<textarea id="smartTemplateTasks" maxlength="1000" placeholder="أذكار المساء&#10;قراءة ١٠ صفحات&#10;تجهيز ملابس الغد"></textarea></label></div><div class="exp-err" id="smartTemplateErr"></div><button type="button" class="task-sheet-save" id="smartTemplateSave">حفظ القالب</button>');
     const name=sheet.over.querySelector("#smartTemplateName"), preset=sheet.over.querySelector("#smartTemplatePreset"), tasks=sheet.over.querySelector("#smartTemplateTasks"), err=sheet.over.querySelector("#smartTemplateErr");
@@ -8946,11 +8962,14 @@
     let expenseLine=""; try{expenseLine="\n💰 المصروف المتغير: "+expMoney(expVarNetInWeek(range));}catch(e){}
     return "ملخص أسبوعي من مفكرتي 🌙\n🕌 الصلوات: "+prayers.toLocaleString("ar-EG")+"\n✅ المهام: "+tasksDone.toLocaleString("ar-EG")+" / "+tasksTotal.toLocaleString("ar-EG")+"\n💧 أيام هدف الماء: "+waterDays.toLocaleString("ar-EG")+" / ٧"+expenseLine;
   }
+  async function smartShareWeek(){const text=smartWeekSummary();try{if(navigator.share){await navigator.share({title:"ملخص أسبوعي",text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);smartActionNotice("تم نسخ الملخص للمشاركة.");}else prompt("انسخ الملخص:",text);}catch(e){if(e&&e.name!=="AbortError")prompt("انسخ الملخص:",text);}}
   function smartInit(){
     const byId=id=>document.getElementById(id);
     byId("quickTaskBtn").onclick=smartOpenQuickTask;
     byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
     byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
+    byId("quickCustomActionBtn").onclick=()=>smartOpenCustomAction();
+    byId("quickManageActionsBtn").onclick=smartManageCustomActions;
     document.querySelectorAll("[data-quick-template]").forEach(button=>button.onclick=()=>{const template=smartBuiltinTemplate(button.dataset.quickTemplate);if(!template||template.hidden)return;if(template.action==="recurring")expOpenRecurringForm(null);else smartAddTasks(template.tasks,template.name);});
     byId("quickCustomTemplateBtn").onclick=smartOpenCustomTemplate;
     byId("quickManageTemplatesBtn").onclick=smartManageCustomTemplates;
@@ -8958,7 +8977,8 @@
     smartRenderUndo();
     smartRenderBuiltinTemplates();
     smartRenderCustomTemplates();
-    byId("shareWeekBtn").onclick=async()=>{const text=smartWeekSummary();try{if(navigator.share){await navigator.share({title:"ملخص أسبوعي",text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);alert("تم نسخ الملخص للمشاركة.");}else prompt("انسخ الملخص:",text);}catch(e){if(e&&e.name!=="AbortError")prompt("انسخ الملخص:",text);}};
+    smartRenderCustomActions();
+    byId("shareWeekBtn").onclick=smartShareWeek;
   }
 
   /* ---------- سلسلة أيام الصلوات الخمس ---------- */
