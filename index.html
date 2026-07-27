@@ -10956,6 +10956,14 @@
     const end=new Date(start); end.setMonth(end.getMonth()+1); end.setDate(end.getDate()-1);
     return {start:fmtDate(start),end:fmtDate(end),day};
   }
+  /* أسبوع مالي داخل دورة الراتب: يبدأ مع الراتب ويُقصّ عند نهاية الدورة، لا مع بداية الأسبوع الميلادي. */
+  function expSalaryWeekRange(dateStr){
+    const cycle=expSalaryCycleRange(dateStr,expState.settings.salaryCycleStartDay), start=new Date(cycle.start+"T12:00:00"), current=new Date(dateStr+"T12:00:00");
+    const index=Math.max(0,Math.floor((current-start)/86400000/7)); start.setDate(start.getDate()+index*7);
+    const end=new Date(start); end.setDate(end.getDate()+6); const cycleEnd=new Date(cycle.end+"T12:00:00");
+    if(end>cycleEnd) end.setTime(cycleEnd.getTime());
+    return {start:fmtDate(start),end:fmtDate(end),cycleStart:cycle.start,cycleEnd:cycle.end};
+  }
   function expYearRange(dateStr){ const y=new Date(dateStr+"T12:00:00").getFullYear(); return {start:y+"-01-01", end:y+"-12-31"}; }
   function expMonthKeyOf(dateStr){ return dateStr.slice(0,7); }
   function expLastDayOfMonth(y,m){ return new Date(y, m, 0).getDate(); } /* m:1-12 */
@@ -11433,7 +11441,7 @@
   function expSummaryCards(){
     const today = todayStr();
     const dayNet = expNetInRange(expDayRange(today));
-    const wr = expWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
+    const wr = expSalaryWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
     const weekNet = expNetInRange(wr), cycleNet = expNetInRange(cycle), salary=expToMinor(expState.settings.salaryAmountMinor), remaining=salary-cycleNet;
     const budget = expWeeklyBudgetTotal(wr.start), varSpent = expVarNetInWeek(wr);
     return [
@@ -11454,7 +11462,7 @@
     }
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
-    const alert=document.getElementById("expBudgetAlert"), wr=expWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
+    const alert=document.getElementById("expBudgetAlert"), wr=expSalaryWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
     if(alert && budget>0 && spent/budget>=.8){ const over=spent>budget; alert.hidden=false; alert.textContent=over ? "⚠️ تجاوزت ميزانية الأسبوع بـ "+expMoney(spent-budget) : "⚠️ استخدمت "+_arn(Math.round(spent/budget*100))+"٪ من ميزانية الأسبوع — المتبقي "+expMoney(budget-spent); }
     else if(alert){ alert.hidden=true; alert.textContent=""; }
     expRenderTravelBanner("expLaunchBanner");
@@ -11542,7 +11550,7 @@
   }
   function expRenderVarCard(){
     const box = document.getElementById("expVarCard");
-    const wr = expWeekRange(todayStr());
+    const wr = expSalaryWeekRange(todayStr());
     const cats = expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
     let rows="";
     if(!cats.length){ rows='<div class="exp-empty">لا توجد فئات أسبوعية نشطة.</div>'; }
@@ -11602,7 +11610,7 @@
   }
   function expRenderBudgetCompareCard(){
     const box=document.getElementById("expBudgetCompareCard"); if(!box) return;
-    const wr=expWeekRange(todayStr()), d=new Date(todayStr()+"T12:00:00");
+    const wr=expSalaryWeekRange(todayStr()), d=new Date(todayStr()+"T12:00:00");
     expEnsureMonth(d.getFullYear(),d.getMonth()+1);
     const budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr), bpct=Math.min(100,expPct(spent,budget));
     const inst=expMonthInstances(d.getFullYear(),d.getMonth()+1);
@@ -11937,7 +11945,7 @@
 
   function expOpenVarForm(catId){
     const c = catId? expCatById(catId):null;
-    const wr = expWeekRange(todayStr());
+    const wr = expSalaryWeekRange(todayStr());
     const curBudget = c? expBudgetForWeek(c, wr.start):0;
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(c?"تعديل فئة":"إضافة فئة أسبوعية")+'</h3><button data-close>✕</button></div>'+
@@ -11968,7 +11976,7 @@
   }
   function expOpenBudgetForm(catId){
     const c=expCatById(catId); if(!c) return;
-    const wr=expWeekRange(todayStr());
+    const wr=expSalaryWeekRange(todayStr());
     expOpenForm(
       '<div class="exp-form-head"><h3>الميزانية الأسبوعية — '+expEsc(c.name)+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-field"><label>الميزانية الأسبوعية (ر.س)</label><input class="amount" id="bfAmt" inputmode="decimal" value="'+(expBudgetForWeek(c,wr.start)/100||"")+'"></div>'+
@@ -11982,7 +11990,7 @@
       const amt=expParseAmount(g("#bfAmt").value);
       if(isNaN(amt)||amt<0){ g("#bfErr").textContent="أدخل ميزانية صحيحة (غير سالبة)."; return; }
       let from=wr.start;
-      if(b.dataset.scope==="nextWeek"){ const d=new Date(wr.start+"T12:00:00"); d.setDate(d.getDate()+7); from=fmtDate(d); }
+      if(b.dataset.scope==="nextWeek"){ const d=new Date(wr.end+"T12:00:00"); d.setDate(d.getDate()+1); from=fmtDate(d); }
       expSetCategoryBudget(catId, amt, from); expCloseForm(); expRefresh();
     });
   }
