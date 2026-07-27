@@ -2178,6 +2178,7 @@
       <p class="customize-hint">أظهر ما تحتاجه فقط، ورتّب البطاقات بالسحب أو بالأسهم. تُحفظ اختياراتك تلقائيًا على هذا الجهاز.</p>
       <div class="customize-list" id="customizeList"></div>
       <div class="customize-actions">
+        <button type="button" id="customizeNav">تخصيص الشريط السفلي</button>
         <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
         <button type="button" id="customizeShowAll">إظهار الكل</button>
         <button type="button" id="customizeReset">الترتيب الافتراضي</button>
@@ -12485,6 +12486,7 @@
     {id:"sportCard",icon:"🏃",label:"الرياضة"},
     {id:"healthCard",icon:"⚖️",label:"الصحة"},
     {id:"waterCard",icon:"💧",label:"شرب الماء"},
+    {id:"expensesCard",icon:"💰",label:"المصاريف"},
     {id:"readingCard",icon:"📚",label:"القراءة"},
     {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
     {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
@@ -12565,6 +12567,7 @@
     document.getElementById("customizeDone").onclick=personalizeClose;
     document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
     document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.getElementById("customizeNav").onclick=navOpenCustomizer;
     document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
     customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
     document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
@@ -12575,16 +12578,66 @@
   const APP_VIEW_GROUPS={
     today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","intentionCard","memoryCard","notesCard","ratingCard"]
   };
+  const NAV_PREF_KEY="h2do-bottom-nav-v1";
+  const NAV_DEFS=[
+    {view:"today",icon:"☀️",label:"اليوم",locked:true},
+    {view:"iman",icon:"📿",label:"إيمانيات"},
+    {view:"sport",icon:"❤️",label:"الصحة"},
+    {view:"expenses",icon:"💰",label:"المصاريف"},
+    {view:"more",icon:"•••",label:"المزيد",locked:true}
+  ];
+  function navDefault(){ return {order:NAV_DEFS.map(d=>d.view),hidden:[]}; }
+  function navLoad(){
+    let raw={}; try{ raw=JSON.parse(localStorage.getItem(NAV_PREF_KEY)||"{}"); }catch(e){}
+    const valid=new Set(NAV_DEFS.map(d=>d.view)), seen=new Set();
+    const order=(Array.isArray(raw.order)?raw.order:[]).filter(view=>valid.has(view)&&!seen.has(view)&&seen.add(view));
+    NAV_DEFS.forEach(d=>{ if(!seen.has(d.view)) order.push(d.view); });
+    const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(view=>valid.has(view)&&!NAV_DEFS.find(d=>d.view===view).locked);
+    return {order,hidden};
+  }
+  let navPrefs=navLoad();
+  function navSave(){ localStorage.setItem(NAV_PREF_KEY,JSON.stringify(navPrefs)); }
+  function navIsHidden(view){ return navPrefs.hidden.includes(view); }
+  function navApply(){
+    const nav=document.querySelector(".quick-nav"); if(!nav) return;
+    navPrefs.order.forEach(view=>{ const link=nav.querySelector('[data-app-view="'+view+'"]'); if(link){ link.hidden=navIsHidden(view); nav.appendChild(link); } });
+  }
+  function navCardsForView(view){
+    const base=APP_VIEW_GROUPS[view]||APP_VIEW_GROUPS.today;
+    if(view!=="more") return base;
+    const hiddenCards=navPrefs.hidden.flatMap(hiddenView=>APP_VIEW_GROUPS[hiddenView]||[]);
+    return [...new Set(base.concat(hiddenCards))];
+  }
+  function navCommit(){
+    if(navIsHidden(appView)){ appView="more"; localStorage.setItem(APP_VIEW_KEY,appView); }
+    navSave(); navApply(); appViewApply();
+  }
+  function navMove(view,delta){
+    const from=navPrefs.order.indexOf(view), to=from+delta;
+    if(from<0||to<0||to>=navPrefs.order.length) return;
+    navPrefs.order.splice(from,1); navPrefs.order.splice(to,0,view); navCommit(); navOpenCustomizer();
+  }
+  function navOpenCustomizer(){
+    const rows=navPrefs.order.map((view,index)=>{
+      const def=NAV_DEFS.find(d=>d.view===view), hidden=navIsHidden(view), lock=def.locked;
+      return '<div class="template-manager-row"><span class="template-manager-copy">'+def.icon+' '+def.label+'<small>'+(lock?'أساسي ولا يمكن إخفاؤه':hidden?'مخفي — سيظهر ضمن «المزيد»':'ظاهر في الشريط')+'</small></span><span class="template-manager-actions"><button type="button" data-nav-up="'+view+'" '+(index===0?'disabled':'')+'>↑</button><button type="button" data-nav-down="'+view+'" '+(index===navPrefs.order.length-1?'disabled':'')+'>↓</button>'+(lock?'':'<button type="button" class="hidden-toggle" data-nav-toggle="'+view+'">'+(hidden?'إظهار':'إخفاء')+'</button>')+'</span></div>';
+    }).join("");
+    const sheet=taskSheet("تخصيص الشريط السفلي",'<p class="task-history-empty">رتّب الأقسام أو أخفِ ما لا تحتاجه. الأقسام المخفية تبقى متاحة داخل «المزيد».</p><div class="task-history-list">'+rows+'</div><div class="customize-actions"><button type="button" id="navReset">استعادة الترتيب</button></div>');
+    sheet.over.querySelectorAll("[data-nav-up]").forEach(btn=>btn.onclick=()=>{ sheet.close(); navMove(btn.dataset.navUp,-1); });
+    sheet.over.querySelectorAll("[data-nav-down]").forEach(btn=>btn.onclick=()=>{ sheet.close(); navMove(btn.dataset.navDown,1); });
+    sheet.over.querySelectorAll("[data-nav-toggle]").forEach(btn=>btn.onclick=()=>{ const view=btn.dataset.navToggle; navPrefs.hidden=navIsHidden(view)?navPrefs.hidden.filter(v=>v!==view):navPrefs.hidden.concat(view); navCommit(); sheet.close(); navOpenCustomizer(); });
+    sheet.over.querySelector("#navReset").onclick=()=>{ navPrefs=navDefault(); navCommit(); sheet.close(); navOpenCustomizer(); };
+  }
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
-    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(APP_VIEW_GROUPS[appView]||APP_VIEW_GROUPS.today);
+    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(navCardsForView(appView));
     Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById(APP_VIEW_GROUPS[view][0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
+  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById(navCardsForView(view)[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
   function appViewInit(){
     document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
-    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); appViewApply();
+    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
   }
 
   /* ---------- إعداد البداية والأهداف اليومية ---------- */
