@@ -12297,7 +12297,7 @@
       '<div class="exp-card"><h3>⚙️ إعدادات المصاريف</h3>'+
       '<div class="exp-field"><label>بداية الأسبوع</label><select id="stWeek">'+days.map((d,i)=>'<option value="'+i+'"'+(i===s.weekStartDay?" selected":"")+'>'+d+'</option>').join("")+'</select></div>'+
       '<div class="exp-field"><label>يوم بداية دورة الراتب</label><input id="stSalaryDay" type="number" min="1" max="28" value="'+(s.salaryCycleStartDay||27)+'"></div>'+
-      '<div class="exp-field"><label>راتب الدورة (اختياري)</label><input id="stSalaryAmount" type="number" min="0" step="0.01" value="'+((expToMinor(s.salaryAmountMinor)/100)||"")+'" placeholder="مثال: 8000"></div>'+
+      '<div class="exp-field"><label>راتب الدورة بالريال (اختياري)</label><input id="stSalaryAmount" type="text" inputmode="decimal" value="'+((expToMinor(s.salaryAmountMinor)/100)||"")+'" placeholder="مثال: 8000 أو ٨٠٠٠"></div>'+
       '<div class="exp-field"><label>طريقة الدفع الافتراضية</label><select id="stPay">'+expOptions(EXP_PAYMENTS, s.defaultPaymentMethod)+'</select></div>'+
       '<div class="exp-card-hint">العملة: ريال سعودي (ر.س) · الأرقام: عربية</div>'+
       '</div>'+
@@ -12311,7 +12311,7 @@
       '</div>';
     body.querySelector("#stWeek").onchange=e=>{ s.weekStartDay=parseInt(e.target.value,10); expSave(expState); expRefresh(); };
     body.querySelector("#stSalaryDay").onchange=e=>{ s.salaryCycleStartDay=Math.max(1,Math.min(28,parseInt(e.target.value,10)||27)); expSave(expState); expRefresh(); };
-    body.querySelector("#stSalaryAmount").onchange=e=>{ s.salaryAmountMinor=expToMinor(e.target.value); expSave(expState); expRefresh(); };
+    body.querySelector("#stSalaryAmount").onchange=e=>{ const amount=expParseAmount(e.target.value); if(isNaN(amount)||amount<0){ e.target.value=(expToMinor(s.salaryAmountMinor)/100)||""; return; } s.salaryAmountMinor=amount; expSave(expState); expRefresh(); };
     body.querySelector("#stPay").onchange=e=>{ s.defaultPaymentMethod=e.target.value||null; expSave(expState); };
     const gsb=body.querySelector("#expGlobalSyncBtn"), gst=body.querySelector("#expGlobalSyncText");
     if(gsb) gsb.onclick=()=>{
