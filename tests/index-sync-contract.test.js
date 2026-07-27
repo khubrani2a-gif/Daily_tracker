@@ -106,6 +106,7 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/SMART_CUSTOM_ACTIONS_KEY/);
   assert.match(html,/function smartOpenCustomAction\(/);
   assert.match(html,/function smartManageCustomActions\(/);
+  ["iman","dhikr","health","sport5","family","shopping","finance"].forEach(action=>assert.match(html,new RegExp('value="'+action+'"'),action));
   assert.match(html,/اختر قالبًا لإضافته إلى مهام اليوم\./);
   assert.doesNotMatch(html,/quickTemplatesBtn/);
   assert.match(html,/renderTodayOverview\(\);\s*\n\s*updateStreak/);
