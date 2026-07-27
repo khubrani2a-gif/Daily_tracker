@@ -244,7 +244,7 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
 
 test("family hub keeps finance, shopping, and household-task entry points",()=>{
   ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["familyShoppingLoad","familyRenderOverview","familyRenderShopping","FAMILY_SHOP_KEY"].forEach(name=>assert.ok(html.includes(name),name));
+  ["familyShoppingAll","familyShoppingLoad","familyRenderOverview","familyRenderShopping","familyShopping"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/data-app-view="expenses"[^>]*>[^<]*<span>👨‍👩‍👧<\/span>العائلة/);
   assert.match(html,/const quickExpense=document\.getElementById\("expQuickAdd"\);/);
 });

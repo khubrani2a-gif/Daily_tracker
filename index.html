@@ -10486,7 +10486,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 3;   /* v3: أهداف الادخار + المعاملات المتكررة */
+  const EXP_SCHEMA = 4;   /* v4: أهداف الادخار + المعاملات المتكررة + قائمة التسوق العائلية */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10512,7 +10512,7 @@
       version:EXP_SCHEMA,
       settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null,
                  currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
-      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[]
+      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[]
     };
   }
   function expData(){
@@ -10538,6 +10538,12 @@
     raw.trips = objArr(raw.trips);
     raw.savingsGoals = objArr(raw.savingsGoals);
     raw.recurringTransactions = objArr(raw.recurringTransactions);
+    raw.familyShopping = objArr(raw.familyShopping);
+    /* ترحيل قائمة التسوق المحلية الأولى إلى بيانات العائلة المتزامنة، بلا فقدان للعناصر القديمة. */
+    if(!raw.familyShopping.length){
+      try{ const legacy=JSON.parse(localStorage.getItem("h2do-family-shopping-v1")||"[]"); if(Array.isArray(legacy)) raw.familyShopping=legacy.filter(x=>x&&typeof x.text==="string").slice(0,200).map(x=>Object.assign({id:newId(),category:"أخرى",quantity:"",done:false,createdAt:Date.now(),updatedAt:Date.now(),deletedAt:null},x)); }catch(e){}
+    }
+    raw.familyShopping.forEach(item=>{ if(!item.id) item.id=newId(); if(typeof item.text!=="string") item.text=""; if(item.category===undefined) item.category="أخرى"; if(item.quantity===undefined) item.quantity=""; if(item.done===undefined) item.done=false; if(item.createdAt===undefined) item.createdAt=Date.now(); if(item.updatedAt===undefined) item.updatedAt=item.createdAt; if(item.deletedAt===undefined) item.deletedAt=null; });
     raw.categories.forEach(c=>{ c.budgets = objArr(c.budgets); if(c.isActive===undefined) c.isActive=true; if(c.archivedAt===undefined) c.archivedAt=null; });
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
@@ -10764,6 +10770,7 @@
     out.trips = expMergeById(localD.trips, remoteD.trips, t=>t.id, expTripTie);   /* عند التعادل: الشاهدة تفوز حتميًا */
     out.savingsGoals = expMergeById(localD.savingsGoals, remoteD.savingsGoals, g=>g.id);
     out.recurringTransactions = expMergeById(localD.recurringTransactions, remoteD.recurringTransactions, r=>r.id);
+    out.familyShopping = expMergeById(localD.familyShopping, remoteD.familyShopping, item=>item.id, expTripTie);
     /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
     out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
     /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
@@ -10780,7 +10787,7 @@
     return out;
   }
   /* توقيع خفيف لكشف مساهمة المحلي (سجلات إضافية/أحدث) لتقرير الدفع العكسي دون تراشق لا نهائي */
-  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
+  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions","familyShopping"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
   /* هل الحالة المحلية «بذرة افتراضية نقية» لم تُستخدم بعد؟ (فئات افتراضية فقط، بلا معاملات/رحلات/التزامات) */
   function expIsPristine(d){ return !!(d && d.settings && d.settings.pristineSeed) && !(d.transactions&&d.transactions.length) && !(d.trips&&d.trips.length) && !(d.fixedTemplates&&d.fixedTemplates.length) && !(d.savingsGoals&&d.savingsGoals.length) && !(d.recurringTransactions&&d.recurringTransactions.length); }
   /* إزالة تكرار الفئات الافتراضية المتباينة المعرّفات (من أجهزة بذرت قبل الإصلاح) مع إعادة ربط المراجع — بلا فقدان مالي */
@@ -10840,7 +10847,7 @@
       /* جهاز جديد ما زال على «البذرة النقية» → يتبنّى الخادم كاملًا بلا حقن فئاته الافتراضية (يمنع تكرار الفئات) */
       if(expIsPristine(local)){
         const adopt = Object.assign({}, remote);
-        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
+        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
         safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
@@ -10848,7 +10855,7 @@
       }
       if(!cache){
         dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
-        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
+        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions","familyShopping"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -10875,7 +10882,7 @@
     expLoadFailed = true; diagErr("expData:init", e);
     /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
     expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
-      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[] };
+      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[] };
   }
   /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
   function expRetryLoad(){
@@ -11329,10 +11336,10 @@
   let expRepDate = todayStr();
   let expSaving = false;
   let expUndoTimer = null;
-  const FAMILY_SHOP_KEY="h2do-family-shopping-v1";
   const FAMILY_SHOP_CATEGORIES=["بقالة","صيدلية","المنزل","الأطفال","أخرى"];
-  function familyShoppingLoad(){ try{ const list=JSON.parse(localStorage.getItem(FAMILY_SHOP_KEY)||"[]"); return Array.isArray(list)?list.filter(x=>x&&typeof x.text==="string").slice(0,200):[]; }catch(e){ return []; } }
-  function familyShoppingSave(list){ localStorage.setItem(FAMILY_SHOP_KEY,JSON.stringify(list.slice(0,200))); }
+  function familyShoppingAll(){ return (expState&&Array.isArray(expState.familyShopping)?expState.familyShopping:[]).filter(item=>item&&typeof item.text==="string").slice(0,200); }
+  function familyShoppingLoad(){ return familyShoppingAll().filter(item=>!item.deletedAt); }
+  function familyShoppingSave(list){ if(!expState) return; expState.familyShopping=list.slice(0,200); expSave(expState); }
   function familyPendingShopping(){ return familyShoppingLoad().filter(item=>!item.done); }
   function familyPendingTasks(){ return (state&&Array.isArray(state.tasks)?state.tasks:[]).filter(task=>itemFilled(task)&&!task.done&&taskStatus(task)!=="cancelled"); }
   function familyRenderLaunch(){
@@ -11362,11 +11369,11 @@
     box.innerHTML='<div class="exp-card"><h3>🛒 قائمة التسوق المشتركة</h3><div class="exp-grid2" style="margin:.75rem 0"><input id="familyShopText" placeholder="مثال: حليب" maxlength="120" aria-label="عنصر التسوق"><select id="familyShopCategory">'+FAMILY_SHOP_CATEGORIES.map(category=>'<option>'+category+'</option>').join("")+'</select><input id="familyShopQty" placeholder="الكمية (اختياري)" maxlength="50"></div><button class="exp-primary" id="familyShopAdd" style="width:100%">＋ إضافة للقائمة</button></div>'
       +'<div class="exp-card" style="margin-top:1rem"><h3>المتبقي ('+_arn(pending.length)+')</h3>'+(pending.length?pending.map(row).join(""):'<div class="exp-empty">قائمة التسوق مكتملة 🎉</div>')+'</div>'
       +(done.length?'<div class="exp-card" style="margin-top:1rem"><h3>تم شراؤه</h3>'+done.map(row).join("")+'</div>':"");
-    const add=()=>{ const text=document.getElementById("familyShopText").value.trim(); if(!text) return; const list=familyShoppingLoad(); list.unshift({id:newId(),text,category:document.getElementById("familyShopCategory").value,quantity:document.getElementById("familyShopQty").value.trim(),done:false,createdAt:Date.now()}); familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch(); };
+    const add=()=>{ const text=document.getElementById("familyShopText").value.trim(); if(!text) return; const now=Date.now(), list=familyShoppingAll(); list.unshift({id:newId(),text,category:document.getElementById("familyShopCategory").value,quantity:document.getElementById("familyShopQty").value.trim(),done:false,createdAt:now,updatedAt:now,deletedAt:null}); familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch(); };
     document.getElementById("familyShopAdd").onclick=add;
     document.getElementById("familyShopText").onkeydown=e=>{ if(e.key==="Enter") add(); };
-    box.querySelectorAll("[data-family-done]").forEach(button=>button.onclick=()=>{ const list=familyShoppingLoad(); const item=list.find(entry=>entry.id===button.dataset.familyDone); if(item){item.done=!item.done; familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch();} });
-    box.querySelectorAll("[data-family-delete]").forEach(button=>button.onclick=()=>{ familyShoppingSave(familyShoppingLoad().filter(item=>item.id!==button.dataset.familyDelete)); familyRenderShopping(); familyRenderLaunch(); });
+    box.querySelectorAll("[data-family-done]").forEach(button=>button.onclick=()=>{ const list=familyShoppingAll(); const item=list.find(entry=>entry.id===button.dataset.familyDone); if(item){item.done=!item.done; item.updatedAt=Date.now(); familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch();} });
+    box.querySelectorAll("[data-family-delete]").forEach(button=>button.onclick=()=>{ const list=familyShoppingAll(); const item=list.find(entry=>entry.id===button.dataset.familyDelete); if(item){ item.deletedAt=Date.now(); item.updatedAt=item.deletedAt; familyShoppingSave(list); familyRenderShopping(); familyRenderLaunch(); } });
   }
   let expActiveTripId = null;   /* آخر رحلة نشطة مختارة للجلسة (عند تداخل الرحلات) */
   let expTripDetailId = null;   /* الرحلة المفتوحة في صفحة التفاصيل */
