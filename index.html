@@ -11211,6 +11211,22 @@
       countAgainstWeeklyBudget:false, transactionType:"expense", paymentMethod:method||null,
       description:"دفعة: "+(tpl?tpl.name:"التزام") });
   }
+  /* عند اعتماد دفعة أعلى من المتبقي، لا نترك بطاقة الدورة تعرض مبلغًا قديمًا
+     ثم تبدو الدفعة كأنها تجاوز. نثبت إجمالي الدفعات كمخطط لهذه الدورة فقط. */
+  function expAdoptPaymentPlan(instId, paymentMinor){
+    const inst=expInstById(instId); if(!inst) return;
+    const planned=Math.max(expToMinor(inst.plannedAmountMinor), expToMinor(inst.paidAmountMinor)+expToMinor(paymentMinor));
+    if(planned===expToMinor(inst.plannedAmountMinor)) return;
+    inst.plannedAmountMinor=planned;
+    const tpl=expTplById(inst.templateId);
+    if(tpl){
+      if(!tpl.overrides) tpl.overrides={};
+      tpl.overrides[expMonthKey(inst.year,inst.month)]=planned;
+      tpl.updatedAt=Date.now();
+    }
+    expRecalcInstance(inst);
+    expSave(expState);
+  }
   function expSetCategoryBudget(catId, amountMinor, fromWeekStart){
     const c = expCatById(catId); if(!c) return;
     if(!Array.isArray(c.budgets)) c.budgets=[];
@@ -11873,10 +11889,10 @@
       if(expSaving) return;
       const amt=expParseAmount(g("#pfAmt").value);
       if(isNaN(amt)||amt<=0){ g("#pfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
-      const proceed=()=>{ expSaving=true; g("#pfSave").disabled=true; expRecordPayment(instId, amt, g("#pfDate").value||todayStr(), g("#pfPay").value||null); expCloseForm(); expRefresh(); };
+      const proceed=(adoptPlan)=>{ expSaving=true; g("#pfSave").disabled=true; if(adoptPlan) expAdoptPaymentPlan(instId, amt); expRecordPayment(instId, amt, g("#pfDate").value||todayStr(), g("#pfPay").value||null); expCloseForm(); expRefresh(); };
       if(amt > remain && remain>=0){
-        hifzShowConfirm({title:"المبلغ يتجاوز المتبقي", body:"الدفعة ("+expMoney(amt)+") أكبر من المتبقي ("+expMoney(remain)+"). تسجيلها كما هي؟", okText:"تسجيل", cancelText:"مراجعة", onOk:proceed});
-      } else proceed();
+        hifzShowConfirm({title:"تحديث مبلغ الالتزام", body:"الدفعة ("+expMoney(amt)+") أكبر من المتبقي المسجل ("+expMoney(remain)+"). عند التسجيل سيُعتمد المبلغ الجديد لهذه الدورة ويُسجل الدفع.", okText:"اعتماد وتسجيل", cancelText:"مراجعة", onOk:()=>proceed(true)});
+      } else proceed(false);
     };
   }
   function expShowPaymentHistory(tplId){
@@ -11932,8 +11948,8 @@
         if(amt!==t.defaultAmountMinor){
           expScopeDialog("متى تريد تطبيق تعديل المبلغ؟", [
             {label:"هذا الشهر فقط", val:"thisOnly"},
-            {label:"من هذا الشهر وما بعده", val:"fromThis"},
-            {label:"من الشهر القادم", val:"fromNext"}
+            {label:"من هذا الشهر وما بعده (الموصى به)", val:"fromThis"},
+            {label:"من الشهر القادم فقط — لا يغيّر دورة الراتب الحالية", val:"fromNext"}
           ], applyChange);
         } else applyChange("thisOnly");
       } else {
