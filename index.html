@@ -11118,6 +11118,11 @@
     return expState.instances.filter(i=>i.year===y && i.month===m && expInstVisible(i,y,m))
       .sort((a,b)=>{ const ta=expTplById(a.templateId)||{}, tb=expTplById(b.templateId)||{}; return (ta.sortOrder||0)-(tb.sortOrder||0); });
   }
+  function expSalaryCycleInstances(dateStr){
+    const cycle=expSalaryCycleRange(dateStr,expState.settings.salaryCycleStartDay), start=new Date(cycle.start+"T12:00:00"), end=new Date(cycle.end+"T12:00:00"), months=[];
+    for(let d=new Date(start.getFullYear(),start.getMonth(),1);d<=end;d.setMonth(d.getMonth()+1)) months.push([d.getFullYear(),d.getMonth()+1]);
+    return months.flatMap(([year,month])=>expMonthInstances(year,month)).filter(inst=>expInRange(inst.dueDate,cycle));
+  }
   function expRecalcInstance(inst){
     if(!inst) return;
     const linked = expActiveTx().filter(t=>t.fixedExpenseInstanceId===inst.id);
@@ -11497,8 +11502,8 @@
   }
   function expRenderFixedCard(){
     const box = document.getElementById("expFixedCard");
-    const d = new Date(todayStr()+"T12:00:00"), y=d.getFullYear(), m=d.getMonth()+1;
-    const insts = expMonthInstances(y,m);
+    const d = new Date(todayStr()+"T12:00:00"), cycle=expSalaryCycleRange(todayStr(),expState.settings.salaryCycleStartDay);
+    const insts = expSalaryCycleInstances(todayStr());
     /* التزامات متوقّفة (غير نشطة وغير مؤرشفة): تبقى في القائمة بحالة «متوقف» ولا تتحوّل لفئة.
        نستثني ما له مثيل ظاهر هذا الشهر (فيه مالٌ فعلي) كي لا يُكرَّر كصفٍّ عادي وصفِّ «متوقف» معًا. */
     const shownTpl = new Set(insts.map(i=>i.templateId));
@@ -11535,7 +11540,7 @@
     const totalRemain = insts.reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
     const unpaidCount = insts.filter(i=>i.status!=="paid").length;
     box.innerHTML =
-      '<h3>🏠 المصروفات الشهرية الثابتة</h3><div class="exp-card-hint">التزامات هذا الشهر — لا تُحسب صرفًا فعليًا إلا بعد تسجيل الدفعة</div>'+
+      '<h3>🏠 التزامات دورة الراتب</h3><div class="exp-card-hint">من '+expArDateShort(cycle.start)+' إلى '+expArDateShort(cycle.end)+' — لا تُحسب صرفًا فعليًا إلا بعد تسجيل الدفعة</div>'+
       rows +
       '<div class="exp-foot">'+
         '<div class="exp-foot-row"><span>إجمالي الالتزامات</span><b>'+expMoney(totalPlanned)+'</b></div>'+
@@ -11610,27 +11615,26 @@
   }
   function expRenderBudgetCompareCard(){
     const box=document.getElementById("expBudgetCompareCard"); if(!box) return;
-    const wr=expSalaryWeekRange(todayStr()), d=new Date(todayStr()+"T12:00:00");
-    expEnsureMonth(d.getFullYear(),d.getMonth()+1);
+    const wr=expSalaryWeekRange(todayStr());
     const budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr), bpct=Math.min(100,expPct(spent,budget));
-    const inst=expMonthInstances(d.getFullYear(),d.getMonth()+1);
+    const inst=expSalaryCycleInstances(todayStr());
     const planned=inst.reduce((a,i)=>a+expToMinor(i.plannedAmountMinor),0);
     const paid=inst.reduce((a,i)=>a+expToMinor(i.paidAmountMinor),0), fpct=Math.min(100,expPct(paid,planned));
     const row=(title,actual,total,pct)=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+title+'</div>'+
       '<div class="exp-row-sub">الفعلي '+expMoney(actual)+' · المخطط '+expMoney(total)+'</div>'+
       '<div class="exp-bar"><i class="'+(total&&actual>total?'over':pct>=80?'near':'')+'" style="width:'+pct+'%"></i></div></div></div>';
     box.innerHTML='<h3>⚖️ الميزانية مقابل الفعلي</h3><div class="exp-card-hint">صورة سريعة قبل اتخاذ قرار الصرف.</div>'+
-      row("المتغير هذا الأسبوع",spent,budget,bpct)+row("الالتزامات هذا الشهر",paid,planned,fpct);
+      row("المتغير هذا الأسبوع",spent,budget,bpct)+row("التزامات دورة الراتب",paid,planned,fpct);
   }
   function expRenderCategoryChartCard(){
     const box=document.getElementById("expCategoryChartCard"); if(!box) return;
-    const range=expMonthRange(todayStr()), map=expByCategory(range);
+    const range=expSalaryCycleRange(todayStr(),expState.settings.salaryCycleStartDay), map=expByCategory(range);
     const items=Object.keys(map).map(id=>({id,value:map[id],cat:expCatById(id)})).filter(x=>x.value>0).sort((a,b)=>b.value-a.value).slice(0,6);
     const max=items.length?items[0].value:0;
-    box.innerHTML='<h3>📊 صرف الفئات</h3><div class="exp-card-hint">أعلى الفئات في الشهر الحالي.</div>'+
+    box.innerHTML='<h3>📊 صرف الفئات</h3><div class="exp-card-hint">أعلى الفئات في دورة الراتب الحالية.</div>'+
       (items.map(x=>'<div class="exp-chart-row"><span class="exp-chart-label">'+(x.cat&&x.cat.icon?x.cat.icon+" ":"")+expEsc(x.cat?x.cat.name:"غير مصنف")+'</span>'+
         '<div class="exp-bar"><i style="width:'+Math.max(4,expPct(x.value,max))+'%"></i></div><b class="exp-chart-value">'+expMoney(x.value,false)+'</b></div>').join("")||
-      '<div class="exp-empty">لا توجد مصاريف هذا الشهر.</div>');
+      '<div class="exp-empty">لا توجد مصاريف في دورة الراتب الحالية.</div>');
   }
   function expRenderRecurringCard(){
     const box=document.getElementById("expRecurringCard"); if(!box) return;

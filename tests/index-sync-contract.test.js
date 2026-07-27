@@ -246,6 +246,7 @@ test("salary-cycle budgeting supports a configurable payday",()=>{
   ["salaryCycleStartDay","salaryAmountMinor","stSalaryDay","stSalaryAmount","expSalaryCycleStatus","خطة دورة الراتب"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/function expSalaryCycleRange\(/);
   assert.match(html,/function expSalaryWeekRange\(/);
+  assert.match(html,/function expSalaryCycleInstances\(/);
   assert.match(html,/const wr = expSalaryWeekRange\(today\)/);
   assert.match(html,/stSalaryAmount"\)\.onchange=e=>\{ const amount=expParseAmount\(e\.target\.value\)/);
 });
