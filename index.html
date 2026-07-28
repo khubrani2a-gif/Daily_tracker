@@ -264,6 +264,8 @@
   .quick-nav [hidden]{display:none}
   .mobile-view-hidden{display:none!important}
   #prayerCard,#ibadahCard,#quranCard,#hifzCard,#sportCard,#tasksCard,#prioritiesCard,#expensesCard{scroll-margin-top:76px}
+  /* لا تجعل إعادة رسم قائمة العبادات تغيّر موضع القراءة على الجوال. */
+  #ibadahCard{overflow-anchor:none}
   @media(max-width:700px){
     body{
       padding-bottom:var(--mobile-scroll-clearance);
@@ -7646,6 +7648,28 @@
   }
 
   const ADHKAR_MODE_OF = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
+
+  /* عناصر العبادة تُعاد رسمها بعد الإنجاز لتحديث الحلقة والمتبقي. نحتفظ بموضع
+     الصفحة قبل اللمس/النقر حتى لا يعيد المتصفح المستخدم إلى أول بطاقة الصلاة. */
+  function ibScrollTop(){ return window.scrollY || document.documentElement.scrollTop || 0; }
+  function ibRestoreScroll(top){
+    const restore=()=>{ if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"}); };
+    requestAnimationFrame(restore);
+    setTimeout(restore,0);
+    setTimeout(restore,80);
+  }
+  const ibadahCardForScroll=document.getElementById("ibadahCard");
+  let ibInteractionScrollTop=null;
+  if(ibadahCardForScroll){
+    const capture=()=>{ ibInteractionScrollTop=ibScrollTop(); };
+    ibadahCardForScroll.addEventListener("pointerdown",capture,true);
+    ibadahCardForScroll.addEventListener("touchstart",capture,{capture:true,passive:true});
+    ibadahCardForScroll.addEventListener("click",()=>{
+      const top=ibInteractionScrollTop===null?ibScrollTop():ibInteractionScrollTop;
+      ibInteractionScrollTop=null;
+      ibRestoreScroll(top);
+    },true);
+  }
 
   function ibRenderItem(w, ul){
     const li = document.createElement("li");
