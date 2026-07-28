@@ -17,8 +17,8 @@ const today=()=>new Date().toISOString().slice(0,10);
 test("expense hierarchy migrates legacy data and saves predefined and custom subcategories",async()=>{
   const now=Date.now();
   const legacy={version:6,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",updatedAt:now},
-    categories:[{id:"legacy_food",name:"الأكل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:50000}],isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:1,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home_dup",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:2,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_exceptional",name:"المشتريات الاستثنائية",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:7,createdAt:now,updatedAt:now,archivedAt:null}],
-    fixedTemplates:[],instances:[],transactions:[{id:"old",amountMinor:1000,transactionDate:today(),categoryId:"legacy_food",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null},{id:"old_exceptional",amountMinor:28060,transactionDate:today(),categoryId:"legacy_exceptional",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null}],trips:[]};
+    categories:[{id:"legacy_food",name:"الأكل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:50000},{from:"2026-06-01",amountMinor:45000}],isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000},{from:"2026-06-01",amountMinor:25000}],isActive:true,sortOrder:1,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home_dup",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:2,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_exceptional",name:"المشتريات الاستثنائية",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000},{from:"2026-06-01",amountMinor:28000}],isActive:true,sortOrder:7,createdAt:now,updatedAt:now,archivedAt:null}],
+    fixedTemplates:[],instances:[],transactions:[{id:"old",amountMinor:1000,transactionDate:"2026-06-15",categoryId:"legacy_food",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null},{id:"old_exceptional",amountMinor:28060,transactionDate:today(),categoryId:"legacy_exceptional",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null}],trips:[{id:"legacy_trip",name:"رحلة قديمة",createdAt:now,updatedAt:now,allocations:[{categoryId:"legacy_food",amountMinor:10000,createdAt:now},{categoryId:"legacy_exceptional",amountMinor:5000,createdAt:now}]}],recurringTransactions:[{id:"legacy_food_recurring",name:"طعام رحلة",categoryId:"legacy_food",createdAt:now,updatedAt:now,deletedAt:null}]};
   const browser=await chromium.launch(); const ctx=await browser.newContext({viewport:{width:390,height:844}}); const page=await ctx.newPage();
   try{
     await page.addInitScript(data=>{ if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data)); },legacy);
@@ -27,7 +27,10 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     const food=state.categories.find(c=>c.id==="legacy_food");
     assert.equal(food.name,"البقالة");
     assert.equal(food.budgets[0].amountMinor,30000);
-    assert.equal(state.categories.find(c=>c.name==="المطاعم والطلبات").budgets[0].amountMinor,50000);
+    const restaurants=state.categories.find(c=>c.name==="المطاعم والطلبات");
+    assert.equal(restaurants.budgets[0].amountMinor,50000);
+    assert.equal(restaurants.budgets.find(b=>b.from==="2026-06-01").amountMinor,45000);
+    assert.equal(food.budgets.find(b=>b.from==="2026-06-01").amountMinor,25000);
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.ok(food.subcategories.some(s=>s.name==="خضار وفواكه"));
     assert.equal(state.transactions.find(t=>t.id==="old").subcategoryId,null);
@@ -35,6 +38,10 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.equal(state.categories.find(c=>c.name==="غير مخطط").budgets[0].amountMinor,30000);
     assert.equal(state.transactions.find(t=>t.id==="old_exceptional").categoryId,state.categories.find(c=>c.name==="غير مخطط").id);
     assert.ok(state.categories.filter(c=>c.name==="مشتريات غير متكررة").every(c=>!(c.budgets||[]).length));
+    assert.equal(state.categories.find(c=>c.name==="غير مخطط").budgets.find(b=>b.from==="2026-06-01").amountMinor,28000);
+    assert.equal(state.trips.find(t=>t.id==="legacy_trip").allocations.find(a=>a.amountMinor===10000).categoryId,restaurants.id);
+    assert.equal(state.trips.find(t=>t.id==="legacy_trip").allocations.find(a=>a.amountMinor===5000).categoryId,state.categories.find(c=>c.name==="غير مخطط").id);
+    assert.equal(state.recurringTransactions.find(r=>r.id==="legacy_food_recurring").categoryId,restaurants.id);
     await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), target=data.categories.find(c=>c.name==="غير مخطط"); target.budgets=[{from:"1970-01-01",amountMinor:20000}]; data.settings.legacyExceptionalBudgetV9=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
     await page.reload(); await page.waitForTimeout(350);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
