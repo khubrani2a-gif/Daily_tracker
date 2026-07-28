@@ -10888,13 +10888,14 @@
     if(!cutoff) return false;
     const legacyFoodIds=new Set(d.categories.filter(c=>c.name==="البقالة"&&c.id!==restaurants.id&&(Number(c.createdAt)||0)<=cutoff).map(c=>c.id));
     if(!legacyFoodIds.size) return false;
-    let changed=!d.settings.legacyFoodTransactionsV5, now=Date.now();
+    let changed=!d.settings.legacyFoodTransactionsV5, now=Date.now(), moved=0;
     d.transactions.forEach(t=>{
       const created=Number(t&&t.createdAt)||Number(t&&t.updatedAt)||0;
       if(t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&legacyFoodIds.has(t.categoryId)&&created&&created<=cutoff){
-        t.categoryId=restaurants.id; t.updatedAt=now; changed=true;
+        t.categoryId=restaurants.id; t.updatedAt=now; changed=true; moved++;
       }
     });
+    if(moved) d.settings.legacyFoodTransactionsMovedAtV5=now;
     d.settings.legacyFoodTransactionsV5=true;
     return changed;
   }
@@ -10905,12 +10906,14 @@
     if(!d||!d.settings||!d.settings.legacyFoodTransactionsV5||!Array.isArray(d.categories)||!Array.isArray(d.transactions)) return false;
     const restaurants=d.categories.find(c=>c.name==="المطاعم والطلبات"&&(c.budgets||[]).length);
     const home=d.categories.find(c=>c.name==="احتياجات المنزل"&&c.id!==restaurants?.id);
-    const cutoff=Number(home&&home.createdAt)||0, restaurantCreated=Number(restaurants&&restaurants.createdAt)||0;
-    if(!restaurants||!home||!cutoff||!restaurantCreated||restaurantCreated>=cutoff) return false;
+    if(!restaurants||!home) return false;
+    const candidates=d.transactions.filter(t=>t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id);
+    const movedStamp=Number(d.settings.legacyFoodTransactionsMovedAtV5)||candidates.reduce((max,t)=>Math.max(max,Number(t.updatedAt)||0),0);
+    if(!movedStamp) return false;
     let changed=!d.settings.legacyHomeTransactionsV6, now=Date.now();
-    d.transactions.forEach(t=>{
+    candidates.forEach(t=>{
       const lastChange=Number(t&&t.updatedAt)||Number(t&&t.createdAt)||0;
-      if(t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id&&lastChange&&lastChange<=cutoff){
+      if(lastChange&&lastChange<movedStamp){
         t.categoryId=home.id; t.updatedAt=now; changed=true;
       }
     });

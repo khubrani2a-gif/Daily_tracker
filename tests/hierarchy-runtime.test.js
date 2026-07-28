@@ -37,11 +37,11 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
-    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), stamp=Date.now()-1000, restaurants=data.categories.find(c=>c.name==="المطاعم والطلبات"), home=data.categories.find(c=>c.name==="احتياجات المنزل"); restaurants.createdAt=stamp-5000; home.createdAt=stamp; data.transactions.push({id:"old_home_cloud",amountMinor:33558,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-3000,updatedAt:stamp-3000,deletedAt:null},{id:"moved_food_cloud",amountMinor:4800,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-4000,updatedAt:stamp+500,deletedAt:null}); data.settings.legacyHomeTransactionsV6=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
+    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), restaurants=data.categories.find(c=>c.name==="المطاعم والطلبات"), moved=data.transactions.find(t=>t.id==="old"), stamp=Number(moved.updatedAt); data.transactions.push({id:"old_home_cloud",amountMinor:33558,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-3000,updatedAt:stamp-3000,deletedAt:null}); data.settings.legacyFoodTransactionsMovedAtV5=stamp; data.settings.legacyHomeTransactionsV6=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
     await page.reload(); await page.waitForTimeout(350);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.equal(state.transactions.find(t=>t.id==="old_home_cloud").categoryId,state.categories.find(c=>c.name==="احتياجات المنزل").id);
-    assert.equal(state.transactions.find(t=>t.id==="moved_food_cloud").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
+    assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
     await page.locator("#expOpenBtn").click(); await page.locator('.exp-tab[data-view="dash"]').click(); await page.locator("#expAddBtn").click();
