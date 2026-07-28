@@ -7650,25 +7650,14 @@
   const ADHKAR_MODE_OF = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
 
   /* عناصر العبادة تُعاد رسمها بعد الإنجاز لتحديث الحلقة والمتبقي. نحتفظ بموضع
-     الصفحة قبل اللمس/النقر حتى لا يعيد المتصفح المستخدم إلى أول بطاقة الصلاة. */
+     الصفحة قبل التحديث نفسه حتى لا يعيد المتصفح المستخدم إلى أول بطاقة الصلاة. */
   function ibScrollTop(){ return window.scrollY || document.documentElement.scrollTop || 0; }
-  function ibRestoreScroll(top){
-    const restore=()=>{ if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"}); };
-    requestAnimationFrame(restore);
-    setTimeout(restore,0);
-    setTimeout(restore,80);
-  }
-  const ibadahCardForScroll=document.getElementById("ibadahCard");
-  let ibInteractionScrollTop=null;
-  if(ibadahCardForScroll){
-    const capture=()=>{ ibInteractionScrollTop=ibScrollTop(); };
-    ibadahCardForScroll.addEventListener("pointerdown",capture,true);
-    ibadahCardForScroll.addEventListener("touchstart",capture,{capture:true,passive:true});
-    ibadahCardForScroll.addEventListener("click",()=>{
-      const top=ibInteractionScrollTop===null?ibScrollTop():ibInteractionScrollTop;
-      ibInteractionScrollTop=null;
-      ibRestoreScroll(top);
-    },true);
+  function ibRefreshAfterChange(){
+    const top=ibScrollTop();
+    renderWorship();
+    renderProgress();
+    /* الاستعادة المتزامنة تمنع الوميض الذي تسببه الاستعادات المؤجلة على الجوال. */
+    if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"});
   }
 
   function ibRenderItem(w, ul){
@@ -7718,7 +7707,7 @@
       rst.onclick = (ev)=>{
         ev.stopPropagation();
         state.istighfar = 0; state.worship.istighfar = false;
-        save(); renderWorship(); renderProgress();
+        save(); ibRefreshAfterChange();
       };
       li.onclick = ()=>{
         if((state.istighfar||0) >= 100) return;
@@ -7728,7 +7717,7 @@
           state.worship.istighfar = true;
           if(navigator.vibrate) navigator.vibrate([30,60,30]);
         }
-        save(); renderWorship(); renderProgress();
+        save(); ibRefreshAfterChange();
       };
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
@@ -7764,7 +7753,7 @@
       rst.onclick = (ev)=>{
         ev.stopPropagation();
         state.wCounts[w.id] = 0; state.worship[w.id] = false;
-        save(); renderWorship(); renderProgress();
+        save(); ibRefreshAfterChange();
       };
       li.onclick = ()=>{
         if((state.wCounts[w.id]||0) >= w.target) return;
@@ -7774,7 +7763,7 @@
           state.worship[w.id] = true;
           if(navigator.vibrate) navigator.vibrate([30,60,30]);
         }
-        save(); renderWorship(); renderProgress();
+        save(); ibRefreshAfterChange();
       };
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
@@ -7789,7 +7778,7 @@
     const on = !!state.worship[w.id];
     chk.className = "chk"+(on?" on":"");
     chk.textContent = "✔";
-    chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); renderWorship(); renderProgress(); };
+    chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); ibRefreshAfterChange(); };
     const lbl = document.createElement("span");
     lbl.className = "lbl"+(on?" done-line":"");
     lbl.textContent = w.label;
@@ -7961,7 +7950,9 @@
   };
   document.getElementById("ibSunnahDone").onclick = function(){
     state.sunnahDone = !state.sunnahDone;
+    const top=ibScrollTop();
     save(); renderWorship();
+    if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"});
   };
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
   const dhikrCounterBox=document.getElementById("dhikrCounterBox");
