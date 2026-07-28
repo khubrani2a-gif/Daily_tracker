@@ -690,7 +690,7 @@
   .ib-sunnah-actions #ibSunnahDone.done{
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;
   }
-  .dhikr-counter{margin:.85rem 0;padding:.85rem;border:1px solid var(--accent);border-radius:15px;background:linear-gradient(135deg,var(--accent-soft),var(--paper))}
+  .dhikr-counter{margin:.85rem 0;padding:.85rem;border:1px solid var(--accent);border-radius:15px;background:linear-gradient(135deg,var(--accent-soft),var(--paper));cursor:pointer;touch-action:manipulation}
   .dhikr-counter-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}.dhikr-counter-title{font-size:.86rem;font-weight:800;color:var(--accent)}.dhikr-counter-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}.dhikr-counter-settings{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.35rem .55rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
   .dhikr-counter-text{text-align:center;font-size:1.05rem;font-weight:800;color:var(--ink);margin:.7rem 0 .2rem}.dhikr-counter-progress{text-align:center;color:var(--muted);font-size:.74rem}.dhikr-counter-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.65rem 0}.dhikr-counter-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .2s}
   .dhikr-count-btn{display:block;width:min(220px,100%);margin:.1rem auto 0;border:0;border-radius:99px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-family:inherit;font-size:1.1rem;font-weight:800;padding:.75rem;cursor:pointer;box-shadow:var(--shadow-sm);touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}.dhikr-count-btn:active{filter:brightness(.96)}.dhikr-count-btn.done{background:var(--paper);border:1px solid var(--accent);color:var(--accent)}
@@ -2318,7 +2318,7 @@
           </div>
         </div>
 
-        <section class="dhikr-counter" aria-labelledby="dhikrCounterTitle">
+        <section class="dhikr-counter" id="dhikrCounterBox" aria-labelledby="dhikrCounterTitle" role="button" tabindex="0" aria-label="اضغط في أي مكان للعد">
           <div class="dhikr-counter-head">
             <span class="dhikr-counter-title" id="dhikrCounterTitle">📿 عداد الذكر</span>
             <span class="dhikr-counter-actions"><button type="button" class="dhikr-counter-settings" id="dhikrStatsBtn">📊 إحصاءات</button><button type="button" class="dhikr-counter-settings" id="dhikrCounterSettings">⚙ ضبط الذكر</button></span>
@@ -7940,11 +7940,14 @@
     save(); renderWorship();
   };
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
+  const dhikrCounterBox=document.getElementById("dhikrCounterBox");
   let dhikrLastTouchAt=0;
   dhikrCountButton.addEventListener("touchend",event=>{event.preventDefault();event.stopPropagation();dhikrLastTouchAt=Date.now();dhikrCount();dhikrCountButton.blur();},{passive:false});
   dhikrCountButton.onpointerdown=event=>{if(event.pointerType==="touch"){event.preventDefault();event.stopPropagation();}};
   dhikrCountButton.onclick=event=>{event.preventDefault();event.stopPropagation();if(Date.now()-dhikrLastTouchAt>700)dhikrCount();dhikrCountButton.blur();};
   dhikrCountButton.ondblclick=event=>event.preventDefault();
+  dhikrCounterBox.onclick=event=>{if(event.target.closest(".dhikr-counter-settings,#dhikrCountBtn"))return;event.preventDefault();event.stopPropagation();dhikrCount();};
+  dhikrCounterBox.onkeydown=event=>{if((event.key==="Enter"||event.key===" ")&&event.target===dhikrCounterBox){event.preventDefault();dhikrCount();}};
   document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
   document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
