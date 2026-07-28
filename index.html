@@ -122,11 +122,11 @@
     line-height:1.5;
     transition:background-color .3s, color .3s;
   }
-  html.app-large-text{font-size:18px}
+  html.app-large-text{font-size:19px!important}
   body.app-dense .grid{gap:.55rem}
   body.app-dense .col{gap:.6rem}
-  body.app-dense .card{padding:.65rem .75rem!important}
-  body.app-dense .today-overview{padding:.7rem .8rem}
+  body.app-dense .card{padding:.45rem .55rem!important}
+  body.app-dense .today-overview{padding:.55rem .65rem}
   body.app-dense .quick-nav{margin-top:.65rem;margin-bottom:.65rem}
   .page{max-width:1120px;margin:0 auto}
 
@@ -941,6 +941,10 @@
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
   .task-fields .appearance-choice,.task-history-list .appearance-choice{display:flex;flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer;margin-bottom:.45rem}
   .task-fields .appearance-choice input,.task-history-list .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
+  .appearance-toggle{width:100%;display:flex;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.68rem;font:inherit;font-weight:700;cursor:pointer}
+  .appearance-toggle-mark{width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--chk-border);border-radius:7px;color:transparent;flex:0 0 auto}
+  .appearance-toggle[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+  .appearance-toggle[aria-pressed="true"] .appearance-toggle-mark{background:var(--accent);border-color:var(--accent);color:#fff}
   .compact-choice{width:100%;display:flex;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.68rem;font:inherit;cursor:pointer;margin-bottom:.45rem}
   .compact-choice-mark{width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--chk-border);border-radius:7px;color:transparent;flex:0 0 auto;font-weight:800}
   .compact-choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -12768,15 +12772,17 @@
     document.body.classList.toggle("app-dense",appearancePrefs.dense);
   }
   function appearanceOpen(){
-    const sheet=taskSheet("المظهر وحجم الخط",'<div class="task-fields"><label>المظهر<select id="appearanceTheme"><option value="light"'+(theme==="light"?' selected':'')+'>نهاري</option><option value="dark"'+(theme==="dark"?' selected':'')+'>ليلي</option></select></label><label class="appearance-choice"><input type="checkbox" id="appearanceLarge"'+(appearancePrefs.largeText?' checked':'')+'><span>خط أكبر وأسهل للقراءة</span></label><label class="appearance-choice"><input type="checkbox" id="appearanceDense"'+(appearancePrefs.dense?' checked':'')+'><span>عرض مضغوط للبطاقات</span></label></div><p class="appearance-preview" id="appearancePreview"></p><p class="task-history-empty">يُطبّق التغيير مباشرة ويُحفظ تلقائيًا على هذا الجهاز.</p><button type="button" class="task-sheet-save" id="appearanceSave">تم</button>');
+    const option=(id,label,on)=>'<button type="button" class="appearance-toggle" id="'+id+'" aria-pressed="'+(on?"true":"false")+'"><span class="appearance-toggle-mark">✓</span><span>'+label+'</span></button>';
+    const sheet=taskSheet("المظهر وحجم الخط",'<div class="task-fields"><label>المظهر<select id="appearanceTheme"><option value="light"'+(theme==="light"?' selected':'')+'>نهاري</option><option value="dark"'+(theme==="dark"?' selected':'')+'>ليلي</option></select></label>'+option("appearanceLarge","خط أكبر وأسهل للقراءة",appearancePrefs.largeText)+option("appearanceDense","عرض مضغوط للبطاقات",appearancePrefs.dense)+'</div><p class="appearance-preview" id="appearancePreview"></p><p class="task-history-empty">اضغط على الخيار لتطبيقه فورًا؛ ويحفظ تلقائيًا على هذا الجهاز.</p><button type="button" class="task-sheet-save" id="appearanceSave">تم</button>');
     const commit=()=>{
       theme=sheet.over.querySelector("#appearanceTheme").value;
-      appearancePrefs={largeText:sheet.over.querySelector("#appearanceLarge").checked,dense:sheet.over.querySelector("#appearanceDense").checked};
+      appearancePrefs={largeText:sheet.over.querySelector("#appearanceLarge").getAttribute("aria-pressed")==="true",dense:sheet.over.querySelector("#appearanceDense").getAttribute("aria-pressed")==="true"};
       localStorage.setItem(THEME_KEY,theme); localStorage.setItem(APPEARANCE_PREF_KEY,JSON.stringify(appearancePrefs));
       applyTheme(theme); appearanceApply();
       sheet.over.querySelector("#appearancePreview").textContent="تم التطبيق: "+(theme==="dark"?"ليلي":"نهاري")+" · "+(appearancePrefs.largeText?"خط كبير":"خط عادي")+" · "+(appearancePrefs.dense?"عرض مضغوط":"عرض مريح")+".";
     };
-    sheet.over.querySelectorAll("#appearanceTheme,#appearanceLarge,#appearanceDense").forEach(input=>input.onchange=commit);
+    sheet.over.querySelector("#appearanceTheme").onchange=commit;
+    sheet.over.querySelectorAll("#appearanceLarge,#appearanceDense").forEach(button=>button.onclick=()=>{button.setAttribute("aria-pressed",button.getAttribute("aria-pressed")!=="true"?"true":"false");commit();});
     commit();
     sheet.over.querySelector("#appearanceSave").onclick=()=>sheet.close();
   }
