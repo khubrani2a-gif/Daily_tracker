@@ -941,6 +941,11 @@
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
   .task-fields .appearance-choice,.task-history-list .appearance-choice{display:flex;flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer;margin-bottom:.45rem}
   .task-fields .appearance-choice input,.task-history-list .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
+  .compact-choice{width:100%;display:flex;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.68rem;font:inherit;cursor:pointer;margin-bottom:.45rem}
+  .compact-choice-mark{width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--chk-border);border-radius:7px;color:transparent;flex:0 0 auto;font-weight:800}
+  .compact-choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+  .compact-choice[aria-pressed="true"] .compact-choice-mark{background:var(--accent);border-color:var(--accent);color:#fff}
+  .compact-choice small{display:block;color:var(--muted);font-size:.68rem;font-weight:400;margin-top:.1rem}
   .appearance-preview{margin:.75rem 0 0;padding:.6rem .7rem;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:.74rem;font-weight:700}
   .task-fields input,.task-fields select,.task-history-search{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none}
   .task-fields textarea{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none;resize:vertical;min-height:78px}
@@ -12739,10 +12744,12 @@
     const render=()=>{
       viewSelect.value=selectedView;
       const hidden=compactHiddenForView(selectedView);
-      if(selectedView==="shared") list.innerHTML=COMPACT_SHARED_ITEMS.map(item=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+item.id+'"'+(hidden.has(item.id)?' checked':'')+'><span>'+item.label+' <small>إخفاؤها في جميع الأقسام عند تشغيل العرض المختصر</small></span></label>').join("");
-      else { const cards=CARD_DEFS.filter(def=>cardView(def.id)===selectedView); list.innerHTML=cards.length?cards.map(def=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+def.id+'"'+(hidden.has(def.id)?' checked':'')+'><span>'+def.icon+' '+def.label+' <small>إخفاؤها عند تشغيل العرض المختصر</small></span></label>').join(""):'<p class="task-history-empty">لا توجد بطاقات في هذا القسم. انقل بطاقة إليه من شاشة التخصيص أولًا.</p>'; }
+      const choice=(id,label,hint)=>'<button type="button" class="compact-choice" data-compact-card="'+id+'" aria-pressed="'+(hidden.has(id)?"true":"false")+'"><span class="compact-choice-mark">✓</span><span>'+label+'<small>'+hint+'</small></span></button>';
+      if(selectedView==="shared") list.innerHTML=COMPACT_SHARED_ITEMS.map(item=>choice(item.id,item.label,"إخفاؤها في جميع الأقسام عند تشغيل العرض المختصر")).join("");
+      else { const cards=CARD_DEFS.filter(def=>cardView(def.id)===selectedView); list.innerHTML=cards.length?cards.map(def=>choice(def.id,def.icon+" "+def.label,"إخفاؤها عند تشغيل العرض المختصر")).join(""):'<p class="task-history-empty">لا توجد بطاقات في هذا القسم. انقل بطاقة إليه من شاشة التخصيص أولًا.</p>'; }
+      list.querySelectorAll("[data-compact-card]").forEach(button=>button.onclick=()=>button.setAttribute("aria-pressed",button.getAttribute("aria-pressed")!=="true"?"true":"false"));
     };
-    const saveCurrent=()=>{ compactPrefs[selectedView]=[...list.querySelectorAll("[data-compact-card]:checked")].map(input=>input.dataset.compactCard); };
+    const saveCurrent=()=>{ compactPrefs[selectedView]=[...list.querySelectorAll('[data-compact-card][aria-pressed="true"]')].map(button=>button.dataset.compactCard); };
     viewSelect.onchange=()=>{saveCurrent(); selectedView=viewSelect.value;render();};
     sheet.over.querySelector("#compactSave").onclick=()=>{
       saveCurrent();
