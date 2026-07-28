@@ -355,7 +355,7 @@ test("weekly variable expenses explain spending, budget status, and available ac
 });
 
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
-  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","legacyBudgetPlacementV2","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
+  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/"expdcat_"\+i/);
   assert.match(html,/expMergeSubcategories/);
   assert.match(html,/expEnsureCategoryHierarchy\(out\)/);
