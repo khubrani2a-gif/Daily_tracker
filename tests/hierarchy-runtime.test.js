@@ -37,10 +37,10 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
-    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), restaurants=data.categories.find(c=>c.name==="المطاعم والطلبات"), moved=data.transactions.find(t=>t.id==="old"), stamp=Number(moved.updatedAt); data.transactions.push({id:"old_home_cloud",amountMinor:33558,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-3000,updatedAt:stamp-3000,deletedAt:null}); data.settings.legacyFoodTransactionsMovedAtV5=stamp; data.settings.legacyHomeTransactionsV6=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
+    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), restaurants=data.categories.find(c=>c.name==="المطاعم والطلبات"), moved=data.transactions.find(t=>t.id==="old"), stamp=Number(moved.updatedAt); [[6673,"a"],[11325,"b"],[15560,"c"]].forEach(([amount,suffix])=>data.transactions.push({id:"old_home_cloud_"+suffix,amountMinor:amount,transactionDate:"2026-07-27",categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-3000,updatedAt:stamp,deletedAt:null})); data.settings.legacyFoodTransactionsMovedAtV5=stamp; data.settings.legacyHomeTransactionsV6=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
     await page.reload(); await page.waitForTimeout(350);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
-    assert.equal(state.transactions.find(t=>t.id==="old_home_cloud").categoryId,state.categories.find(c=>c.name==="احتياجات المنزل").id);
+    assert.ok(state.transactions.filter(t=>t.id.startsWith("old_home_cloud_")).every(t=>t.categoryId===state.categories.find(c=>c.name==="احتياجات المنزل").id));
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
