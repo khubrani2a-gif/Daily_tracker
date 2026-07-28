@@ -7826,8 +7826,10 @@
   }
   function dhikrCount(){
     const counter=dhikrCounterState(); if(counter.count>=counter.target)return;
+    const scrollTop=window.scrollY||document.documentElement.scrollTop||0;
     counter.count++; if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
     save();renderDhikrCounter();
+    requestAnimationFrame(()=>{ if(Math.abs((window.scrollY||0)-scrollTop)>1) window.scrollTo({top:scrollTop,left:0,behavior:"auto"}); });
   }
   function dhikrStatsRows(){
     const rows=new Map(), days=allDays(), weekStart=new Date(currentDate+"T12:00:00");weekStart.setDate(weekStart.getDate()-6);
@@ -7937,8 +7939,10 @@
     state.sunnahDone = !state.sunnahDone;
     save(); renderWorship();
   };
-  document.getElementById("dhikrCountBtn").onclick=dhikrCount;
-  document.getElementById("dhikrCountBtn").ondblclick=event=>event.preventDefault();
+  const dhikrCountButton=document.getElementById("dhikrCountBtn");
+  dhikrCountButton.onpointerdown=event=>{if(event.pointerType==="touch")event.preventDefault();};
+  dhikrCountButton.onclick=event=>{event.preventDefault();dhikrCount();dhikrCountButton.blur();};
+  dhikrCountButton.ondblclick=event=>event.preventDefault();
   document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
   document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
