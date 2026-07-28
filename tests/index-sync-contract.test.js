@@ -127,6 +127,14 @@ test("separate dhikr counter supports presets, custom wording, and a daily targe
   assert.match(html,/DHIKR_COUNTER_PRESETS/);
 });
 
+test("worship interactions update in place without scroll compensation",()=>{
+  assert.match(html,/function renderWorship\(rebuildLists=true\)/);
+  assert.match(html,/function ibRefreshAfterChange\(\)\{\s*renderWorship\(false\);\s*renderProgress\(\);\s*\}/);
+  assert.match(html,/chk\.classList\.toggle\("on",completed\)/);
+  assert.doesNotMatch(html,/function ibRestoreScroll\(/);
+  assert.doesNotMatch(html,/function ibScrollTop\(/);
+});
+
 test("primary daily controls use native buttons with accessible state",()=>{
   assert.ok((html.match(/document\.createElement\("button"\)/g)||[]).length>=3);
   assert.match(html,/aria-pressed/);

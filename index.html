@@ -264,8 +264,6 @@
   .quick-nav [hidden]{display:none}
   .mobile-view-hidden{display:none!important}
   #prayerCard,#ibadahCard,#quranCard,#hifzCard,#sportCard,#tasksCard,#prioritiesCard,#expensesCard{scroll-margin-top:76px}
-  /* لا تجعل إعادة رسم قائمة العبادات تغيّر موضع القراءة على الجوال. */
-  #ibadahCard{overflow-anchor:none}
   @media(max-width:700px){
     body{
       padding-bottom:var(--mobile-scroll-clearance);
@@ -4380,7 +4378,7 @@
     const today = todayStr();
     if(currentDate === today){
       state.worship.werd = true;
-      save(); renderWorship(); renderProgress();
+      save(); renderWorship(false); renderProgress();
       return;
     }
     let s;
@@ -7649,15 +7647,11 @@
 
   const ADHKAR_MODE_OF = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
 
-  /* عناصر العبادة تُعاد رسمها بعد الإنجاز لتحديث الحلقة والمتبقي. نحتفظ بموضع
-     الصفحة قبل التحديث نفسه حتى لا يعيد المتصفح المستخدم إلى أول بطاقة الصلاة. */
-  function ibScrollTop(){ return window.scrollY || document.documentElement.scrollTop || 0; }
+  /* عند التسجيل نحدّث الملخص فقط ونُبقي عناصر القائمة نفسها في الصفحة؛ إزالة
+     العنصر المضغوط وإنشاؤه من جديد كانت سبب قفزة Safari إلى أعلى البطاقة. */
   function ibRefreshAfterChange(){
-    const top=ibScrollTop();
-    renderWorship();
+    renderWorship(false);
     renderProgress();
-    /* الاستعادة المتزامنة تمنع الوميض الذي تسببه الاستعادات المؤجلة على الجوال. */
-    if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"});
   }
 
   function ibRenderItem(w, ul){
@@ -7704,10 +7698,16 @@
       rst.className = "tally-reset";
       rst.textContent = "🔄";
       rst.title = "تصفير العداد";
+      const paint=()=>{
+        const current=state.istighfar||0, completed=current>=100;
+        state.worship.istighfar=completed;
+        chk.classList.toggle("on",completed); lbl.classList.toggle("done-line",completed); tally.classList.toggle("done",completed);
+        tally.textContent=completed?"تم ✓ ١٠٠":current.toLocaleString("ar-EG")+" / ١٠٠";
+      };
       rst.onclick = (ev)=>{
         ev.stopPropagation();
         state.istighfar = 0; state.worship.istighfar = false;
-        save(); ibRefreshAfterChange();
+        paint(); save(); ibRefreshAfterChange();
       };
       li.onclick = ()=>{
         if((state.istighfar||0) >= 100) return;
@@ -7717,7 +7717,7 @@
           state.worship.istighfar = true;
           if(navigator.vibrate) navigator.vibrate([30,60,30]);
         }
-        save(); ibRefreshAfterChange();
+        paint(); save(); ibRefreshAfterChange();
       };
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
@@ -7750,10 +7750,16 @@
       rst.className = "tally-reset";
       rst.textContent = "🔄";
       rst.title = "تصفير العداد";
+      const paint=()=>{
+        const current=state.wCounts[w.id]||0, completed=current>=w.target;
+        state.worship[w.id]=completed;
+        chk.classList.toggle("on",completed); lbl.classList.toggle("done-line",completed); tally.classList.toggle("done",completed);
+        tally.textContent=completed?"تم ✓ "+arn(w.target):arn(current)+" / "+arn(w.target);
+      };
       rst.onclick = (ev)=>{
         ev.stopPropagation();
         state.wCounts[w.id] = 0; state.worship[w.id] = false;
-        save(); ibRefreshAfterChange();
+        paint(); save(); ibRefreshAfterChange();
       };
       li.onclick = ()=>{
         if((state.wCounts[w.id]||0) >= w.target) return;
@@ -7763,7 +7769,7 @@
           state.worship[w.id] = true;
           if(navigator.vibrate) navigator.vibrate([30,60,30]);
         }
-        save(); ibRefreshAfterChange();
+        paint(); save(); ibRefreshAfterChange();
       };
       const ctrl = document.createElement("span");
       ctrl.className = "tally-ctrl";
@@ -7778,7 +7784,12 @@
     const on = !!state.worship[w.id];
     chk.className = "chk"+(on?" on":"");
     chk.textContent = "✔";
-    chk.onclick = ()=>{ state.worship[w.id]=!state.worship[w.id]; save(); ibRefreshAfterChange(); };
+    chk.onclick = ()=>{
+      state.worship[w.id]=!state.worship[w.id];
+      const completed=!!state.worship[w.id];
+      chk.classList.toggle("on",completed); lbl.classList.toggle("done-line",completed);
+      save(); ibRefreshAfterChange();
+    };
     const lbl = document.createElement("span");
     lbl.className = "lbl"+(on?" done-line":"");
     lbl.textContent = w.label;
@@ -7839,10 +7850,8 @@
   }
   function dhikrCount(){
     const counter=dhikrCounterState(); if(counter.count>=counter.target)return;
-    const scrollTop=window.scrollY||document.documentElement.scrollTop||0;
     counter.count++; if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
     save();renderDhikrCounter();
-    requestAnimationFrame(()=>{ if(Math.abs((window.scrollY||0)-scrollTop)>1) window.scrollTo({top:scrollTop,left:0,behavior:"auto"}); });
   }
   function dhikrStatsRows(){
     const rows=new Map(), days=allDays(), weekStart=new Date(currentDate+"T12:00:00");weekStart.setDate(weekStart.getDate()-6);
@@ -7890,17 +7899,19 @@
     sheet.over.querySelectorAll("[data-dhikr-hide]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrHide), item=get(ref);if(!item)return;dhikrSetHidden(ref.kind,ref.id,!item.hidden);renderWorship();renderProgress();sheet.close();});
     sheet.over.querySelectorAll("[data-dhikr-delete]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrDelete), item=get(ref);if(!item)return;smartAskInTemplateManager(sheet,"حذف «"+item.label+"»؟",ref.kind==="builtin"?"سيُخفى الذكر الأساسي ويمكن إظهاره لاحقًا.":"سيُحذف الذكر نهائيًا من "+item.where+".",()=>{if(ref.kind==="custom")wCustomSave(wCustom().filter(entry=>entry.id!==ref.id));else if(ref.kind==="counter")dhikrCounterCustomPresetsSave(dhikrCounterCustomPresets().filter(entry=>entry.id!==ref.id));else dhikrSetHidden(ref.kind,ref.id,true);renderWorship();renderProgress();sheet.close();});});
   }
-  function renderWorship(){
+  function renderWorship(rebuildLists=true){
     dhikrMigrateLegacyCounterItems();
-    const worshipItems = wAllItemsForDate(currentDate);
-    IB_GROUPS.forEach(g=>{
-      const ul = document.getElementById("ibList-"+g);
-      ul.innerHTML = "";
-      worshipItems.filter(w=>w.group === g && w.id !== "werd" && w.kind !== "quran").forEach(w=>{
-        const item=(g==="adhkar"?Object.assign({},w,{label:dhikrDisplayLabel(w)}):w);
-        ibRenderItem(w.id in Object.fromEntries(WORSHIP.map(x=>[x.id,true])) ? item : Object.assign({custom:true},item), ul);
+    if(rebuildLists){
+      const worshipItems = wAllItemsForDate(currentDate);
+      IB_GROUPS.forEach(g=>{
+        const ul = document.getElementById("ibList-"+g);
+        ul.innerHTML = "";
+        worshipItems.filter(w=>w.group === g && w.id !== "werd" && w.kind !== "quran").forEach(w=>{
+          const item=(g==="adhkar"?Object.assign({},w,{label:dhikrDisplayLabel(w)}):w);
+          ibRenderItem(w.id in Object.fromEntries(WORSHIP.map(x=>[x.id,true])) ? item : Object.assign({custom:true},item), ul);
+        });
       });
-    });
+    }
 
     renderQuranCard();
     renderDhikrCounter();
@@ -7950,9 +7961,7 @@
   };
   document.getElementById("ibSunnahDone").onclick = function(){
     state.sunnahDone = !state.sunnahDone;
-    const top=ibScrollTop();
-    save(); renderWorship();
-    if(Math.abs(ibScrollTop()-top)>1) window.scrollTo({top,left:0,behavior:"auto"});
+    save(); renderWorship(false);
   };
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
   const dhikrCounterBox=document.getElementById("dhikrCounterBox");
