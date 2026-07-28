@@ -359,7 +359,8 @@
   .customize-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.65rem;border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.55rem .65rem;transition:.15s}
   .customize-row.dragging{opacity:.4}.customize-row.drag-over{border-color:var(--accent);background:var(--accent-soft)}
   .customize-row.is-hidden .customize-name{opacity:.5;text-decoration:line-through}
-  .customize-drag{font-size:1.05rem;color:var(--muted);cursor:grab;user-select:none;padding:.2rem}
+  .customize-drag{font-size:1.05rem;color:var(--muted);cursor:grab;user-select:none;padding:.45rem;touch-action:none;border-radius:8px}
+  .customize-drag:active{cursor:grabbing;background:var(--accent-soft);color:var(--accent)}
   .customize-name{font-size:.9rem;font-weight:600;color:var(--ink)}
   .customize-name small{display:block;font-size:.65rem;font-weight:500;color:var(--muted);margin-top:.06rem}
   .customize-controls{display:flex;align-items:center;gap:.25rem}
@@ -12852,7 +12853,7 @@
       if(customizeFilter!=="all"&&view!==customizeFilter) return;
       const row=document.createElement("div");
       row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
-      const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
+      const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اضغط مطولًا ثم اسحب لإعادة الترتيب"; drag.setAttribute("role","button"); drag.setAttribute("aria-label","اسحب بطاقة "+def.label+" لإعادة ترتيبها"); drag.tabIndex=0;
       const name=document.createElement("span"); name.className="customize-name"; name.innerHTML=def.icon+" "+def.label+"<small>قسم "+(CARD_VIEW_LABELS[view]||"")+"</small>";
       const controls=document.createElement("div"); controls.className="customize-controls";
       const section=document.createElement("select"); section.className="customize-section"; section.setAttribute("aria-label","نقل بطاقة "+def.label+" إلى قسم آخر");
@@ -12865,11 +12866,25 @@
       const track=document.createElement("i"); toggle.append(input,track);
       input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
       controls.append(section,up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
-      row.ondragstart=e=>{ customizeDragId=id; row.classList.add("dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); } };
-      row.ondragover=e=>{ e.preventDefault(); row.classList.add("drag-over"); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; };
-      row.ondragleave=()=>row.classList.remove("drag-over");
-      row.ondrop=e=>{ e.preventDefault(); row.classList.remove("drag-over"); personalizeDrop(customizeDragId||(e.dataTransfer&&e.dataTransfer.getData("text/plain")),id); };
-      row.ondragend=()=>{ customizeDragId=null; list.querySelectorAll(".dragging,.drag-over").forEach(x=>x.classList.remove("dragging","drag-over")); };
+      const clearDrag=()=>list.querySelectorAll(".dragging,.drag-over").forEach(item=>item.classList.remove("dragging","drag-over"));
+      const startPointerDrag=e=>{
+        if(e.button!=null&&e.button!==0) return;
+        e.preventDefault(); customizeDragId=id; row.classList.add("dragging");
+        const move=event=>{
+          const target=document.elementFromPoint(event.clientX,event.clientY)?.closest(".customize-row");
+          list.querySelectorAll(".drag-over").forEach(item=>item.classList.remove("drag-over"));
+          if(target&&target.dataset.cardId!==id) target.classList.add("drag-over");
+        };
+        const finish=event=>{
+          const target=document.elementFromPoint(event.clientX,event.clientY)?.closest(".customize-row");
+          const targetId=target&&target.dataset.cardId; clearDrag(); customizeDragId=null;
+          document.removeEventListener("pointermove",move); document.removeEventListener("pointerup",finish); document.removeEventListener("pointercancel",finish);
+          if(targetId) personalizeDrop(id,targetId);
+        };
+        document.addEventListener("pointermove",move); document.addEventListener("pointerup",finish); document.addEventListener("pointercancel",finish);
+      };
+      drag.addEventListener("pointerdown",startPointerDrag);
+      drag.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); personalizeMove(id,e.shiftKey?-1:1); } };
     });
   }
   const customizeOverlay=document.getElementById("customizeOverlay");
