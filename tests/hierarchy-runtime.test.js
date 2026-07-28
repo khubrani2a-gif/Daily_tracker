@@ -21,7 +21,7 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     fixedTemplates:[],instances:[],transactions:[{id:"old",amountMinor:1000,transactionDate:today(),categoryId:"legacy_food",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null}],trips:[]};
   const browser=await chromium.launch(); const ctx=await browser.newContext({viewport:{width:390,height:844}}); const page=await ctx.newPage();
   try{
-    await page.addInitScript(data=>localStorage.setItem("h2do-expenses",JSON.stringify(data)),legacy);
+    await page.addInitScript(data=>{ if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data)); },legacy);
     await page.goto(fileUrl); await page.waitForTimeout(350);
     let state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     const food=state.categories.find(c=>c.id==="legacy_food");
@@ -37,6 +37,11 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
+    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")), stamp=Date.now()-1000, restaurants=data.categories.find(c=>c.name==="المطاعم والطلبات"), home=data.categories.find(c=>c.name==="احتياجات المنزل"); restaurants.createdAt=stamp-5000; home.createdAt=stamp; data.transactions.push({id:"old_home_cloud",amountMinor:33558,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-3000,updatedAt:stamp-3000,deletedAt:null},{id:"moved_food_cloud",amountMinor:4800,transactionDate:new Date().toISOString().slice(0,10),categoryId:restaurants.id,transactionType:"expense",createdAt:stamp-4000,updatedAt:stamp+500,deletedAt:null}); data.settings.legacyHomeTransactionsV6=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
+    await page.reload(); await page.waitForTimeout(350);
+    state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
+    assert.equal(state.transactions.find(t=>t.id==="old_home_cloud").categoryId,state.categories.find(c=>c.name==="احتياجات المنزل").id);
+    assert.equal(state.transactions.find(t=>t.id==="moved_food_cloud").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
     await page.locator("#expOpenBtn").click(); await page.locator('.exp-tab[data-view="dash"]').click(); await page.locator("#expAddBtn").click();
