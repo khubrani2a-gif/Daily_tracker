@@ -10608,7 +10608,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 5;   /* v5: بيانات العائلة المتزامنة (التسوق والمواعيد) */
+  const EXP_SCHEMA = 6;   /* v6: سجلّ تعديلات الالتزامات والدفعات القابل للتراجع */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10634,7 +10634,7 @@
       version:EXP_SCHEMA,
       settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null,
                  currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
-      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[]
+      categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[], activityLog:[]
     };
   }
   function expData(){
@@ -10662,6 +10662,7 @@
     raw.recurringTransactions = objArr(raw.recurringTransactions);
     raw.familyShopping = objArr(raw.familyShopping);
     raw.familyEvents = objArr(raw.familyEvents);
+    raw.activityLog = objArr(raw.activityLog).slice(-80);
     /* ترحيل قائمة التسوق المحلية الأولى إلى بيانات العائلة المتزامنة، بلا فقدان للعناصر القديمة. */
     if(!raw.familyShopping.length){
       try{ const legacy=JSON.parse(localStorage.getItem("h2do-family-shopping-v1")||"[]"); if(Array.isArray(legacy)) raw.familyShopping=legacy.filter(x=>x&&typeof x.text==="string").slice(0,200).map(x=>Object.assign({id:newId(),category:"أخرى",quantity:"",done:false,createdAt:Date.now(),updatedAt:Date.now(),deletedAt:null},x)); }catch(e){}
@@ -10672,6 +10673,7 @@
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
     raw.fixedTemplates.forEach(tp=>{ if(!Array.isArray(tp.suspensions)) tp.suspensions=[]; if(tp.archiveMonth===undefined) tp.archiveMonth=null; });
+    raw.activityLog.forEach(item=>{ if(!item.id)item.id=newId(); if(!item.createdAt)item.createdAt=Date.now(); if(!item.updatedAt)item.updatedAt=item.createdAt; if(item.undoneAt===undefined)item.undoneAt=null; });
     /* ترحيل v2 (السفر) + حقول تصنيف الالتزام — على كائنات مضمونة فقط، بلا رمي */
     const was = raw.version||1;
     raw.transactions.forEach(t=>{
@@ -10896,6 +10898,7 @@
     out.recurringTransactions = expMergeById(localD.recurringTransactions, remoteD.recurringTransactions, r=>r.id);
     out.familyShopping = expMergeById(localD.familyShopping, remoteD.familyShopping, item=>item.id, expTripTie);
     out.familyEvents = expMergeById(localD.familyEvents, remoteD.familyEvents, item=>item.id, expTripTie);
+    out.activityLog = expMergeById(localD.activityLog, remoteD.activityLog, item=>item.id).slice(-80);
     /* المثيلات ذاكرة مؤقتة تُولّد تلقائيًا؛ فتح المفتاح الطبيعي (القالب+السنة+الشهر) يمنع تكرارها عبر الأجهزة */
     out.instances = expMergeById(localD.instances, remoteD.instances, i=> i.templateId+"|"+i.year+"|"+i.month);
     /* اتحاد النسخ المؤرّخة للميزانيات داخل الفئة، ومخصصات الرحلة — لا نفقد نسخة أضافها جهاز آخر */
@@ -10912,7 +10915,7 @@
     return out;
   }
   /* توقيع خفيف لكشف مساهمة المحلي (سجلات إضافية/أحدث) لتقرير الدفع العكسي دون تراشق لا نهائي */
-  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
+  function expSig(d){ let n=0,u=0; ["categories","fixedTemplates","transactions","trips","instances","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"].forEach(k=>{ (d[k]||[]).forEach(r=>{ n++; u+=(r.updatedAt||0); }); }); u+=(d.settings&&d.settings.updatedAt)||0; return n+":"+u; }
   /* هل الحالة المحلية «بذرة افتراضية نقية» لم تُستخدم بعد؟ (فئات افتراضية فقط، بلا معاملات/رحلات/التزامات) */
   function expIsPristine(d){ return !!(d && d.settings && d.settings.pristineSeed) && !(d.transactions&&d.transactions.length) && !(d.trips&&d.trips.length) && !(d.fixedTemplates&&d.fixedTemplates.length) && !(d.savingsGoals&&d.savingsGoals.length) && !(d.recurringTransactions&&d.recurringTransactions.length); }
   /* إزالة تكرار الفئات الافتراضية المتباينة المعرّفات (من أجهزة بذرت قبل الإصلاح) مع إعادة ربط المراجع — بلا فقدان مالي */
@@ -10972,7 +10975,7 @@
       /* جهاز جديد ما زال على «البذرة النقية» → يتبنّى الخادم كاملًا بلا حقن فئاته الافتراضية (يمنع تكرار الفئات) */
       if(expIsPristine(local)){
         const adopt = Object.assign({}, remote);
-        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
+        ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"].forEach(k=>{ if(!Array.isArray(adopt[k])) adopt[k]=[]; });
         adopt.settings = Object.assign({}, remote.settings||{});
         expState = adopt; localStorage.setItem(EXP_KEY, JSON.stringify(adopt));
         safeRun("expRefresh", expRefresh);                     /* نتيجة خادم صالحة تُرسم دائمًا */
@@ -10980,7 +10983,7 @@
       }
       if(!cache){
         dataDetectConflict("expenses","settings",local.settings||{},remote.settings||{},"اعتماد إعدادات المصاريف الأحدث");
-        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
+        ["categories","fixedTemplates","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"].forEach(key=>dataDetectCollectionConflicts("expenses",key,local[key],remote[key],"دمج كل سجل مالي حسب آخر تحديث"));
       }
       let merged = expMerge(local, remote);
       merged = expDedupeDefaults(merged);                      /* إزالة تكرار الفئات الافتراضية المتباينة مع إعادة الربط */
@@ -11007,7 +11010,7 @@
     expLoadFailed = true; diagErr("expData:init", e);
     /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
     expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
-      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[] };
+      categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[], activityLog:[] };
   }
   /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
   function expRetryLoad(){
@@ -11323,6 +11326,35 @@
     t.deletedAt = null; t.updatedAt = Date.now();
     if(t.fixedExpenseInstanceId) expRecalcInstance(expInstById(t.fixedExpenseInstanceId));
     expSave(expState);
+  }
+  /* سجل مالي صغير ومُزامَن: يحتفظ فقط بما يلزم لشرح التعديل وعكسه بأمان. */
+  function expClone(value){ try{return JSON.parse(JSON.stringify(value));}catch(e){return null;} }
+  function expFixedSnapshot(tplId){ return {template:expClone(expTplById(tplId)),instances:expState.instances.filter(i=>i.templateId===tplId).map(expClone)}; }
+  function expRestoreFixedSnapshot(snapshot){
+    if(!snapshot||!snapshot.template) return;
+    const tpl=expTplById(snapshot.template.id); if(tpl) Object.assign(tpl,expClone(snapshot.template));
+    (snapshot.instances||[]).forEach(saved=>{ const inst=expInstById(saved.id); if(inst) Object.assign(inst,expClone(saved)); });
+  }
+  function expActivityPush(entry){
+    if(!Array.isArray(expState.activityLog)) expState.activityLog=[];
+    const now=Date.now(), rec=Object.assign({id:newId(),createdAt:now,updatedAt:now,undoneAt:null},entry);
+    expState.activityLog.push(rec); if(expState.activityLog.length>80) expState.activityLog=expState.activityLog.slice(-80);
+    expSave(expState); return rec;
+  }
+  function expActivityCanUndo(rec){
+    if(!rec||rec.undoneAt) return false;
+    if(rec.type==="payment") return !!expState.transactions.find(t=>t.id===rec.txId&&!t.deletedAt);
+    if(rec.type==="fixed-edit") return !!expTplById(rec.templateId);
+    return false;
+  }
+  function expActivityUndo(id){
+    const rec=(expState.activityLog||[]).find(item=>item.id===id); if(!expActivityCanUndo(rec)) return false;
+    if(rec.type==="payment"){
+      const tx=expState.transactions.find(t=>t.id===rec.txId); tx.deletedAt=Date.now(); tx.updatedAt=tx.deletedAt;
+      if(tx.fixedExpenseInstanceId) expRecalcInstance(expInstById(tx.fixedExpenseInstanceId));
+      expRestoreFixedSnapshot(rec.before);
+    } else if(rec.type==="fixed-edit") expRestoreFixedSnapshot(rec.before);
+    rec.undoneAt=Date.now(); rec.updatedAt=rec.undoneAt; expSave(expState); expRefresh(); return true;
   }
   function expRecordPayment(instId, amountMinor, dateStr, method){
     const inst = expInstById(instId); if(!inst) return null;
@@ -11686,10 +11718,12 @@
         '<div class="exp-foot-row'+(totalRemain>0?' warn':'')+'"><span>المتبقي</span><b>'+expMoney(totalRemain)+'</b></div>'+
         '<div class="exp-foot-row"><span>غير المدفوعة</span><b>'+_arn(unpaidCount)+'</b></div>'+
       '</div>'+
-      '<button class="exp-add-line" id="expAddFixed">＋ إضافة التزام شهري</button>';
+      '<button class="exp-add-line" id="expAddFixed">＋ إضافة التزام شهري</button>'+
+      '<button class="exp-add-line" id="expActivityBtn">🕓 سجل التعديلات والدفعات</button>';
     box.querySelectorAll("[data-payinst]").forEach(b=> b.onclick=()=> expOpenPaymentForm(b.dataset.payinst));
     box.querySelectorAll("[data-tplmenu]").forEach(b=> b.onclick=()=> expTplMenu(b, b.dataset.tplmenu));
     box.querySelector("#expAddFixed").onclick = ()=> expOpenFixedForm(null);
+    box.querySelector("#expActivityBtn").onclick = ()=> expShowFixedActivity();
   }
   function expRenderVarCard(){
     const box = document.getElementById("expVarCard");
@@ -12011,11 +12045,23 @@
       if(expSaving) return;
       const amt=expParseAmount(g("#pfAmt").value);
       if(isNaN(amt)||amt<=0){ g("#pfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
-      const proceed=(adoptPlan)=>{ expSaving=true; g("#pfSave").disabled=true; if(adoptPlan) expAdoptPaymentPlan(instId, amt); expRecordPayment(instId, amt, g("#pfDate").value||todayStr(), g("#pfPay").value||null); expCloseForm(); expRefresh(); };
+      const proceed=(adoptPlan)=>{ const before=expFixedSnapshot(inst.templateId), date=g("#pfDate").value||todayStr(), method=g("#pfPay").value||null; expSaving=true; g("#pfSave").disabled=true; if(adoptPlan) expAdoptPaymentPlan(instId, amt); const tx=expRecordPayment(instId, amt, date, method), activity=tx?expActivityPush({type:"payment",templateId:inst.templateId,templateName:tpl.name,txId:tx.id,amountMinor:amt,transactionDate:date,paymentMethod:method,before}):null; expCloseForm(); expRefresh(); if(activity) expShowUndoAction("سُجلت دفعة «"+tpl.name+"»",()=>expActivityUndo(activity.id)); };
       /* الإدخال الأعلى هنا يعني غالبًا تعديل مبلغ الالتزام (مثل الإيجار).
          نعتمد المبلغ للدورة الحالية ونسجل الدفعة مباشرة بدل وضع تأكيد ثانٍ قد يحجب الحفظ. */
       proceed(amt > remain && remain>=0);
     };
+  }
+  function expShowFixedActivity(){
+    const rows=(expState.activityLog||[]).filter(item=>item&&["payment","fixed-edit"].includes(item.type)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const list=rows.length?rows.map(item=>{
+      const when=new Date(item.createdAt||Date.now()).toLocaleString("ar-SA",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+      const payment=item.type==="payment", title=payment?"💵 دفعة "+expEsc(item.templateName||"التزام")+" · "+expMoney(item.amountMinor):"✏️ تعديل التزام "+expEsc(item.templateName||"التزام");
+      const sub=payment?(expArDate(item.transactionDate||todayStr())+(item.paymentMethod?" · "+expEsc(item.paymentMethod):"")):("المبلغ الجديد: "+expMoney(item.newAmountMinor)+" · "+({thisOnly:"هذا الشهر",fromThis:"من هذا الشهر",fromNext:"من الشهر القادم"}[item.scope]||"تعديل"));
+      const can=expActivityCanUndo(item);
+      return '<div class="exp-txitem"><div class="t-main"><div class="t-name">'+title+(item.undoneAt?'<span class="exp-pill unpaid">تم التراجع</span>':'')+'</div><div class="t-sub">'+sub+' · '+when+'</div></div>'+(can?'<button class="exp-mini" data-activity-undo="'+item.id+'" title="تراجع">↩︎</button>':'')+'</div>';
+    }).join(""):'<div class="exp-empty">لا توجد تعديلات أو دفعات مسجلة بعد.</div>';
+    expOpenForm('<div class="exp-form-head"><h3>🕓 سجل الالتزامات</h3><button data-close>✕</button></div><div class="exp-card-hint">تظهر هنا دفعات الالتزامات وتعديلات مبالغها. يمكن التراجع عن العمليات المتاحة.</div>'+list+'<button class="exp-save" data-close>إغلاق</button>');
+    expFormBox.querySelectorAll("[data-activity-undo]").forEach(button=>button.onclick=()=>{const rec=(expState.activityLog||[]).find(item=>item.id===button.dataset.activityUndo);if(!rec)return;hifzShowConfirm({title:"التراجع عن هذه العملية؟",body:rec.type==="payment"?"ستُلغى الدفعة ويُعاد احتساب الالتزام.":"سيُعاد مبلغ الالتزام وإعداداته كما كانت قبل التعديل.",okText:"تراجع",cancelText:"إلغاء",onOk:()=>{expCloseForm();expActivityUndo(rec.id);}});});
   }
   function expShowPaymentHistory(tplId){
     const t=expTplById(tplId); const linkedInsts=expState.instances.filter(i=>i.templateId===tplId).map(i=>i.id);
@@ -12049,7 +12095,7 @@
       if(t){
         /* تعديل قالب موجود مع اختيار نطاق التطبيق (لا يُعاد كتابة الشهور السابقة تلقائيًا) */
         const applyChange=(scope)=>{
-          expSaving=true;
+          const before=expFixedSnapshot(t.id), oldName=t.name, oldAmount=expToMinor(t.defaultAmountMinor); expSaving=true;
           t.name=name; t.amountType=type; t.dueDay=due; t.note=note; t.updatedAt=Date.now();
           const dNow=new Date(todayStr()+"T12:00:00"), cy=dNow.getFullYear(), cm=dNow.getMonth()+1, curKey=cy+"-"+_pad2(cm);
           if(!t.overrides) t.overrides={};
@@ -12065,7 +12111,9 @@
             if(t.overrides[curKey]==null) t.overrides[curKey]=expPlannedForMonth(t,cy,cm);
             t.defaultAmountMinor=amt;
           }
-          expSave(expState); expCloseForm(); expRefresh();
+          expSave(expState);
+          const activity=expActivityPush({type:"fixed-edit",templateId:t.id,templateName:name,oldName,oldAmountMinor:oldAmount,newAmountMinor:amt,scope,before});
+          expCloseForm(); expRefresh(); expShowUndoAction("تم تعديل التزام «"+name+"»",()=>expActivityUndo(activity.id));
         };
         if(amt!==t.defaultAmountMinor){
           expScopeDialog("متى تريد تطبيق تعديل المبلغ؟", [
