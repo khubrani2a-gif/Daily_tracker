@@ -353,3 +353,13 @@ test("weekly variable expenses explain spending, budget status, and available ac
   assert.match(html,/إضافة مصروف/);
   assert.match(html,/تعديل الميزانية الأسبوعية/);
 });
+
+test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
+  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
+  assert.match(html,/"expdcat_"\+i/);
+  assert.match(html,/expMergeSubcategories/);
+  assert.match(html,/expEnsureCategoryHierarchy\(out\)/);
+  assert.match(html,/اكتب نوع المصروف عند اختيار «أخرى»/);
+  assert.match(html,/حفظ هذا التصنيف للاستخدام لاحقًا/);
+  assert.match(html,/c\.showInWeeklyBudget!==false/);
+});
