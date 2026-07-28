@@ -1307,6 +1307,27 @@
   .exp-bar i{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s}
   .exp-bar i.near{background:var(--gold)}
   .exp-bar i.over{background:var(--danger)}
+  /* بطاقة المصروفات الأسبوعية: تعرض الرقم والحالة منفصلين حتى لا تختلط الميزانية بالمصروف. */
+  .exp-var-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.42rem;margin:.65rem 0 .35rem}
+  .exp-var-summary div{border:1px solid var(--line);background:var(--chip-bg);border-radius:11px;padding:.42rem .45rem;min-width:0}
+  .exp-var-summary small{display:block;color:var(--muted);font-size:.64rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-var-summary b{display:block;color:var(--ink);font-size:.78rem;margin-top:.12rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-var-summary .accent b{color:var(--accent)}
+  .exp-var-summary .danger b{color:var(--danger)}
+  .exp-var-tools{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:.55rem 0 .25rem}
+  .exp-var-tools select,.exp-var-tools button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.32rem .48rem;font:inherit;font-size:.7rem;cursor:pointer}
+  .exp-var-tools button.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+  .exp-var-insight{margin:.55rem 0 .15rem;padding:.45rem .55rem;border-radius:10px;background:var(--danger-soft);color:var(--danger);font-size:.73rem;font-weight:600}
+  .exp-var-row{align-items:flex-start}
+  .exp-var-row .exp-row-name{margin-bottom:.08rem}
+  .exp-var-meta{display:flex;align-items:center;justify-content:space-between;gap:.45rem;margin-top:.3rem;font-size:.69rem;color:var(--muted)}
+  .exp-var-meta .exp-pill{margin:0;white-space:nowrap}
+  .exp-var-progress{margin-top:.3rem}
+  .exp-var-progress .exp-bar{position:relative;overflow:visible}
+  .exp-var-progress .exp-bar i{overflow:hidden}
+  .exp-bar-over{position:absolute;inset-inline-start:.15rem;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:var(--danger);color:#fff;font-size:.65rem;line-height:12px;text-align:center;font-style:normal;font-weight:800}
+  .exp-var-empty-state{padding:.55rem 0;color:var(--muted);font-size:.76rem;text-align:center}
+  @media(max-width:520px){.exp-var-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.exp-var-summary b{font-size:.84rem}}
   .exp-mini{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:1.05rem;padding:.2rem .3rem;border-radius:8px;line-height:1}
   .exp-mini:hover{background:var(--accent-soft);color:var(--accent)}
   .exp-foot{margin-top:.7rem;padding-top:.7rem;border-top:2px solid var(--line);display:flex;flex-direction:column;gap:.25rem}
@@ -11860,45 +11881,45 @@
     box.querySelector("#expAddFixed").onclick = ()=> expOpenFixedForm(null);
     box.querySelector("#expActivityBtn").onclick = ()=> expShowFixedActivity();
   }
+  const EXP_VAR_VIEW_KEY="h2do-variable-expenses-view-v1", EXP_VAR_HIDDEN_KEY="h2do-variable-expenses-hidden-v1";
+  function expVarViewLoad(){
+    try{ const v=JSON.parse(localStorage.getItem(EXP_VAR_VIEW_KEY)||"{}"); return {sort:["custom","spent","over"].includes(v.sort)?v.sort:"custom",overOnly:!!v.overOnly,showHidden:!!v.showHidden}; }
+    catch(e){ return {sort:"custom",overOnly:false,showHidden:false}; }
+  }
+  function expVarViewSave(v){ localStorage.setItem(EXP_VAR_VIEW_KEY,JSON.stringify(v)); }
+  function expVarHiddenLoad(){ try{ const v=JSON.parse(localStorage.getItem(EXP_VAR_HIDDEN_KEY)||"{}"); return v&&typeof v==="object"?v:{}; }catch(e){return {}; } }
+  function expVarHiddenForWeek(weekStart){ const all=expVarHiddenLoad(); return new Set(Array.isArray(all[weekStart])?all[weekStart]:[]); }
+  function expVarToggleHidden(catId, weekStart){ const all=expVarHiddenLoad(), ids=new Set(Array.isArray(all[weekStart])?all[weekStart]:[]); if(ids.has(catId))ids.delete(catId);else ids.add(catId); all[weekStart]=Array.from(ids); localStorage.setItem(EXP_VAR_HIDDEN_KEY,JSON.stringify(all)); }
   function expRenderVarCard(){
-    const box = document.getElementById("expVarCard");
-    const wr = expSalaryWeekRange(todayStr());
-    const cats = expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
-    let rows="";
-    if(!cats.length){ rows='<div class="exp-empty">لا توجد فئات أسبوعية نشطة.</div>'; }
-    cats.forEach(c=>{
-      const budget = expBudgetForWeek(c, wr.start);
-      const spent = expNetInRange(wr, t=> t.categoryId===c.id && expClassify(t)==="variable");
-      const remain = budget - spent;
-      const pct = expPct(spent, budget);
-      const cls = budget && pct>=100 ? "over" : (pct>=75 ? "near" : "ok");
-      const barCls = cls==="ok"?"":cls;
-      let sub = budget ? (expMoney(spent,false)+" / "+expMoney(budget)) : (expMoney(spent)+" (لا ميزانية)");
-      let pill = "";
-      if(budget){
-        if(remain>=0) pill = '<span class="exp-pill '+cls+'">المتبقي '+expMoney(remain,false)+'</span>';
-        else pill = '<span class="exp-pill over">تجاوز '+expMoney(-remain,false)+'</span>';
-      }
-      rows += '<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+
-        (c.icon?c.icon+" ":"")+expEsc(c.name)+pill+'</div>'+
-        '<div class="exp-row-sub">'+sub+'</div>'+
-        (budget? '<div class="exp-bar"><i class="'+barCls+'" style="width:'+Math.min(100,pct)+'%"></i></div>':'')+
-        '</div><button class="exp-mini" data-catmenu="'+c.id+'" title="خيارات">⋯</button></div>';
-    });
-    const totalBudget = expWeeklyBudgetTotal(wr.start);
-    const totalSpent = expVarNetInWeek(wr);
-    const totalRemain = totalBudget - totalSpent;
-    box.innerHTML =
-      '<h3>🛒 المصروفات الأسبوعية المتغيرة</h3><div class="exp-card-hint">أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'</div>'+
-      rows +
-      '<div class="exp-foot">'+
-        '<div class="exp-foot-row"><span>ميزانية الأسبوع</span><b>'+expMoney(totalBudget)+'</b></div>'+
-        '<div class="exp-foot-row"><span>المصروف</span><b>'+expMoney(totalSpent)+'</b></div>'+
-        '<div class="exp-foot-row '+(totalRemain<0?'warn':'total')+'"><span>'+(totalRemain<0?'التجاوز':'المتبقي')+'</span><b>'+expMoney(Math.abs(totalRemain))+'</b></div>'+
-      '</div>'+
+    const box=document.getElementById("expVarCard"); if(!box)return;
+    const wr=expSalaryWeekRange(todayStr()), view=expVarViewLoad(), hidden=expVarHiddenForWeek(wr.start);
+    const cats=expState.categories.filter(c=>c.section==="variable"&&c.isActive&&!c.archivedAt).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    const totalBudget=expWeeklyBudgetTotal(wr.start), totalSpent=expVarNetInWeek(wr), totalRemain=totalBudget-totalSpent;
+    const totalPct=totalBudget>0?Math.max(0,expPct(totalSpent,totalBudget)):0;
+    let data=cats.map(c=>{ const budget=expBudgetForWeek(c,wr.start), spent=expNetInRange(wr,t=>t.categoryId===c.id&&expClassify(t)==="variable"), remain=budget-spent, pct=budget>0?Math.max(0,expPct(spent,budget)):0; return {c,budget,spent,remain,pct,over:budget>0&&remain<0}; });
+    const exceeded=data.filter(x=>x.over).sort((a,b)=>b.remain-a.remain);
+    if(!view.showHidden)data=data.filter(x=>!hidden.has(x.c.id));
+    if(view.overOnly)data=data.filter(x=>x.over);
+    if(view.sort==="spent")data.sort((a,b)=>b.spent-a.spent);
+    if(view.sort==="over")data.sort((a,b)=>(a.remain-b.remain)||b.spent-a.spent);
+    const rows=data.map(x=>{
+      const hasBudget=x.budget>0, cls=hasBudget&&x.pct>=100?"over":(x.pct>=75?"near":"ok"), used=Math.min(100,x.pct);
+      const status=!hasBudget?"لا توجد ميزانية":x.spent<=0?"المتبقي "+expMoney(x.budget):x.remain>0?"المتبقي "+expMoney(x.remain):x.remain===0?"اكتملت الميزانية":"تجاوزت بـ "+expMoney(-x.remain);
+      const sub=!hasBudget?(x.spent?"صُرف "+expMoney(x.spent)+" · لا توجد ميزانية":"لا توجد ميزانية"):(x.spent<=0?"لم يُصرف شيء من "+expMoney(x.budget):"صُرف "+expMoney(x.spent)+" من "+expMoney(x.budget));
+      return '<div class="exp-row exp-var-row"><div class="exp-row-main"><div class="exp-row-name">'+(x.c.icon?x.c.icon+" ":"")+expEsc(x.c.name)+'</div><div class="exp-row-sub">'+sub+'</div>'+
+        (hasBudget?'<div class="exp-var-progress"><div class="exp-bar"><i class="'+(cls==="ok"?"":cls)+'" style="width:'+used+'%"></i>'+(x.pct>100?'<em class="exp-bar-over" title="تجاوز الميزانية">+</em>':'')+'</div><div class="exp-var-meta"><span>'+_arn(x.pct)+'٪ مستخدم</span><span class="exp-pill '+cls+'">'+status+'</span></div></div>':'<div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">'+status+'</span></div>')+
+        '</div><button class="exp-mini" data-catmenu="'+x.c.id+'" title="خيارات '+expEsc(x.c.name)+'">⋯</button></div>';
+    }).join("") || '<div class="exp-var-empty-state">'+(view.overOnly?"لا توجد فئات متجاوزة ضمن العرض الحالي.":"لا توجد فئات أسبوعية ظاهرة.")+'</div>';
+    const insight=exceeded.length?'<div class="exp-var-insight">⚠️ تجاوزت '+_arn(exceeded.length)+' فئات ميزانيتها'+(exceeded[0]?'؛ أكبر تجاوز في «'+expEsc(exceeded[0].c.name)+'» بمقدار '+expMoney(-exceeded[0].remain):"")+'.</div>':"";
+    box.innerHTML='<h3>🛒 المصروفات الأسبوعية المتغيرة</h3><div class="exp-card-hint">أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'</div>'+
+      '<div class="exp-var-summary"><div><small>ميزانية الأسبوع</small><b>'+expMoney(totalBudget)+'</b></div><div><small>المصروف</small><b>'+expMoney(totalSpent)+'</b></div><div class="'+(totalRemain<0?'danger':'accent')+'"><small>'+(totalRemain<0?'التجاوز':'المتبقي')+'</small><b>'+expMoney(Math.abs(totalRemain))+'</b></div><div><small>المستخدم</small><b>'+_arn(totalPct)+'٪</b></div></div>'+
+      '<div class="exp-var-tools"><select id="expVarSort" aria-label="ترتيب الفئات"><option value="custom"'+(view.sort==="custom"?" selected":"")+'>الترتيب المخصص</option><option value="spent"'+(view.sort==="spent"?" selected":"")+'>الأعلى صرفًا</option><option value="over"'+(view.sort==="over"?" selected":"")+'>الأعلى تجاوزًا</option></select><button id="expVarOver" class="'+(view.overOnly?'active':'')+'" aria-pressed="'+view.overOnly+'">المتجاوزة فقط</button>'+(hidden.size?'<button id="expVarHidden" class="'+(view.showHidden?'active':'')+'">'+(view.showHidden?'إخفاء المخفية':'إظهار المخفية')+' ('+_arn(hidden.size)+')</button>':'')+'</div>'+insight+rows+
       '<button class="exp-add-line" id="expAddVar">＋ إضافة فئة أسبوعية</button>';
-    box.querySelectorAll("[data-catmenu]").forEach(b=> b.onclick=()=> expCatMenu(b, b.dataset.catmenu));
-    box.querySelector("#expAddVar").onclick = ()=> expOpenVarForm(null);
+    box.querySelectorAll("[data-catmenu]").forEach(b=>b.onclick=()=>expCatMenu(b,b.dataset.catmenu));
+    box.querySelector("#expAddVar").onclick=()=>expOpenVarForm(null);
+    box.querySelector("#expVarSort").onchange=e=>{view.sort=e.target.value;expVarViewSave(view);expRenderVarCard();};
+    box.querySelector("#expVarOver").onclick=()=>{view.overOnly=!view.overOnly;expVarViewSave(view);expRenderVarCard();};
+    const hiddenBtn=box.querySelector("#expVarHidden"); if(hiddenBtn)hiddenBtn.onclick=()=>{view.showHidden=!view.showHidden;expVarViewSave(view);expRenderVarCard();};
   }
   function expRenderSavingsCard(){
     const box=document.getElementById("expSavingsCard"); if(!box) return;
@@ -12004,12 +12025,38 @@
   }
   function expCatMenu(anchor, catId){
     const c = expCatById(catId); if(!c) return;
+    const wr=expSalaryWeekRange(todayStr()), isHidden=expVarHiddenForWeek(wr.start).has(catId);
     expActionMenu(anchor, [
+      {label:"＋ إضافة مصروف", onClick:()=> expOpenExpenseForm(null,null,catId)},
       {label:"✏️ تعديل الاسم/الأيقونة", onClick:()=> expOpenVarForm(catId)},
       {label:"💰 تعديل الميزانية الأسبوعية", onClick:()=> expOpenBudgetForm(catId)},
+      {label:"📋 عرض تفاصيل الفئة", onClick:()=> expShowVarCategoryDetails(catId)},
+      {label:"↔ نقل مصروفات هذا الأسبوع", onClick:()=> expMoveVarTransactions(catId)},
+      {label:isHidden?"👁 إظهار في هذا الأسبوع":"🙈 إخفاء من هذا الأسبوع", onClick:()=>{ expVarToggleHidden(catId,wr.start); expRenderVarCard(); }},
       {label: c.isActive?"⏸ إيقاف":"▶ تفعيل", onClick:()=>{ c.isActive=!c.isActive; c.updatedAt=Date.now(); expSave(expState); expRefresh(); }},
       {label:"🗑 أرشفة", onClick:()=> hifzShowConfirm({title:"أرشفة هذه الفئة؟", body:"ستُخفى من الإدخال الجديد وتبقى معاملاتها في التقارير.", okText:"أرشفة", cancelText:"إلغاء", onOk:()=>{ c.archivedAt=Date.now(); c.isActive=false; c.updatedAt=Date.now(); expSave(expState); expRefresh(); }})}
     ]);
+  }
+  function expShowVarCategoryDetails(catId){
+    const c=expCatById(catId); if(!c)return;
+    const wr=expSalaryWeekRange(todayStr()), budget=expBudgetForWeek(c,wr.start);
+    const txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
+    const spent=expNet(txs), remain=budget-spent;
+    const list=txs.length?txs.map(t=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+expEsc(t.subcategory||t.description||"مصروف")+'</div><div class="t-sub">'+expArDate(t.transactionDate)+(t.paymentMethod?" · "+expEsc(t.paymentMethod):"")+'</div></div><div class="t-amt">'+expMoney(t.amountMinor)+'</div><button class="exp-mini" data-var-edit="'+t.id+'" title="تعديل المصروف">✎</button></div>').join(""):'<div class="exp-empty">لا توجد مصروفات لهذه الفئة في الأسبوع الحالي.</div>';
+    const summary=budget>0?'<div class="exp-foot" style="margin-top:0"><div class="exp-foot-row"><span>الميزانية</span><b>'+expMoney(budget)+'</b></div><div class="exp-foot-row"><span>المصروف</span><b>'+expMoney(spent)+'</b></div><div class="exp-foot-row '+(remain<0?'warn':'total')+'"><span>'+(remain<0?'تجاوزت بـ':'المتبقي')+'</span><b>'+expMoney(Math.abs(remain))+'</b></div></div>':'<div class="exp-card-hint">لا توجد ميزانية مضبوطة لهذه الفئة.</div>';
+    expOpenForm('<div class="exp-form-head"><h3>تفاصيل — '+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</h3><button data-close>✕</button></div>'+summary+'<div style="margin-top:.65rem">'+list+'</div><button class="exp-save" data-close>إغلاق</button>');
+    expFormBox.querySelectorAll("[data-var-edit]").forEach(b=>b.onclick=()=>expOpenExpenseForm(b.dataset.varEdit));
+  }
+  function expMoveVarTransactions(catId){
+    const source=expCatById(catId); if(!source)return;
+    const wr=expSalaryWeekRange(todayStr()), txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
+    const destinations=expState.categories.filter(c=>c.section==="variable"&&c.isActive&&!c.archivedAt&&c.id!==catId);
+    if(!txs.length){ hifzShowConfirm({title:"لا توجد مصروفات للنقل",body:"لا توجد مصروفات مسجلة لهذه الفئة خلال الأسبوع الحالي.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
+    if(!destinations.length){ hifzShowConfirm({title:"أضف فئة أخرى أولًا",body:"تحتاج إلى فئة أسبوعية أخرى لنقل المصروفات إليها.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
+    const options=destinations.map(c=>'<option value="'+c.id+'">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</option>').join("");
+    const list=txs.map(t=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+expEsc(t.subcategory||t.description||"مصروف")+'</div><div class="t-sub">'+expArDate(t.transactionDate)+' · '+expMoney(t.amountMinor)+'</div></div><select class="exp-move-select" data-var-move="'+t.id+'"><option value="">ابقَ في '+expEsc(source.name)+'</option>'+options+'</select></div>').join("");
+    expOpenForm('<div class="exp-form-head"><h3>نقل مصروفات — '+expEsc(source.name)+'</h3><button data-close>✕</button></div><div class="exp-card-hint">اختر الفئة الجديدة لكل مصروف في أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'. لا يتغير المبلغ أو التاريخ.</div>'+list+'<button class="exp-save" id="expMoveSave">حفظ النقل</button>');
+    expFormBox.querySelector("#expMoveSave").onclick=()=>{ let changed=0; expFormBox.querySelectorAll("[data-var-move]").forEach(s=>{if(s.value){const t=expState.transactions.find(x=>x.id===s.dataset.varMove);if(t){t.categoryId=s.value;t.updatedAt=Date.now();changed++;}}}); if(!changed){expCloseForm();return;} expSave(expState);expCloseForm();expRefresh();};
   }
 
   /* ---------- النماذج ---------- */
@@ -12066,11 +12113,11 @@
     };
   }
 
-  function expOpenExpenseForm(editId, preTripId){
+  function expOpenExpenseForm(editId, preTripId, preCategoryId){
     const tx = editId ? expState.transactions.find(t=>t.id===editId) : null;
     const cats = expState.categories.filter(c=>c.isActive && !c.archivedAt).sort((a,b)=> (a.section===b.section?0:a.section==="variable"?-1:1) || (a.sortOrder||0)-(b.sortOrder||0));
     const varCats = cats.filter(c=>c.section==="variable");
-    const curCat = tx? tx.categoryId : (varCats[0]?varCats[0].id:"");
+    const curCat = tx? tx.categoryId : (preCategoryId || (varCats[0]?varCats[0].id:""));
     const defPay = expState.settings.defaultPaymentMethod || (tx?tx.paymentMethod:"");
     const chips = varCats.map(c=>'<button type="button" class="exp-chip'+(c.id===curCat?' active':'')+'" data-catchip="'+c.id+'">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</button>').join("");
     const catOpts = cats.map(c=>'<option value="'+c.id+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+expEsc(c.name)+'</option>').join("");

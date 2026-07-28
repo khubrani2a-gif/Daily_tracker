@@ -344,3 +344,12 @@ test("weekly goal review offers alternate, edit, and cancellation controls",()=>
   assert.match(html,/statsInstallWeeklyGoalControls\(\)/);
   assert.match(html,/statsSaveWeeklyGoal\(\);/);
 });
+
+test("weekly variable expenses explain spending, budget status, and available actions",()=>{
+  ["صُرف ","لم يُصرف شيء من ","تجاوزت بـ ","اكتملت الميزانية","لا توجد ميزانية","٪ مستخدم"].forEach(text=>assert.ok(html.includes(text),text));
+  ["expVarViewLoad","expVarToggleHidden","expShowVarCategoryDetails","expMoveVarTransactions"].forEach(name=>assert.match(html,new RegExp("function "+name+"\\("),name));
+  assert.match(html,/Math\.min\(100,x\.pct\)/);
+  assert.match(html,/إظهار في هذا الأسبوع/);
+  assert.match(html,/إضافة مصروف/);
+  assert.match(html,/تعديل الميزانية الأسبوعية/);
+});
