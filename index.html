@@ -237,21 +237,7 @@
   .quick-template-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;padding:.55rem;border:1px dashed var(--line);border-radius:12px;background:var(--chip-bg)}
   .quick-template-status{width:100%;margin:0;padding:.15rem .1rem 0;color:var(--accent);font-size:.7rem;font-weight:700;line-height:1.55}
   .quick-template-feedback{width:100%;margin:0;color:var(--muted);font-size:.68rem;line-height:1.5}
-  body.home-compact .grid .card{display:none!important}
-  body.home-compact[data-app-view="today"] .grid .card:is(#prayerCard,#tasksCard,#waterCard),
-  body.home-compact[data-app-view="iman"] .grid .card:is(#prayerCard,#ibadahCard),
-  body.home-compact[data-app-view="sport"] .grid .card:is(#sportCard,#waterCard),
-  body.home-compact[data-app-view="more"] .grid .card:is(#readingCard,#intentionCard){display:block!important}
-  body.home-compact[data-app-view="today"] #tasksCard{order:2}
-  body.home-compact[data-app-view="today"] #waterCard{order:3}
-  body.home-compact[data-app-view]:not([data-app-view="expenses"]) #expensesCard{display:none!important}
-  body.home-compact .today-metric:nth-child(3),
-  body.home-compact #weeklyGoalBanner,
-  body.home-compact .smart-actions,
-  body.home-compact .quick-action-feedback,
-  body.home-compact .quick-template-bar,
-  body.home-compact .tomorrow-panel{display:none}
-  body.home-compact .today-metrics{grid-template-columns:repeat(3,1fr)}
+  body.home-compact .compact-hidden{display:none!important}
   .home-mode-status{display:none;margin:.65rem 0 0;color:var(--muted);font-size:.7rem;line-height:1.6}
   body.home-compact .home-mode-status{display:block}
   .tomorrow-panel{margin-top:.75rem;padding:.72rem .78rem;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
@@ -953,8 +939,8 @@
   .task-sheet-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:9px;width:34px;height:34px;cursor:pointer}
   .task-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
-  .task-fields .appearance-choice{flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer}
-  .task-fields .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
+  .task-fields .appearance-choice,.task-history-list .appearance-choice{display:flex;flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer;margin-bottom:.45rem}
+  .task-fields .appearance-choice input,.task-history-list .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
   .appearance-preview{margin:.75rem 0 0;padding:.6rem .7rem;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:.74rem;font-weight:700}
   .task-fields input,.task-fields select,.task-history-search{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none}
   .task-fields textarea{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none;resize:vertical;min-height:78px}
@@ -2233,7 +2219,7 @@
       <div class="customize-actions">
         <button type="button" id="customizeNav">تخصيص الشريط السفلي</button>
         <button type="button" id="customizeAppearance">المظهر وحجم الخط</button>
-        <button type="button" id="customizeCompact">العرض المختصر</button>
+        <button type="button" id="customizeCompact">إعداد العرض المختصر</button>
         <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
         <button type="button" id="customizeShowAll">إظهار الكل</button>
         <button type="button" id="customizeReset">الترتيب الافتراضي</button>
@@ -12712,17 +12698,48 @@
 
   /* ---------- تخصيص بطاقات الصفحة ---------- */
   const HOME_MODE_KEY="h2do-home-mode-v1";
+  const HOME_COMPACT_PREF_KEY="h2do-home-compact-v2";
+  function compactPrefsLoad(){
+    let raw={}; try{raw=JSON.parse(localStorage.getItem(HOME_COMPACT_PREF_KEY)||"{}")||{};}catch(e){}
+    const valid=new Set(["today","iman","sport","expenses","more"]), out={};
+    Object.entries(raw).forEach(([view,ids])=>{ if(valid.has(view)&&Array.isArray(ids)) out[view]=[...new Set(ids.filter(id=>typeof id==="string"))]; });
+    return out;
+  }
+  let compactPrefs=compactPrefsLoad();
+  function compactHiddenForView(view){ return new Set(compactPrefs[view]||[]); }
+  function compactApplyCards(view){
+    const hidden=compactHiddenForView(view);
+    CARD_DEFS.forEach(def=>{ const card=document.getElementById(def.id); if(card) card.classList.toggle("compact-hidden",homeCompact&&cardView(def.id)===view&&hidden.has(def.id)); });
+  }
   let homeCompact=localStorage.getItem(HOME_MODE_KEY)==="compact";
   function homeModeRender(){
     const view=typeof appView==="undefined"?"today":appView, compact=homeCompact, button=document.getElementById("homeModeBtn"), status=document.getElementById("homeModeStatus");
-    const summaries={today:"الصلاة، المهام، والماء",iman:"الصلاة والعبادات",sport:"النشاط والماء",expenses:"ملخص العائلة",more:"القراءة والنية"};
+    const hiddenCount=compactHiddenForView(view).size;
     document.body.dataset.appView=view;
     document.body.classList.toggle("home-compact",compact);
     document.body.classList.toggle("home-compact-today",compact&&view==="today");
-    if(status) status.textContent="العرض المختصر نشط: "+(summaries[view]||"البطاقات الأساسية")+" فقط. استخدم «عرض كامل» لإظهار بقية الأدوات.";
-    if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار جميع بطاقات هذا القسم":"إظهار البطاقات الأساسية فقط";}
+    compactApplyCards(view);
+    if(status) status.textContent=compact?(hiddenCount?"العرض المختصر نشط: أُخفيت "+hiddenCount.toLocaleString("ar-EG")+" بطاقة من هذا القسم حسب اختيارك.":"العرض المختصر نشط، ولم تحدد بطاقات لإخفائها في هذا القسم بعد."):"";
+    if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار كل بطاقات هذا القسم":"تطبيق بطاقاتك المخفية في هذا القسم";}
   }
   function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();if(typeof appViewApply==="function") appViewApply();};homeModeRender();}
+  function compactSettingsOpen(){
+    let selectedView=appView||"today";
+    const sheet=taskSheet("إعداد العرض المختصر",'<p class="task-history-empty">اختر البطاقات التي تريد إخفاءها في كل قسم. تُحفظ اختياراتك، وزر «عرض مختصر» يطبقها مباشرة لاحقًا.</p><div class="task-fields"><label class="task-field-wide">القسم<select id="compactView"></select></label></div><div class="task-history-list" id="compactCardsList"></div><button type="button" class="task-sheet-save" id="compactSave">حفظ الإعدادات</button>');
+    const viewSelect=sheet.over.querySelector("#compactView"), list=sheet.over.querySelector("#compactCardsList");
+    Object.entries(CARD_VIEW_LABELS).forEach(([view,label])=>{const option=document.createElement("option");option.value=view;option.textContent=label;viewSelect.appendChild(option);});
+    const render=()=>{
+      viewSelect.value=selectedView;
+      const hidden=compactHiddenForView(selectedView), cards=CARD_DEFS.filter(def=>cardView(def.id)===selectedView);
+      list.innerHTML=cards.length?cards.map(def=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+def.id+'"'+(hidden.has(def.id)?' checked':'')+'><span>'+def.icon+' '+def.label+' <small>إخفاؤها عند تشغيل العرض المختصر</small></span></label>').join(""):'<p class="task-history-empty">لا توجد بطاقات في هذا القسم. انقل بطاقة إليه من شاشة التخصيص أولًا.</p>';
+    };
+    viewSelect.onchange=()=>{selectedView=viewSelect.value;render();};
+    sheet.over.querySelector("#compactSave").onclick=()=>{
+      compactPrefs[selectedView]=[...list.querySelectorAll("[data-compact-card]:checked")].map(input=>input.dataset.compactCard);
+      localStorage.setItem(HOME_COMPACT_PREF_KEY,JSON.stringify(compactPrefs)); homeModeRender(); if(typeof appViewApply==="function") appViewApply(); sheet.close();
+    };
+    render();
+  }
   const APPEARANCE_PREF_KEY="h2do-appearance-v1";
   function appearanceLoad(){
     let raw={}; try{raw=JSON.parse(localStorage.getItem(APPEARANCE_PREF_KEY)||"{}")||{};}catch(e){}
@@ -12852,7 +12869,7 @@
     document.querySelectorAll("[data-card-filter]").forEach(button=>button.onclick=()=>{ customizeFilter=button.dataset.cardFilter||"all"; personalizeRenderList(); });
     document.getElementById("customizeNav").onclick=navOpenCustomizer;
     document.getElementById("customizeAppearance").onclick=appearanceOpen;
-    document.getElementById("customizeCompact").onclick=()=>{ homeCompact=!homeCompact; localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full"); homeModeRender(); if(typeof appViewApply==="function") appViewApply(); };
+    document.getElementById("customizeCompact").onclick=compactSettingsOpen;
     document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
     customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
     document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
@@ -12919,11 +12936,11 @@
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
     if(typeof homeModeRender==="function") homeModeRender();
-    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(homeCompact?(COMPACT_VIEW_CARDS[appView]||navCardsForView(appView)):navCardsForView(appView));
+    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(navCardsForView(appView).filter(id=>!homeCompact||!compactHiddenForView(appView).has(id)));
     CARD_DEFS.forEach(def=>{ const el=document.getElementById(def.id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(def.id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){ if(!NAV_DEFS.some(def=>def.view===view)) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById((homeCompact?COMPACT_VIEW_CARDS[view]:navCardsForView(view))[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
+  function appViewSet(view){ if(!NAV_DEFS.some(def=>def.view===view)) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const cards=navCardsForView(view).filter(id=>!homeCompact||!compactHiddenForView(view).has(id)); const first=document.getElementById(cards[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
   function appViewInit(){
     document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
     window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
