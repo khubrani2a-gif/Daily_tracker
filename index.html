@@ -375,6 +375,7 @@
   .customize-name{font-size:.9rem;font-weight:600;color:var(--ink)}
   .customize-name small{display:block;font-size:.65rem;font-weight:500;color:var(--muted);margin-top:.06rem}
   .customize-controls{display:flex;align-items:center;gap:.25rem}
+  .customize-section{max-width:86px;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;padding:.34rem .2rem;font:inherit;font-size:.64rem;cursor:pointer}
   .customize-move{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:.8rem}
   .customize-move:disabled{opacity:.3;cursor:default}
   .customize-toggle{position:relative;width:40px;height:23px;display:inline-block;margin-right:.25rem}
@@ -950,6 +951,9 @@
   .task-sheet-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:9px;width:34px;height:34px;cursor:pointer}
   .task-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
+  .task-fields .appearance-choice{flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer}
+  .task-fields .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
+  .appearance-preview{margin:.75rem 0 0;padding:.6rem .7rem;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:.74rem;font-weight:700}
   .task-fields input,.task-fields select,.task-history-search{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none}
   .task-fields textarea{border:1.5px solid var(--line);background:var(--chk-bg);color:var(--ink);border-radius:10px;padding:.58rem;font-family:inherit;font-size:.88rem;outline:none;resize:vertical;min-height:78px}
   .task-field-wide{grid-column:1/-1}
@@ -12728,13 +12732,17 @@
     document.body.classList.toggle("app-dense",appearancePrefs.dense);
   }
   function appearanceOpen(){
-    const sheet=taskSheet("المظهر وحجم الخط",'<div class="task-fields"><label>المظهر<select id="appearanceTheme"><option value="light"'+(theme==="light"?' selected':'')+'>نهاري</option><option value="dark"'+(theme==="dark"?' selected':'')+'>ليلي</option></select></label><label><input type="checkbox" id="appearanceLarge"'+(appearancePrefs.largeText?' checked':'')+'> خط أكبر وأسهل للقراءة</label><label><input type="checkbox" id="appearanceDense"'+(appearancePrefs.dense?' checked':'')+'> عرض مضغوط للبطاقات</label></div><p class="task-history-empty">لا يؤثر هذا على بياناتك، ويمكنك تغييره متى شئت.</p><button type="button" class="task-sheet-save" id="appearanceSave">حفظ المظهر</button>');
-    sheet.over.querySelector("#appearanceSave").onclick=()=>{
+    const sheet=taskSheet("المظهر وحجم الخط",'<div class="task-fields"><label>المظهر<select id="appearanceTheme"><option value="light"'+(theme==="light"?' selected':'')+'>نهاري</option><option value="dark"'+(theme==="dark"?' selected':'')+'>ليلي</option></select></label><label class="appearance-choice"><input type="checkbox" id="appearanceLarge"'+(appearancePrefs.largeText?' checked':'')+'><span>خط أكبر وأسهل للقراءة</span></label><label class="appearance-choice"><input type="checkbox" id="appearanceDense"'+(appearancePrefs.dense?' checked':'')+'><span>عرض مضغوط للبطاقات</span></label></div><p class="appearance-preview" id="appearancePreview"></p><p class="task-history-empty">يُطبّق التغيير مباشرة ويُحفظ تلقائيًا على هذا الجهاز.</p><button type="button" class="task-sheet-save" id="appearanceSave">تم</button>');
+    const commit=()=>{
       theme=sheet.over.querySelector("#appearanceTheme").value;
       appearancePrefs={largeText:sheet.over.querySelector("#appearanceLarge").checked,dense:sheet.over.querySelector("#appearanceDense").checked};
       localStorage.setItem(THEME_KEY,theme); localStorage.setItem(APPEARANCE_PREF_KEY,JSON.stringify(appearancePrefs));
-      applyTheme(theme); appearanceApply(); sheet.close();
+      applyTheme(theme); appearanceApply();
+      sheet.over.querySelector("#appearancePreview").textContent="تم التطبيق: "+(theme==="dark"?"ليلي":"نهاري")+" · "+(appearancePrefs.largeText?"خط كبير":"خط عادي")+" · "+(appearancePrefs.dense?"عرض مضغوط":"عرض مريح")+".";
     };
+    sheet.over.querySelectorAll("#appearanceTheme,#appearanceLarge,#appearanceDense").forEach(input=>input.onchange=commit);
+    commit();
+    sheet.over.querySelector("#appearanceSave").onclick=()=>sheet.close();
   }
   const CARD_PREF_KEY = "h2do-card-layout-v1";
   const CARD_DEFS = [
@@ -12754,7 +12762,8 @@
     {id:"notesCard",icon:"🗒️",label:"الملاحظات",view:"more"},
     {id:"ratingCard",icon:"🌟",label:"تقييم اليوم",view:"more"}
   ];
-  function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[]}; }
+  const CARD_VIEW_LABELS={today:"اليوم",iman:"إيمانيات",sport:"الصحة",expenses:"العائلة",more:"المزيد"};
+  function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[],views:{}}; }
   function personalizeLoad(){
     let raw={};
     try{ raw=JSON.parse(localStorage.getItem(CARD_PREF_KEY)||"{}"); }catch(e){}
@@ -12768,9 +12777,12 @@
       localStorage.setItem("h2do-reading-card-position-v1","1");
     }
     const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
-    return {order,hidden};
+    const views={};
+    if(raw.views&&typeof raw.views==="object") Object.entries(raw.views).forEach(([id,view])=>{ if(valid.has(id)&&CARD_VIEW_LABELS[view]) views[id]=view; });
+    return {order,hidden,views};
   }
   let cardPrefs=personalizeLoad(), customizeDragId=null, customizeFilter="all";
+  function cardView(id){ const def=CARD_DEFS.find(item=>item.id===id); return cardPrefs.views[id]||(def&&def.view)||"more"; }
   function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
   function personalizeApply(){
     const host=document.querySelector(".grid .col");
@@ -12800,19 +12812,23 @@
     document.querySelectorAll("[data-card-filter]").forEach(button=>button.classList.toggle("active",button.dataset.cardFilter===customizeFilter));
     cardPrefs.order.forEach((id,index)=>{
       const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
-      if(customizeFilter!=="all"&&def.view!==customizeFilter) return;
+      const view=cardView(id);
+      if(customizeFilter!=="all"&&view!==customizeFilter) return;
       const row=document.createElement("div");
       row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
       const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
-      const name=document.createElement("span"); name.className="customize-name"; name.innerHTML=def.icon+" "+def.label+"<small>قسم "+({today:"اليوم",iman:"إيمانيات",sport:"الصحة",expenses:"العائلة",more:"المزيد"}[def.view]||"")+"</small>";
+      const name=document.createElement("span"); name.className="customize-name"; name.innerHTML=def.icon+" "+def.label+"<small>قسم "+(CARD_VIEW_LABELS[view]||"")+"</small>";
       const controls=document.createElement("div"); controls.className="customize-controls";
+      const section=document.createElement("select"); section.className="customize-section"; section.setAttribute("aria-label","نقل بطاقة "+def.label+" إلى قسم آخر");
+      Object.entries(CARD_VIEW_LABELS).forEach(([key,label])=>{ const option=document.createElement("option"); option.value=key; option.textContent=label; option.selected=key===view; section.appendChild(option); });
+      section.onchange=()=>{ cardPrefs.views[id]=section.value; personalizeCommit(); };
       const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
       const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
       const toggle=document.createElement("label"); toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة";
       const input=document.createElement("input"); input.type="checkbox"; input.checked=!hidden.has(id); input.setAttribute("aria-label","إظهار بطاقة "+def.label);
       const track=document.createElement("i"); toggle.append(input,track);
       input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
-      controls.append(up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
+      controls.append(section,up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
       row.ondragstart=e=>{ customizeDragId=id; row.classList.add("dragging"); if(e.dataTransfer){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",id); } };
       row.ondragover=e=>{ e.preventDefault(); row.classList.add("drag-over"); if(e.dataTransfer) e.dataTransfer.dropEffect="move"; };
       row.ondragleave=()=>row.classList.remove("drag-over");
@@ -12850,11 +12866,11 @@
   };
   const NAV_PREF_KEY="h2do-bottom-nav-v1";
   const NAV_DEFS=[
-    {view:"today",icon:"☀️",label:"اليوم",locked:true},
+    {view:"today",icon:"☀️",label:"اليوم"},
     {view:"iman",icon:"📿",label:"إيمانيات"},
     {view:"sport",icon:"❤️",label:"الصحة"},
     {view:"expenses",icon:"👨‍👩‍👧",label:"العائلة"},
-    {view:"more",icon:"•••",label:"المزيد",locked:true}
+    {view:"more",icon:"•••",label:"المزيد"}
   ];
   function navDefault(){ return {order:NAV_DEFS.map(d=>d.view),hidden:[]}; }
   function navLoad(){
@@ -12873,13 +12889,13 @@
     navPrefs.order.forEach(view=>{ const link=nav.querySelector('[data-app-view="'+view+'"]'); if(link){ link.hidden=navIsHidden(view); nav.appendChild(link); } });
   }
   function navCardsForView(view){
-    const base=APP_VIEW_GROUPS[view]||APP_VIEW_GROUPS.today;
+    const base=CARD_DEFS.filter(def=>cardView(def.id)===view).map(def=>def.id);
     if(view!=="more") return base;
-    const hiddenCards=navPrefs.hidden.flatMap(hiddenView=>APP_VIEW_GROUPS[hiddenView]||[]);
+    const hiddenCards=navPrefs.hidden.flatMap(hiddenView=>CARD_DEFS.filter(def=>cardView(def.id)===hiddenView).map(def=>def.id));
     return [...new Set(base.concat(hiddenCards))];
   }
   function navCommit(){
-    if(navIsHidden(appView)){ appView="more"; localStorage.setItem(APP_VIEW_KEY,appView); }
+    if(navIsHidden(appView)){ appView=navPrefs.order.find(view=>!navIsHidden(view))||"today"; localStorage.setItem(APP_VIEW_KEY,appView); }
     navSave(); navApply(); appViewApply();
   }
   function navMove(view,delta){
@@ -12889,8 +12905,8 @@
   }
   function navOpenCustomizer(){
     const rows=navPrefs.order.map((view,index)=>{
-      const def=NAV_DEFS.find(d=>d.view===view), hidden=navIsHidden(view), lock=def.locked;
-      return '<div class="template-manager-row"><span class="template-manager-copy">'+def.icon+' '+def.label+'<small>'+(lock?'أساسي ولا يمكن إخفاؤه':hidden?'مخفي — سيظهر ضمن «المزيد»':'ظاهر في الشريط')+'</small></span><span class="template-manager-actions"><button type="button" data-nav-up="'+view+'" '+(index===0?'disabled':'')+'>↑</button><button type="button" data-nav-down="'+view+'" '+(index===navPrefs.order.length-1?'disabled':'')+'>↓</button>'+(lock?'':'<button type="button" class="hidden-toggle" data-nav-toggle="'+view+'">'+(hidden?'إظهار':'إخفاء')+'</button>')+'</span></div>';
+      const def=NAV_DEFS.find(d=>d.view===view), hidden=navIsHidden(view);
+      return '<div class="template-manager-row"><span class="template-manager-copy">'+def.icon+' '+def.label+'<small>'+(hidden?'مخفي من الشريط':'ظاهر في الشريط')+'</small></span><span class="template-manager-actions"><button type="button" data-nav-up="'+view+'" '+(index===0?'disabled':'')+'>↑</button><button type="button" data-nav-down="'+view+'" '+(index===navPrefs.order.length-1?'disabled':'')+'>↓</button><button type="button" class="hidden-toggle" data-nav-toggle="'+view+'">'+(hidden?'إظهار':'إخفاء')+'</button></span></div>';
     }).join("");
     const sheet=taskSheet("تخصيص الشريط السفلي",'<p class="task-history-empty">رتّب الأقسام أو أخفِ ما لا تحتاجه. الأقسام المخفية تبقى متاحة داخل «المزيد».</p><div class="task-history-list">'+rows+'</div><div class="customize-actions"><button type="button" id="navReset">استعادة الترتيب</button></div>');
     sheet.over.querySelectorAll("[data-nav-up]").forEach(btn=>btn.onclick=()=>{ sheet.close(); navMove(btn.dataset.navUp,-1); });
@@ -12902,10 +12918,10 @@
   function appViewApply(){
     if(typeof homeModeRender==="function") homeModeRender();
     const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(homeCompact?(COMPACT_VIEW_CARDS[appView]||navCardsForView(appView)):navCardsForView(appView));
-    Object.values(APP_VIEW_GROUPS).flat().forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(id)); });
+    CARD_DEFS.forEach(def=>{ const el=document.getElementById(def.id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(def.id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){ if(!APP_VIEW_GROUPS[view]) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById((homeCompact?COMPACT_VIEW_CARDS[view]:navCardsForView(view))[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
+  function appViewSet(view){ if(!NAV_DEFS.some(def=>def.view===view)) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const first=document.getElementById((homeCompact?COMPACT_VIEW_CARDS[view]:navCardsForView(view))[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
   function appViewInit(){
     document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
     window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
