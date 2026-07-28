@@ -13149,6 +13149,7 @@
       author: (typeof raw.author === "string" && raw.author.trim()) ? raw.author.trim().slice(0,200) : null,
       materialType: RD_MATERIAL_TYPES.indexOf(raw.materialType) !== -1 ? raw.materialType : "other",
       progressUnit, totalUnits, currentUnit, status,
+      notes: (typeof raw.notes === "string") ? raw.notes.trim().slice(0,4000) : "",
       startedAt: (typeof raw.startedAt === "number" && isFinite(raw.startedAt)) ? raw.startedAt : null,
       completedAt: (typeof raw.completedAt === "number" && isFinite(raw.completedAt)) ? raw.completedAt : null,
       createdAt: (typeof raw.createdAt === "number" && isFinite(raw.createdAt)) ? raw.createdAt : Date.now(),
@@ -13653,11 +13654,12 @@
     html += '<div class="rd-today">🕮 '+(isToday?"اليوم":currentDate)+': '+_arn(sessionsToday)+' جلسة · '+_arn(minsToday)+' دقيقة</div>';
     if(goal) html += '<div class="rd-goal">🎯 '+ (goal.mode==="minutes"? (_arn(goal.current)+" / "+_arn(goal.value)+" دقيقة") : (_arn(goal.current)+" / "+_arn(goal.value)+" "+RD_UNIT_LABELS[goal.unit])) +'</div>';
     html += '</div>';
-    html += '<div class="rd-actions"><button class="exp-primary" id="rdStartBtn">▶ ابدأ جلسة</button><button class="exp-secondary" id="rdQuickBtn">⚡ تسجيل سريع</button></div>';
+    html += '<div class="rd-actions"><button class="exp-primary" id="rdStartBtn">▶ ابدأ جلسة</button><button class="exp-secondary" id="rdQuickBtn">⚡ تسجيل سريع</button><button class="exp-secondary" id="rdNotesBtn">🗒 ملاحظات</button></div>';
     body.innerHTML = html;
     document.getElementById("rdFocusBlock").onclick = ()=> rdOpenOverlay("today");
     document.getElementById("rdStartBtn").onclick = (e)=>{ e.stopPropagation(); rdHandleStartClick(focus.id); };
     document.getElementById("rdQuickBtn").onclick = (e)=>{ e.stopPropagation(); rdOpenQuickLogForm(focus.id); };
+    document.getElementById("rdNotesBtn").onclick = (e)=>{ e.stopPropagation(); rdOpenOverlay("library"); rdOpenItemForm(focus.id); };
   }
 
   /* ==================================================================
@@ -13763,7 +13765,9 @@
     } else {
       html += '<div class="rd-actions"><button class="exp-secondary" id="rdQuickBtn2">⚡ تسجيل سريع (لهذا التاريخ)</button></div>';
     }
+    if(focus.notes) html += '<div class="exp-card-hint">🗒 '+expEsc(focus.notes.slice(0,180))+(focus.notes.length>180?'…':'')+'</div>';
     if(isToday) html += '<button class="witr-change-btn" id="rdGoalBtn">🎯 الهدف اليومي</button>';
+    html += '<button class="witr-change-btn" id="rdEditNotesBtn">🗒 الملاحظات والاقتباسات</button>';
     const goal = isToday ? rdGoalProgressToday() : null;
     if(goal) html += '<div class="rd-goal">🎯 '+ (goal.mode==="minutes"? (_arn(goal.current)+" / "+_arn(goal.value)+" دقيقة") : (_arn(goal.current)+" / "+_arn(goal.value)+" "+RD_UNIT_LABELS[goal.unit])) +' — '+_arn(goal.pct)+'٪</div>';
     const sessions = rdSessions().filter(s=> !s.deletedAt && s.itemId===focus.id && s.dateKey===currentDate)
@@ -13778,6 +13782,7 @@
     if(g("#rdStartBtn2")) g("#rdStartBtn2").onclick = ()=> rdHandleStartClick(focus.id);
     if(g("#rdQuickBtn2")) g("#rdQuickBtn2").onclick = ()=> rdOpenQuickLogForm(focus.id);
     if(g("#rdGoalBtn")) g("#rdGoalBtn").onclick = ()=> rdOpenGoalForm();
+    if(g("#rdEditNotesBtn")) g("#rdEditNotesBtn").onclick = ()=> rdOpenItemForm(focus.id);
     if(g("#rdTimerFinish")) g("#rdTimerFinish").onclick = ()=> rdOpenTimerEndForm();
     if(g("#rdTimerDiscard")) g("#rdTimerDiscard").onclick = ()=> hifzShowConfirm({title:"تجاهل الجلسة؟", body:"لن تُحتسب أي مدّة قراءة.", okText:"تجاهل", cancelText:"إلغاء", onOk:()=>{ rdDiscardTimer(); rdRenderToday(); renderReadingCard(); }});
     box.querySelectorAll("[data-rdsess-edit]").forEach(b=> b.onclick = ()=> rdOpenQuickLogForm(focus.id, b.dataset.rdsessEdit));
@@ -13926,21 +13931,24 @@
     const isFocus = rdSettings().focusItemId === it.id;
     const pos = it.progressUnit==="time" ? "" : (" · "+rdPosLine(it));
     return '<div class="exp-row" data-rditem="'+it.id+'"><div class="exp-row-main"><div class="exp-row-name">'+(isFocus?"⭐ ":"")+expEsc(it.title)+'</div>'
-      + '<div class="exp-row-sub">'+RD_MATERIAL_LABELS[it.materialType]+pos+'</div></div><button class="exp-mini" data-rdmenu="'+it.id+'">⋯</button></div>';
+      + '<div class="exp-row-sub">'+RD_MATERIAL_LABELS[it.materialType]+pos+(it.notes?' · 🗒 ملاحظات':'')+'</div></div><button class="exp-mini" data-rdmenu="'+it.id+'">⋯</button></div>';
   }
   function rdRenderLibrary(){
     const box = document.getElementById("rdViewLibrary");
-    const items = rdItems().filter(it=> !it.deletedAt);
-    let html = '<button class="exp-primary" id="rdLibAdd" style="width:100%;margin-bottom:1rem">＋ إضافة مادة</button>';
+    const items = rdItems().filter(it=> !it.deletedAt), query=(box.dataset.rdQuery||"").trim().toLowerCase();
+    const shown=query?items.filter(it=>(it.title+" "+(it.author||"")+" "+(it.notes||"")+" "+RD_MATERIAL_LABELS[it.materialType]).toLowerCase().includes(query)):items;
+    let html = '<button class="exp-primary" id="rdLibAdd" style="width:100%;margin-bottom:.7rem">＋ إضافة مادة</button><div class="exp-field"><label>ابحث في مكتبتي</label><input id="rdLibSearch" type="search" value="'+expEsc(box.dataset.rdQuery||"")+'" placeholder="عنوان، مؤلف، ملاحظة أو اقتباس"></div>';
     if(!items.length){ html += '<div class="exp-empty">ابدأ رحلتك مع مادة جديدة</div>'; box.innerHTML = html; document.getElementById("rdLibAdd").onclick = ()=> rdOpenItemForm(null); return; }
     const groups = { active:[], paused:[], queued:[], completed:[], abandoned:[] };
-    items.forEach(it=> (groups[it.status] || groups.queued).push(it));
+    shown.forEach(it=> (groups[it.status] || groups.queued).push(it));
     [["active","نشطة"],["paused","متوقفة مؤقتًا"],["queued","قائمة الانتظار"],["completed","مكتملة"],["abandoned","مهجورة"]].forEach(([key,label])=>{
       const arr = groups[key]; if(!arr.length) return;
       html += '<div class="exp-sec-head">'+label+' ('+_arn(arr.length)+')</div><div class="exp-card" style="padding:.3rem .7rem">'+arr.map(rdItemRowHtml).join("")+'</div>';
     });
+    if(!shown.length) html += '<div class="exp-empty">لا توجد مادة أو ملاحظة مطابقة للبحث.</div>';
     box.innerHTML = html;
     document.getElementById("rdLibAdd").onclick = ()=> rdOpenItemForm(null);
+    box.querySelector("#rdLibSearch").oninput = e=>{ box.dataset.rdQuery=e.target.value; rdRenderLibrary(); const next=box.querySelector("#rdLibSearch"); if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);} };
     box.querySelectorAll("[data-rditem]").forEach(r=> r.onclick = (e)=>{ if(e.target.closest("[data-rdmenu]")) return; rdOpenItemForm(r.dataset.rditem); });
     box.querySelectorAll("[data-rdmenu]").forEach(b=> b.onclick = (e)=>{ e.stopPropagation(); rdItemMenu(b, b.dataset.rdmenu); });
   }
@@ -13986,6 +13994,7 @@
       + (hasSessions ? '<div class="hint">لا يمكن تغيير وحدة التقدّم بعد وجود جلسات مسجَّلة لهذه المادة.</div>' : '')
       + '<div class="exp-grid2" id="itTotalWrap"><div class="exp-field"><label>إجمالي الوحدات (اختياري)</label><input id="itTotal" inputmode="numeric" value="'+(it&&it.totalUnits!=null?it.totalUnits:"")+'"></div>'
       + '<div class="exp-field"><label>الموضع الحالي (اختياري)</label><input id="itCurrent" inputmode="numeric" value="'+(it&&it.currentUnit!=null?it.currentUnit:"")+'"></div></div>'
+      + '<div class="exp-field"><label>ملاحظات واقتباسات (اختياري)</label><textarea id="itNotes" maxlength="4000" placeholder="فكرة مهمة، اقتباس، أو ما تريد الرجوع إليه لاحقًا…">'+expEsc(it&&it.notes||"")+'</textarea></div>'
       + '<div class="exp-err" id="itErr"></div>'
       + '<button class="exp-save" id="itSave">'+(it?"حفظ التعديل":"إضافة")+'</button>'
     );
@@ -14009,7 +14018,7 @@
           if(total != null && cur > total){ g("#itErr").textContent = "الموضع الحالي أكبر من الإجمالي."; return; }
         }
       }
-      const fields = { title, author: g("#itAuthor").value.trim()||null, materialType: g("#itType").value, progressUnit: unit, totalUnits: total, currentUnit: cur };
+      const fields = { title, author: g("#itAuthor").value.trim()||null, materialType: g("#itType").value, progressUnit: unit, totalUnits: total, currentUnit: cur, notes: g("#itNotes").value.trim() };
       let saved;
       if(it) saved = rdEditItem(it.id, fields);
       else { saved = rdAddItem(fields); if(!rdSettings().focusItemId) rdSetFocus(saved.id); }
