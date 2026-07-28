@@ -7650,8 +7650,10 @@
   /* عند التسجيل نحدّث الملخص فقط ونُبقي عناصر القائمة نفسها في الصفحة؛ إزالة
      العنصر المضغوط وإنشاؤه من جديد كانت سبب قفزة Safari إلى أعلى البطاقة. */
   function ibRefreshAfterChange(){
-    renderWorship(false);
-    renderProgress();
+    /* لا نغيّر أي محتوى فوق قائمة الإيمانيات أثناء الضغط؛ تحديث الملخصات الكبيرة
+       (اليوم/الغد/الهدف) قد يغيّر ارتفاع الصفحة فيدفع موضع القراءة على الجوال. */
+    renderWorship(false,false);
+    renderProgress(false);
   }
 
   function ibRenderItem(w, ul){
@@ -7899,7 +7901,7 @@
     sheet.over.querySelectorAll("[data-dhikr-hide]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrHide), item=get(ref);if(!item)return;dhikrSetHidden(ref.kind,ref.id,!item.hidden);renderWorship();renderProgress();sheet.close();});
     sheet.over.querySelectorAll("[data-dhikr-delete]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrDelete), item=get(ref);if(!item)return;smartAskInTemplateManager(sheet,"حذف «"+item.label+"»؟",ref.kind==="builtin"?"سيُخفى الذكر الأساسي ويمكن إظهاره لاحقًا.":"سيُحذف الذكر نهائيًا من "+item.where+".",()=>{if(ref.kind==="custom")wCustomSave(wCustom().filter(entry=>entry.id!==ref.id));else if(ref.kind==="counter")dhikrCounterCustomPresetsSave(dhikrCounterCustomPresets().filter(entry=>entry.id!==ref.id));else dhikrSetHidden(ref.kind,ref.id,true);renderWorship();renderProgress();sheet.close();});});
   }
-  function renderWorship(rebuildLists=true){
+  function renderWorship(rebuildLists=true, updateRemaining=true){
     dhikrMigrateLegacyCounterItems();
     if(rebuildLists){
       const worshipItems = wAllItemsForDate(currentDate);
@@ -7926,20 +7928,22 @@
     document.getElementById("ibRingPct").textContent = pct+"٪";
     document.getElementById("ibCountNum").textContent = done.length.toLocaleString("ar-EG")+" / "+total.toLocaleString("ar-EG");
 
-    const remainBox = document.getElementById("ibRemainBox");
-    const remaining = all.filter(w=>!state.worship[w.id]).map(ibRemainLabel).filter(Boolean);
-    if(!remaining.length){
-      remainBox.classList.add("all-done");
-      remainBox.innerHTML = '<span>✨ أتممت كل عباداتك اليوم، تقبّل الله منك</span>';
-    }else{
-      remainBox.classList.remove("all-done");
-      remainBox.innerHTML = '<span class="ib-remain-title">📋 بقي عليك</span><span class="ib-remain-chips" id="ibRemainChips"></span>';
-      const box = document.getElementById("ibRemainChips");
-      remaining.slice(0,4).forEach(t=>{
-        const c = document.createElement("span"); c.textContent = t; box.appendChild(c);
-      });
-      if(remaining.length > 4){
-        const c = document.createElement("span"); c.textContent = "+"+(remaining.length-4).toLocaleString("ar-EG"); box.appendChild(c);
+    if(updateRemaining){
+      const remainBox = document.getElementById("ibRemainBox");
+      const remaining = all.filter(w=>!state.worship[w.id]).map(ibRemainLabel).filter(Boolean);
+      if(!remaining.length){
+        remainBox.classList.add("all-done");
+        remainBox.innerHTML = '<span>✨ أتممت كل عباداتك اليوم، تقبّل الله منك</span>';
+      }else{
+        remainBox.classList.remove("all-done");
+        remainBox.innerHTML = '<span class="ib-remain-title">📋 بقي عليك</span><span class="ib-remain-chips" id="ibRemainChips"></span>';
+        const box = document.getElementById("ibRemainChips");
+        remaining.slice(0,4).forEach(t=>{
+          const c = document.createElement("span"); c.textContent = t; box.appendChild(c);
+        });
+        if(remaining.length > 4){
+          const c = document.createElement("span"); c.textContent = "+"+(remaining.length-4).toLocaleString("ar-EG"); box.appendChild(c);
+        }
       }
     }
 
@@ -8980,7 +8984,7 @@
     renderNowPanel();
   }
 
-  function renderProgress(){
+  function renderProgress(updatePageSummaries=true){
     let total = 0, done = 0;
     total += PRAYERS.length; done += state.prayers.filter(isPrayed).length;
     const ibItems = wAllItems(currentDate);
@@ -8995,10 +8999,12 @@
     const C = 163.36;
     document.getElementById("ringFg").style.strokeDashoffset = C * (1 - pct/100);
     document.getElementById("ringText").textContent = pct+"%";
-    renderTodayOverview();
-    updateStreak();
-    renderTomorrowPanel();
-    smartRenderUndo();
+    if(updatePageSummaries){
+      renderTodayOverview();
+      updateStreak();
+      renderTomorrowPanel();
+      smartRenderUndo();
+    }
   }
 
   /* ---------- أدوات يومية خفيفة: الغد، القوالب، والمشاركة ---------- */

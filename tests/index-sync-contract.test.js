@@ -128,8 +128,9 @@ test("separate dhikr counter supports presets, custom wording, and a daily targe
 });
 
 test("worship interactions update in place without scroll compensation",()=>{
-  assert.match(html,/function renderWorship\(rebuildLists=true\)/);
-  assert.match(html,/function ibRefreshAfterChange\(\)\{\s*renderWorship\(false\);\s*renderProgress\(\);\s*\}/);
+  assert.match(html,/function renderWorship\(rebuildLists=true, updateRemaining=true\)/);
+  assert.match(html,/function ibRefreshAfterChange\(\)\{[\s\S]*renderWorship\(false,false\);[\s\S]*renderProgress\(false\);[\s\S]*\}/);
+  assert.match(html,/function renderProgress\(updatePageSummaries=true\)/);
   assert.match(html,/chk\.classList\.toggle\("on",completed\)/);
   assert.doesNotMatch(html,/function ibRestoreScroll\(/);
   assert.doesNotMatch(html,/function ibScrollTop\(/);
