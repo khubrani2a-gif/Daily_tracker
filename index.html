@@ -2227,6 +2227,8 @@
       <div class="customize-list" id="customizeList"></div>
       <div class="customize-actions">
         <button type="button" id="customizeNav">تخصيص الشريط السفلي</button>
+        <button type="button" id="customizeTemplates">إدارة القوالب</button>
+        <button type="button" id="customizeActions">إدارة الاختصارات</button>
         <button type="button" id="customizeAppearance">المظهر وحجم الخط</button>
         <button type="button" id="customizeCompact">إعداد العرض المختصر</button>
         <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
@@ -12915,6 +12917,8 @@
     document.getElementById("customizeUndo").onclick=personalizeUndo;
     document.querySelectorAll("[data-card-filter]").forEach(button=>button.onclick=()=>{ customizeFilter=button.dataset.cardFilter||"all"; personalizeRenderList(); });
     document.getElementById("customizeNav").onclick=navOpenCustomizer;
+    document.getElementById("customizeTemplates").onclick=smartManageCustomTemplates;
+    document.getElementById("customizeActions").onclick=smartManageCustomActions;
     document.getElementById("customizeAppearance").onclick=appearanceOpen;
     document.getElementById("customizeCompact").onclick=compactSettingsOpen;
     document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
