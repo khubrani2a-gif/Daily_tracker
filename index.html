@@ -363,12 +363,17 @@
   .customize-head h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.15rem}
   .customize-close{border:0;background:var(--chip-bg);color:var(--muted);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:1rem}
   .customize-hint{font-size:.76rem;color:var(--muted);padding:.75rem 1.1rem 0;line-height:1.6}
+  .customize-summary{margin:.7rem 1rem 0;padding:.6rem .75rem;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-size:.73rem;font-weight:700;line-height:1.6}
+  .customize-filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.7rem 1rem 0}
+  .customize-filter{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:99px;padding:.32rem .55rem;font:inherit;font-size:.68rem;font-weight:700;cursor:pointer}
+  .customize-filter.active{background:var(--accent);border-color:var(--accent);color:#fff}
   .customize-list{overflow-y:auto;padding:.75rem 1rem;display:flex;flex-direction:column;gap:.45rem}
   .customize-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.65rem;border:1px solid var(--line);background:var(--chip-bg);border-radius:13px;padding:.55rem .65rem;transition:.15s}
   .customize-row.dragging{opacity:.4}.customize-row.drag-over{border-color:var(--accent);background:var(--accent-soft)}
   .customize-row.is-hidden .customize-name{opacity:.5;text-decoration:line-through}
   .customize-drag{font-size:1.05rem;color:var(--muted);cursor:grab;user-select:none;padding:.2rem}
   .customize-name{font-size:.9rem;font-weight:600;color:var(--ink)}
+  .customize-name small{display:block;font-size:.65rem;font-weight:500;color:var(--muted);margin-top:.06rem}
   .customize-controls{display:flex;align-items:center;gap:.25rem}
   .customize-move{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:.8rem}
   .customize-move:disabled{opacity:.3;cursor:default}
@@ -2209,6 +2214,15 @@
         <button type="button" class="customize-close" id="customizeClose" aria-label="إغلاق">✕</button>
       </div>
       <p class="customize-hint">أظهر ما تحتاجه فقط ورتّب البطاقات بالسحب أو بالأسهم. من هنا تستطيع أيضًا تخصيص الشريط والمظهر. تُحفظ اختياراتك تلقائيًا على هذا الجهاز.</p>
+      <div class="customize-summary" id="customizeSummary"></div>
+      <div class="customize-filters" id="customizeFilters" aria-label="تصفية البطاقات">
+        <button type="button" class="customize-filter active" data-card-filter="all">الكل</button>
+        <button type="button" class="customize-filter" data-card-filter="today">اليوم</button>
+        <button type="button" class="customize-filter" data-card-filter="iman">إيمانيات</button>
+        <button type="button" class="customize-filter" data-card-filter="sport">الصحة</button>
+        <button type="button" class="customize-filter" data-card-filter="expenses">العائلة</button>
+        <button type="button" class="customize-filter" data-card-filter="more">المزيد</button>
+      </div>
       <div class="customize-list" id="customizeList"></div>
       <div class="customize-actions">
         <button type="button" id="customizeNav">تخصيص الشريط السفلي</button>
@@ -12724,21 +12738,21 @@
   }
   const CARD_PREF_KEY = "h2do-card-layout-v1";
   const CARD_DEFS = [
-    {id:"prayerCard",icon:"🕌",label:"الصلاة"},
-    {id:"ibadahCard",icon:"📿",label:"العبادات والعادات"},
-    {id:"quranCard",icon:"📖",label:"القرآن"},
-    {id:"hifzCard",icon:"📗",label:"حفظ القرآن"},
-    {id:"sportCard",icon:"🏃",label:"الرياضة"},
-    {id:"healthCard",icon:"⚖️",label:"الصحة"},
-    {id:"waterCard",icon:"💧",label:"شرب الماء"},
-    {id:"expensesCard",icon:"👨‍👩‍👧",label:"العائلة"},
-    {id:"readingCard",icon:"📚",label:"القراءة"},
-    {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة"},
-    {id:"tasksCard",icon:"📝",label:"مهام اليوم"},
-    {id:"prioritiesCard",icon:"⭐",label:"الأولويات"},
-    {id:"memoryCard",icon:"📌",label:"ذكرى اليوم"},
-    {id:"notesCard",icon:"🗒️",label:"الملاحظات"},
-    {id:"ratingCard",icon:"🌟",label:"تقييم اليوم"}
+    {id:"prayerCard",icon:"🕌",label:"الصلاة",view:"iman"},
+    {id:"ibadahCard",icon:"📿",label:"العبادات والعادات",view:"iman"},
+    {id:"quranCard",icon:"📖",label:"القرآن",view:"iman"},
+    {id:"hifzCard",icon:"📗",label:"حفظ القرآن",view:"iman"},
+    {id:"sportCard",icon:"🏃",label:"الرياضة",view:"sport"},
+    {id:"healthCard",icon:"⚖️",label:"الصحة",view:"sport"},
+    {id:"waterCard",icon:"💧",label:"شرب الماء",view:"sport"},
+    {id:"expensesCard",icon:"👨‍👩‍👧",label:"العائلة",view:"expenses"},
+    {id:"readingCard",icon:"📚",label:"القراءة",view:"more"},
+    {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة",view:"more"},
+    {id:"tasksCard",icon:"📝",label:"مهام اليوم",view:"today"},
+    {id:"prioritiesCard",icon:"⭐",label:"الأولويات",view:"today"},
+    {id:"memoryCard",icon:"📌",label:"ذكرى اليوم",view:"more"},
+    {id:"notesCard",icon:"🗒️",label:"الملاحظات",view:"more"},
+    {id:"ratingCard",icon:"🌟",label:"تقييم اليوم",view:"more"}
   ];
   function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[]}; }
   function personalizeLoad(){
@@ -12756,7 +12770,7 @@
     const hidden=(Array.isArray(raw.hidden)?raw.hidden:[]).filter(id=>valid.has(id));
     return {order,hidden};
   }
-  let cardPrefs=personalizeLoad(), customizeDragId=null;
+  let cardPrefs=personalizeLoad(), customizeDragId=null, customizeFilter="all";
   function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
   function personalizeApply(){
     const host=document.querySelector(".grid .col");
@@ -12781,12 +12795,16 @@
     if(!list) return;
     list.innerHTML="";
     const hidden=new Set(cardPrefs.hidden);
+    const visibleCount=CARD_DEFS.length-hidden.size, summary=document.getElementById("customizeSummary");
+    if(summary) summary.textContent="ظاهر الآن: "+visibleCount.toLocaleString("ar-EG")+" من "+CARD_DEFS.length.toLocaleString("ar-EG")+" بطاقة · اختَر قسمًا لتسهيل الترتيب.";
+    document.querySelectorAll("[data-card-filter]").forEach(button=>button.classList.toggle("active",button.dataset.cardFilter===customizeFilter));
     cardPrefs.order.forEach((id,index)=>{
       const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
+      if(customizeFilter!=="all"&&def.view!==customizeFilter) return;
       const row=document.createElement("div");
       row.className="customize-row"+(hidden.has(id)?" is-hidden":""); row.dataset.cardId=id; row.draggable=true;
       const drag=document.createElement("span"); drag.className="customize-drag"; drag.textContent="☰"; drag.title="اسحب لإعادة الترتيب"; drag.setAttribute("aria-hidden","true");
-      const name=document.createElement("span"); name.className="customize-name"; name.textContent=def.icon+" "+def.label;
+      const name=document.createElement("span"); name.className="customize-name"; name.innerHTML=def.icon+" "+def.label+"<small>قسم "+({today:"اليوم",iman:"إيمانيات",sport:"الصحة",expenses:"العائلة",more:"المزيد"}[def.view]||"")+"</small>";
       const controls=document.createElement("div"); controls.className="customize-controls";
       const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
       const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
@@ -12813,6 +12831,7 @@
     document.getElementById("customizeDone").onclick=personalizeClose;
     document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
     document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.querySelectorAll("[data-card-filter]").forEach(button=>button.onclick=()=>{ customizeFilter=button.dataset.cardFilter||"all"; personalizeRenderList(); });
     document.getElementById("customizeNav").onclick=navOpenCustomizer;
     document.getElementById("customizeAppearance").onclick=appearanceOpen;
     document.getElementById("customizeCompact").onclick=()=>{ homeCompact=!homeCompact; localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full"); homeModeRender(); if(typeof appViewApply==="function") appViewApply(); };
