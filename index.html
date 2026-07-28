@@ -10872,10 +10872,10 @@
     const now=Date.now(); restaurants.updatedAt=now; grocery.updatedAt=now; home.updatedAt=now; d.settings.legacyBudgetPlacementV3=true; return true;
   }
   function expClearDuplicatedLegacyHomeBudgets(d){
-    if(!d||!d.settings||d.settings.legacyBudgetPlacementV4||!d.settings.legacyBudgetPlacementV3) return false;
+    if(!d||!d.settings||!d.settings.legacyBudgetPlacementV3) return false;
     const grocery=d.categories&&d.categories.find(c=>c.name==="البقالة"&&(c.budgets||[]).length), restaurants=d.categories&&d.categories.find(c=>c.name==="المطاعم والطلبات"&&(c.budgets||[]).length);
     if(!grocery||!restaurants) return false;
-    let changed=false; const now=Date.now(); (d.categories||[]).filter(c=>c.name==="احتياجات المنزل").forEach(c=>{if((c.budgets||[]).length){c.budgets=[];c.updatedAt=now;changed=true;}});
+    let changed=!d.settings.legacyBudgetPlacementV4; const now=Date.now(); (d.categories||[]).filter(c=>c.name==="احتياجات المنزل").forEach(c=>{if((c.budgets||[]).length){c.budgets=[];c.updatedAt=now;changed=true;}});
     d.settings.legacyBudgetPlacementV4=true; return changed;
   }
   function expData(){
