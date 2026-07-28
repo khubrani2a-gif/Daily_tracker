@@ -31,10 +31,12 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.ok(food.subcategories.some(s=>s.name==="خضار وفواكه"));
     assert.equal(state.transactions.find(t=>t.id==="old").subcategoryId,null);
-    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")); const home=data.categories.find(c=>c.name==="احتياجات المنزل"); home.budgets=[{from:"1970-01-01",amountMinor:30000}]; data.settings.legacyBudgetPlacementV4=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
+    assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
+    await page.evaluate(()=>{ const data=JSON.parse(localStorage.getItem("h2do-expenses")); const home=data.categories.find(c=>c.name==="احتياجات المنزل"), grocery=data.categories.find(c=>c.name==="البقالة"); home.budgets=[{from:"1970-01-01",amountMinor:30000}]; data.transactions.find(t=>t.id==="old").categoryId=grocery.id; data.settings.legacyBudgetPlacementV4=true; data.settings.legacyFoodTransactionsV5=true; localStorage.setItem("h2do-expenses",JSON.stringify(data)); });
     await page.reload(); await page.waitForTimeout(350);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
+    assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
     await page.locator("#expOpenBtn").click(); await page.locator('.exp-tab[data-view="dash"]').click(); await page.locator("#expAddBtn").click();
