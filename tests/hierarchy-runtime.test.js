@@ -17,7 +17,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 test("expense hierarchy migrates legacy data and saves predefined and custom subcategories",async()=>{
   const now=Date.now();
   const legacy={version:6,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",updatedAt:now},
-    categories:[{id:"legacy_food",name:"الأكل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:50000}],isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:1,createdAt:now,updatedAt:now,archivedAt:null}],
+    categories:[{id:"legacy_food",name:"الأكل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:50000}],isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:1,createdAt:now,updatedAt:now,archivedAt:null},{id:"legacy_home_dup",name:"مشتريات المنزل",section:"variable",budgets:[{from:"1970-01-01",amountMinor:30000}],isActive:true,sortOrder:2,createdAt:now,updatedAt:now,archivedAt:null}],
     fixedTemplates:[],instances:[],transactions:[{id:"old",amountMinor:1000,transactionDate:today(),categoryId:"legacy_food",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null}],trips:[]};
   const browser=await chromium.launch(); const ctx=await browser.newContext({viewport:{width:390,height:844}}); const page=await ctx.newPage();
   try{
@@ -28,10 +28,12 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.equal(food.name,"البقالة");
     assert.equal(food.budgets[0].amountMinor,30000);
     assert.equal(state.categories.find(c=>c.name==="المطاعم والطلبات").budgets[0].amountMinor,50000);
+    assert.ok(state.categories.filter(c=>c.name==="احتياجات المنزل").every(c=>!(c.budgets||[]).length));
     assert.ok(food.subcategories.some(s=>s.name==="خضار وفواكه"));
     assert.equal(state.transactions.find(t=>t.id==="old").subcategoryId,null);
 
-    await page.locator("#expOpenBtn").click(); await page.locator("#expAddBtn").click();
+    await page.locator('[data-app-view="expenses"]').click();
+    await page.locator("#expOpenBtn").click(); await page.locator('.exp-tab[data-view="dash"]').click(); await page.locator("#expAddBtn").click();
     await page.locator("#efAmount").fill("25"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"خضار وفواكه"}).click(); await page.locator("#efDetails").fill("تموين الأسبوع");
     await page.locator("#efSave").click(); await page.waitForTimeout(80);
@@ -46,7 +48,9 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.equal(tx.customSubcategory,"منتج موسمي"); assert.equal(state.categories.find(c=>c.id==="legacy_food").subcategories.some(s=>s.name==="منتج موسمي"),false);
 
     await page.locator("#expAddBtn").click(); await page.locator("#efAmount").fill("12"); await page.locator("#efCat").selectOption("legacy_food");
-    await page.locator("[data-subchip]").filter({hasText:"أخرى"}).click(); await page.locator("#efCustomSub").fill("قسم المخبز"); await page.locator("#efSaveCustom").check(); await page.locator("#efSave").click(); await page.waitForTimeout(80);
+    await page.locator("[data-subchip]").filter({hasText:"أخرى"}).click(); await page.locator("#efCustomSub").fill("قسم المخبز");
+    await page.locator("#efSaveCustom").evaluate(el=>{ el.checked=true; el.dispatchEvent(new Event("change",{bubbles:true})); });
+    await page.locator("#efSave").click(); await page.waitForTimeout(80);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     assert.equal(state.categories.find(c=>c.id==="legacy_food").subcategories.filter(s=>s.name==="قسم المخبز").length,1);
   } finally { await ctx.close(); await browser.close(); }

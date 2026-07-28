@@ -10766,7 +10766,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 9;   /* v9: تصحيح توزيع ميزانيات الفئات القديمة مهما كان معرّفها */
+  const EXP_SCHEMA = 10;  /* v10: تنظيف نسخة ميزانية المنزل المكررة بعد النقل */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10871,6 +10871,13 @@
     restaurants.budgets=groceryOld; grocery.budgets=homeOld; home.budgets=[];
     const now=Date.now(); restaurants.updatedAt=now; grocery.updatedAt=now; home.updatedAt=now; d.settings.legacyBudgetPlacementV3=true; return true;
   }
+  function expClearDuplicatedLegacyHomeBudgets(d){
+    if(!d||!d.settings||d.settings.legacyBudgetPlacementV4||!d.settings.legacyBudgetPlacementV3) return false;
+    const grocery=d.categories&&d.categories.find(c=>c.name==="البقالة"&&(c.budgets||[]).length), restaurants=d.categories&&d.categories.find(c=>c.name==="المطاعم والطلبات"&&(c.budgets||[]).length);
+    if(!grocery||!restaurants) return false;
+    let changed=false; const now=Date.now(); (d.categories||[]).filter(c=>c.name==="احتياجات المنزل").forEach(c=>{if((c.budgets||[]).length){c.budgets=[];c.updatedAt=now;changed=true;}});
+    d.settings.legacyBudgetPlacementV4=true; return changed;
+  }
   function expData(){
     let raw;
     try{ raw = JSON.parse(localStorage.getItem(EXP_KEY)); }catch(e){ raw = null; }
@@ -10907,6 +10914,7 @@
     const hierarchyMigrated=expEnsureCategoryHierarchy(raw);
     const legacyBudgetMoved=expMoveLegacyBudgetTimelines(raw);
     const legacyBudgetMovedByName=expMoveLegacyBudgetTimelinesByName(raw);
+    const legacyHomeDuplicatesCleared=expClearDuplicatedLegacyHomeBudgets(raw);
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
     raw.fixedTemplates.forEach(tp=>{ if(!Array.isArray(tp.suspensions)) tp.suspensions=[]; if(tp.archiveMonth===undefined) tp.archiveMonth=null; });
@@ -10985,7 +10993,7 @@
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
-    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
     else if(reconInst || normalized || activeRecon || recurringGenerated){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق/التطبيع دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
@@ -11236,9 +11244,10 @@
       const hierarchyChanged=expEnsureCategoryHierarchy(merged);
       const legacyBudgetMoved=expMoveLegacyBudgetTimelines(merged);
       const legacyBudgetMovedByName=expMoveLegacyBudgetTimelinesByName(merged);
-      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName) merged.settings.updatedAt=Date.now();
+      const legacyHomeDuplicatesCleared=expClearDuplicatedLegacyHomeBudgets(merged);
+      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName||legacyHomeDuplicatesCleared) merged.settings.updatedAt=Date.now();
       const activeChanged = expReconcileActiveTrips(merged);   /* رحلة نشطة يدويًا واحدة على الأكثر بعد الدمج (حتمي) */
-      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName;   /* هل أضاف/غيّر المحلي شيئًا؟ */
+      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared;   /* هل أضاف/غيّر المحلي شيئًا؟ */
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
