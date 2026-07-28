@@ -200,13 +200,14 @@
   .today-focus b{color:var(--accent)}
   .now-panel{margin:.2rem 0 .85rem;border:1px solid var(--accent);background:linear-gradient(135deg,var(--accent-soft),transparent);border-radius:16px;padding:.7rem}
   .now-panel-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;color:var(--accent);font-weight:800;font-size:.92rem;margin-bottom:.5rem}
+  .now-panel-head button{border:1px solid var(--line);background:var(--paper);color:var(--accent);border-radius:9px;padding:.25rem .45rem;font-family:inherit;font-weight:700;cursor:pointer}
   .now-panel-hint{font-size:.72rem;color:var(--muted);font-weight:400}
-  .now-panel-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+  .now-panel-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
   .now-panel-item{min-width:0;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-family:inherit;border-radius:11px;padding:.55rem .6rem;cursor:pointer}
   .now-panel-item:hover,.now-panel-item:focus-visible{border-color:var(--accent);outline:none}
   .now-panel-item b,.now-panel-item small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .now-panel-item b{font-size:.8rem}.now-panel-item small{color:var(--muted);font-size:.7rem;margin-top:.15rem}
-  @media(max-width:430px){.now-panel-items{grid-template-columns:1fr}}
+  @media(max-width:560px){.now-panel-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .today-customize{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:10px;width:36px;height:36px;cursor:pointer;flex-shrink:0}
   .today-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
   .today-metric{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:.65rem .75rem}
@@ -2150,7 +2151,7 @@
       <div class="today-focus" id="todayFocus" aria-live="polite"></div>
     </div>
     <section class="now-panel" id="nowPanel" aria-labelledby="nowPanelTitle">
-      <div class="now-panel-head"><span id="nowPanelTitle">⚡ لوحة الآن</span><span class="now-panel-hint">اضغط للانتقال مباشرة</span></div>
+      <div class="now-panel-head"><span id="nowPanelTitle">⚡ لوحة الآن</span><span><span class="now-panel-hint">اضغط للانتقال</span> <button type="button" id="nowPanelSettings" aria-label="تخصيص لوحة الآن">⚙️</button></span></div>
       <div class="now-panel-items" id="nowPanelItems"></div>
     </section>
     <div class="today-metrics">
@@ -8856,6 +8857,9 @@
     }
   }
 
+  const NOW_PANEL_KEY="h2do-now-panel";
+  function nowPanelLoad(){try{const raw=JSON.parse(localStorage.getItem(NOW_PANEL_KEY)||"{}");return {hidden:Array.isArray(raw.hidden)?raw.hidden.filter(x=>typeof x==="string").slice(0,12):[],custom:Array.isArray(raw.custom)?raw.custom.filter(x=>x&&typeof x.id==="string"&&typeof x.name==="string"&&typeof x.kind==="string").map(x=>({id:x.id,name:x.name.trim().slice(0,40),icon:typeof x.icon==="string"?x.icon.slice(0,12):"⚡",kind:x.kind})).filter(x=>x.name).slice(0,12):[]};}catch(e){return {hidden:[],custom:[]};}}
+  function nowPanelSave(value){localStorage.setItem(NOW_PANEL_KEY,JSON.stringify(value));renderNowPanel();}
   function renderNowPanel(){
     const host=document.getElementById("nowPanelItems"); if(!host||!state) return;
     const tasks=(state.tasks||[]).filter(taskActive).filter(task=>!itemDone(task));
@@ -8875,7 +8879,23 @@
       {id:"health",icon:"💧",title:"الماء والصحة",detail:state.water<waterGoal()?"بقي "+_arn(waterGoal()-state.water)+" أكواب":"اكتمل هدف الماء اليوم",go:()=>{appViewSet("sport");setTimeout(()=>document.getElementById("waterCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
       {id:"finance",icon:"💰",title:financeTitle,detail:financeDetail,go:()=>{expOpenOverlay();expSetView("dash");}}
     ];
-    host.textContent=""; rows.forEach(row=>{const button=document.createElement("button");button.type="button";button.className="now-panel-item";button.innerHTML="<b>"+row.icon+" "+expEsc(row.title)+"</b><small>"+expEsc(row.detail)+"</small>";button.onclick=row.go;host.appendChild(button);});
+    const settings=nowPanelLoad(); settings.custom.forEach(item=>rows.push({id:item.id,icon:item.icon||"⚡",title:item.name,detail:"اختصار خاص",go:()=>{const action={name:item.name,icon:item.icon,kind:item.kind,task:""};smartRunCustomAction(action);}}));
+    host.textContent=""; rows.filter(row=>settings.hidden.indexOf(row.id)===-1).forEach(row=>{const button=document.createElement("button");button.type="button";button.className="now-panel-item";button.innerHTML="<b>"+row.icon+" "+expEsc(row.title)+"</b><small>"+expEsc(row.detail)+"</small>";button.onclick=row.go;host.appendChild(button);});
+    const settingsBtn=document.getElementById("nowPanelSettings"); if(settingsBtn) settingsBtn.onclick=nowPanelOpenSettings;
+  }
+  function nowPanelOpenSettings(){
+    const data=nowPanelLoad(), builtin=[{id:"prayer",label:"🕌 الصلاة"},{id:"task",label:"✅ المهمة"},{id:"worship",label:"📖 الذكر والورد"},{id:"health",label:"💧 الصحة والماء"},{id:"finance",label:"💰 المالية"}], all=builtin.concat(data.custom.map(item=>({id:item.id,label:(item.icon||"⚡")+" "+item.name,custom:true})));
+    const rows=all.map(item=>'<div class="template-manager-row"><span class="template-manager-copy">'+expEsc(item.label)+'<small>'+(item.custom?"عنصر خاص":"عنصر أساسي")+'</small></span><span class="template-manager-actions"><button type="button" class="hidden-toggle" data-now-toggle="'+item.id+'">'+(data.hidden.includes(item.id)?"إظهار":"إخفاء")+'</button>'+(item.custom?'<button type="button" data-now-edit="'+item.id+'">تعديل</button><button type="button" class="danger" data-now-delete="'+item.id+'">حذف</button>':'')+'</span></div>').join("");
+    const sheet=taskSheet("تخصيص لوحة الآن",'<p class="task-history-empty">اخفِ ما لا تحتاجه، أو أضف اختصارًا لأي إجراء في التطبيق.</p><div class="task-history-list">'+rows+'</div><button type="button" class="task-sheet-save" id="nowAdd">＋ إضافة عنصر</button>');
+    sheet.over.querySelector("#nowAdd").onclick=()=>{sheet.close();nowPanelOpenCustom();};
+    sheet.over.querySelectorAll("[data-now-toggle]").forEach(button=>button.onclick=()=>{const next=nowPanelLoad(), id=button.dataset.nowToggle;next.hidden=next.hidden.includes(id)?next.hidden.filter(x=>x!==id):next.hidden.concat(id);nowPanelSave(next);sheet.close();nowPanelOpenSettings();});
+    sheet.over.querySelectorAll("[data-now-edit]").forEach(button=>button.onclick=()=>{sheet.close();nowPanelOpenCustom(button.dataset.nowEdit);});
+    sheet.over.querySelectorAll("[data-now-delete]").forEach(button=>button.onclick=()=>{const next=nowPanelLoad(), id=button.dataset.nowDelete;next.custom=next.custom.filter(item=>item.id!==id);next.hidden=next.hidden.filter(x=>x!==id);nowPanelSave(next);sheet.close();nowPanelOpenSettings();});
+  }
+  function nowPanelOpenCustom(id){
+    const data=nowPanelLoad(), current=id?data.custom.find(item=>item.id===id):null, item=current||{name:"",icon:"⚡",kind:"quickTask"}, kinds=["quickTask","expense","water","iman","dhikr","health","family","shopping","finance","share"], labels={quickTask:"إضافة مهمة",expense:"إضافة مصروف",water:"إضافة كوب ماء",iman:"فتح إيمانيات",dhikr:"فتح عداد الذكر",health:"فتح الصحة",family:"فتح العائلة",shopping:"فتح التسوق",finance:"فتح المالية",share:"مشاركة الأسبوع"};
+    const sheet=taskSheet(current?"تعديل عنصر لوحة الآن":"إضافة عنصر للوحة الآن",'<div class="task-fields"><label>اسم العنصر<input id="nowName" maxlength="40" value="'+expEsc(item.name)+'" placeholder="مثال: تسوق المنزل"></label><label>الرمز<input id="nowIcon" maxlength="12" value="'+expEsc(item.icon)+'" placeholder="🛒"></label><label class="task-field-wide">الإجراء<select id="nowKind">'+kinds.map(kind=>'<option value="'+kind+'"'+(item.kind===kind?" selected":"")+'>'+labels[kind]+'</option>').join("")+'</select></label></div><div class="exp-err" id="nowErr"></div><button type="button" class="task-sheet-save" id="nowSave">'+(current?"حفظ التعديل":"إضافة")+'</button>');
+    sheet.over.querySelector("#nowSave").onclick=()=>{const name=sheet.over.querySelector("#nowName").value.trim(), icon=sheet.over.querySelector("#nowIcon").value.trim()||smartInferIcon(name,"⚡"), kind=sheet.over.querySelector("#nowKind").value;if(!name){sheet.over.querySelector("#nowErr").textContent="اكتب اسم العنصر.";return;}const next=nowPanelLoad(), row={id:current?current.id:"now_"+newId(),name,icon,kind};if(current)next.custom=next.custom.map(item=>item.id===row.id?row:item);else next.custom.push(row);nowPanelSave(next);sheet.close();};
   }
   function renderTodayOverview(){
     if(!state || !document.getElementById("todayOverviewTitle")) return;
