@@ -10766,7 +10766,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 14;  /* v14: نقل المشتريات الاستثنائية إلى غير مخطط */
+  const EXP_SCHEMA = 15;  /* v15: استعادة ميزانية المشتريات الاستثنائية لهذا الأسبوع */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10957,6 +10957,23 @@
     d.settings.legacyExceptionalToUnplannedV8=true;
     return changed;
   }
+  /* إذا كانت الدفعة القديمة ٢٨٠٫٦٠ قد انتقلت لكن ميزانيتها ٣٠٠ ضاعت من
+     النسخة السحابية، نصحح أسبوعها وحده؛ لا نغيّر أي أسبوع أو مبلغ آخر. */
+  function expRestoreExceptionalBudgetV9(d){
+    if(!d||!d.settings||!d.settings.legacyExceptionalToUnplannedV8||!Array.isArray(d.categories)||!Array.isArray(d.transactions)) return false;
+    const target=d.categories.find(c=>c.name==="غير مخطط"&&!c.archivedAt);
+    if(!target) return false;
+    const start="2026-07-27", end="2026-08-02";
+    const batch=d.transactions.filter(t=>t&&!t.deletedAt&&t.categoryId===target.id&&t.transactionDate>=start&&t.transactionDate<=end);
+    const spent=batch.reduce((sum,t)=>sum+(t.transactionType==="refund"?-expToMinor(t.amountMinor):expToMinor(t.amountMinor)),0);
+    const active=(target.budgets||[]).filter(b=>b&&b.from<=start).sort((a,b)=>a.from<b.from?-1:1).pop();
+    if(spent!==28060||!active||expToMinor(active.amountMinor)!==20000) return false;
+    const existing=(target.budgets||[]).find(b=>b.from===start);
+    if(existing) existing.amountMinor=30000; else target.budgets.push({from:start,amountMinor:30000});
+    target.budgets.sort((a,b)=>a.from<b.from?-1:1); target.updatedAt=Date.now();
+    d.settings.legacyExceptionalBudgetV9=true;
+    return true;
+  }
   function expData(){
     let raw;
     try{ raw = JSON.parse(localStorage.getItem(EXP_KEY)); }catch(e){ raw = null; }
@@ -10998,6 +11015,7 @@
     const legacyHomeTransactionsRestored=expRestoreLegacyHomeTransactions(raw);
     const legacyHomeBatchCorrected=expCorrectLegacyHomeBatchV7(raw);
     const legacyExceptionalMoved=expMoveExceptionalToUnplannedV8(raw);
+    const legacyExceptionalBudgetRestored=expRestoreExceptionalBudgetV9(raw);
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
     raw.fixedTemplates.forEach(tp=>{ if(!Array.isArray(tp.suspensions)) tp.suspensions=[]; if(tp.archiveMonth===undefined) tp.archiveMonth=null; });
@@ -11076,7 +11094,7 @@
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
-    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved || legacyExceptionalBudgetRestored){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
     else if(reconInst || normalized || activeRecon || recurringGenerated){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق/التطبيع دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
@@ -11332,9 +11350,10 @@
       const legacyHomeTransactionsRestored=expRestoreLegacyHomeTransactions(merged);
       const legacyHomeBatchCorrected=expCorrectLegacyHomeBatchV7(merged);
       const legacyExceptionalMoved=expMoveExceptionalToUnplannedV8(merged);
-      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName||legacyHomeDuplicatesCleared||legacyFoodTransactionsMoved||legacyHomeTransactionsRestored||legacyHomeBatchCorrected||legacyExceptionalMoved) merged.settings.updatedAt=Date.now();
+      const legacyExceptionalBudgetRestored=expRestoreExceptionalBudgetV9(merged);
+      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName||legacyHomeDuplicatesCleared||legacyFoodTransactionsMoved||legacyHomeTransactionsRestored||legacyHomeBatchCorrected||legacyExceptionalMoved||legacyExceptionalBudgetRestored) merged.settings.updatedAt=Date.now();
       const activeChanged = expReconcileActiveTrips(merged);   /* رحلة نشطة يدويًا واحدة على الأكثر بعد الدمج (حتمي) */
-      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved;   /* هل أضاف/غيّر المحلي شيئًا؟ */
+      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved || legacyExceptionalBudgetRestored;   /* هل أضاف/غيّر المحلي شيئًا؟ */
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });

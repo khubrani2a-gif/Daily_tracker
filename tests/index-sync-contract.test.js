@@ -355,7 +355,7 @@ test("weekly variable expenses explain spending, budget status, and available ac
 });
 
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
-  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","expClearDuplicatedLegacyHomeBudgets","legacyBudgetPlacementV4","expMoveLegacyFoodTransactions","legacyFoodTransactionsV5","expRestoreLegacyHomeTransactions","legacyHomeTransactionsV6","expCorrectLegacyHomeBatchV7","legacyHomeBatchV7","expMoveExceptionalToUnplannedV8","legacyExceptionalToUnplannedV8","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
+  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","expClearDuplicatedLegacyHomeBudgets","legacyBudgetPlacementV4","expMoveLegacyFoodTransactions","legacyFoodTransactionsV5","expRestoreLegacyHomeTransactions","legacyHomeTransactionsV6","expCorrectLegacyHomeBatchV7","legacyHomeBatchV7","expMoveExceptionalToUnplannedV8","legacyExceptionalToUnplannedV8","expRestoreExceptionalBudgetV9","legacyExceptionalBudgetV9","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/"expdcat_"\+i/);
   assert.match(html,/expMergeSubcategories/);
   assert.match(html,/expEnsureCategoryHierarchy\(out\)/);
