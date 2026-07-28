@@ -198,6 +198,15 @@
   .today-overview-date{display:block;color:var(--muted);font-size:.72rem;font-weight:400;margin-top:.1rem}
   .today-focus{max-width:52%;font-size:.8rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:.45rem .7rem;line-height:1.5}
   .today-focus b{color:var(--accent)}
+  .now-panel{margin:.2rem 0 .85rem;border:1px solid var(--accent);background:linear-gradient(135deg,var(--accent-soft),transparent);border-radius:16px;padding:.7rem}
+  .now-panel-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;color:var(--accent);font-weight:800;font-size:.92rem;margin-bottom:.5rem}
+  .now-panel-hint{font-size:.72rem;color:var(--muted);font-weight:400}
+  .now-panel-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+  .now-panel-item{min-width:0;text-align:right;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-family:inherit;border-radius:11px;padding:.55rem .6rem;cursor:pointer}
+  .now-panel-item:hover,.now-panel-item:focus-visible{border-color:var(--accent);outline:none}
+  .now-panel-item b,.now-panel-item small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now-panel-item b{font-size:.8rem}.now-panel-item small{color:var(--muted);font-size:.7rem;margin-top:.15rem}
+  @media(max-width:430px){.now-panel-items{grid-template-columns:1fr}}
   .today-customize{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:10px;width:36px;height:36px;cursor:pointer;flex-shrink:0}
   .today-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
   .today-metric{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:.65rem .75rem}
@@ -2140,6 +2149,10 @@
       <button type="button" class="today-mode" id="homeModeBtn" aria-pressed="false">عرض مختصر</button>
       <div class="today-focus" id="todayFocus" aria-live="polite"></div>
     </div>
+    <section class="now-panel" id="nowPanel" aria-labelledby="nowPanelTitle">
+      <div class="now-panel-head"><span id="nowPanelTitle">⚡ لوحة الآن</span><span class="now-panel-hint">اضغط للانتقال مباشرة</span></div>
+      <div class="now-panel-items" id="nowPanelItems"></div>
+    </section>
     <div class="today-metrics">
       <div class="today-metric">
         <div class="today-metric-top"><span>🕌 الصلوات</span><b id="todayPrayerValue">٠ / ٦</b></div>
@@ -8843,6 +8856,27 @@
     }
   }
 
+  function renderNowPanel(){
+    const host=document.getElementById("nowPanelItems"); if(!host||!state) return;
+    const tasks=(state.tasks||[]).filter(taskActive).filter(task=>!itemDone(task));
+    const priorities=(state.priorities||[]).filter(itemFilled).filter(item=>!itemDone(item));
+    const prayerIndex=state.prayers.findIndex(value=>!isPrayed(value));
+    const prayerName=prayerIndex>=0?PRAYERS[prayerIndex]:"اكتملت الصلوات";
+    const prayerTime=prayerIndex>=0?getTime(PRAYER_KEYS[prayerIndex]):null;
+    const q=qLoad(), qRemain=Math.max(0,q.target-Math.max(0,q.page-q.startPage));
+    const counter=state.dhikrCounter||null;
+    const planned=priorities.concat(tasks).sort((a,b)=>(a.dueTime||"99:99").localeCompare(b.dueTime||"99:99"))[0];
+    let financeTitle="المالية", financeDetail="افتح ملخص دورة الراتب";
+    try{ if(expState&&typeof expSalaryCycleStatus==="function"){ const cycle=expSalaryCycleStatus(todayStr()); if(cycle.salary>0){financeTitle="المتبقي من الراتب";financeDetail=expMoney(cycle.remaining)+" · "+_arn(cycle.days)+" أيام";} } }catch(e){}
+    const rows=[
+      {id:"prayer",icon:"🕌",title:"الصلاة: "+prayerName,detail:prayerTime?"موعدها "+fmt12(prayerTime):"سجّل الصلاة التالية",go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById("prayerCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"task",icon:"✅",title:planned?itemText(planned):"لا توجد مهمة معلّقة",detail:planned?(planned.dueTime?"موعدها "+planned.dueTime:"أقرب أولوية لديك"):"أضف مهمة أو أولوية",go:()=>{appViewSet("today");setTimeout(()=>document.getElementById("tasksCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"worship",icon:counter?"📿":"📖",title:counter?counter.text:"ورد القرآن",detail:counter?("العداد: "+_arn(counter.count||0)+" / "+_arn(counter.target||0)):(qRemain?"بقي "+_arn(qRemain)+" صفحات":"اكتمل ورد اليوم"),go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById(counter?"ibadahCard":"quranCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"health",icon:"💧",title:"الماء والصحة",detail:state.water<waterGoal()?"بقي "+_arn(waterGoal()-state.water)+" أكواب":"اكتمل هدف الماء اليوم",go:()=>{appViewSet("sport");setTimeout(()=>document.getElementById("waterCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"finance",icon:"💰",title:financeTitle,detail:financeDetail,go:()=>{expOpenOverlay();expSetView("dash");}}
+    ];
+    host.textContent=""; rows.forEach(row=>{const button=document.createElement("button");button.type="button";button.className="now-panel-item";button.innerHTML="<b>"+row.icon+" "+expEsc(row.title)+"</b><small>"+expEsc(row.detail)+"</small>";button.onclick=row.go;host.appendChild(button);});
+  }
   function renderTodayOverview(){
     if(!state || !document.getElementById("todayOverviewTitle")) return;
     const ar = n=>Number(n||0).toLocaleString("ar-EG");
@@ -8884,6 +8918,7 @@
     const remaining=state.prayers.filter(v=>!isPrayed(v)).length+tasks.filter(t=>!itemDone(t)).length+priorities.filter(p=>!itemDone(p)).length+(qRead<q.target?1:0)+(state.water<waterGoal()?1:0);
     document.getElementById("todayRemaining").textContent="المتبقي اليوم: "+ar(remaining)+" عناصر";
     renderWeeklyGoalBanner();
+    renderNowPanel();
   }
 
   function renderProgress(){
