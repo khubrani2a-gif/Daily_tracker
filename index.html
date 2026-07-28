@@ -7940,8 +7940,10 @@
     save(); renderWorship();
   };
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
-  dhikrCountButton.onpointerdown=event=>{if(event.pointerType==="touch")event.preventDefault();};
-  dhikrCountButton.onclick=event=>{event.preventDefault();dhikrCount();dhikrCountButton.blur();};
+  let dhikrLastTouchAt=0;
+  dhikrCountButton.addEventListener("touchend",event=>{event.preventDefault();event.stopPropagation();dhikrLastTouchAt=Date.now();dhikrCount();dhikrCountButton.blur();},{passive:false});
+  dhikrCountButton.onpointerdown=event=>{if(event.pointerType==="touch"){event.preventDefault();event.stopPropagation();}};
+  dhikrCountButton.onclick=event=>{event.preventDefault();event.stopPropagation();if(Date.now()-dhikrLastTouchAt>700)dhikrCount();dhikrCountButton.blur();};
   dhikrCountButton.ondblclick=event=>event.preventDefault();
   document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
