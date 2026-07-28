@@ -79,12 +79,16 @@ test("mobile scroll containers clear the fixed navigation and iPhone safe area",
   assert.match(html,/env\(safe-area-inset-bottom,\s*0px\)/);
   assert.match(html,/\.exp-form\{[\s\S]*?padding-bottom:var\(--mobile-scroll-clearance\);[\s\S]*?scroll-padding-bottom:var\(--mobile-scroll-clearance\)/);
   assert.match(html,/body\{[\s\S]*?padding-bottom:var\(--mobile-scroll-clearance\);[\s\S]*?scroll-padding-bottom:var\(--mobile-scroll-clearance\)/);
+  assert.match(html,/\.page\{padding-bottom:var\(--mobile-scroll-clearance\);scroll-padding-bottom:var\(--mobile-scroll-clearance\)}/);
+  assert.match(html,/bottom:calc\(\.65rem \+ env\(safe-area-inset-bottom, 0px\)\)/);
 });
 
 test("today overview and responsive quick navigation remain wired",()=>{
   ["todayOverviewTitle","todayPrayerValue","todayTaskValue","todayQuranValue","todayWaterValue","todayFocus","weeklyGoalBanner","weeklyGoalText","weeklyGoalDone","tomorrowItems","quickTaskBtn","quickExpenseBtn","quickWaterBtn","quickActionsCatalogBtn","quickCustomActionBtn","quickManageActionsBtn","quickCustomActions","quickActionFeedback","shareWeekBtn","quickTemplateUndoBtn","quickTemplateStatus","quickTemplateFeedback","quickCustomTemplateBtn","quickManageTemplatesBtn","quickCustomTemplateList"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
   });
+  assert.match(html,/const changed=appView!==view;/);
+  assert.match(html,/if\(!changed\) return;/);
   assert.match(html,/<div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">/);
   ["today","iman","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
   assert.match(html,/const APP_VIEW_GROUPS=/);

@@ -80,7 +80,7 @@
     --mobile-nav-height:5.5rem;
     --mobile-content-gap:1.25rem;
     --mobile-scroll-clearance:calc(
-      var(--mobile-nav-height) + var(--mobile-content-gap) + env(safe-area-inset-bottom, 0px)
+      var(--mobile-nav-height) + var(--mobile-content-gap) + .75rem + env(safe-area-inset-bottom, 0px)
     );
   }
   html.dark{
@@ -269,10 +269,11 @@
       padding-bottom:var(--mobile-scroll-clearance);
       scroll-padding-bottom:var(--mobile-scroll-clearance);
     }
+    .page{padding-bottom:var(--mobile-scroll-clearance);scroll-padding-bottom:var(--mobile-scroll-clearance)}
     .today-overview-head{display:grid;grid-template-columns:1fr auto}.today-focus{grid-column:1/-1;max-width:none;margin-top:.55rem}.today-customize{grid-column:2;grid-row:1}
     .today-metrics{grid-template-columns:1fr 1fr}
     .weekly-goal-banner{grid-template-columns:auto 1fr}.weekly-goal-action{grid-column:1/-1;width:100%}.weekly-goal-steps{grid-column:1/-1;flex-direction:column}.weekly-goal-step{width:100%}
-    .quick-nav{position:fixed;top:auto;right:.65rem;left:.65rem;bottom:.65rem;width:auto;max-width:none;margin:0;justify-content:space-around;border-radius:18px;z-index:900;padding:.4rem .25rem}
+    .quick-nav{position:fixed;top:auto;right:.65rem;left:.65rem;bottom:calc(.65rem + env(safe-area-inset-bottom, 0px));width:auto;max-width:none;margin:0;justify-content:space-around;border-radius:18px;z-index:900;padding:.4rem .25rem}
     .quick-nav a,.quick-nav button{display:flex;flex-direction:column;align-items:center;gap:.08rem;font-size:.64rem;padding:.35rem .32rem}
     .quick-nav a span,.quick-nav button span{font-size:1.05rem}
     .today-priority-chip{max-width:150px}.today-remaining{width:100%;margin:0}
@@ -13192,7 +13193,17 @@
     CARD_DEFS.forEach(def=>{ const el=document.getElementById(def.id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(def.id)); });
     document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){ if(!NAV_DEFS.some(def=>def.view===view)) return; appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply(); const cards=navCardsForView(view).filter(id=>!homeCompact||!compactHiddenForView(view).has(id)); const first=document.getElementById(cards[0])||document.querySelector(".today-overview");window.scrollTo({top:first.offsetTop-8,behavior:"smooth"}); }
+  function appViewSet(view){
+    if(!NAV_DEFS.some(def=>def.view===view)) return;
+    const changed=appView!==view;
+    appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply();
+    /* الضغط على القسم المفتوح لا يعيد المستخدم إلى أول بطاقة فيه؛ مهم عندما يكون
+       الشريط الثابت قريبًا من محتوى قابل للضغط في أسفل الشاشة. */
+    if(!changed) return;
+    const cards=navCardsForView(view).filter(id=>!homeCompact||!compactHiddenForView(view).has(id));
+    const first=document.getElementById(cards[0])||document.querySelector(".today-overview");
+    window.scrollTo({top:first.offsetTop-8,behavior:"smooth"});
+  }
   function appViewInit(){
     document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
     window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
