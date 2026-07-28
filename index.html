@@ -10766,7 +10766,7 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 13;  /* v13: تصحيح دفعة المنزل القديمة التي اختلطت بالمطاعم */
+  const EXP_SCHEMA = 14;  /* v14: نقل المشتريات الاستثنائية إلى غير مخطط */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
   const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
@@ -10934,6 +10934,29 @@
     d.settings.legacyHomeBatchV7=true;
     return true;
   }
+  /* المشتريات الاستثنائية القديمة أصبحت «غير مخطط»: ننقل الميزانية والمعاملات
+     والمراجع معًا، ونترك الفئة المصدر فارغة ومخفية كي لا نفقد أي سجل تاريخي. */
+  function expMoveExceptionalToUnplannedV8(d){
+    if(!d||!d.settings||!Array.isArray(d.categories)) return false;
+    const target=d.categories.find(c=>c.name==="غير مخطط"&&!c.archivedAt);
+    const sources=d.categories.filter(c=>c.id!==(target&&target.id)&&(c.name==="مشتريات غير متكررة"||c.name==="المشتريات الاستثنائية"));
+    if(!target||!sources.length) return false;
+    const sourceIds=new Set(sources.map(c=>c.id)), now=Date.now();
+    let changed=!d.settings.legacyExceptionalToUnplannedV8;
+    const byDate=new Map((target.budgets||[]).map(b=>[b.from,b]));
+    sources.forEach(source=>{
+      (source.budgets||[]).forEach(b=>{if(b&&b.from){byDate.set(b.from,b);changed=true;}});
+      if((source.budgets||[]).length){source.budgets=[];source.updatedAt=now;changed=true;}
+      if(source.showInWeeklyBudget!==false){source.showInWeeklyBudget=false;source.updatedAt=now;changed=true;}
+    });
+    target.budgets=[...byDate.values()].sort((a,b)=>a.from<b.from?-1:1);
+    (d.transactions||[]).forEach(t=>{if(t&&!t.deletedAt&&sourceIds.has(t.categoryId)){t.categoryId=target.id;t.updatedAt=now;changed=true;}});
+    (d.recurringTransactions||[]).forEach(r=>{if(r&&!r.deletedAt&&sourceIds.has(r.categoryId)){r.categoryId=target.id;r.updatedAt=now;changed=true;}});
+    (d.trips||[]).forEach(tr=>(tr.allocations||[]).forEach(a=>{if(sourceIds.has(a.categoryId)){a.categoryId=target.id;tr.updatedAt=now;changed=true;}}));
+    if(changed) target.updatedAt=now;
+    d.settings.legacyExceptionalToUnplannedV8=true;
+    return changed;
+  }
   function expData(){
     let raw;
     try{ raw = JSON.parse(localStorage.getItem(EXP_KEY)); }catch(e){ raw = null; }
@@ -10974,6 +10997,7 @@
     const legacyFoodTransactionsMoved=expMoveLegacyFoodTransactions(raw);
     const legacyHomeTransactionsRestored=expRestoreLegacyHomeTransactions(raw);
     const legacyHomeBatchCorrected=expCorrectLegacyHomeBatchV7(raw);
+    const legacyExceptionalMoved=expMoveExceptionalToUnplannedV8(raw);
     raw.trips.forEach(tr=>{ tr.allocations = objArr(tr.allocations); if(tr.archivedAt===undefined) tr.archivedAt=null; if(tr.isManuallyActivated===undefined) tr.isManuallyActivated=false; if(tr.deletedAt===undefined) tr.deletedAt=null; });
     /* الالتزامات: سجلّ تعليق شهري (توافقي) يفصل حالة الواجهة الحالية عن قابلية التطبيق التاريخية */
     raw.fixedTemplates.forEach(tp=>{ if(!Array.isArray(tp.suspensions)) tp.suspensions=[]; if(tp.archiveMonth===undefined) tp.archiveMonth=null; });
@@ -11052,7 +11076,7 @@
     const oldVersion = raw.version || 1;
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
-    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
     else if(reconInst || normalized || activeRecon || recurringGenerated){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق/التطبيع دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
@@ -11307,9 +11331,10 @@
       const legacyFoodTransactionsMoved=expMoveLegacyFoodTransactions(merged);
       const legacyHomeTransactionsRestored=expRestoreLegacyHomeTransactions(merged);
       const legacyHomeBatchCorrected=expCorrectLegacyHomeBatchV7(merged);
-      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName||legacyHomeDuplicatesCleared||legacyFoodTransactionsMoved||legacyHomeTransactionsRestored||legacyHomeBatchCorrected) merged.settings.updatedAt=Date.now();
+      const legacyExceptionalMoved=expMoveExceptionalToUnplannedV8(merged);
+      if(hierarchyChanged||legacyBudgetMoved||legacyBudgetMovedByName||legacyHomeDuplicatesCleared||legacyFoodTransactionsMoved||legacyHomeTransactionsRestored||legacyHomeBatchCorrected||legacyExceptionalMoved) merged.settings.updatedAt=Date.now();
       const activeChanged = expReconcileActiveTrips(merged);   /* رحلة نشطة يدويًا واحدة على الأكثر بعد الدمج (حتمي) */
-      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected;   /* هل أضاف/غيّر المحلي شيئًا؟ */
+      const contributed = (expSig(merged) !== expSig(remote)) || activeChanged || hierarchyChanged || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved;   /* هل أضاف/غيّر المحلي شيئًا؟ */
       expState = merged;                                       /* عيّن أولًا لأن إعادة حساب المثيلات تقرأ expState.transactions */
       /* المثيلات ذاكرة مشتقّة: أعِد حساب المدفوع/الحالة من المعاملات المدموجة (مصدر الحقيقة) مع الحفاظ على updatedAt للتقارب */
       (merged.instances||[]).forEach(inst=>{ const u=inst.updatedAt; expRecalcInstance(inst); inst.updatedAt=u; });
