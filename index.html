@@ -367,13 +367,12 @@
   .customize-section{max-width:86px;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;padding:.34rem .2rem;font:inherit;font-size:.64rem;cursor:pointer}
   .customize-move{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:.8rem}
   .customize-move:disabled{opacity:.3;cursor:default}
-  .customize-toggle{position:relative;width:40px;height:23px;display:inline-block;margin-right:.25rem}
-  .customize-toggle input{position:absolute;opacity:0;pointer-events:none}
+  .customize-toggle{position:relative;width:40px;height:23px;display:inline-block;margin-right:.25rem;border:0;padding:0;background:none;cursor:pointer}
   .customize-toggle i{position:absolute;inset:0;border-radius:99px;background:var(--line);cursor:pointer;transition:.18s}
   .customize-toggle i::after{content:"";position:absolute;width:17px;height:17px;right:3px;top:3px;border-radius:50%;background:var(--paper);box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.18s}
-  .customize-toggle input:checked+i{background:var(--accent)}
-  .customize-toggle input:checked+i::after{transform:translateX(-17px)}
-  .customize-toggle input:focus-visible+i{outline:2px solid var(--accent-2);outline-offset:2px}
+  .customize-toggle[aria-pressed="true"] i{background:var(--accent)}
+  .customize-toggle[aria-pressed="true"] i::after{transform:translateX(-17px)}
+  .customize-toggle:focus-visible i{outline:2px solid var(--accent-2);outline-offset:2px}
   .customize-actions{display:flex;gap:.5rem;flex-wrap:wrap;padding:.85rem 1rem 1rem;border-top:1px solid var(--line)}
   .customize-actions button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:11px;padding:.6rem;font-family:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
   .customize-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -12861,10 +12860,9 @@
       section.onchange=()=>{ cardPrefs.views[id]=section.value; personalizeCommit(); };
       const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
       const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
-      const toggle=document.createElement("label"); toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة";
-      const input=document.createElement("input"); input.type="checkbox"; input.checked=!hidden.has(id); input.setAttribute("aria-label","إظهار بطاقة "+def.label);
-      const track=document.createElement("i"); toggle.append(input,track);
-      input.onchange=()=>{ cardPrefs.hidden=input.checked?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
+      const toggle=document.createElement("button"); toggle.type="button"; toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة"; toggle.setAttribute("aria-label",(hidden.has(id)?"إظهار":"إخفاء")+" بطاقة "+def.label); toggle.setAttribute("aria-pressed",hidden.has(id)?"false":"true");
+      const track=document.createElement("i"); toggle.append(track);
+      toggle.onclick=()=>{ cardPrefs.hidden=hidden.has(id)?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
       controls.append(section,up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
       const clearDrag=()=>list.querySelectorAll(".dragging,.drag-over").forEach(item=>item.classList.remove("dragging","drag-over"));
       const startPointerDrag=e=>{
