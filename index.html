@@ -2529,6 +2529,11 @@
 
     <!-- ===== Column 3: memory + notes + rating ===== -->
     <div class="col">
+      <div class="card" id="activityCard">
+        <h2><span class="ico">🕓</span> سجل النشاط</h2>
+        <div class="hint" id="activitySummary">ما أنجزته اليوم من كل الأقسام</div>
+        <button type="button" class="exp-secondary" id="activityOpenBtn" style="width:100%;margin-top:.7rem">عرض سجل اليوم</button>
+      </div>
       <div class="card" id="memoryCard">
         <h2><span class="ico">📌</span> ذكرى اليوم</h2>
         <textarea class="plain" id="memory" rows="3" placeholder="لحظة جميلة، فائدة، موقف لا تريد نسيانه..."></textarea>
@@ -9984,6 +9989,24 @@
     el.value = state[key] || "";
     el.oninput = ()=>{ state[key] = el.value; save(); };
   }
+  function activityEntriesForDay(dateStr){
+    const rows=[], prayers=(state.prayers||[]).map((value,index)=>isPrayed(value)?PRAYERS[index]:null).filter(Boolean); if(prayers.length)rows.push({icon:"🕌",title:"الصلاة",detail:prayers.join(" · ")});
+    const worship=(typeof wAllItems==="function"?wAllItems(dateStr):[]).filter(item=>!!state.worship[item.id]).map(item=>item.label); if(worship.length)rows.push({icon:"📿",title:"العبادات",detail:worship.join(" · ")});
+    const doneTasks=(state.tasks||[]).filter(taskActive).filter(itemDone).map(itemText), donePriorities=(state.priorities||[]).filter(itemFilled).filter(itemDone).map(itemText); if(doneTasks.length||donePriorities.length)rows.push({icon:"✅",title:"المهام والأولويات",detail:donePriorities.concat(doneTasks).join(" · ")});
+    if((state.water||0)>0)rows.push({icon:"💧",title:"الماء",detail:_arn(state.water)+" أكواب"});
+    if(state.sport&&state.sport.mins>0)rows.push({icon:"🏃",title:"النشاط",detail:_arn(state.sport.mins)+" دقيقة"});
+    try{const sessions=typeof rdSessions==="function"?rdSessions().filter(session=>!session.deletedAt&&session.dateKey===dateStr):[];if(sessions.length)rows.push({icon:"📚",title:"القراءة والعلم",detail:_arn(sessions.length)+" جلسات · "+_arn(Math.round(sessions.reduce((sum,session)=>sum+(session.durationSeconds||0),0)/60))+" دقيقة"});}catch(e){}
+    try{const txs=typeof expActiveTx==="function"?expActiveTx().filter(tx=>tx.transactionDate===dateStr&&tx.transactionType!=="transfer"):[];if(txs.length)rows.push({icon:"💰",title:"المالية",detail:_arn(txs.length)+" معاملات · "+expMoney(expNet(txs))});}catch(e){}
+    return rows;
+  }
+  function renderActivityCard(){
+    const summary=document.getElementById("activitySummary"), button=document.getElementById("activityOpenBtn");if(!summary||!button)return;const rows=activityEntriesForDay(currentDate);summary.textContent=rows.length?rows.slice(0,2).map(row=>row.icon+" "+row.detail).join(" · "):"لا يوجد نشاط مسجل لهذا اليوم بعد.";button.textContent="عرض سجل "+(currentDate===todayStr()?"اليوم":"هذا التاريخ");button.onclick=()=>activityOpen(currentDate);
+  }
+  function activityOpen(dateStr){
+    const rows=activityEntriesForDay(dateStr), label=new Date(dateStr+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"}), list=rows.length?rows.map(row=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+row.icon+" "+expEsc(row.title)+'</div><div class="t-sub">'+expEsc(row.detail)+'</div></div></div>').join(""):'<div class="exp-empty">لا يوجد إنجاز مسجل في هذا اليوم بعد.</div>';
+    const sheet=taskSheet("🕓 سجل النشاط",'<div class="exp-rep-nav"><button type="button" id="activityPrev">›</button><div class="exp-rep-label">'+label+'</div><button type="button" id="activityNext">‹</button></div><div class="task-history-list">'+list+'</div>');
+    const shift=delta=>{const day=new Date(dateStr+"T12:00:00");day.setDate(day.getDate()+delta);const next=fmtDate(day);if(next>todayStr())return;sheet.close();goto(next);activityOpen(next);};sheet.over.querySelector("#activityPrev").onclick=()=>shift(-1);sheet.over.querySelector("#activityNext").onclick=()=>shift(1);
+  }
 
   function renderAll(){
     /* ترحيل معرّفات + تنظيف روابط مكسورة مرّة واحدة لأي حالة وصلت (تحميل قديم/مزامنة) ثم حفظها لتثبيتها */
@@ -10000,6 +10023,7 @@
     safeRun("bindMemory", ()=> bindTextarea("memory","memory"));
     safeRun("bindNotes", ()=> bindTextarea("notes","notes"));
     safeRun("renderStars", renderStars);
+    safeRun("renderActivity", renderActivityCard);
     safeRun("renderProgress", renderProgress);
     safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
     safeRun("renderReadingCard", ()=>{ if(typeof renderReadingCard === "function") renderReadingCard(); });
@@ -12936,6 +12960,7 @@
     {id:"waterCard",icon:"💧",label:"شرب الماء",view:"sport"},
     {id:"expensesCard",icon:"👨‍👩‍👧",label:"العائلة",view:"expenses"},
     {id:"readingCard",icon:"📚",label:"القراءة",view:"more"},
+    {id:"activityCard",icon:"🕓",label:"سجل النشاط",view:"more"},
     {id:"intentionCard",icon:"🤍",label:"النية والأفعال الحسنة",view:"more"},
     {id:"tasksCard",icon:"📝",label:"مهام اليوم",view:"today"},
     {id:"prioritiesCard",icon:"⭐",label:"الأولويات",view:"today"},
@@ -13065,10 +13090,10 @@
   /* ---------- تنقل الجوال بخمس وجهات ---------- */
   const APP_VIEW_KEY="h2do-mobile-view";
   const APP_VIEW_GROUPS={
-    today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","intentionCard","memoryCard","notesCard","ratingCard"]
+    today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard","memoryCard","notesCard","ratingCard"]
   };
   const COMPACT_VIEW_CARDS={
-    today:["prayerCard","tasksCard","waterCard"], iman:["prayerCard","ibadahCard"], sport:["sportCard","waterCard"], expenses:["expensesCard"], more:["readingCard","intentionCard"]
+    today:["prayerCard","tasksCard","waterCard"], iman:["prayerCard","ibadahCard"], sport:["sportCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard"]
   };
   const NAV_PREF_KEY="h2do-bottom-nav-v1";
   const NAV_DEFS=[
