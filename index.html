@@ -2161,7 +2161,7 @@
       <button type="button" class="weekly-goal-action" id="weeklyGoalDone" aria-pressed="false">تحديد كمكتمل</button>
       <div class="weekly-goal-steps" id="weeklyGoalSteps" aria-label="خطوات هدف الأسبوع"></div>
     </div>
-    <div class="smart-actions" aria-label="اختصارات سريعة">
+    <div class="smart-actions" id="smartActions" aria-label="اختصارات سريعة">
       <button type="button" id="quickTaskBtn">＋ مهمة</button>
       <button type="button" id="quickExpenseBtn">＋ مصروف</button>
       <button type="button" id="quickWaterBtn">💧 كوب ماء</button>
@@ -2184,7 +2184,7 @@
       <p class="quick-template-status" id="quickTemplateStatus">اختر قالبًا لإضافته إلى مهام اليوم.</p>
       <p class="quick-template-feedback" id="quickTemplateFeedback" role="status" aria-live="polite"></p>
     </div>
-    <section class="tomorrow-panel" aria-labelledby="tomorrowTitle">
+    <section class="tomorrow-panel" id="tomorrowPanel" aria-labelledby="tomorrowTitle">
       <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
       <div class="tomorrow-items" id="tomorrowItems" aria-live="polite"></div>
       <p id="tomorrowHint"></p>
@@ -12699,9 +12699,14 @@
   /* ---------- تخصيص بطاقات الصفحة ---------- */
   const HOME_MODE_KEY="h2do-home-mode-v1";
   const HOME_COMPACT_PREF_KEY="h2do-home-compact-v2";
+  const COMPACT_SHARED_ITEMS=[
+    {id:"quickActions",label:"⚡ الاختصارات السريعة",targets:["smartActions","quickActionFeedback"]},
+    {id:"templates",label:"✨ القوالب",targets:["quickTemplateBar"]},
+    {id:"tomorrow",label:"🗓️ لوحة الغد",targets:["tomorrowPanel"]}
+  ];
   function compactPrefsLoad(){
     let raw={}; try{raw=JSON.parse(localStorage.getItem(HOME_COMPACT_PREF_KEY)||"{}")||{};}catch(e){}
-    const valid=new Set(["today","iman","sport","expenses","more"]), out={};
+    const valid=new Set(["today","iman","sport","expenses","more","shared"]), out={};
     Object.entries(raw).forEach(([view,ids])=>{ if(valid.has(view)&&Array.isArray(ids)) out[view]=[...new Set(ids.filter(id=>typeof id==="string"))]; });
     return out;
   }
@@ -12710,32 +12715,37 @@
   function compactApplyCards(view){
     const hidden=compactHiddenForView(view);
     CARD_DEFS.forEach(def=>{ const card=document.getElementById(def.id); if(card) card.classList.toggle("compact-hidden",homeCompact&&cardView(def.id)===view&&hidden.has(def.id)); });
+    const sharedHidden=compactHiddenForView("shared");
+    COMPACT_SHARED_ITEMS.forEach(item=>item.targets.forEach(id=>document.getElementById(id)?.classList.toggle("compact-hidden",homeCompact&&sharedHidden.has(item.id))));
   }
   let homeCompact=localStorage.getItem(HOME_MODE_KEY)==="compact";
   function homeModeRender(){
     const view=typeof appView==="undefined"?"today":appView, compact=homeCompact, button=document.getElementById("homeModeBtn"), status=document.getElementById("homeModeStatus");
-    const hiddenCount=compactHiddenForView(view).size;
+    const hiddenCount=compactHiddenForView(view).size+compactHiddenForView("shared").size;
     document.body.dataset.appView=view;
     document.body.classList.toggle("home-compact",compact);
     document.body.classList.toggle("home-compact-today",compact&&view==="today");
     compactApplyCards(view);
-    if(status) status.textContent=compact?(hiddenCount?"العرض المختصر نشط: أُخفيت "+hiddenCount.toLocaleString("ar-EG")+" بطاقة من هذا القسم حسب اختيارك.":"العرض المختصر نشط، ولم تحدد بطاقات لإخفائها في هذا القسم بعد."):"";
+    if(status) status.textContent=compact?(hiddenCount?"العرض المختصر نشط: أُخفيت "+hiddenCount.toLocaleString("ar-EG")+" عناصر حسب اختيارك.":"العرض المختصر نشط، ولم تحدد عناصر لإخفائها في هذا القسم بعد."):"";
     if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار كل بطاقات هذا القسم":"تطبيق بطاقاتك المخفية في هذا القسم";}
   }
   function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();if(typeof appViewApply==="function") appViewApply();};homeModeRender();}
   function compactSettingsOpen(){
     let selectedView=appView||"today";
-    const sheet=taskSheet("إعداد العرض المختصر",'<p class="task-history-empty">اختر البطاقات التي تريد إخفاءها في كل قسم. تُحفظ اختياراتك، وزر «عرض مختصر» يطبقها مباشرة لاحقًا.</p><div class="task-fields"><label class="task-field-wide">القسم<select id="compactView"></select></label></div><div class="task-history-list" id="compactCardsList"></div><button type="button" class="task-sheet-save" id="compactSave">حفظ الإعدادات</button>');
+    const sheet=taskSheet("إعداد العرض المختصر",'<p class="task-history-empty">اختر البطاقات أو العناصر المشتركة التي تريد إخفاءها. تُحفظ اختياراتك، وزر «عرض مختصر» يطبقها مباشرة لاحقًا.</p><div class="task-fields"><label class="task-field-wide">القسم<select id="compactView"></select></label></div><div class="task-history-list" id="compactCardsList"></div><button type="button" class="task-sheet-save" id="compactSave">حفظ الإعدادات</button>');
     const viewSelect=sheet.over.querySelector("#compactView"), list=sheet.over.querySelector("#compactCardsList");
     Object.entries(CARD_VIEW_LABELS).forEach(([view,label])=>{const option=document.createElement("option");option.value=view;option.textContent=label;viewSelect.appendChild(option);});
+    const sharedOption=document.createElement("option"); sharedOption.value="shared"; sharedOption.textContent="عناصر مشتركة"; viewSelect.appendChild(sharedOption);
     const render=()=>{
       viewSelect.value=selectedView;
-      const hidden=compactHiddenForView(selectedView), cards=CARD_DEFS.filter(def=>cardView(def.id)===selectedView);
-      list.innerHTML=cards.length?cards.map(def=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+def.id+'"'+(hidden.has(def.id)?' checked':'')+'><span>'+def.icon+' '+def.label+' <small>إخفاؤها عند تشغيل العرض المختصر</small></span></label>').join(""):'<p class="task-history-empty">لا توجد بطاقات في هذا القسم. انقل بطاقة إليه من شاشة التخصيص أولًا.</p>';
+      const hidden=compactHiddenForView(selectedView);
+      if(selectedView==="shared") list.innerHTML=COMPACT_SHARED_ITEMS.map(item=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+item.id+'"'+(hidden.has(item.id)?' checked':'')+'><span>'+item.label+' <small>إخفاؤها في جميع الأقسام عند تشغيل العرض المختصر</small></span></label>').join("");
+      else { const cards=CARD_DEFS.filter(def=>cardView(def.id)===selectedView); list.innerHTML=cards.length?cards.map(def=>'<label class="appearance-choice"><input type="checkbox" data-compact-card="'+def.id+'"'+(hidden.has(def.id)?' checked':'')+'><span>'+def.icon+' '+def.label+' <small>إخفاؤها عند تشغيل العرض المختصر</small></span></label>').join(""):'<p class="task-history-empty">لا توجد بطاقات في هذا القسم. انقل بطاقة إليه من شاشة التخصيص أولًا.</p>'; }
     };
-    viewSelect.onchange=()=>{selectedView=viewSelect.value;render();};
+    const saveCurrent=()=>{ compactPrefs[selectedView]=[...list.querySelectorAll("[data-compact-card]:checked")].map(input=>input.dataset.compactCard); };
+    viewSelect.onchange=()=>{saveCurrent(); selectedView=viewSelect.value;render();};
     sheet.over.querySelector("#compactSave").onclick=()=>{
-      compactPrefs[selectedView]=[...list.querySelectorAll("[data-compact-card]:checked")].map(input=>input.dataset.compactCard);
+      saveCurrent();
       localStorage.setItem(HOME_COMPACT_PREF_KEY,JSON.stringify(compactPrefs)); homeModeRender(); if(typeof appViewApply==="function") appViewApply(); sheet.close();
     };
     render();
