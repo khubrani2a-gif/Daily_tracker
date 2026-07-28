@@ -2230,6 +2230,7 @@
         <button type="button" id="customizeAppearance">المظهر وحجم الخط</button>
         <button type="button" id="customizeCompact">إعداد العرض المختصر</button>
         <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
+        <button type="button" id="customizeUndo" disabled>↶ تراجع</button>
         <button type="button" id="customizeShowAll">إظهار الكل</button>
         <button type="button" id="customizeReset">الترتيب الافتراضي</button>
         <button type="button" class="primary" id="customizeDone">تم</button>
@@ -12823,9 +12824,15 @@
     if(raw.views&&typeof raw.views==="object") Object.entries(raw.views).forEach(([id,view])=>{ if(valid.has(id)&&CARD_VIEW_LABELS[view]) views[id]=view; });
     return {order,hidden,views};
   }
-  let cardPrefs=personalizeLoad(), customizeDragId=null, customizeFilter="all";
+  let cardPrefs=personalizeLoad(), customizeDragId=null, customizeFilter="all", personalizeUndoSnapshot=null;
   function cardView(id){ const def=CARD_DEFS.find(item=>item.id===id); return cardPrefs.views[id]||(def&&def.view)||"more"; }
   function personalizeSave(){ localStorage.setItem(CARD_PREF_KEY,JSON.stringify(cardPrefs)); }
+  function personalizeRemember(){ personalizeUndoSnapshot=JSON.stringify(cardPrefs); }
+  function personalizeUndo(){
+    if(!personalizeUndoSnapshot) return;
+    const current=JSON.stringify(cardPrefs), snapshot=personalizeUndoSnapshot;
+    try{ localStorage.setItem(CARD_PREF_KEY,snapshot); cardPrefs=personalizeLoad(); personalizeUndoSnapshot=current; personalizeCommit(); }catch(e){}
+  }
   function personalizeApply(){
     const host=document.querySelector(".grid .col");
     if(!host) return;
@@ -12837,10 +12844,12 @@
   function personalizeMove(id,delta){
     const from=cardPrefs.order.indexOf(id), to=from+delta;
     if(from<0||to<0||to>=cardPrefs.order.length) return;
+    personalizeRemember();
     cardPrefs.order.splice(from,1); cardPrefs.order.splice(to,0,id); personalizeCommit();
   }
   function personalizeDrop(source,target){
     if(!source||source===target||!cardPrefs.order.includes(source)||!cardPrefs.order.includes(target)) return;
+    personalizeRemember();
     const next=cardPrefs.order.filter(id=>id!==source), at=next.indexOf(target);
     next.splice(at,0,source); cardPrefs.order=next; personalizeCommit();
   }
@@ -12851,6 +12860,7 @@
     const hidden=new Set(cardPrefs.hidden);
     const visibleCount=CARD_DEFS.length-hidden.size, summary=document.getElementById("customizeSummary");
     if(summary) summary.textContent="ظاهر الآن: "+visibleCount.toLocaleString("ar-EG")+" من "+CARD_DEFS.length.toLocaleString("ar-EG")+" بطاقة · اختَر قسمًا لتسهيل الترتيب.";
+    const undoButton=document.getElementById("customizeUndo"); if(undoButton) undoButton.disabled=!personalizeUndoSnapshot;
     document.querySelectorAll("[data-card-filter]").forEach(button=>button.classList.toggle("active",button.dataset.cardFilter===customizeFilter));
     cardPrefs.order.forEach((id,index)=>{
       const def=CARD_DEFS.find(d=>d.id===id); if(!def) return;
@@ -12863,12 +12873,12 @@
       const controls=document.createElement("div"); controls.className="customize-controls";
       const section=document.createElement("select"); section.className="customize-section"; section.setAttribute("aria-label","نقل بطاقة "+def.label+" إلى قسم آخر");
       Object.entries(CARD_VIEW_LABELS).forEach(([key,label])=>{ const option=document.createElement("option"); option.value=key; option.textContent=label; option.selected=key===view; section.appendChild(option); });
-      section.onchange=()=>{ cardPrefs.views[id]=section.value; personalizeCommit(); };
+      section.onchange=()=>{ personalizeRemember(); cardPrefs.views[id]=section.value; personalizeCommit(); };
       const up=document.createElement("button"); up.type="button"; up.className="customize-move"; up.textContent="↑"; up.disabled=index===0; up.setAttribute("aria-label","نقل "+def.label+" للأعلى"); up.onclick=()=>personalizeMove(id,-1);
       const down=document.createElement("button"); down.type="button"; down.className="customize-move"; down.textContent="↓"; down.disabled=index===cardPrefs.order.length-1; down.setAttribute("aria-label","نقل "+def.label+" للأسفل"); down.onclick=()=>personalizeMove(id,1);
       const toggle=document.createElement("button"); toggle.type="button"; toggle.className="customize-toggle"; toggle.title=hidden.has(id)?"إظهار البطاقة":"إخفاء البطاقة"; toggle.setAttribute("aria-label",(hidden.has(id)?"إظهار":"إخفاء")+" بطاقة "+def.label); toggle.setAttribute("aria-pressed",hidden.has(id)?"false":"true");
       const track=document.createElement("i"); toggle.append(track);
-      toggle.onclick=()=>{ cardPrefs.hidden=hidden.has(id)?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
+      toggle.onclick=()=>{ personalizeRemember(); cardPrefs.hidden=hidden.has(id)?cardPrefs.hidden.filter(x=>x!==id):[...new Set(cardPrefs.hidden.concat(id))]; personalizeCommit(); };
       controls.append(section,up,down,toggle); row.append(drag,name,controls); list.appendChild(row);
       const clearDrag=()=>list.querySelectorAll(".dragging,.drag-over").forEach(item=>item.classList.remove("dragging","drag-over"));
       const startPointerDrag=e=>{
@@ -12900,8 +12910,9 @@
     document.getElementById("customizeBtn").onclick=personalizeOpen;
     document.getElementById("customizeClose").onclick=personalizeClose;
     document.getElementById("customizeDone").onclick=personalizeClose;
-    document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
-    document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.getElementById("customizeShowAll").onclick=()=>{ personalizeRemember(); cardPrefs.hidden=[]; personalizeCommit(); };
+    document.getElementById("customizeReset").onclick=()=>{ personalizeRemember(); cardPrefs=personalizeDefault(); personalizeCommit(); };
+    document.getElementById("customizeUndo").onclick=personalizeUndo;
     document.querySelectorAll("[data-card-filter]").forEach(button=>button.onclick=()=>{ customizeFilter=button.dataset.cardFilter||"all"; personalizeRenderList(); });
     document.getElementById("customizeNav").onclick=navOpenCustomizer;
     document.getElementById("customizeAppearance").onclick=appearanceOpen;
