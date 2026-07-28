@@ -122,6 +122,10 @@
     line-height:1.5;
     transition:background-color .3s, color .3s;
   }
+  body.app-large-text{font-size:18px}
+  body.app-dense .grid{gap:.75rem}
+  body.app-dense .col{gap:.8rem}
+  body.app-dense .card{padding:.8rem .9rem}
   .page{max-width:1120px;margin:0 auto}
 
   /* ===== Header ===== */
@@ -2204,10 +2208,12 @@
         <h2 id="customizeTitle">⚙️ تخصيص بطاقاتك</h2>
         <button type="button" class="customize-close" id="customizeClose" aria-label="إغلاق">✕</button>
       </div>
-      <p class="customize-hint">أظهر ما تحتاجه فقط، ورتّب البطاقات بالسحب أو بالأسهم. تُحفظ اختياراتك تلقائيًا على هذا الجهاز.</p>
+      <p class="customize-hint">أظهر ما تحتاجه فقط ورتّب البطاقات بالسحب أو بالأسهم. من هنا تستطيع أيضًا تخصيص الشريط والمظهر. تُحفظ اختياراتك تلقائيًا على هذا الجهاز.</p>
       <div class="customize-list" id="customizeList"></div>
       <div class="customize-actions">
         <button type="button" id="customizeNav">تخصيص الشريط السفلي</button>
+        <button type="button" id="customizeAppearance">المظهر وحجم الخط</button>
+        <button type="button" id="customizeCompact">العرض المختصر</button>
         <button type="button" id="customizeOnboard">إعداد الوحدات والأهداف</button>
         <button type="button" id="customizeShowAll">إظهار الكل</button>
         <button type="button" id="customizeReset">الترتيب الافتراضي</button>
@@ -12697,6 +12703,25 @@
     if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار جميع بطاقات هذا القسم":"إظهار البطاقات الأساسية فقط";}
   }
   function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();if(typeof appViewApply==="function") appViewApply();};homeModeRender();}
+  const APPEARANCE_PREF_KEY="h2do-appearance-v1";
+  function appearanceLoad(){
+    let raw={}; try{raw=JSON.parse(localStorage.getItem(APPEARANCE_PREF_KEY)||"{}")||{};}catch(e){}
+    return {largeText:raw.largeText===true,dense:raw.dense===true};
+  }
+  let appearancePrefs=appearanceLoad();
+  function appearanceApply(){
+    document.body.classList.toggle("app-large-text",appearancePrefs.largeText);
+    document.body.classList.toggle("app-dense",appearancePrefs.dense);
+  }
+  function appearanceOpen(){
+    const sheet=taskSheet("المظهر وحجم الخط",'<div class="task-fields"><label>المظهر<select id="appearanceTheme"><option value="light"'+(theme==="light"?' selected':'')+'>نهاري</option><option value="dark"'+(theme==="dark"?' selected':'')+'>ليلي</option></select></label><label><input type="checkbox" id="appearanceLarge"'+(appearancePrefs.largeText?' checked':'')+'> خط أكبر وأسهل للقراءة</label><label><input type="checkbox" id="appearanceDense"'+(appearancePrefs.dense?' checked':'')+'> عرض مضغوط للبطاقات</label></div><p class="task-history-empty">لا يؤثر هذا على بياناتك، ويمكنك تغييره متى شئت.</p><button type="button" class="task-sheet-save" id="appearanceSave">حفظ المظهر</button>');
+    sheet.over.querySelector("#appearanceSave").onclick=()=>{
+      theme=sheet.over.querySelector("#appearanceTheme").value;
+      appearancePrefs={largeText:sheet.over.querySelector("#appearanceLarge").checked,dense:sheet.over.querySelector("#appearanceDense").checked};
+      localStorage.setItem(THEME_KEY,theme); localStorage.setItem(APPEARANCE_PREF_KEY,JSON.stringify(appearancePrefs));
+      applyTheme(theme); appearanceApply(); sheet.close();
+    };
+  }
   const CARD_PREF_KEY = "h2do-card-layout-v1";
   const CARD_DEFS = [
     {id:"prayerCard",icon:"🕌",label:"الصلاة"},
@@ -12782,12 +12807,15 @@
   function personalizeClose(){ customizeOverlay.hidden=true; document.body.style.overflow=""; document.getElementById("customizeBtn").focus(); }
   function personalizeInit(){
     personalizeApply();
+    appearanceApply();
     document.getElementById("customizeBtn").onclick=personalizeOpen;
     document.getElementById("customizeClose").onclick=personalizeClose;
     document.getElementById("customizeDone").onclick=personalizeClose;
     document.getElementById("customizeShowAll").onclick=()=>{ cardPrefs.hidden=[]; personalizeCommit(); };
     document.getElementById("customizeReset").onclick=()=>{ cardPrefs=personalizeDefault(); personalizeCommit(); };
     document.getElementById("customizeNav").onclick=navOpenCustomizer;
+    document.getElementById("customizeAppearance").onclick=appearanceOpen;
+    document.getElementById("customizeCompact").onclick=()=>{ homeCompact=!homeCompact; localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full"); homeModeRender(); if(typeof appViewApply==="function") appViewApply(); };
     document.getElementById("customizeOnboard").onclick=()=>{ personalizeClose(); onboardOpen(false); };
     customizeOverlay.onclick=e=>{ if(e.target===customizeOverlay) personalizeClose(); };
     document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!customizeOverlay.hidden) personalizeClose(); });
