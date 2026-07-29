@@ -12225,13 +12225,13 @@
   }
   function familyRenderLaunch(){
     const box=document.getElementById("familyLaunchSummary"); if(!box) return;
-    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), savings=(expState&&expState.savingsGoals||[]).filter(goal=>!goal.archivedAt&&!goal.completedAt).length, next=familyUpcomingEvent();
-    box.innerHTML=[
-      {label:"قائمة التسوق",val:_arn(shopping.length)+" عناصر"},
-      {label:"مهام المنزل",val:_arn(tasks.length)+" مهام"},
-      {label:"أهداف عائلية",val:_arn(savings)+" أهداف"},
-      {label:"الموعد القادم",val:next?next.title:"لا يوجد"}
-    ].map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("");
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks().filter(task=>task.category==="منزل"), next=familyUpcomingEvent(), members=familyMembers(), cycle=expSalaryCycleStatus(todayStr()), fixed=(expState.fixedTemplates||[]).filter(row=>!row.archivedAt).length;
+    box.innerHTML='<div class="exp-card" style="grid-column:1/-1"><h3>👨‍👩‍👧 إدارة العائلة</h3><p class="exp-card-hint">'+_arn(members.length)+' أعضاء · '+_arn(tasks.length)+' مهام منزلية · '+_arn(shopping.length)+' مشتريات'+(next?' · '+expEsc(next.title):'')+'</p><button type="button" class="exp-secondary" id="familyLaunchManage" style="margin-top:.5rem">فتح إدارة العائلة</button></div>'
+      +'<div class="exp-card" style="grid-column:1/-1"><h3>💰 مالية العائلة</h3><p class="exp-card-hint">'+(cycle.salary>0?'المتبقي '+expMoney(cycle.remaining)+' · '+_arn(fixed)+' التزامات ثابتة':'حدّد مبلغ الراتب لعرض المتبقي والحد اليومي.')+'</p><button type="button" class="exp-secondary" id="familyLaunchFinance" style="margin-top:.5rem">فتح مالية العائلة</button></div>';
+    const financeSummary=document.getElementById("expLaunchSummary"); if(financeSummary) financeSummary.hidden=true;
+    box.querySelector("#familyLaunchManage").onclick=()=>{expOpenOverlay();expSetView("familyManage");};
+    box.querySelector("#familyLaunchFinance").onclick=()=>{expOpenOverlay();expSetView("dash");};
+    const shopButton=document.getElementById("familyQuickShop"), manageButton=document.getElementById("expOpenBtn");if(shopButton)shopButton.hidden=true;if(manageButton){manageButton.textContent="فتح العائلة";manageButton.onclick=()=>{expOpenOverlay();expSetView("family");};}
   }
   function familyRenderOverview(){
     const box=document.getElementById("familyOverviewBody"); if(!box) return;
