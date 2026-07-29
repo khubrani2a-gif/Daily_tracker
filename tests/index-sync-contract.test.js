@@ -354,6 +354,39 @@ test("weekly variable expenses explain spending, budget status, and available ac
   assert.match(html,/تعديل الميزانية الأسبوعية/);
 });
 
+test("daily route connects capture, focused execution, and day closing to existing tasks",()=>{
+  ["dailyRoute","dailyRouteTask","dailyRouteStart","dailyRouteDone","dailyRouteDefer","dailyRoutePlan","dailyRouteReplan","dailyRouteUndo","dailyRouteSimple","dailyRouteInbox","dailyRouteFamily","dailyRouteWeekly","dailyRoutePatterns","dailyRouteArchive","dailyRouteSettings","dailyRouteClose"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["dailyRouteSettingsLoad","dailyRouteSettingsSave","dailyRouteOpenSettings","dailyRouteCandidates","dailyRoutePlanIds","dailyRouteHabit","dailyRouteReason","dailyRouteEssentials","dailyRouteRender","dailyRouteOpenPlan","dailyRouteOpenReplan","dailyRouteMoveToTomorrow","dailyRouteUndoReplan","dailyRouteToggleSimple","dailyRouteOpenWeeklyReview","dailyRoutePatterns","dailyRouteOpenPatterns","dailyRouteOpenArchive","dailyRouteStateForDate","dailyRouteOpenFamilyAppointment","dailyRouteOpenInbox","dailyRouteOpenFocus","dailyRouteOpenClose"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/المؤقت لا يُكمل المهمة تلقائيًا/);
+  assert.match(html,/حفظ وإغلاق اليوم/);
+  assert.match(html,/storageKey\(tomorrow\)/);
+  assert.match(html,/اختر ٣ أولويات كحد أقصى/);
+  assert.match(html,/انقل غير المختار إلى الغد/);
+  assert.match(html,/تشغيل الوضع المبسط/);
+  assert.match(html,/renderStatsPeriod\("week"\)/);
+  assert.match(html,/خطوة إيمانية خفيفة/);
+  assert.match(html,/قراءة للسبعة أيام الأخيرة فقط/);
+  assert.match(html,/حفظ الموعد والتجهيزات/);
+  assert.match(html,/آخر ٣٠ يومًا محفوظًا/);
+  assert.match(html,/اقتراحات مسار اليوم/);
+  assert.match(html,/لأنك اخترتها ضمن أهم ٣ أولويات اليوم/);
+  assert.match(html,/اليوم مزدحم/);
+  assert.match(html,/الخطوة الحالية:/);
+  assert.match(html,/مصروف فعلي/);
+  assert.match(html,/الحد الأدنى:/);
+  assert.match(html,/dailyRouteRender\(\);/);
+  ["decisionCenter","decisionRulesBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["decisionRulesLoad","decisionItems","renderDecisionCenter","decisionRulesOpen","dataAutoBackup"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  assert.match(html,/أولوية ثابتة: موعد قريب يحتاج تجهيزًا، ثم مشكلة متكررة، ثم إشارة مالية/);
+  assert.match(html,/return out\.slice\(0,3\)/);
+  assert.match(html,/DATA_MAX_BACKUPS=7/);
+  assert.match(html,/record\.reason==="نسخة تلقائية يومية"/);
+  assert.match(html,/option value="appointment"/);
+  assert.match(html,/option value="review"/);
+  assert.match(html,/taskOpenMeta\(task/);
+  assert.match(html,/activityOpen\(row\.date\)/);
+});
+
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
   ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","expClearDuplicatedLegacyHomeBudgets","legacyBudgetPlacementV4","expMoveLegacyFoodTransactions","legacyFoodTransactionsV5","expRestoreLegacyHomeTransactions","legacyHomeTransactionsV6","expCorrectLegacyHomeBatchV7","legacyHomeBatchV7","expMoveExceptionalToUnplannedV8","legacyExceptionalToUnplannedV8","expRestoreExceptionalBudgetV9","legacyExceptionalBudgetV9","expMarkHistoricalUnificationV10","legacyHistoryUnifiedV10","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/"expdcat_"\+i/);
