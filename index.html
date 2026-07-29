@@ -11200,7 +11200,7 @@
     let changed=!d.settings.legacyFoodTransactionsV5, now=Date.now(), moved=0;
     d.transactions.forEach(t=>{
       const created=Number(t&&t.createdAt)||Number(t&&t.updatedAt)||0;
-      if(t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&legacyFoodIds.has(t.categoryId)&&created&&created<=cutoff){
+      if(t&&!t.categoryPinnedAt&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&legacyFoodIds.has(t.categoryId)&&created&&created<=cutoff){
         t.categoryId=restaurants.id; t.updatedAt=now; changed=true; moved++;
       }
     });
@@ -11227,7 +11227,7 @@
     const restaurants=d.categories.find(c=>c.name==="المطاعم والطلبات"&&(c.budgets||[]).length);
     const home=d.categories.find(c=>c.name==="احتياجات المنزل"&&c.id!==restaurants?.id);
     if(!restaurants||!home) return false;
-    const candidates=d.transactions.filter(t=>t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id);
+    const candidates=d.transactions.filter(t=>t&&!t.categoryPinnedAt&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id);
     const movedStamp=Number(d.settings.legacyFoodTransactionsMovedAtV5)||candidates.reduce((max,t)=>Math.max(max,Number(t.updatedAt)||0),0);
     if(!movedStamp) return false;
     let changed=!d.settings.legacyHomeTransactionsV6, now=Date.now();
@@ -11247,7 +11247,7 @@
     const restaurants=d.categories.find(c=>c.name==="المطاعم والطلبات"&&(c.budgets||[]).length);
     const home=d.categories.find(c=>c.name==="احتياجات المنزل"&&c.id!==restaurants?.id);
     if(!restaurants||!home) return false;
-    const batch=d.transactions.filter(t=>t&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id&&t.transactionDate==="2026-07-27");
+    const batch=d.transactions.filter(t=>t&&!t.categoryPinnedAt&&!t.deletedAt&&!t.fixedExpenseInstanceId&&t.sourceType!=="fixed"&&t.categoryId===restaurants.id&&t.transactionDate==="2026-07-27");
     const total=batch.reduce((sum,t)=>sum+(t.transactionType==="refund"?-expToMinor(t.amountMinor):expToMinor(t.amountMinor)),0);
     if(batch.length!==3||total!==33558) return false;
     const now=Date.now(); batch.forEach(t=>{t.categoryId=home.id;t.updatedAt=now;});
@@ -11270,7 +11270,7 @@
       if(source.showInWeeklyBudget!==false){source.showInWeeklyBudget=false;source.updatedAt=now;changed=true;}
     });
     target.budgets=[...byDate.values()].sort((a,b)=>a.from<b.from?-1:1);
-    (d.transactions||[]).forEach(t=>{if(t&&!t.deletedAt&&sourceIds.has(t.categoryId)){t.categoryId=target.id;t.updatedAt=now;changed=true;}});
+    (d.transactions||[]).forEach(t=>{if(t&&!t.categoryPinnedAt&&!t.deletedAt&&sourceIds.has(t.categoryId)){t.categoryId=target.id;t.updatedAt=now;changed=true;}});
     (d.recurringTransactions||[]).forEach(r=>{if(r&&!r.deletedAt&&sourceIds.has(r.categoryId)){r.categoryId=target.id;r.updatedAt=now;changed=true;}});
     (d.trips||[]).forEach(tr=>(tr.allocations||[]).forEach(a=>{if(sourceIds.has(a.categoryId)){a.categoryId=target.id;tr.updatedAt=now;changed=true;}}));
     if(changed) target.updatedAt=now;
@@ -11368,6 +11368,7 @@
       if(t.subcategoryId===undefined) t.subcategoryId = null;
       if(t.customSubcategory===undefined) t.customSubcategory = null;
       if(t.subcategory===undefined) t.subcategory = null; /* الحقل القديم يبقى للعرض والسجل */
+      if(t.categoryPinnedAt===undefined) t.categoryPinnedAt = null; /* ختم إسناد الفئة يدويًا: يمنع أي ترحيل تلقائي من تجاوز اختيار المستخدم */
     });
     raw.savingsGoals.forEach(g=>{ if(g.deletedAt===undefined) g.deletedAt=null; if(g.isActive===undefined) g.isActive=true; });
     raw.recurringTransactions.forEach(r=>{ if(r.deletedAt===undefined) r.deletedAt=null; if(r.isActive===undefined) r.isActive=true; });
@@ -12623,7 +12624,7 @@
     const options=destinations.map(c=>'<option value="'+c.id+'">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</option>').join("");
     const list=txs.map(t=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+expEsc(t.subcategory||t.description||"مصروف")+'</div><div class="t-sub">'+expArDate(t.transactionDate)+' · '+expMoney(t.amountMinor)+'</div></div><select class="exp-move-select" data-var-move="'+t.id+'"><option value="">ابقَ في '+expEsc(source.name)+'</option>'+options+'</select></div>').join("");
     expOpenForm('<div class="exp-form-head"><h3>نقل مصروفات — '+expEsc(source.name)+'</h3><button data-close>✕</button></div><div class="exp-card-hint">اختر الفئة الجديدة لكل مصروف في أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'. لا يتغير المبلغ أو التاريخ.</div>'+list+'<button class="exp-save" id="expMoveSave">حفظ النقل</button>');
-    expFormBox.querySelector("#expMoveSave").onclick=()=>{ let changed=0; expFormBox.querySelectorAll("[data-var-move]").forEach(s=>{if(s.value){const t=expState.transactions.find(x=>x.id===s.dataset.varMove);if(t){t.categoryId=s.value;t.updatedAt=Date.now();changed++;}}}); if(!changed){expCloseForm();return;} expSave(expState);expCloseForm();expRefresh();};
+    expFormBox.querySelector("#expMoveSave").onclick=()=>{ let changed=0; expFormBox.querySelectorAll("[data-var-move]").forEach(s=>{if(s.value){const t=expState.transactions.find(x=>x.id===s.dataset.varMove);if(t){const now=Date.now();t.categoryId=s.value;t.categoryPinnedAt=now;/* إسناد يدوي صريح: لا يجوز لأي ترحيل تلقائي تجاوزه */t.updatedAt=now;changed++;}}}); if(!changed){expCloseForm();return;} expSave(expState);expCloseForm();expRefresh();};
   }
   function expOpenSubcategoryManager(catId){
     const c=expCatById(catId); if(!c)return;
@@ -12785,7 +12786,7 @@
       const fxRate=g("#efFxRate")? parseFloat(String(g("#efFxRate").value).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace("٫",".").replace(/[^\d.]/g,"")) : NaN;
       const hasFx = !isNaN(fxAmt) && fxAmt>0 && g("#efFxCur") && g("#efFxCur").value;
       expSaving=true; g("#efSave").disabled=true;
-      const payload={ amountMinor:amt, transactionDate:date, categoryId:catId, transactionType:type, tripId:tripId,
+      const payload={ amountMinor:amt, transactionDate:date, categoryId:catId, categoryPinnedAt:Date.now(), /* الفئة مُختارة يدويًا في النموذج */ transactionType:type, tripId:tripId,
         countAgainstWeeklyBudget: g("#efCount")? g("#efCount").checked : (tripId? !!(expTripById(tripId)||{}).includeInWeeklyBudgets : true),
         subcategoryId:selectedSubId||null, customSubcategory:selectedSub&&selectedSub.name==="أخرى"?customSub:null,
         subcategory:selectedSub?(selectedSub.name==="أخرى"?customSub:selectedSub.name):null, paymentMethod:(g("#efPay")&&g("#efPay").value)||null,
