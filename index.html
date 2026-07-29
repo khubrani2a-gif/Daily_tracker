@@ -9169,24 +9169,36 @@
   }
   /* ---------- قواعد الاقتراح ومركز القرارات: اقتراحات فقط، بلا تنفيذ صامت ---------- */
   const DECISION_RULES_KEY="h2do-decision-rules-v1";
-  function decisionRulesLoad(){try{const x=JSON.parse(localStorage.getItem(DECISION_RULES_KEY)||"{}");return {deferred:x.deferred!==false,unplanned:x.unplanned!==false,family:x.family!==false};}catch(e){return {deferred:true,unplanned:true,family:true};}}
+  function decisionRulesLoad(){
+    try{
+      const x=JSON.parse(localStorage.getItem(DECISION_RULES_KEY)||"{}"), limit=Math.round(Number(x.deferredLimit));
+      return {deferred:x.deferred!==false,deferredLimit:limit>=2&&limit<=9?limit:3,unplanned:x.unplanned!==false,family:x.family!==false,morningReading:x.morningReading!==false};
+    }catch(e){return {deferred:true,deferredLimit:3,unplanned:true,family:true,morningReading:true};}
+  }
   function decisionRulesSave(value){localStorage.setItem(DECISION_RULES_KEY,JSON.stringify(value));renderDecisionCenter();}
-  function decisionDeferredTask(){const count={};Object.values(allDays()).forEach(day=>(day.tasks||[]).forEach(task=>{if(task&&task.text&&taskStatus(task)==="deferred")count[task.text]=(count[task.text]||0)+1;}));const entry=Object.entries(count).sort((a,b)=>b[1]-a[1])[0];return entry&&entry[1]>=3?entry:null;}
+  function decisionDeferredTask(limit){const count={};Object.values(allDays()).forEach(day=>(day.tasks||[]).forEach(task=>{if(task&&task.text&&taskStatus(task)==="deferred")count[task.text]=(count[task.text]||0)+1;}));const entry=Object.entries(count).sort((a,b)=>b[1]-a[1])[0];return entry&&entry[1]>=(limit||3)?entry:null;}
   function decisionUnplanned(){try{const range=expSalaryWeekRange(todayStr()), amount=expActiveTx().filter(tx=>expInRange(tx.transactionDate,range)&&((expCatById(tx.categoryId)||{}).name)==="غير مخطط").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);return amount>0?amount:0;}catch(e){return 0;}}
   function decisionFamilyPrep(){return (state.tasks||[]).find(task=>task&&/^موعد عائلي:/.test(task.text||"")&&Array.isArray(task.subtasks)&&task.subtasks.some(step=>!step.done))||null;}
+  function decisionMorningReading(){const hour=new Date().getHours(), q=qLoad();return hour>=5&&hour<11&&q.page<q.startPage+q.target?{remaining:q.startPage+q.target-q.page}:null;}
   function decisionItems(){
     const rules=decisionRulesLoad(), out=[];
     /* الأولوية ثابتة: موعد قريب يحتاج تجهيزًا، ثم مشكلة متكررة، ثم إشارة مالية. */
     const family=rules.family&&decisionFamilyPrep();
     if(family)out.push({id:"family",icon:"👨‍👩‍👧",title:"موعد عائلي يحتاج تجهيزًا",detail:family.text+" · بقي "+family.subtasks.filter(step=>!step.done).length.toLocaleString("ar-EG")+" تجهيزات.",action:"فتح المهمة",go:()=>{appViewSet("today");setTimeout(()=>{document.getElementById("tasksCard")?.scrollIntoView({behavior:"smooth",block:"start"});taskOpenMeta(family,()=>{renderTaskLists();renderProgress();});},100);}});
-    const deferred=rules.deferred&&decisionDeferredTask();
+    const deferred=rules.deferred&&decisionDeferredTask(rules.deferredLimit);
     if(deferred)out.push({id:"deferred",icon:"🔁",title:"مهمة تتكرر في التأجيل",detail:"«"+deferred[0]+"» تأجلت "+deferred[1].toLocaleString("ar-EG")+" مرات؛ اقترح تقسيمها أو نقلها.",action:"إعادة التخطيط",go:dailyRouteOpenReplan});
     const unplanned=rules.unplanned&&decisionUnplanned();
     if(unplanned)out.push({id:"unplanned",icon:"💸",title:"مصروف غير مخطط هذا الأسبوع",detail:expMoney(unplanned)+" يحتاج مراجعة قبل أن يتكرر.",action:"فتح المالية",go:()=>{expOpenOverlay();expSetView("dash");}});
+    const reading=rules.morningReading&&decisionMorningReading();
+    if(reading)out.push({id:"morning-reading",icon:"📖",title:"ورد الصباح لم يُسجّل بعد",detail:"بقي "+reading.remaining.toLocaleString("ar-EG")+" صفحات من هدف القرآن اليوم.",action:"فتح القرآن",go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById("quranCard")?.scrollIntoView({behavior:"smooth",block:"start"}),80);}});
     return out.slice(0,3);
   }
   function renderDecisionCenter(){const host=document.getElementById("decisionCenterList");if(!host)return;const rows=decisionItems();host.innerHTML=rows.length?rows.map((row,i)=>'<div class="decision-row"><div><b>'+row.icon+" "+expEsc(row.title)+'</b><small>'+expEsc(row.detail)+'</small></div><button type="button" data-decision="'+i+'">'+row.action+'</button></div>').join(""):'<p class="task-history-empty">لا توجد قرارات عاجلة الآن.</p>';host.querySelectorAll("[data-decision]").forEach(button=>button.onclick=()=>rows[+button.dataset.decision].go());const settings=document.getElementById("decisionRulesBtn");if(settings)settings.onclick=decisionRulesOpen;}
-  function decisionRulesOpen(){const rules=decisionRulesLoad(),row=(id,label,checked)=>'<label class="daily-carry-row"><input type="checkbox" data-decision-rule="'+id+'" '+(checked?"checked":"")+'><span>'+label+'</span></label>';const sheet=taskSheet("⚙️ قواعد الاقتراح",'<p class="task-history-empty">تنتج القواعد قرارًا مقترحًا فقط، ولا تعدّل بياناتك بنفسها.</p>'+row("deferred","عند تأجيل مهمة ٣ مرات",rules.deferred)+row("unplanned","عند وجود مصروف غير مخطط خلال الأسبوع",rules.unplanned)+row("family","عند بقاء تجهيزات موعد عائلي",rules.family)+'<button type="button" class="task-sheet-save" id="decisionRulesSave">حفظ القواعد</button>');sheet.over.querySelector("#decisionRulesSave").onclick=()=>{const next={deferred:false,unplanned:false,family:false};sheet.over.querySelectorAll("[data-decision-rule]").forEach(box=>next[box.dataset.decisionRule]=box.checked);decisionRulesSave(next);sheet.close();};}
+  function decisionRulesOpen(){
+    const rules=decisionRulesLoad(),row=(id,label,checked)=>'<label class="daily-carry-row"><input type="checkbox" data-decision-rule="'+id+'" '+(checked?"checked":"")+'><span>'+label+'</span></label>';
+    const sheet=taskSheet("⚙️ قواعد الاقتراح",'<p class="task-history-empty">القواعد تقترح فقط ولا تنفذ تعديلًا أو نقلًا من دون موافقتك.</p>'+row("family","عند بقاء تجهيزات موعد عائلي",rules.family)+row("deferred","عند تكرار تأجيل مهمة",rules.deferred)+'<label class="daily-carry-row"><span>عدد مرات التأجيل قبل الاقتراح</span><select id="decisionDeferredLimit">'+[2,3,4,5].map(n=>'<option value="'+n+'" '+(rules.deferredLimit===n?'selected':'')+'>'+n.toLocaleString("ar-EG")+' مرات</option>').join("")+'</select></label>'+row("unplanned","عند وجود مصروف غير مخطط خلال الأسبوع",rules.unplanned)+row("morningReading","بعد الفجر: اقترح ورد القرآن إن كان ناقصًا",rules.morningReading)+'<button type="button" class="task-sheet-save" id="decisionRulesSave">حفظ القواعد</button>');
+    sheet.over.querySelector("#decisionRulesSave").onclick=()=>{const next={deferred:false,deferredLimit:+sheet.over.querySelector("#decisionDeferredLimit").value||3,unplanned:false,family:false,morningReading:false};sheet.over.querySelectorAll("[data-decision-rule]").forEach(box=>next[box.dataset.decisionRule]=box.checked);decisionRulesSave(next);sheet.close();};
+  }
   function renderTodayOverview(){
     if(!state || !document.getElementById("todayOverviewTitle")) return;
     const ar = n=>Number(n||0).toLocaleString("ar-EG");
@@ -9214,7 +9226,12 @@
     const focus = document.getElementById("todayFocus");
     const pendingPriority = priorities.find(p=>!itemDone(p));
     const nextPrayerIndex = state.prayers.findIndex(v=>!isPrayed(v));
-    if(pendingPriority) focus.textContent = "🎯 تركيزك التالي: "+itemText(pendingPriority);
+    const hour=new Date().getHours(), appointment=tasks.find(task=>/^موعد عائلي:/.test(itemText(task))&&task.dueTime), focusTask=tasks.find(task=>taskStatus(task)==="in_progress");
+    if(appointment&&appointment.dueTime>=new Date().toTimeString().slice(0,5)) focus.textContent="👨‍👩‍👧 تجهيز الموعد: "+itemText(appointment)+" عند "+appointment.dueTime;
+    else if(focusTask) focus.textContent="⏱️ الجلسة الحالية: "+itemText(focusTask);
+    else if(hour>=18&&(tasks.some(task=>!itemDone(task))||priorities.some(priority=>!itemDone(priority)))) focus.textContent="🌙 مساءً: رتّب المتبقي أو انقله للغد دون حذف أي مهمة.";
+    else if(hour>=5&&hour<11&&qRead<q.target) focus.textContent="📖 صباحًا: وقت مناسب لورد القرآن — بقي "+ar(q.target-qRead)+" صفحات.";
+    else if(pendingPriority) focus.textContent = "🎯 تركيزك التالي: "+itemText(pendingPriority);
     else if(nextPrayerIndex>=0) focus.textContent = "🕌 التالي: تسجيل صلاة "+PRAYERS[nextPrayerIndex];
     else if(qRead<q.target) focus.textContent = "📖 بقي "+ar(q.target-qRead)+" صفحات لإتمام ورد القرآن";
     else if(state.water<waterGoal()) focus.textContent = "💧 بقي "+ar(waterGoal()-state.water)+" أكواب لإتمام هدف الماء";

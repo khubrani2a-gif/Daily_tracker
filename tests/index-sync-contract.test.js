@@ -385,6 +385,12 @@ test("daily route connects capture, focused execution, and day closing to existi
   assert.match(html,/option value="review"/);
   assert.match(html,/taskOpenMeta\(task/);
   assert.match(html,/activityOpen\(row\.date\)/);
+  assert.match(html,/deferredLimit/);
+  assert.match(html,/morningReading/);
+  assert.match(html,/function decisionMorningReading\(/);
+  assert.match(html,/ورد الصباح لم يُسجّل بعد/);
+  assert.match(html,/القواعد تقترح فقط ولا تنفذ تعديلًا أو نقلًا من دون موافقتك/);
+  assert.match(html,/مساءً: رتّب المتبقي أو انقله للغد/);
 });
 
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
