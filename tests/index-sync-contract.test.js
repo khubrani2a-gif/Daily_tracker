@@ -287,6 +287,10 @@ test("family hub keeps finance, shopping, and household-task entry points",()=>{
   assert.match(html,/مالية العائلة/);
   assert.match(html,/function familyRenderManage\(/);
   assert.match(html,/expSetView\("familyManage"\)/);
+  ["familyShoppingCategoryLabel","family-category-picker","familyShopCategoryBtn","familyShopCategoryMenu","familyShopCustomCategory"].forEach(name=>assert.ok(html.includes(name),name));
+  assert.match(html,/🛒 بقالة وتموين/);
+  assert.match(html,/✏️ تصنيف آخر/);
+  assert.match(html,/category==="أخرى"&&!custom/);
 });
 
 test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
