@@ -3244,6 +3244,9 @@
       <div class="exp-view" id="expViewFamily">
         <div id="familyOverviewBody"></div>
       </div>
+      <div class="exp-view" id="expViewFamilyManage" hidden>
+        <div id="familyManageBody"></div>
+      </div>
       <div class="exp-view" id="expViewDash">
         <div class="exp-sumgrid" id="expDashSummary"></div>
         <div id="expDashBanner" hidden></div>
@@ -12232,23 +12235,18 @@
   }
   function familyRenderOverview(){
     const box=document.getElementById("familyOverviewBody"); if(!box) return;
-    const shopping=familyPendingShopping(), tasks=familyPendingTasks(), finance=expSummaryCards(), next=familyUpcomingEvent(), cycle=expSalaryCycleStatus(todayStr());
-    const cycleNote=cycle.salary>0?'دورة الراتب: '+cycle.cycle.start+' إلى '+cycle.cycle.end+' · المتبقي '+expMoney(cycle.remaining)+' · '+_arn(cycle.days)+' أيام · حدك اليومي '+expMoney(cycle.daily):'حدّد راتب الدورة من «المالية ← الإعدادات» ليظهر المتبقي والحد اليومي.';
-    const members=familyMembers(), budget=expToMinor((expState.settings||{}).familyBudgetMinor||0), familySpent=expNetInRange(cycle.cycle);
-    box.innerHTML='<div class="exp-sumgrid">'+finance.slice(1,3).map(card=>'<div class="exp-sumcard"><small>'+card.label+'</small><b>'+card.val+'</b></div>').join("")+'<div class="exp-sumcard"><small>أعضاء العائلة</small><b>'+_arn(members.length)+'</b></div></div>'
-      +'<div class="exp-card" style="margin-top:.8rem"><h3>👨‍👩‍👧 العائلة المشتركة</h3><p class="exp-card-hint">'+(members.length?members.map(member=>expEsc(member.name)).join(" · "):"أضف أفراد الأسرة لتعيين المهام والمشتريات ومعرفة من أنجزها.")+'</p><button class="exp-secondary" id="familyManageMembers" style="margin-top:.7rem">إدارة الأعضاء</button></div>'
-      +'<div class="exp-card" style="margin-top:.8rem"><h3>💳 خطة دورة الراتب</h3><p class="exp-card-hint">'+cycleNote+'</p><button class="exp-secondary" id="familyCycleSettings" style="margin-top:.7rem">إعداد دورة الراتب</button></div>'
-      +'<div class="exp-card" style="margin-top:.8rem"><h3>🏡 ميزانية المنزل المشتركة</h3><p class="exp-card-hint">'+(budget>0?"المخطط "+expMoney(budget)+" · المصروف في دورة الراتب "+expMoney(familySpent)+" · المتبقي "+expMoney(budget-familySpent):"ميزانية اختيارية مستقلة لمتابعة مصاريف الأسرة.")+'</p><button class="exp-secondary" id="familyBudgetEdit" style="margin-top:.7rem">ضبط الميزانية</button></div>'
-      +'<div class="exp-cards" style="margin-top:.8rem"><div class="exp-card"><h3>🛒 قائمة التسوق</h3><p class="exp-card-hint">'+(shopping.length?shopping.slice(0,3).map(item=>expEsc(item.text)+(item.assignee?" · "+expEsc(familyMemberName(item.assignee)):"")).join(" · "):"لا توجد عناصر متبقية")+'</p><button class="exp-secondary" id="familyOpenShopping" style="margin-top:.7rem">إدارة المشتريات</button></div>'
-      +'<div class="exp-card"><h3>🏠 مهام المنزل</h3><p class="exp-card-hint">'+(tasks.length?tasks.slice(0,3).map(task=>expEsc(task.text)+(task.assignee?" · "+expEsc(familyMemberName(task.assignee)):"")).join(" · "):"لا توجد مهام مفتوحة اليوم")+'</p><button class="exp-secondary" id="familyAddTask" style="margin-top:.7rem">＋ مهمة منزلية</button></div></div>'
-      +'<div class="exp-cards" style="margin-top:1rem"><div class="exp-card"><h3>📅 مواعيد العائلة</h3><p class="exp-card-hint">'+(next?expEsc(next.title)+" · "+next.date:"لا توجد مواعيد قادمة")+'</p><button class="exp-secondary" id="familyOpenEvents" style="margin-top:.7rem">إدارة المواعيد</button></div><div class="exp-card"><h3>🎯 أهداف العائلة</h3><p class="exp-card-hint">استخدم أهداف الادخار للرحلة، الطوارئ، الأثاث أو أي هدف مشترك.</p><button class="exp-secondary" id="familyOpenFinance" style="margin-top:.7rem">فتح المالية والأهداف</button></div></div>';
-    document.getElementById("familyOpenShopping").onclick=()=>expSetView("shopping");
-    document.getElementById("familyAddTask").onclick=familyOpenTask;
-    document.getElementById("familyManageMembers").onclick=familyManageMembers;
-    document.getElementById("familyBudgetEdit").onclick=()=>{const current=expToMinor((expState.settings||{}).familyBudgetMinor||0)/100,value=prompt("ميزانية المنزل المشتركة لهذه الدورة (ر.س)",String(current));if(value===null)return;const amount=Math.round(Number(value)*100);if(!Number.isFinite(amount)||amount<0){alert("اكتب مبلغًا صحيحًا.");return;}expState.settings.familyBudgetMinor=amount;expState.settings.updatedAt=Date.now();expSave(expState);familyRecordActivity("budget_edit","تعديل ميزانية المنزل إلى "+expMoney(amount));familyRenderOverview();};
-    document.getElementById("familyCycleSettings").onclick=()=>expSetView("settings");
-    document.getElementById("familyOpenEvents").onclick=familyOpenEvents;
-    document.getElementById("familyOpenFinance").onclick=()=>expSetView("dash");
+    const shopping=familyPendingShopping(), tasks=familyPendingTasks().filter(task=>task.category==="منزل"), next=familyUpcomingEvent(), members=familyMembers(), cycle=expSalaryCycleStatus(todayStr()), fixed=(expState.fixedTemplates||[]).filter(row=>!row.archivedAt).length, householdBudget=expToMinor((expState.settings||{}).familyBudgetMinor||0);
+    const finance=cycle.salary>0?'المتبقي '+expMoney(cycle.remaining)+' · المصروف '+expMoney(cycle.spent):'حدّد مبلغ الراتب لعرض المتبقي والحد اليومي.';
+    box.innerHTML='<div class="exp-card"><h2 style="margin:0">العائلة</h2><p class="exp-card-hint">تابع شؤون المنزل ومالية الأسرة من مكان واحد.</p></div>'
+      +'<div class="exp-card" style="margin-top:.8rem"><h3>👨‍👩‍👧 إدارة العائلة</h3><p class="exp-card-hint">الأعضاء، المهام، المشتريات والمواعيد</p><p class="exp-card-hint">'+_arn(members.length)+' أعضاء · '+_arn(tasks.length)+' مهام مفتوحة · '+_arn(shopping.length)+' مشتريات متبقية'+(next?' · الموعد القادم: '+expEsc(next.title):'')+'</p><button class="exp-primary" id="familyOpenManage" style="width:100%">فتح إدارة العائلة</button><div class="exp-grid2" style="margin-top:.6rem"><button class="exp-secondary" id="familyQuickTask">＋ مهمة</button><button class="exp-secondary" id="familyQuickShopping">＋ مشتريات</button><button class="exp-secondary" id="familyQuickEvent">＋ موعد</button><button class="exp-secondary" id="familyQuickMembers">إدارة الأعضاء</button></div></div>'
+      +'<div class="exp-card" style="margin-top:.8rem"><h3>💰 مالية العائلة</h3><p class="exp-card-hint">دورة الراتب، المصروفات والالتزامات والميزانيات</p><p class="exp-card-hint">خطة دورة الراتب: '+finance+' · '+_arn(fixed)+' التزامات ثابتة'+(householdBudget?" · ميزانية المنزل المشتركة "+expMoney(householdBudget):" · ميزانية المنزل المشتركة اختيارية")+'</p><button class="exp-primary" id="familyOpenFinance" style="width:100%">فتح مالية العائلة</button><div class="exp-grid2" style="margin-top:.6rem"><button class="exp-secondary" id="familyFinanceExpense">＋ مصروف</button><button class="exp-secondary" id="familyFinanceFixed">الالتزامات</button><button class="exp-secondary" id="familyFinanceBudget">الميزانية</button><button class="exp-secondary" id="familyFinanceReports">التقارير</button></div></div>';
+    document.getElementById("familyOpenManage").onclick=()=>expSetView("familyManage"); document.getElementById("familyQuickTask").onclick=familyOpenTask; document.getElementById("familyQuickShopping").onclick=()=>expSetView("shopping"); document.getElementById("familyQuickEvent").onclick=familyOpenEvents; document.getElementById("familyQuickMembers").onclick=familyManageMembers;
+    document.getElementById("familyOpenFinance").onclick=()=>expSetView("dash"); document.getElementById("familyFinanceExpense").onclick=()=>expOpenExpenseForm(null); document.getElementById("familyFinanceFixed").onclick=()=>expSetView("dash"); document.getElementById("familyFinanceBudget").onclick=()=>expSetView("dash"); document.getElementById("familyFinanceReports").onclick=()=>expSetView("reports");
+  }
+  function familyRenderManage(){
+    const box=document.getElementById("familyManageBody");if(!box)return;const tasks=familyPendingTasks().filter(task=>task.category==="منزل"), shopping=familyPendingShopping(), next=familyUpcomingEvent(), activity=(expState.activityLog||[]).filter(row=>!row.deletedAt).slice(0,3);
+    box.innerHTML='<button type="button" class="exp-secondary" id="familyBackLanding">← العائلة</button><div class="exp-sumgrid" style="margin-top:.7rem"><div class="exp-sumcard"><small>الأعضاء</small><b>'+_arn(familyMembers().length)+'</b></div><div class="exp-sumcard"><small>مهام المنزل</small><b>'+_arn(tasks.length)+'</b></div><div class="exp-sumcard"><small>المشتريات</small><b>'+_arn(shopping.length)+'</b></div></div><div class="exp-card" style="margin-top:.8rem"><h3>📅 الموعد القادم</h3><p class="exp-card-hint">'+(next?expEsc(next.title)+' · '+next.date:"لا توجد مواعيد عائلية قادمة.")+'</p><div class="exp-grid2"><button class="exp-secondary" id="familyManageTasks">المهام</button><button class="exp-secondary" id="familyManageShopping">المشتريات</button><button class="exp-secondary" id="familyManageEvents">المواعيد</button><button class="exp-secondary" id="familyManagePeople">الأعضاء</button></div></div><div class="exp-card" style="margin-top:.8rem"><h3>🕓 سجل النشاط</h3><p class="exp-card-hint">'+(activity.length?activity.map(row=>expEsc(row.detail)).join(" · "):"لا يوجد نشاط عائلي مسجل بعد.")+'</p></div>';
+    box.querySelector("#familyBackLanding").onclick=()=>expSetView("family");box.querySelector("#familyManageTasks").onclick=familyOpenTask;box.querySelector("#familyManageShopping").onclick=()=>expSetView("shopping");box.querySelector("#familyManageEvents").onclick=familyOpenEvents;box.querySelector("#familyManagePeople").onclick=familyManageMembers;
   }
   function familyOpenEvents(){
     const list=familyEventsAll();
@@ -13483,6 +13481,7 @@
   function expSetView(v){
     expCurView=v;
     document.getElementById("expViewFamily").hidden = v!=="family";
+    document.getElementById("expViewFamilyManage").hidden = v!=="familyManage";
     document.getElementById("expViewDash").hidden = v!=="dash";
     document.getElementById("expViewShopping").hidden = v!=="shopping";
     document.getElementById("expViewTrips").hidden = v!=="trips";
@@ -13490,6 +13489,7 @@
     document.getElementById("expViewSettings").hidden = v!=="settings";
     expOverlay.querySelectorAll(".exp-tabs .exp-tab[data-view]").forEach(b=> b.classList.toggle("active", b.dataset.view===v));
     if(v==="family") familyRenderOverview();
+    else if(v==="familyManage") familyRenderManage();
     else if(v==="shopping") familyRenderShopping();
     else if(v==="dash") expRenderDash();
     else if(v==="trips"){ expTripDetailId=null; expRenderTrips(); }

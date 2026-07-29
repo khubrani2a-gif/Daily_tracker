@@ -276,13 +276,17 @@ test("salary-cycle budgeting supports a configurable payday",()=>{
 });
 
 test("family hub keeps finance, shopping, and household-task entry points",()=>{
-  ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewFamilyManage","familyManageBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["familyShoppingAll","familyShoppingLoad","familyRenderOverview","familyRenderShopping","familyShopping","familyEvents","familyOpenEvents","familyMembers","familyManageMembers","familyOpenTask","familyRecordActivity","familyBudgetMinor"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/data-app-view="expenses"[^>]*>[^<]*<span>👨‍👩‍👧<\/span>العائلة/);
   assert.match(html,/const quickExpense=document\.getElementById\("expQuickAdd"\);/);
   assert.match(html,/إدارة الأعضاء/);
   assert.match(html,/المكلّف/);
   assert.match(html,/ميزانية المنزل المشتركة/);
+  assert.match(html,/إدارة العائلة/);
+  assert.match(html,/مالية العائلة/);
+  assert.match(html,/function familyRenderManage\(/);
+  assert.match(html,/expSetView\("familyManage"\)/);
 });
 
 test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
