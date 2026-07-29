@@ -15,6 +15,42 @@ test("inline application JavaScript parses without errors",()=>{
   assert.ok(match); assert.doesNotThrow(()=>new Function(match[1]));
 });
 
+function sourceFunction(name){
+  const start=html.indexOf("function "+name+"(");
+  assert.ok(start>=0,"missing function "+name);
+  const bodyStart=html.indexOf("{",start);
+  let depth=0;
+  for(let i=bodyStart;i<html.length;i++){
+    if(html[i]==="{") depth++;
+    if(html[i]==="}" && --depth===0) return html.slice(start,i+1);
+  }
+  throw new Error("unterminated function "+name);
+}
+
+function fakeDocument(){
+  const createElement=tag=>({
+    tag, children:[], textContent:"", className:"", insertedHtml:"", onclick:null,
+    append(...nodes){this.children.push(...nodes);},
+    appendChild(node){this.children.push(node); return node;},
+    setAttribute(){},
+    insertAdjacentHTML(_position,html){this.insertedHtml+=html;}
+  });
+  return {createElement,body:createElement("body"),addEventListener(){},removeEventListener(){}};
+}
+
+test("routine and template titles render hostile text as text, not markup",()=>{
+  const taskSheet=new Function("document","return ("+sourceFunction("taskSheet")+");")(fakeDocument());
+  ["<img src=x onerror=alert(1)>","<script>alert(1)</script>"].forEach(payload=>{
+    const sheet=taskSheet(payload,"<p>واجهة داخلية ثابتة</p>");
+    const heading=sheet.over.children[0].children[0].children[0];
+    assert.equal(heading.textContent,payload);
+    assert.doesNotMatch(sheet.over.children[0].insertedHtml,new RegExp(payload.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
+  });
+  assert.match(html,/heading\.textContent=String\(title\|\|""\)/);
+  assert.doesNotMatch(html,/'<div class="task-sheet"><div class="task-sheet-head"><h3>'\+title/);
+  assert.doesNotMatch(html,/smartManageRoutines\(\)\{const templates=.*item\.icon\+/s);
+});
+
 test("global lifecycle events are each registered exactly once",()=>{
   ["visibilitychange","focus","pageshow","online","offline"].forEach(event=>{
     const matches=html.match(new RegExp("addEventListener\\(\\\""+event+"\\\"","g"))||[];
@@ -104,7 +140,7 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/function smartOpenTemplateEditor\(/);
   assert.match(html,/function smartAskInTemplateManager\(/);
   assert.match(html,/function smartSetTemplateHidden\(/);
-  assert.match(html,/data-smart-template-hide/);
+  assert.match(html,/hide\.onclick=\(\)=>\{smartSetTemplateHidden\(\{kind:row\.kind,id:row\.id\},!row\.hidden\)/);
   assert.match(html,/SMART_CUSTOM_TEMPLATES_KEY/);
   assert.match(html,/SMART_TEMPLATE_SETTINGS_KEY/);
   assert.match(html,/SMART_CUSTOM_ACTIONS_KEY/);

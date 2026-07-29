@@ -8518,10 +8518,19 @@
   }
   function taskSheet(title, bodyHtml){
     const over=document.createElement("div"); over.className="task-sheet-overlay"; over.setAttribute("role","dialog"); over.setAttribute("aria-modal","true"); over.setAttribute("aria-label",title);
-    over.innerHTML='<div class="task-sheet"><div class="task-sheet-head"><h3>'+title+'</h3><button type="button" class="task-sheet-close" aria-label="إغلاق">✕</button></div>'+bodyHtml+'</div>';
+    /* العنوان قد يتضمن اسمًا محفوظًا من قالب أو نسخة مستوردة؛ لا نُدخله أبدًا عبر innerHTML. */
+    const sheet=document.createElement("div"); sheet.className="task-sheet";
+    const head=document.createElement("div"); head.className="task-sheet-head";
+    const heading=document.createElement("h3"); heading.textContent=String(title||"");
+    const closeButton=document.createElement("button"); closeButton.type="button"; closeButton.className="task-sheet-close"; closeButton.setAttribute("aria-label","إغلاق"); closeButton.textContent="✕";
+    head.append(heading,closeButton);
+    sheet.appendChild(head);
+    /* bodyHtml يبقى لقوالب الواجهة الداخلية فقط؛ النص القابل للتعديل لا يُمرّر إليه مباشرة. */
+    sheet.insertAdjacentHTML("beforeend",bodyHtml);
+    over.appendChild(sheet);
     const close=()=>{ document.removeEventListener("keydown",key); over.remove(); };
     const key=e=>{ if(e.key==="Escape") close(); };
-    over.querySelector(".task-sheet-close").onclick=close;
+    closeButton.onclick=close;
     over.onclick=e=>{ if(e.target===over) close(); };
     document.addEventListener("keydown",key); document.body.appendChild(over);
     return {over,close};
@@ -8980,7 +8989,12 @@
       {id:"finance",icon:"💰",title:financeTitle,detail:financeDetail,go:()=>{expOpenOverlay();expSetView("dash");}}
     ];
     const settings=nowPanelLoad(); settings.custom.forEach(item=>rows.push({id:item.id,icon:item.icon||"⚡",title:item.name,detail:"اختصار خاص",go:()=>{const action={name:item.name,icon:item.icon,kind:item.kind,task:""};smartRunCustomAction(action);}}));
-    host.textContent=""; rows.filter(row=>settings.hidden.indexOf(row.id)===-1).forEach(row=>{const button=document.createElement("button");button.type="button";button.className="now-panel-item";button.innerHTML="<b>"+row.icon+" "+expEsc(row.title)+"</b><small>"+expEsc(row.detail)+"</small>";button.onclick=row.go;host.appendChild(button);});
+    host.textContent=""; rows.filter(row=>settings.hidden.indexOf(row.id)===-1).forEach(row=>{
+      const button=document.createElement("button"); button.type="button"; button.className="now-panel-item";
+      const title=document.createElement("b"); title.textContent=String(row.icon||"⚡")+" "+String(row.title||"");
+      const detail=document.createElement("small"); detail.textContent=String(row.detail||"");
+      button.append(title,detail); button.onclick=row.go; host.appendChild(button);
+    });
     const settingsBtn=document.getElementById("nowPanelSettings"); if(settingsBtn) settingsBtn.onclick=nowPanelOpenSettings;
   }
   function nowPanelOpenSettings(){
@@ -9390,15 +9404,36 @@
     const frequency=sheet.over.querySelector("#routineFrequency"), dayWrap=sheet.over.querySelector("#routineDayWrap");frequency.onchange=()=>dayWrap.hidden=frequency.value!=="weekly";
     sheet.over.querySelector("#routineSave").onclick=()=>{const all=smartCustomTemplatesLoad(),pos=all.findIndex(row=>row.id===id);if(pos<0)return;all[pos].schedule=frequency.value==="none"?null:{frequency:frequency.value,day:+sheet.over.querySelector("#routineDay").value,time:sheet.over.querySelector("#routineTime").value||""};smartCustomTemplatesSave(all);sheet.close();smartTemplateNotice(frequency.value==="none"?"أُلغيت جدولة الروتين.":"تمت جدولة الروتين: "+smartScheduleLabel(all[pos].schedule));};
   }
-  function smartManageRoutines(){const templates=smartCustomTemplatesLoad(), rows=templates.length?templates.map(item=>'<div class="template-manager-row"><span class="template-manager-copy">'+item.icon+' '+expEsc(item.name)+'<small>'+smartScheduleLabel(item.schedule)+'</small></span><span class="template-manager-actions"><button type="button" data-routine-edit="'+item.id+'">جدولة</button></span></div>').join(""):'<div class="task-history-empty">أنشئ قالبًا خاصًا أولًا، ثم حدّد له جدولًا.</div>';const sheet=taskSheet("الروتينات المجدولة",'<p class="task-history-empty">الروتين يضيف مهامه تلقائيًا في اليوم المحدد، بوقت اختياري لكل مهمة.</p><div class="task-history-list">'+rows+'</div>');sheet.over.querySelectorAll("[data-routine-edit]").forEach(button=>button.onclick=()=>{sheet.close();smartOpenRoutineScheduler(button.dataset.routineEdit);});}
+  function smartManageRoutines(){
+    const templates=smartCustomTemplatesLoad();
+    const sheet=taskSheet("الروتينات المجدولة",'<p class="task-history-empty">الروتين يضيف مهامه تلقائيًا في اليوم المحدد، بوقت اختياري لكل مهمة.</p><div class="task-history-list" id="routineManagerRows"></div>');
+    const host=sheet.over.querySelector("#routineManagerRows");
+    if(!templates.length){ host.textContent="أنشئ قالبًا خاصًا أولًا، ثم حدّد له جدولًا."; host.classList.add("task-history-empty"); return; }
+    templates.forEach(item=>{
+      const row=document.createElement("div"); row.className="template-manager-row";
+      const copy=document.createElement("span"); copy.className="template-manager-copy"; copy.textContent=String(item.icon||"📌")+" "+String(item.name||"");
+      const detail=document.createElement("small"); detail.textContent=smartScheduleLabel(item.schedule); copy.appendChild(detail);
+      const actions=document.createElement("span"); actions.className="template-manager-actions";
+      const edit=document.createElement("button"); edit.type="button"; edit.textContent="جدولة"; edit.onclick=()=>{sheet.close();smartOpenRoutineScheduler(item.id);};
+      actions.appendChild(edit); row.append(copy,actions); host.appendChild(row);
+    });
+  }
   function smartManageCustomTemplates(){
-    const builtins=Object.keys(SMART_BUILTIN_TEMPLATES).map(id=>Object.assign({kind:"builtin"},smartBuiltinTemplate(id))), customs=smartCustomTemplatesLoad().map(row=>Object.assign({kind:"custom",icon:"📌",action:"tasks"},row)), rows=[...builtins,...customs], body='<div class="task-history-list">'+rows.map(row=>'<div class="template-manager-row"><span class="template-manager-copy">'+row.icon+' '+expEsc(row.name)+'<small>'+(row.hidden?"مخفي":row.action==="recurring"?"يفتح نموذج المصروف المتكرر":row.tasks.length.toLocaleString("ar-EG")+" مهام")+'</small></span><span class="template-manager-actions"><button type="button" data-smart-template-edit="'+row.kind+':'+row.id+'">تعديل</button><button type="button" class="hidden-toggle" data-smart-template-hide="'+row.kind+':'+row.id+'">'+(row.hidden?"إظهار":"إخفاء")+'</button><button type="button" class="danger" data-smart-template-delete="'+row.kind+':'+row.id+'">حذف</button></span></div>').join("")+'</div>';
-    const sheet=taskSheet("إدارة كل القوالب",body+'<button type="button" class="task-sheet-save" id="smartTemplateNew">＋ قالب خاص</button><button type="button" class="exp-secondary" id="smartRoutineManage" style="width:100%;margin-top:.5rem">🕓 الروتينات المجدولة</button>'), parse=value=>{const [kind,id]=value.split(":");return {kind,id};};
+    const builtins=Object.keys(SMART_BUILTIN_TEMPLATES).map(id=>Object.assign({kind:"builtin"},smartBuiltinTemplate(id))), customs=smartCustomTemplatesLoad().map(row=>Object.assign({kind:"custom",icon:"📌",action:"tasks"},row)), rows=[...builtins,...customs];
+    const sheet=taskSheet("إدارة كل القوالب",'<div class="task-history-list" id="smartTemplateManagerRows"></div><button type="button" class="task-sheet-save" id="smartTemplateNew">＋ قالب خاص</button><button type="button" class="exp-secondary" id="smartRoutineManage" style="width:100%;margin-top:.5rem">🕓 الروتينات المجدولة</button>');
+    const host=sheet.over.querySelector("#smartTemplateManagerRows");
+    rows.forEach(row=>{
+      const item=document.createElement("div"); item.className="template-manager-row";
+      const copy=document.createElement("span"); copy.className="template-manager-copy"; copy.textContent=String(row.icon||"📌")+" "+String(row.name||"");
+      const detail=document.createElement("small"); detail.textContent=row.hidden?"مخفي":row.action==="recurring"?"يفتح نموذج المصروف المتكرر":row.tasks.length.toLocaleString("ar-EG")+" مهام"; copy.appendChild(detail);
+      const actions=document.createElement("span"); actions.className="template-manager-actions";
+      const edit=document.createElement("button"); edit.type="button"; edit.textContent="تعديل"; edit.onclick=()=>{sheet.close();smartOpenTemplateEditor(row.kind,row.id);};
+      const hide=document.createElement("button"); hide.type="button"; hide.className="hidden-toggle"; hide.textContent=row.hidden?"إظهار":"إخفاء"; hide.onclick=()=>{smartSetTemplateHidden({kind:row.kind,id:row.id},!row.hidden);sheet.close();smartTemplateNotice(row.hidden?"تم إظهار قالب «"+row.name+"».":"تم إخفاء قالب «"+row.name+"».");};
+      const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="حذف"; del.onclick=()=>{smartAskInTemplateManager(sheet,"حذف قالب «"+row.name+"»؟",row.kind==="builtin"?"هذا قالب افتراضي؛ سيُخفى ويمكن إظهاره لاحقًا من إدارة القوالب.":"سيُحذف القالب نهائيًا ولن تتأثر المهام التي أُضيفت سابقًا.",()=>{if(row.kind==="custom")smartCustomTemplatesSave(smartCustomTemplatesLoad().filter(entry=>entry.id!==row.id));else smartSetTemplateHidden({kind:row.kind,id:row.id},true);sheet.close();smartTemplateNotice("تم حذف القالب من القائمة.");});};
+      actions.append(edit,hide,del); item.append(copy,actions); host.appendChild(item);
+    });
     sheet.over.querySelector("#smartTemplateNew").onclick=()=>{sheet.close();smartOpenCustomTemplate();};
     sheet.over.querySelector("#smartRoutineManage").onclick=()=>{sheet.close();smartManageRoutines();};
-    sheet.over.querySelectorAll("[data-smart-template-edit]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.smartTemplateEdit);sheet.close();smartOpenTemplateEditor(ref.kind,ref.id);});
-    sheet.over.querySelectorAll("[data-smart-template-hide]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.smartTemplateHide), template=ref.kind==="custom"?smartCustomTemplatesLoad().find(row=>row.id===ref.id):smartBuiltinTemplate(ref.id);if(!template)return;smartSetTemplateHidden(ref,!template.hidden);sheet.close();smartTemplateNotice(template.hidden?"تم إظهار قالب «"+template.name+"».":"تم إخفاء قالب «"+template.name+"».");});
-    sheet.over.querySelectorAll("[data-smart-template-delete]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.smartTemplateDelete), template=ref.kind==="custom"?smartCustomTemplatesLoad().find(row=>row.id===ref.id):smartBuiltinTemplate(ref.id);if(!template)return;smartAskInTemplateManager(sheet,"حذف قالب «"+template.name+"»؟",ref.kind==="builtin"?"هذا قالب افتراضي؛ سيُخفى ويمكن إظهاره لاحقًا من إدارة القوالب.":"سيُحذف القالب نهائيًا ولن تتأثر المهام التي أُضيفت سابقًا.",()=>{if(ref.kind==="custom")smartCustomTemplatesSave(smartCustomTemplatesLoad().filter(row=>row.id!==ref.id));else smartSetTemplateHidden(ref,true);sheet.close();smartTemplateNotice("تم حذف القالب من القائمة.");});});
   }
   function smartTomorrowDate(){ const d=new Date(currentDate+"T12:00:00"); d.setDate(d.getDate()+1); return fmtDate(d); }
   function smartReadDay(date){ try{return Object.assign(blankState(),JSON.parse(localStorage.getItem(storageKey(date))||"{}"));}catch(e){return blankState();} }
