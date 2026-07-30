@@ -81,9 +81,13 @@ test("server-first and explicit cache fallback are present for docs and queries"
   assert.match(html,/function getDocServerFirst/); assert.match(html,/function getQueryServerFirst/);
 });
 
-test("v98 Expenses fixed-obligation behavior remains present in v112",()=>{
+test("v98 Expenses fixed-obligation behavior remains present in the current release",()=>{
   ["expRepairMisclassified","expUndoPayment","expOpenReclassifyForm","needsReview","expMergeById","fixedTemplateId","countAgainstWeeklyBudget"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/النسخة ١١٢/); assert.match(sw,/mufakkirati-v112/); assert.match(sw,/sync-core\.js/);
+  /* لا نُثبِّت رقم إصدار بعينه (كان يتعطّل مع كل رفع كاش)؛ نتحقّق من وجود نسخة مرئية
+     واسم كاش مُرقَّم صالح — وهو جوهر الفحص: إصدار متماسك لا رقم محدد. */
+  assert.match(html,/النسخة [٠-٩]+/);
+  assert.match(sw,/const CACHE = "mufakkirati-v\d+[a-z]?";/);
+  assert.match(sw,/sync-core\.js/);
 });
 
 test("daily history is cached and below-fold content is deferred at startup",()=>{

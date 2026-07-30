@@ -13045,9 +13045,9 @@
       '<div class="exp-form-head"><h3>'+(c?"تعديل فئة":"إضافة فئة أسبوعية")+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-field"><label>الاسم</label><input id="vfName" placeholder="مثال: الأكل" value="'+expEsc(c&&c.name||"")+'"></div>'+
       '<div class="exp-field"><label>أيقونة (اختياري)</label><input id="vfIcon" maxlength="2" placeholder="🍽" value="'+expEsc(c&&c.icon||"")+'"></div>'+
+      /* حقل الميزانية يُرسم مرّة واحدة فقط (كان مُكرّرًا فينتج مُعرّف #vfBudget مزدوج في DOM) */
       (c? '' : '<div class="exp-field"><label>الميزانية الأسبوعية (ر.س)</label><input class="amount" id="vfBudget" inputmode="decimal" value=""></div>')+
       '<label class="exp-check"><input type="checkbox" id="vfWeekly"'+(!c||c.showInWeeklyBudget!==false?' checked':'')+'> تظهر في بطاقة الميزانية الأسبوعية</label>'+
-      (c? '' : '<div class="exp-field"><label>الميزانية الأسبوعية (ر.س)</label><input class="amount" id="vfBudget" inputmode="decimal" value=""></div>')+
       '<div class="exp-err" id="vfErr"></div>'+
       '<button class="exp-save" id="vfSave">'+(c?"حفظ":"إضافة")+'</button>'
     );

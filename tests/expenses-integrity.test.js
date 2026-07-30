@@ -472,8 +472,20 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("monthly: travel = 0 (deleted trip variable expense excluded)", (await stat(p,"✈️ السفر"))==="٠ ر.س");
     ok("monthly: variable normal = 200 (unrelated N1 remains)", (await stat(p,"المتغيّرة العادية"))==="٢٠٠ ر.س");
     ok("monthly: net total = 200 (only the untouched transaction)", (await stat(p,"الإجمالي الصافي"))==="٢٠٠ ر.س");
-    const catRow = await p.evaluate(()=>{ const heads=[...document.querySelectorAll("#expReportBody .exp-sec-head")]; const h=heads.find(x=>x.textContent.includes("أعلى الفئات")); if(!h) return null; const foot=h.nextElementSibling; if(!foot) return null; const row=[...foot.querySelectorAll(".exp-foot-row")].find(r=>r.textContent.includes("الأكل")); return row? row.querySelector("b").textContent : null; });
-    ok("category breakdown: الأكل shows only N1's 200 (VT1's contribution removed)", catRow==="٢٠٠ ر.س");
+    /* نحلّ اسم الفئة من معرّفها الثابت CA بدل تثبيت الاسم القديم «الأكل»:
+       ترحيل الفئات الهرمية يعيد تسميتها إلى «البقالة» مع بقاء المعرّف والمعاملات كما هي. */
+    const catInfo = await p.evaluate(()=>{
+      const d=JSON.parse(localStorage.getItem("h2do-expenses")||"{}");
+      const cat=(d.categories||[]).find(c=>c&&c.id==="CA");
+      const name=cat?cat.name:null;
+      const heads=[...document.querySelectorAll("#expReportBody .exp-sec-head")];
+      const h=heads.find(x=>x.textContent.includes("أعلى الفئات")); if(!h) return {name,row:null};
+      const foot=h.nextElementSibling; if(!foot) return {name,row:null};
+      const row=name?[...foot.querySelectorAll(".exp-foot-row")].find(r=>r.textContent.includes(name)):null;
+      return {name, row: row? row.querySelector("b").textContent : null};
+    });
+    ok("category breakdown: N1's category (CA, now «"+catInfo.name+"») shows only 200 (VT1's contribution removed)", catInfo.row==="٢٠٠ ر.س");
+    ok("hierarchy migration renamed CA الأكل → البقالة while keeping the same id", catInfo.name==="البقالة");
     await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
     const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
     ok("trips list: deleted trip row not shown (no data-triprow for TR)", !(await p.$('[data-triprow="TR"]')));

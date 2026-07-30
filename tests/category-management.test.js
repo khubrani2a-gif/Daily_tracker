@@ -68,7 +68,7 @@ test("hiding a category persists across close/reopen and full reload, and it sta
     assert.ok(!(await visibleIds(page)).includes(target.id),"أُخفيت فورًا");
 
     /* إغلاق العائلة وإعادة فتحها */
-    await page.locator('[data-app-view="expenses"]').click(); await page.waitForTimeout(200);
+    await page.locator('a[data-app-view="expenses"]').click(); await page.waitForTimeout(200);
     await page.locator("#expOpenBtn").click(); await page.waitForTimeout(400);
     const closeBtn=page.locator("#expClose");
     if(await closeBtn.count()){ await closeBtn.click(); await page.waitForTimeout(250); }
@@ -255,6 +255,77 @@ test("a used custom category is not deleted without reassignment, and reassignme
       return {gone:!s.categories.some(c=>c.id==="cat_used"),cat:t&&t.categoryId,count:s.transactions.length};
     });
     assert.ok(persisted.gone); assert.equal(persisted.cat,target); assert.equal(persisted.count,1);
+    assert.deepEqual([...new Set(errs)],[]);
+  } finally { await ctx.close(); await browser.close(); }
+});
+
+/* انتقال إلى تبويب المالية حيث بطاقة الميزانية الأسبوعية وزر «＋ إضافة فئة أسبوعية» */
+async function openFinance(page){
+  await page.locator('a[data-app-view="expenses"]').click(); await page.waitForTimeout(250);
+  await page.locator("#expOpenBtn").click(); await page.waitForTimeout(350);
+  await page.locator('.exp-tab[data-view="dash"]').click(); await page.waitForTimeout(300);
+}
+
+test("the add-category form renders exactly one #vfBudget and saves the entered budget",async()=>{
+  const {browser,ctx,page,errs}=await open();
+  try{
+    await openFinance(page);
+    await page.locator("#expAddVar").click(); await page.waitForTimeout(300);
+
+    /* لا مُعرّفات مكرّرة داخل النموذج (كان حقل الميزانية يُرسم مرّتين) */
+    const dup=await page.evaluate(()=>{
+      const ids={}, dups=[];
+      document.querySelectorAll("#expFormBox [id]").forEach(el=>{ ids[el.id]=(ids[el.id]||0)+1; });
+      Object.keys(ids).forEach(k=>{ if(ids[k]>1) dups.push(k+"×"+ids[k]); });
+      return {dups, vfBudget:ids.vfBudget||0};
+    });
+    assert.equal(dup.vfBudget,1,"حقل الميزانية مرّة واحدة فقط");
+    assert.deepEqual(dup.dups,[],"لا مُعرّفات مكرّرة في النموذج");
+
+    /* الميزانية المُدخلة تُحفظ فعلًا */
+    await page.locator("#vfName").fill("اشتراك النادي");
+    await page.locator("#vfBudget").fill("150");
+    await page.locator("#vfSave").click(); await page.waitForTimeout(400);
+
+    const saved=await page.evaluate(()=>{
+      const d=JSON.parse(localStorage.getItem("h2do-expenses"));
+      const c=(d.categories||[]).find(x=>x.name==="اشتراك النادي");
+      return c? {budgets:c.budgets||[], visible:c.showInWeeklyBudget!==false} : null;
+    });
+    assert.ok(saved,"أُنشئت الفئة");
+    assert.equal(saved.budgets.length,1,"نسخة ميزانية واحدة");
+    assert.equal(saved.budgets[0].amountMinor,15000,"حُفظت ١٥٠ ر.س بالوحدة الصغرى");
+    assert.equal(saved.visible,true);
+
+    /* تعديل فئة قائمة: لا حقل ميزانية في نموذج التعديل (سلوك قائم لم يتغيّر) */
+    await page.reload(); await page.waitForTimeout(700);
+    await openFinance(page);
+    const catId=await page.evaluate(()=>{
+      const c=window.__mfkrExp.varAll().find(x=>x.name==="اشتراك النادي"); return c?c.id:null;
+    });
+    assert.ok(catId,"الفئة باقية بعد إعادة التحميل");
+    await page.evaluate(id=>{const b=document.querySelector('[data-catmenu="'+id+'"]'); if(b)b.click();},catId);
+    await page.waitForTimeout(250);
+    const edited=await page.evaluate(()=>{
+      const item=[...document.querySelectorAll(".prio-menu-item")].find(x=>x.textContent.includes("تعديل الاسم"));
+      if(item) item.click(); return !!item;
+    });
+    assert.ok(edited,"فُتح نموذج التعديل");
+    await page.waitForTimeout(300);
+    const editForm=await page.evaluate(()=>({
+      vfBudget:document.querySelectorAll("#expFormBox #vfBudget").length,
+      hasName:!!document.querySelector("#expFormBox #vfName")
+    }));
+    assert.equal(editForm.vfBudget,0,"نموذج التعديل بلا حقل ميزانية (كما كان)");
+    assert.ok(editForm.hasName,"نموذج التعديل يعرض الاسم");
+
+    /* الميزانية المحفوظة لم تتأثر بفتح نموذج التعديل */
+    const stillThere=await page.evaluate(()=>{
+      const d=JSON.parse(localStorage.getItem("h2do-expenses"));
+      const c=(d.categories||[]).find(x=>x.name==="اشتراك النادي");
+      return c&&c.budgets&&c.budgets[0]? c.budgets[0].amountMinor : null;
+    });
+    assert.equal(stillThere,15000,"الميزانية باقية بلا تغيير");
     assert.deepEqual([...new Set(errs)],[]);
   } finally { await ctx.close(); await browser.close(); }
 });

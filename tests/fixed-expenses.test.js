@@ -6,6 +6,13 @@ const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth
 const rd=(p)=>p.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
 let PASS=0,FAIL=0; const ok=(n,c)=>{ if(c){PASS++;console.log("  ✓ "+n);}else{FAIL++;console.log("  ✗ FAIL: "+n);} };
 const errs=[];
+/* بعد إعادة تنظيم واجهة العائلة: بطاقة «العائلة» تظهر بعد اختيار قسم العائلة من الشريط السفلي،
+   و«فتح العائلة» يفتح تبويب العائلة، والمالية (بطاقة الالتزامات) صارت تبويبًا مستقلًا data-view="dash". */
+const openFinance=async(p)=>{
+  await p.locator('a[data-app-view="expenses"]').click(); await p.waitForTimeout(250);
+  await p.click("#expOpenBtn"); await p.waitForTimeout(350);
+  await p.click('.exp-tab[data-view="dash"]'); await p.waitForTimeout(300);
+};
 const clickTxt=async(p,sel,txt)=>{ const els=await p.$$(sel); for(const e of els){ if(((await e.textContent())||"").includes(txt)){ await e.click(); return true; } } return false; };
 async function page(b){ const ctx=await b.newContext({viewport:{width:1000,height:900}}); const p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message)); return p; }
 (async()=>{
@@ -20,7 +27,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
       instances:[],transactions:[],trips:[]};
     localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, today());
   await p.goto(fileUrl); await p.waitForTimeout(700);
-  await p.click("#expOpenBtn"); await p.waitForTimeout(300);
+  await openFinance(p);
   await p.click("#expFixedCard [data-payinst]"); await p.waitForTimeout(250);
   await p.fill("#pfAmt","500"); await p.click("#pfSave"); await p.waitForTimeout(400);
   let s=await rd(p); let pay=s.transactions.find(t=>!t.deletedAt);
@@ -50,7 +57,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
       categories:[],fixedTemplates:[{id:"TPL",categoryId:null,name:"تسريع القرض",defaultAmountMinor:200000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:tk.slice(0,7),endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},createdAt:now,updatedAt:now,archivedAt:null}],instances:[],transactions:[],trips:[]};
     localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, today());
   await p.goto(fileUrl); await p.waitForTimeout(700);
-  await p.click("#expOpenBtn"); await p.waitForTimeout(300);
+  await openFinance(p);
   await p.click("#expFixedCard [data-tplmenu]"); await p.waitForTimeout(200);
   await clickTxt(p,".prio-menu-item","إيقاف"); await p.waitForTimeout(300);
   s=await rd(p);
@@ -78,7 +85,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   await p.goto(fileUrl); await p.waitForTimeout(700);
   s=await rd(p);
   ok("seed: instance paid=2000 status paid (recalc on load)", s.instances[0].paidAmountMinor===200000 && s.instances[0].status==="paid");
-  await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+  await openFinance(p);
   // open payment history, undo P2 (80000)
   await p.click("#expFixedCard [data-tplmenu]"); await p.waitForTimeout(200);
   await clickTxt(p,".prio-menu-item","سجل الدفعات"); await p.waitForTimeout(250);

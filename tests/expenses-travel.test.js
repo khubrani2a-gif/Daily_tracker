@@ -6,6 +6,17 @@ const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth
 const rd=(p)=>p.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
 let PASS=0,FAIL=0; const ok=(n,c)=>{ if(c){PASS++;console.log("  ✓ "+n);}else{FAIL++;console.log("  ✗ FAIL: "+n);} };
 const errs=[];
+/* بعد إعادة تنظيم واجهة العائلة: بطاقة «العائلة» تظهر بعد اختيار قسم العائلة من الشريط السفلي.
+   الدالة مُتسامحة: إن كانت النافذة مفتوحة سلفًا لا تعيد فتحها (الزر يكون محجوبًا خلفها). */
+const showFamilyCard=async(p)=>{ await p.locator('a[data-app-view="expenses"]').click(); await p.waitForTimeout(250); };
+const openFamily=async(p)=>{
+  const open=await p.evaluate(()=>{const e=document.getElementById("expOverlay"); return !!(e&&!e.hidden);});
+  if(open) return;
+  await showFamilyCard(p);
+  await p.click("#expOpenBtn"); await p.waitForTimeout(350);
+};
+/* تبويب المالية: فيه بطاقات الميزانية والالتزامات وزر «＋ إضافة مصروف» */
+const openFinance=async(p)=>{ await openFamily(p); await p.click('.exp-tab[data-view="dash"]'); await p.waitForTimeout(300); };
 // everything in TODAY's day/week/month/year -> no navigation needed
 function seed(extra){ return (a)=>{ localStorage.clear(); const now=Date.now(); const tk=a.tk;
   const mk=(o)=>Object.assign({id:o.id,amountMinor:0,transactionDate:tk,categoryId:"CA",transactionType:"expense",fixedExpenseInstanceId:null,relatedTransactionId:null,tripId:null,countAgainstWeeklyBudget:true,originalAmountMinor:null,originalCurrency:null,exchangeRate:null,exchangeRateSource:null,merchantCountry:null,createdAt:now,updatedAt:now,deletedAt:null},o);
@@ -27,7 +38,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   let p=await b.newPage({viewport:{width:1000,height:900}}); p.on("pageerror",e=>errs.push(e.message));
   await p.addInitScript(seed(), {tk:today()});
   await p.goto(fileUrl); await p.waitForTimeout(700);
-  await p.click("#expOpenBtn"); await p.waitForTimeout(150);
+  await openFamily(p);
   await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
 
   console.log("Weekly (single-count, travel excluded, refund reduces)");
@@ -67,16 +78,21 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   ok("priorities card exists", !!(await p.$("#priorities")));
   ok("quran card exists", !!(await p.$("#quranCard")));
   // add a normal expense (no trip) still works & counts weekly
-  await p.click("#expQuickAdd"); await p.waitForTimeout(200);
-  await p.fill("#efAmount","45.75"); await p.click("#efSave"); await p.waitForTimeout(300);
+  /* زر «＋ إضافة مصروف» انتقل من بطاقة الإطلاق (#expQuickAdd) إلى تبويب المالية (#expAddBtn) */
+  await openFinance(p);
+  await p.click("#expAddBtn"); await p.waitForTimeout(200);
+  await p.fill("#efAmount","45.75");
+  /* الفئات الهرمية تُلزم باختيار فئة فرعية قبل الحفظ — نختار أول شريحة متاحة */
+  const chip=await p.$("[data-subchip]"); if(chip){ await chip.click(); await p.waitForTimeout(120); }
+  await p.click("#efSave"); await p.waitForTimeout(400);
   let s=await rd(p);
   ok("normal expense: tripId null, countWeekly true", s.transactions[0].tripId===null && s.transactions[0].countAgainstWeeklyBudget===true && s.transactions[0].amountMinor===4575);
   // no trip -> no trip select shown (no active trips, no trips)
-  await p.click("#expQuickAdd"); await p.waitForTimeout(200);
+  await p.click("#expAddBtn"); await p.waitForTimeout(200);
   ok("no trip selector when no trips exist", !(await p.$("#efTrip")));
   await p.click("[data-close]").catch(()=>{});
   // mobile no overflow for exp elements
-  await p.click("#expOpenBtn"); await p.waitForTimeout(150);
+  await openFamily(p);
   await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(150);
   await p.setViewportSize({width:390,height:820}); await p.waitForTimeout(200);
   const ovf=await p.evaluate(()=>{ let bad=0; document.querySelectorAll("#expOverlay *").forEach(el=>{const r=el.getBoundingClientRect(); if(r.width>0&&r.right>window.innerWidth+1)bad++;}); return bad; });
