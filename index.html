@@ -11060,7 +11060,13 @@
         toMinor:(v)=> expToMinor(v),
         minorParse:(v)=> expMinorParse(v),
         merge:(a,b)=> expMerge(a,b),
-        openExpenseForm:(id,pre)=> expOpenExpenseForm(id,pre)
+        openExpenseForm:(id,pre)=> expOpenExpenseForm(id,pre),
+        varAll:()=> expVarCategoriesAll().map(c=>({id:c.id,name:c.name,visible:c.showInWeeklyBudget!==false,order:c.sortOrder,builtIn:expCategoryIsBuiltIn(c)})),
+        varVisible:()=> expVarCategoriesVisible().map(c=>c.id),
+        catUsage:(id)=> expCategoryUsage(id),
+        setVisible:(id,v)=> expCategorySetVisible(id,v),
+        reorderCat:(id,dir)=> expCategoryReorder(id,dir),
+        openCatManager:()=> expOpenCategoryManager()
       };
     } else {
       window.__mfkrSync = _syncReadOnly;   /* إنتاج: قراءة فقط، لا كتابة */
@@ -11837,9 +11843,19 @@
     cat.budgets.forEach(b=>{ if(b.from<=weekStart && (!best || b.from>best.from)) best=b; });
     return best? best.amountMinor : 0;
   }
+  /* ==================== المصدر الوحيد لقائمة الفئات ====================
+     كل الواجهات (الإدخال، الميزانية الأسبوعية، النقل، المتكرّرة، إعادة التصنيف، التقارير)
+     تقرأ من expState.categories عبر هذه الدوال فقط — بلا قوائم مُثبَّتة منفصلة.
+     - expVarCategoriesAll: كل الفئات الأسبوعية الحيّة مرتّبةً بترتيب المستخدم (يشمل المخفية)
+     - expVarCategoriesVisible: ما يظهر في بطاقة الميزانية الأسبوعية فقط (showInWeeklyBudget)
+     الإخفاء يخصّ العرض الأسبوعي وحده: الفئة المخفية تبقى متاحة للإدخال والنقل والتقارير والسجل. */
+  function expCatSortOrder(a,b){ const d=(a.sortOrder||0)-(b.sortOrder||0); return d||String(a.name||"").localeCompare(String(b.name||""),"ar"); }
+  function expVarCategoriesAll(){ return expState.categories.filter(c=>c&&c.section==="variable"&&c.isActive&&!c.archivedAt).sort(expCatSortOrder); }
+  function expVarCategoriesVisible(){ return expVarCategoriesAll().filter(c=>c.showInWeeklyBudget!==false); }
+  /* الفئة المدمجة في التطبيق تُعرف بـ seedKey (أو مطابقة اسمها لبذرة) — لا تُحذف نهائيًا، تُخفى فقط */
+  function expCategoryIsBuiltIn(c){ return !!(c && (c.seedKey || EXP_DEFAULT_NAMES.indexOf(c.name)>=0)); }
   function expWeeklyBudgetTotal(weekStart){
-    return expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt && c.showInWeeklyBudget!==false)
-      .reduce((a,c)=> a + expBudgetForWeek(c, weekStart), 0);
+    return expVarCategoriesVisible().reduce((a,c)=> a + expBudgetForWeek(c, weekStart), 0);
   }
   /* هل تُحتسب المعاملة ضمن استهلاك الميزانية الأسبوعية العادية؟
      التصنيف محفوظ على مستوى المعاملة (countAgainstWeeklyBudget) لحماية التقارير التاريخية. */
@@ -12458,7 +12474,8 @@
   function expRenderVarCard(){
     const box=document.getElementById("expVarCard"); if(!box)return;
     const wr=expSalaryWeekRange(todayStr()), view=expVarViewLoad(), hidden=expVarHiddenForWeek(wr.start);
-    const cats=expState.categories.filter(c=>c.section==="variable"&&c.isActive&&!c.archivedAt&&c.showInWeeklyBudget!==false).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    const cats=expVarCategoriesVisible();
+    const hiddenCount=expVarCategoriesAll().length-cats.length;
     const totalBudget=expWeeklyBudgetTotal(wr.start), totalSpent=expVarNetInWeek(wr), totalRemain=totalBudget-totalSpent;
     const totalPct=totalBudget>0?Math.max(0,expPct(totalSpent,totalBudget)):0;
     let data=cats.map(c=>{ const budget=expBudgetForWeek(c,wr.start), spent=expNetInRange(wr,t=>t.categoryId===c.id&&expClassify(t)==="variable"), remain=budget-spent, pct=budget>0?Math.max(0,expPct(spent,budget)):0; return {c,budget,spent,remain,pct,over:budget>0&&remain<0}; });
@@ -12479,9 +12496,11 @@
     box.innerHTML='<h3>🛒 المصروفات الأسبوعية المتغيرة</h3><div class="exp-card-hint">أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'</div>'+
       '<div class="exp-var-summary"><div><small>ميزانية الأسبوع</small><b>'+expMoney(totalBudget)+'</b></div><div><small>المصروف</small><b>'+expMoney(totalSpent)+'</b></div><div class="'+(totalRemain<0?'danger':'accent')+'"><small>'+(totalRemain<0?'التجاوز':'المتبقي')+'</small><b>'+expMoney(Math.abs(totalRemain))+'</b></div><div><small>المستخدم</small><b>'+_arn(totalPct)+'٪</b></div></div>'+
       '<div class="exp-var-tools"><select id="expVarSort" aria-label="ترتيب الفئات"><option value="custom"'+(view.sort==="custom"?" selected":"")+'>الترتيب المخصص</option><option value="spent"'+(view.sort==="spent"?" selected":"")+'>الأعلى صرفًا</option><option value="over"'+(view.sort==="over"?" selected":"")+'>الأعلى تجاوزًا</option></select><button id="expVarOver" class="'+(view.overOnly?'active':'')+'" aria-pressed="'+view.overOnly+'">المتجاوزة فقط</button>'+(hidden.size?'<button id="expVarHidden" class="'+(view.showHidden?'active':'')+'">'+(view.showHidden?'إخفاء المخفية':'إظهار المخفية')+' ('+_arn(hidden.size)+')</button>':'')+'</div>'+insight+rows+
-      '<button class="exp-add-line" id="expAddVar">＋ إضافة فئة أسبوعية</button>';
+      '<button class="exp-add-line" id="expAddVar">＋ إضافة فئة أسبوعية</button>'+
+      '<button class="exp-add-line" id="expManageCats">☷ إدارة الفئات'+(hiddenCount?' ('+_arn(hiddenCount)+' مخفية)':'')+'</button>';
     box.querySelectorAll("[data-catmenu]").forEach(b=>b.onclick=()=>expCatMenu(b,b.dataset.catmenu));
     box.querySelector("#expAddVar").onclick=()=>expOpenVarForm(null);
+    box.querySelector("#expManageCats").onclick=()=>expOpenCategoryManager();
     box.querySelector("#expVarSort").onchange=e=>{view.sort=e.target.value;expVarViewSave(view);expRenderVarCard();};
     box.querySelector("#expVarOver").onclick=()=>{view.overOnly=!view.overOnly;expVarViewSave(view);expRenderVarCard();};
     const hiddenBtn=box.querySelector("#expVarHidden"); if(hiddenBtn)hiddenBtn.onclick=()=>{view.showHidden=!view.showHidden;expVarViewSave(view);expRenderVarCard();};
@@ -12595,6 +12614,7 @@
       {label:"＋ إضافة مصروف", onClick:()=> expOpenExpenseForm(null,null,catId)},
       {label:"✏️ تعديل الاسم/الأيقونة", onClick:()=> expOpenVarForm(catId)},
       {label:"☷ إدارة الفئات الفرعية", onClick:()=> expOpenSubcategoryManager(catId)},
+      {label:"⚙️ إدارة الفئات الرئيسية", onClick:()=> expOpenCategoryManager()},
       {label:"💰 تعديل الميزانية الأسبوعية", onClick:()=> expOpenBudgetForm(catId)},
       {label:"📋 عرض تفاصيل الفئة", onClick:()=> expShowVarCategoryDetails(catId)},
       {label:"↔ نقل مصروفات هذا الأسبوع", onClick:()=> expMoveVarTransactions(catId)},
@@ -12618,13 +12638,116 @@
   function expMoveVarTransactions(catId){
     const source=expCatById(catId); if(!source)return;
     const wr=expSalaryWeekRange(todayStr()), txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
-    const destinations=expState.categories.filter(c=>c.section==="variable"&&c.isActive&&!c.archivedAt&&c.id!==catId);
+    const destinations=expVarCategoriesAll().filter(c=>c.id!==catId);   /* يشمل المخفية: الإخفاء لا يمنع النقل */
     if(!txs.length){ hifzShowConfirm({title:"لا توجد مصروفات للنقل",body:"لا توجد مصروفات مسجلة لهذه الفئة خلال الأسبوع الحالي.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
     if(!destinations.length){ hifzShowConfirm({title:"أضف فئة أخرى أولًا",body:"تحتاج إلى فئة أسبوعية أخرى لنقل المصروفات إليها.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
     const options=destinations.map(c=>'<option value="'+c.id+'">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</option>').join("");
     const list=txs.map(t=>'<div class="exp-txitem"><div class="t-main"><div class="t-name">'+expEsc(t.subcategory||t.description||"مصروف")+'</div><div class="t-sub">'+expArDate(t.transactionDate)+' · '+expMoney(t.amountMinor)+'</div></div><select class="exp-move-select" data-var-move="'+t.id+'"><option value="">ابقَ في '+expEsc(source.name)+'</option>'+options+'</select></div>').join("");
     expOpenForm('<div class="exp-form-head"><h3>نقل مصروفات — '+expEsc(source.name)+'</h3><button data-close>✕</button></div><div class="exp-card-hint">اختر الفئة الجديدة لكل مصروف في أسبوع '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'. لا يتغير المبلغ أو التاريخ.</div>'+list+'<button class="exp-save" id="expMoveSave">حفظ النقل</button>');
     expFormBox.querySelector("#expMoveSave").onclick=()=>{ let changed=0; expFormBox.querySelectorAll("[data-var-move]").forEach(s=>{if(s.value){const t=expState.transactions.find(x=>x.id===s.dataset.varMove);if(t){const now=Date.now();t.categoryId=s.value;t.categoryPinnedAt=now;/* إسناد يدوي صريح: لا يجوز لأي ترحيل تلقائي تجاوزه */t.updatedAt=now;changed++;}}}); if(!changed){expCloseForm();return;} expSave(expState);expCloseForm();expRefresh();};
+  }
+  /* ==================== إدارة الفئات الرئيسية ====================
+     نافذة واحدة تتحكّم في الظهور والترتيب والحذف الآمن. كل شيء يُخزَّن داخل expState.categories
+     (showInWeeklyBudget / sortOrder) فيُحفظ محليًا ويتزامن سحابيًا مثل بقيّة البيانات. */
+  /* مراجع الفئة في كل السجلات — تُستخدم لتقرير أهلية الحذف (لا نحذف تاريخًا ماليًا أبدًا) */
+  function expCategoryUsage(catId){
+    const live=t=>t&&!t.deletedAt;
+    const txs=(expState.transactions||[]).filter(t=>live(t)&&t.categoryId===catId).length;
+    const recurring=(expState.recurringTransactions||[]).filter(r=>live(r)&&r.categoryId===catId).length;
+    const trips=(expState.trips||[]).reduce((n,tr)=>n+((tr&&tr.allocations||[]).filter(a=>a&&a.categoryId===catId).length),0);
+    const templates=(expState.fixedTemplates||[]).filter(tp=>tp&&tp.categoryId===catId).length;
+    const cat=expCatById(catId), budgets=(cat&&cat.budgets||[]).length;
+    return {txs,recurring,trips,templates,budgets,total:txs+recurring+trips+templates+budgets};
+  }
+  function expCategoryReorder(catId, dir){
+    const list=expVarCategoriesAll(), i=list.findIndex(c=>c.id===catId);
+    if(i<0) return false;
+    const j=i+dir; if(j<0||j>=list.length) return false;
+    const now=Date.now();
+    list.splice(j,0,list.splice(i,1)[0]);                       /* أعِد الترتيب ثم اكتب أرقامًا متتابعة */
+    list.forEach((c,idx)=>{ if(c.sortOrder!==idx){ c.sortOrder=idx; c.updatedAt=now; } });
+    expSave(expState); return true;
+  }
+  function expCategorySetVisible(catId, visible){
+    const c=expCatById(catId); if(!c) return;
+    c.showInWeeklyBudget=!!visible; c.updatedAt=Date.now();     /* الإخفاء عرضٌ فقط: لا يمسّ المعاملات ولا التقارير */
+    expSave(expState);
+  }
+  function expOpenCategoryManager(){
+    const cats=expVarCategoriesAll();
+    const rows=cats.map((c,i)=>{
+      const visible=c.showInWeeklyBudget!==false, builtIn=expCategoryIsBuiltIn(c), use=expCategoryUsage(c.id);
+      const badge=builtIn?'<span class="exp-pill partial">مدمجة</span>':'<span class="exp-pill near">مخصصة</span>';
+      const state=visible?'ظاهرة في الميزانية الأسبوعية':'مخفية من الميزانية الأسبوعية · تبقى متاحة للإدخال والتقارير';
+      const canDelete=!builtIn;                                  /* المدمجة تُخفى فقط؛ المخصصة تمرّ على فحص الاستخدام */
+      return '<div class="exp-txitem" data-catrow="'+c.id+'">'+
+        '<div class="t-main"><div class="t-name">'+(c.icon?c.icon+" ":"")+expEsc(c.name)+' '+badge+'</div>'+
+        '<div class="t-sub">'+state+(use.total?' · '+_arn(use.txs)+' معاملة':'')+'</div></div>'+
+        '<button class="exp-mini" data-catup="'+c.id+'" title="أعلى"'+(i===0?' disabled':'')+'>↑</button>'+
+        '<button class="exp-mini" data-catdown="'+c.id+'" title="أسفل"'+(i===cats.length-1?' disabled':'')+'>↓</button>'+
+        '<button class="exp-mini" data-catvis="'+c.id+'" title="'+(visible?'إخفاء من الميزانية':'إظهار في الميزانية')+'">'+(visible?'🙈':'👁')+'</button>'+
+        (canDelete?'<button class="exp-mini" data-catdel="'+c.id+'" title="حذف">🗑</button>':'')+
+        '</div>';
+    }).join("")||'<div class="exp-empty">لا توجد فئات أسبوعية.</div>';
+    expOpenForm('<div class="exp-form-head"><h3>☷ إدارة الفئات</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">الإخفاء يزيل الفئة من بطاقة الميزانية الأسبوعية فقط — تبقى متاحة عند إضافة مصروف وتعديله ونقله وفي التقارير والسجل. الترتيب هنا يُستخدم في كل القوائم.</div>'+
+      rows+'<button class="exp-save" data-close>تم</button>');
+    expFormBox.querySelectorAll("[data-catup]").forEach(b=>b.onclick=()=>{ if(expCategoryReorder(b.dataset.catup,-1)){ expOpenCategoryManager(); expRefresh(); } });
+    expFormBox.querySelectorAll("[data-catdown]").forEach(b=>b.onclick=()=>{ if(expCategoryReorder(b.dataset.catdown,1)){ expOpenCategoryManager(); expRefresh(); } });
+    expFormBox.querySelectorAll("[data-catvis]").forEach(b=>b.onclick=()=>{ const c=expCatById(b.dataset.catvis); if(!c)return; expCategorySetVisible(c.id, c.showInWeeklyBudget===false); expOpenCategoryManager(); expRefresh(); });
+    expFormBox.querySelectorAll("[data-catdel]").forEach(b=>b.onclick=()=>expCategoryDeleteFlow(b.dataset.catdel));
+  }
+  /* حذف آمن: المدمجة لا تُحذف أبدًا. المخصصة غير المستخدمة تُحذف. والمستخدمة تتطلّب قرارًا صريحًا:
+     نقل كل مراجعها إلى فئة أخرى، أو الإخفاء، أو الإلغاء — بلا حذف أي معاملة أو ميزانية أو سجل. */
+  function expCategoryDeleteFlow(catId){
+    const c=expCatById(catId); if(!c) return;
+    /* كل التأكيدات تُرسم داخل نفس نافذة النماذج (z-210)؛ نافذة التأكيد العامة أدنى منها (z-200) فتُحجب. */
+    if(expCategoryIsBuiltIn(c)){
+      expOpenForm('<div class="exp-form-head"><h3>لا يمكن حذف فئة مدمجة</h3><button data-close>✕</button></div>'+
+        '<div class="exp-card-hint">«'+expEsc(c.name)+'» فئة مدمجة في التطبيق. يمكنك إخفاؤها من بطاقة الميزانية الأسبوعية بدل حذفها، وتبقى متاحة عند إضافة مصروف وتعديله وفي التقارير والسجل.</div>'+
+        '<button class="exp-save" id="cdHideBuiltin">إخفاؤها</button>'+
+        '<button class="exp-secondary" id="cdBackBuiltin" style="width:100%;margin-top:.5rem">إلغاء</button>');
+      expFormBox.querySelector("#cdHideBuiltin").onclick=()=>{ expCategorySetVisible(c.id,false); expOpenCategoryManager(); expRefresh(); };
+      expFormBox.querySelector("#cdBackBuiltin").onclick=()=>expOpenCategoryManager();
+      return;
+    }
+    const use=expCategoryUsage(catId);
+    if(!use.total){
+      expOpenForm('<div class="exp-form-head"><h3>حذف «'+expEsc(c.name)+'»؟</h3><button data-close>✕</button></div>'+
+        '<div class="exp-card-hint">فئة مخصصة غير مستخدمة: لا معاملات ولا ميزانية ولا مصروفات متكررة ولا مراجع. سيُحذف اسمها فقط.</div>'+
+        '<button class="exp-save" id="cdDelUnused">حذف</button>'+
+        '<button class="exp-secondary" id="cdBackUnused" style="width:100%;margin-top:.5rem">إلغاء</button>');
+      expFormBox.querySelector("#cdDelUnused").onclick=()=>{ expState.categories=expState.categories.filter(x=>x.id!==catId); expSave(expState); expOpenCategoryManager(); expRefresh(); };
+      expFormBox.querySelector("#cdBackUnused").onclick=()=>expOpenCategoryManager();
+      return;
+    }
+    /* مستخدمة: اطلب هدفًا للنقل، أو اقترح الإخفاء */
+    const targets=expVarCategoriesAll().filter(x=>x.id!==catId);
+    const opts=targets.map(x=>'<option value="'+x.id+'">'+(x.icon?x.icon+" ":"")+expEsc(x.name)+'</option>').join("");
+    const detail=[use.txs?_arn(use.txs)+" معاملة":"",use.budgets?_arn(use.budgets)+" نسخة ميزانية":"",use.recurring?_arn(use.recurring)+" مصروف متكرر":"",use.trips?_arn(use.trips)+" مخصص رحلة":"",use.templates?_arn(use.templates)+" التزام":""].filter(Boolean).join(" · ");
+    expOpenForm('<div class="exp-form-head"><h3>حذف «'+expEsc(c.name)+'»</h3><button data-close>✕</button></div>'+
+      '<div class="exp-card-hint">هذه الفئة مستخدمة ('+detail+'). لن نحذف أي معاملة أو سجل مالي. اختر ما تريد:</div>'+
+      (targets.length?'<div class="exp-field"><label>انقل كل مراجعها إلى</label><select id="cdTarget">'+opts+'</select></div><button class="exp-save" id="cdMove">نقل كل المراجع ثم حذف الفئة</button>':'<div class="exp-card-hint">لا توجد فئة أخرى للنقل إليها.</div>')+
+      '<button class="exp-secondary" id="cdHide" style="width:100%;margin-top:.5rem">إخفاؤها بدل الحذف</button>'+
+      '<button class="exp-secondary" data-close style="width:100%;margin-top:.5rem">إلغاء</button>');
+    const hideBtn=expFormBox.querySelector("#cdHide");
+    if(hideBtn) hideBtn.onclick=()=>{ expCategorySetVisible(catId,false); expOpenCategoryManager(); expRefresh(); };
+    const moveBtn=expFormBox.querySelector("#cdMove");
+    if(moveBtn) moveBtn.onclick=()=>{
+      const to=expFormBox.querySelector("#cdTarget").value, target=expCatById(to); if(!target) return;
+      const now=Date.now();
+      /* أعِد ربط كل المراجع (بلا فقدان) — والمعاملات تُختم كإسناد يدوي فلا يتجاوزها أي ترحيل تلقائي */
+      (expState.transactions||[]).forEach(t=>{ if(t&&t.categoryId===catId){ t.categoryId=to; t.categoryPinnedAt=now; t.updatedAt=now; } });
+      (expState.recurringTransactions||[]).forEach(r=>{ if(r&&r.categoryId===catId){ r.categoryId=to; r.updatedAt=now; } });
+      (expState.trips||[]).forEach(tr=>{ (tr&&tr.allocations||[]).forEach(a=>{ if(a&&a.categoryId===catId){ a.categoryId=to; tr.updatedAt=now; } }); });
+      (expState.fixedTemplates||[]).forEach(tp=>{ if(tp&&tp.categoryId===catId){ tp.categoryId=to; tp.updatedAt=now; } });
+      /* نسخ الميزانية المؤرّخة: نضيف ما لا يوجد له تاريخ مطابق في الهدف (لا نطمس ميزانية الهدف) */
+      const byDate=new Map((target.budgets||[]).map(b=>[b.from,b]));
+      (c.budgets||[]).forEach(b=>{ if(b&&b.from!=null&&!byDate.has(b.from)) byDate.set(b.from,b); });
+      target.budgets=[...byDate.values()].sort((a,b)=>a.from<b.from?-1:1); target.updatedAt=now;
+      expState.categories=expState.categories.filter(x=>x.id!==catId);
+      expSave(expState); expOpenCategoryManager(); expRefresh();
+    };
   }
   function expOpenSubcategoryManager(catId){
     const c=expCatById(catId); if(!c)return;
@@ -12671,7 +12794,7 @@
   }
   function expOpenRecurringForm(ruleId){
     const rule=ruleId?(expState.recurringTransactions||[]).find(r=>r.id===ruleId):null;
-    const cats=expState.categories.filter(c=>c.section==="variable"&&c.isActive&&!c.archivedAt);
+    const cats=expVarCategoriesAll();   /* يشمل المخفية: الإخفاء يخصّ العرض الأسبوعي فقط */
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(rule?"تعديل معاملة متكررة":"معاملة متكررة جديدة")+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-field"><label>الاسم</label><input id="rtName" placeholder="مثال: اشتراك الإنترنت" value="'+expEsc(rule&&rule.name||"")+'"></div>'+
@@ -12696,7 +12819,8 @@
 
   function expOpenExpenseForm(editId, preTripId, preCategoryId){
     const tx = editId ? expState.transactions.find(t=>t.id===editId) : null;
-    const cats = expState.categories.filter(c=>c.isActive && !c.archivedAt).sort((a,b)=> (a.section===b.section?0:a.section==="variable"?-1:1) || (a.sortOrder||0)-(b.sortOrder||0));
+    /* نفس ترتيب المستخدم المعتمد في بطاقة الميزانية (الأسبوعية أولًا ثم الالتزامات) — يشمل المخفية */
+    const cats = expVarCategoriesAll().concat(expState.categories.filter(c=>c&&c.section!=="variable"&&c.isActive&&!c.archivedAt).sort(expCatSortOrder));
     const varCats = cats.filter(c=>c.section==="variable");
     const curCat = tx? tx.categoryId : (preCategoryId || (varCats[0]?varCats[0].id:""));
     const curSubId=tx&&tx.subcategoryId||"", curCustom=tx&&tx.customSubcategory||"";
@@ -13076,7 +13200,7 @@
   function expOpenReclassifyForm(txId){
     const t=expState.transactions.find(x=>x.id===txId); if(!t) return;
     const tpls=expState.fixedTemplates.filter(tp=>!tp.archivedAt);
-    const cats=expState.categories.filter(c=>c.section==="variable" && c.isActive && !c.archivedAt).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    const cats=expVarCategoriesAll();   /* يشمل المخفية: إعادة التصنيف متاحة لكل الفئات الحيّة */
     const curFixed = expClassify(t)==="fixed";
     expOpenForm(
       '<div class="exp-form-head"><h3>تصحيح التصنيف</h3><button data-close>✕</button></div>'+
