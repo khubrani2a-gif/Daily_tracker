@@ -9211,7 +9211,7 @@
   }
   function decisionRulesSave(value){localStorage.setItem(DECISION_RULES_KEY,JSON.stringify(value));renderDecisionCenter();}
   function decisionDeferredTask(limit){const count={};Object.values(allDays()).forEach(day=>(day.tasks||[]).forEach(task=>{if(task&&task.text&&taskStatus(task)==="deferred")count[task.text]=(count[task.text]||0)+1;}));const entry=Object.entries(count).sort((a,b)=>b[1]-a[1])[0];return entry&&entry[1]>=(limit||3)?entry:null;}
-  function decisionUnplanned(){try{const range=expSalaryWeekRange(todayStr()), amount=expActiveTx().filter(tx=>expInRange(tx.transactionDate,range)&&((expCatById(tx.categoryId)||{}).name)==="غير مخطط").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);return amount>0?amount:0;}catch(e){return 0;}}
+  function decisionUnplanned(){try{const range=expWeekRange(todayStr()), amount=expActiveTx().filter(tx=>expInRange(tx.transactionDate,range)&&((expCatById(tx.categoryId)||{}).name)==="غير مخطط").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);return amount>0?amount:0;}catch(e){return 0;}}
   function decisionFamilyPrep(){return (state.tasks||[]).find(task=>task&&/^موعد عائلي:/.test(task.text||"")&&Array.isArray(task.subtasks)&&task.subtasks.some(step=>!step.done))||null;}
   function decisionMorningReading(){const hour=new Date().getHours(), q=qLoad();return hour>=5&&hour<11&&q.page<q.startPage+q.target?{remaining:q.startPage+q.target-q.page}:null;}
   function decisionItems(){
@@ -12379,7 +12379,7 @@
   function expSummaryCards(){
     const today = todayStr();
     const dayNet = expNetInRange(expDayRange(today));
-    const wr = expSalaryWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
+    const wr = expWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
     const weekNet = expNetInRange(wr), cycleNet = expNetInRange(cycle), salary=expToMinor(expState.settings.salaryAmountMinor), remaining=salary-cycleNet;
     const budget = expWeeklyBudgetTotal(wr.start), varSpent = expVarNetInWeek(wr);
     return [
@@ -12400,7 +12400,7 @@
     }
     box.innerHTML = expSummaryCards().map(c=>
       '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
-    const alert=document.getElementById("expBudgetAlert"), wr=expSalaryWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
+    const alert=document.getElementById("expBudgetAlert"), wr=expWeekRange(todayStr()), budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr);
     if(alert && budget>0 && spent/budget>=.8){ const over=spent>budget; alert.hidden=false; alert.textContent=over ? "⚠️ تجاوزت ميزانية الأسبوع بـ "+expMoney(spent-budget) : "⚠️ استخدمت "+_arn(Math.round(spent/budget*100))+"٪ من ميزانية الأسبوع — المتبقي "+expMoney(budget-spent); }
     else if(alert){ alert.hidden=true; alert.textContent=""; }
     expRenderTravelBanner("expLaunchBanner");
@@ -12499,7 +12499,7 @@
   function expVarToggleHidden(catId, weekStart){ const all=expVarHiddenLoad(), ids=new Set(Array.isArray(all[weekStart])?all[weekStart]:[]); if(ids.has(catId))ids.delete(catId);else ids.add(catId); all[weekStart]=Array.from(ids); localStorage.setItem(EXP_VAR_HIDDEN_KEY,JSON.stringify(all)); }
   /* حساب نقي مشترك بين الواجهة والاختبارات: يعرض الصرف من دون تعديل بيانات المصدر. */
   function expVariableBudgetProgress(dateStr){
-    const week=expSalaryWeekRange(dateStr), month=expMonthRange(dateStr);
+    const week=expWeekRange(dateStr), month=expMonthRange(dateStr);
     const rows=expVarCategoriesVisible().map(c=>{
       const weeklyBudget=expBudgetForWeek(c,week.start);
       const weeklySpent=expNetInRange(week,t=>t.categoryId===c.id&&expClassify(t)==="variable"&&expCountsWeekly(t));
@@ -12571,7 +12571,7 @@
   }
   function expRenderBudgetCompareCard(){
     const box=document.getElementById("expBudgetCompareCard"); if(!box) return;
-    const wr=expSalaryWeekRange(todayStr());
+    const wr=expWeekRange(todayStr());
     const budget=expWeeklyBudgetTotal(wr.start), spent=expVarNetInWeek(wr), bpct=Math.min(100,expPct(spent,budget));
     const inst=expSalaryCycleInstances(todayStr());
     const planned=inst.reduce((a,i)=>a+expToMinor(i.plannedAmountMinor),0);
@@ -12653,7 +12653,7 @@
   }
   function expCatMenu(anchor, catId){
     const c = expCatById(catId); if(!c) return;
-    const wr=expSalaryWeekRange(todayStr()), isHidden=expVarHiddenForWeek(wr.start).has(catId);
+    const wr=expWeekRange(todayStr()), isHidden=expVarHiddenForWeek(wr.start).has(catId);
     expActionMenu(anchor, [
       {label:"＋ إضافة مصروف", onClick:()=> expOpenExpenseForm(null,null,catId)},
       {label:"✏️ تعديل الاسم/الأيقونة", onClick:()=> expOpenVarForm(catId)},
@@ -12669,7 +12669,7 @@
   }
   function expShowVarCategoryDetails(catId){
     const c=expCatById(catId); if(!c)return;
-    const wr=expSalaryWeekRange(todayStr()), budget=expBudgetForWeek(c,wr.start);
+    const wr=expWeekRange(todayStr()), budget=expBudgetForWeek(c,wr.start);
     const txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
     const spent=expNet(txs), remain=budget-spent;
     const bySub={}; txs.forEach(t=>{const k=expTxSubcategoryLabel(t);bySub[k]=(bySub[k]||0)+(t.transactionType==="refund"?-expToMinor(t.amountMinor):expToMinor(t.amountMinor));});
@@ -12681,7 +12681,7 @@
   }
   function expMoveVarTransactions(catId){
     const source=expCatById(catId); if(!source)return;
-    const wr=expSalaryWeekRange(todayStr()), txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
+    const wr=expWeekRange(todayStr()), txs=expTxInRange(wr,t=>t.categoryId===catId&&expClassify(t)==="variable").sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
     const destinations=expVarCategoriesAll().filter(c=>c.id!==catId);   /* يشمل المخفية: الإخفاء لا يمنع النقل */
     if(!txs.length){ hifzShowConfirm({title:"لا توجد مصروفات للنقل",body:"لا توجد مصروفات مسجلة لهذه الفئة خلال الأسبوع الحالي.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
     if(!destinations.length){ hifzShowConfirm({title:"أضف فئة أخرى أولًا",body:"تحتاج إلى فئة أسبوعية أخرى لنقل المصروفات إليها.",okText:"حسنًا",cancelText:"إغلاق",onOk:()=>{}}); return; }
@@ -13083,7 +13083,7 @@
 
   function expOpenVarForm(catId){
     const c = catId? expCatById(catId):null;
-    const wr = expSalaryWeekRange(todayStr());
+    const wr = expWeekRange(todayStr());
     const curBudget = c? expBudgetForWeek(c, wr.start):0;
     expOpenForm(
       '<div class="exp-form-head"><h3>'+(c?"تعديل فئة":"إضافة فئة أسبوعية")+'</h3><button data-close>✕</button></div>'+
@@ -13116,7 +13116,7 @@
   }
   function expOpenBudgetForm(catId){
     const c=expCatById(catId); if(!c) return;
-    const wr=expSalaryWeekRange(todayStr());
+    const wr=expWeekRange(todayStr());
     expOpenForm(
       '<div class="exp-form-head"><h3>الميزانية الأسبوعية — '+expEsc(c.name)+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-field"><label>الميزانية الأسبوعية (ر.س)</label><input class="amount" id="bfAmt" inputmode="decimal" value="'+(expBudgetForWeek(c,wr.start)/100||"")+'"></div>'+

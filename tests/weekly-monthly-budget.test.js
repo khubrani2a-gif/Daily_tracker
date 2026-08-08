@@ -36,7 +36,7 @@ function fixture(){
       defaultPaymentMethod:null,familyMembers:[],familyBudgetMinor:0,currentBudgetVersion:1,migratedLegacy:true,
       pristineSeed:false,createdAt:now,updatedAt:now},
     categories:[category],fixedTemplates:[],instances:[],
-    /* صرف يومي ١ و٢ أغسطس يبقى ضمن الشهر، لكن لا يدخل أسبوع ٣–٩ أغسطس. */
+    /* صرف يومي ١ و٢ أغسطس يبقى ضمن الشهر، لكن لا يدخل الأسبوع الجديد الذي يبدأ السبت ٨ أغسطس. */
     transactions:[
       tx("aug1","2026-08-01",10000),
       tx("aug2","2026-08-02",5000),
@@ -55,7 +55,7 @@ test("weekly reset keeps configured categories and calendar-month progress witho
   const errors=[]; page.on("pageerror",error=>errors.push(error.message.split("\n")[0]));
   try{
     await page.addInitScript(data=>{
-      const NativeDate=Date, fixed="2026-08-03T12:00:00";
+      const NativeDate=Date, fixed="2026-08-08T12:00:00";
       class FixedDate extends NativeDate{
         constructor(...args){ super(...(args.length?args:[fixed])); }
         static now(){ return new NativeDate(fixed).getTime(); }
@@ -70,13 +70,13 @@ test("weekly reset keeps configured categories and calendar-month progress witho
     await page.goto(fileUrl); await page.waitForTimeout(800);
 
     const before=await page.evaluate(()=>window.__mfkrExp.state());
-    const result=await page.evaluate(()=>window.__mfkrExp.varProgress("2026-08-03"));
+    const result=await page.evaluate(()=>window.__mfkrExp.varProgress("2026-08-08"));
     const row=result.rows.find(item=>item.c.id==="restaurants");
     assert.ok(row,"الفئة ذات الميزانية تبقى في قائمة التقدّم حتى من دون صرف أسبوعي");
-    assert.deepEqual(result.week,{start:"2026-08-03",end:"2026-08-09",cycleStart:"2026-07-27",cycleEnd:"2026-08-26"});
+    assert.deepEqual(result.week,{start:"2026-08-08",end:"2026-08-14"},"نطاق الميزانية يتبع إعداد بداية الأسبوع: السبت إلى الجمعة");
     assert.deepEqual(result.month,{start:"2026-08-01",end:"2026-08-31"});
     assert.equal(row.weeklyBudget,22000);
-    assert.equal(row.weeklySpent,0,"المعاملات قبل ٣ أغسطس لا تدخل الأسبوع الجديد");
+    assert.equal(row.weeklySpent,0,"المعاملات قبل ٨ أغسطس لا تدخل الأسبوع الجديد");
     assert.equal(row.monthlyBudget,Math.round(22000*31/7),"خطة أغسطس تشتق من ٣١ يومًا، لا من ×٤ أو دورة الراتب");
     assert.equal(row.monthlySpent,13000,"الشهر يحفظ ١ و٢ أغسطس ويستثني المسترد والمحذوف والمستبعد");
 

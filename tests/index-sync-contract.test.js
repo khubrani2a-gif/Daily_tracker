@@ -317,10 +317,20 @@ test("advanced expenses include savings, budget comparison, charts, and recurrin
 test("salary-cycle budgeting supports a configurable payday",()=>{
   ["salaryCycleStartDay","salaryAmountMinor","stSalaryDay","stSalaryAmount","expSalaryCycleStatus","خطة دورة الراتب"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/function expSalaryCycleRange\(/);
-  assert.match(html,/function expSalaryWeekRange\(/);
   assert.match(html,/function expSalaryCycleInstances\(/);
-  assert.match(html,/const wr = expSalaryWeekRange\(today\)/);
+  assert.match(html,/const wr = expWeekRange\(today\), cycle=expSalaryCycleRange/);
   assert.match(html,/stSalaryAmount"\)\.onchange=e=>\{ const amount=expParseAmount\(e\.target\.value\)/);
+});
+
+test("financial weekly views obey the configured Saturday-to-Friday boundary",()=>{
+  /* تبقى دورة الراتب مستقلة للالتزامات والراتب، ولا تُستخدم في بطاقات الميزانيات الأسبوعية. */
+  assert.equal((html.match(/expSalaryWeekRange\(/g)||[]).length,1,"helper legacy is not used by financial weekly views");
+  [
+    "const wr = expWeekRange(today), cycle=expSalaryCycleRange",
+    "wr=expWeekRange(todayStr()), budget=expWeeklyBudgetTotal",
+    "const week=expWeekRange(dateStr), month=expMonthRange(dateStr)",
+    "const wr=expWeekRange(todayStr()), isHidden=expVarHiddenForWeek"
+  ].forEach(source=>assert.ok(html.includes(source),source));
 });
 
 test("family hub keeps finance, shopping, and household-task entry points",()=>{
