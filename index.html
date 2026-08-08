@@ -8634,6 +8634,14 @@
     const adding = taskAddOpen[containerId] || priorityAdding;
     const rerender = ()=>{ if(isTasks) renderTaskLists(); else { renderRows(containerId, items, colors, opts); renderProgress(); } };
     const rerenderBoth = ()=>{ renderTaskLists(); };
+    /* الروابط المحفوظة قد تأتي من نسخة احتياطية قديمة؛ لا نعرض إلا رابط HTTP(S) صالحًا.
+       نفتح الرابط في النافذة الحالية لأن النوافذ الجديدة تُحجب في تطبيقات الجوال المضمّنة. */
+    const taskSafeExternalUrl = (value)=>{
+      try{
+        const url = new URL(String(value||""));
+        return /^https?:$/.test(url.protocol) ? url.href : "";
+      }catch(e){ return ""; }
+    };
     const deleteTask = (item)=>{
       const linked=isTasks?(state.priorities||[]).filter(p=>p.sourceTaskId===item.id):[];
       hifzShowConfirm({
@@ -8749,8 +8757,8 @@
       const del=document.createElement("button"); del.type="button"; del.className="task-delete-btn"; del.textContent="🗑"; del.title="حذف المهمة"; del.setAttribute("aria-label","حذف المهمة: "+(item.text||"")); del.onclick=()=>deleteTask(item);
       if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
       else row.append(chk, input, metaBtn, del, flag);
-      const metaParts=taskMetaText(item); if(metaParts.length||item.link){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
-        if(item.link){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=item.link;a.target="_blank";a.rel="noopener noreferrer";a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
+      const taskLink=taskSafeExternalUrl(item.link), metaParts=taskMetaText(item); if(metaParts.length||taskLink){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
+        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.target="_self";a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
       box.appendChild(row);
     };

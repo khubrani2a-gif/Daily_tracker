@@ -188,6 +188,14 @@ test("primary daily controls use native buttons with accessible state",()=>{
   assert.match(html,/حذف المهمة/);
 });
 
+test("task links open reliably in the current tab and reject unsafe protocols",()=>{
+  assert.match(html,/const taskSafeExternalUrl = \(value\)=>\{/);
+  assert.ok(html.includes('return /^https?:$/.test(url.protocol) ? url.href : "";'));
+  assert.match(html,/a\.href=taskLink;a\.target="_self";/);
+  assert.match(html,/a\.setAttribute\("aria-label","فتح الرابط في هذه النافذة"\)/);
+  assert.doesNotMatch(html,/a\.href=item\.link;a\.target="_blank"/);
+});
+
 test("card personalization supports persistent visibility and ordering",()=>{
   ["customizeBtn","customizeOverlay","customizeList","customizeShowAll","customizeReset","customizeDone"].forEach(id=>{
     assert.match(html,new RegExp('id="'+id+'"'),id);
