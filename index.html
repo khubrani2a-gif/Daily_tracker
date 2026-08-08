@@ -8758,7 +8758,7 @@
       if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
       else row.append(chk, input, metaBtn, del, flag);
       const taskLink=taskSafeExternalUrl(item.link), metaParts=taskMetaText(item); if(metaParts.length||taskLink){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
-        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.target="_self";a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";meta.appendChild(a);} row.appendChild(meta); }
+        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);} row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
       box.appendChild(row);
     };

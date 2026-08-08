@@ -191,7 +191,7 @@ test("primary daily controls use native buttons with accessible state",()=>{
 test("task links open reliably in the current tab and reject unsafe protocols",()=>{
   assert.match(html,/const taskSafeExternalUrl = \(value\)=>\{/);
   assert.ok(html.includes('return /^https?:$/.test(url.protocol) ? url.href : "";'));
-  assert.match(html,/a\.href=taskLink;a\.target="_self";/);
+  assert.ok(html.includes('a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); })'));
   assert.match(html,/a\.setAttribute\("aria-label","فتح الرابط في هذه النافذة"\)/);
   assert.doesNotMatch(html,/a\.href=item\.link;a\.target="_blank"/);
 });
