@@ -90,6 +90,13 @@ test("v98 Expenses fixed-obligation behavior remains present in the current rele
   assert.match(sw,/sync-core\.js/);
 });
 
+test("expense payment defaults to Mada and preserves the transaction method while editing",()=>{
+  assert.match(html,/const EXP_PAYMENTS = \["مدى","Apple Pay","نقد","بطاقة ائتمانية","تحويل","أخرى"\]/);
+  assert.match(html,/defaultPaymentMethod:"مدى"/);
+  assert.match(html,/raw\.settings\.defaultPaymentMethod === "بطاقة ائتمانية"/);
+  assert.match(html,/const defPay = \(tx&&tx\.paymentMethod\) \|\| expState\.settings\.defaultPaymentMethod \|\| "مدى"/);
+});
+
 test("daily history is cached and below-fold content is deferred at startup",()=>{
   assert.match(html,/let allDaysCache = null/);
   assert.match(html,/function invalidateAllDaysCache\(\)/);

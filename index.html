@@ -11296,10 +11296,11 @@
   }
 
   const EXP_KEY = "h2do-expenses";
-  const EXP_SCHEMA = 16;  /* v16: توحيد التاريخ والرحلات مع الفئات الجديدة */
+  const EXP_SCHEMA = 17;  /* v17: الافتراضي لطريقة الدفع «مدى» */
   const EXP_CURRENCIES = ["BHD","AED","KWD","QAR","OMR","USD","EUR","GBP","TRY","EGP","JOD","أخرى"];
   const EXP_RATE_SRC = {manual:"يدوي", card_statement:"كشف البطاقة", estimated:"تقديري"};
-  const EXP_PAYMENTS = ["نقد","مدى","بطاقة ائتمانية","تحويل","أخرى"];
+  /* الأكثر استخدامًا أولًا: يفتح «مدى» تلقائيًا مع بقاء كل الطرق الأخرى متاحة. */
+  const EXP_PAYMENTS = ["مدى","Apple Pay","نقد","بطاقة ائتمانية","تحويل","أخرى"];
   const EXP_PURCHASE = ["محلي","توصيل","سفري","متجر إلكتروني","أخرى"];
   const EXP_CONTEXT  = ["عادي","سفر","عمل","مناسبة","طارئ"];
   const EXP_BENEF    = ["لي","الزوج","مشترك","الأسرة","أخرى"];
@@ -11344,7 +11345,7 @@
     const categories=EXP_CATEGORY_SEED.map((seed,i)=>expSeedCategory(seed,i,now,i<8?"expdcat_"+i:null));
     return {
       version:EXP_SCHEMA,
-      settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null, familyMembers:[], familyBudgetMinor:0,
+      settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:"مدى", familyMembers:[], familyBudgetMinor:0,
                  currentBudgetVersion:1, migratedLegacy:true, pristineSeed:true, createdAt:now, updatedAt:now },
       categories, fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[], activityLog:[]
     };
@@ -11535,7 +11536,7 @@
     }
     /* ضمان الحقول الناقصة للسجلات القديمة (توافق تصاعدي) — دالة كليّة لا ترمي مهما كان شكل البيانات */
     raw.settings = Object.assign({ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG",
-      defaultPaymentMethod:null, currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() },
+      defaultPaymentMethod:"مدى", currentBudgetVersion:1, migratedLegacy:true, createdAt:Date.now(), updatedAt:Date.now() },
       (raw.settings && typeof raw.settings==="object") ? raw.settings : {});
     /* أزِل عناصر القمامة (null/غير كائن) فقط — لا نحذف أي سجلّ حقيقي */
     const objArr = a => (Array.isArray(a)? a : []).filter(x=> x && typeof x==="object");
@@ -11643,9 +11644,16 @@
     let activeRecon=false;
     try{ activeRecon = expReconcileActiveTrips(raw); }catch(e){ if(typeof expDiag==="function") expDiag("expReconcileActiveTrips", e); }
     const oldVersion = raw.version || 1;
+    /* الإصدارات السابقة كانت تفتح «بطاقة ائتمانية» تلقائيًا؛ نستبدل هذا الافتراضي القديم
+       بـ«مدى» مرّة واحدة فقط. يستطيع المستخدم اختيار أي طريقة أخرى لاحقًا من الإعدادات. */
+    let madaDefaultMigrated=false;
+    if(oldVersion < 17 && raw.settings.defaultPaymentMethod === "بطاقة ائتمانية"){
+      raw.settings.defaultPaymentMethod="مدى";
+      madaDefaultMigrated=true;
+    }
     raw.version = EXP_SCHEMA;
     /* ثبّت الترحيل/الإصلاح فقط عند رفع النسخة أو حدوث إصلاح فعلي (لا نبصم كل السجلات بلا داعٍ) */
-    if(oldVersion < EXP_SCHEMA || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved || legacyExceptionalBudgetRestored || legacyHistoryUnified){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
+    if(oldVersion < EXP_SCHEMA || madaDefaultMigrated || repaired || hierarchyMigrated || legacyBudgetMoved || legacyBudgetMovedByName || legacyHomeDuplicatesCleared || legacyFoodTransactionsMoved || legacyHomeTransactionsRestored || legacyHomeBatchCorrected || legacyExceptionalMoved || legacyExceptionalBudgetRestored || legacyHistoryUnified){ raw.settings.updatedAt = Date.now(); try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }
     else if(reconInst || normalized || activeRecon || recurringGenerated){ try{ localStorage.setItem(EXP_KEY, JSON.stringify(raw)); }catch(e){} }   /* حفظ التوفيق/التطبيع دون بصم updatedAt (بلا دفعٍ للخادم) */
     return raw;
   }
@@ -11926,7 +11934,7 @@
   catch(e){
     expLoadFailed = true; diagErr("expData:init", e);
     /* حالة آمنة قابلة للاسترداد — لا نطمس تخزين المستخدم ولا ندفع حالة فارغة للخادم */
-    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:null, pristineSeed:false, updatedAt:0 },
+    expState = { version:EXP_SCHEMA, settings:{ currency:"SAR", weekStartDay:6, salaryCycleStartDay:27, salaryAmountMinor:0, numberFormat:"ar-EG", defaultPaymentMethod:"مدى", pristineSeed:false, updatedAt:0 },
       categories:[], fixedTemplates:[], instances:[], transactions:[], trips:[], savingsGoals:[], recurringTransactions:[], familyShopping:[], familyEvents:[], activityLog:[] };
   }
   /* إعادة محاولة تحميل المصاريف بأمان (زر «إعادة المحاولة») */
@@ -13075,7 +13083,8 @@
     const curCat = tx? tx.categoryId : (preCategoryId || (varCats[0]?varCats[0].id:""));
     const curSubId=tx&&tx.subcategoryId||"", curCustom=tx&&tx.customSubcategory||"";
     const legacyDetails=tx?(tx.description||(!tx.subcategoryId?tx.subcategory||"":"")):"";
-    const defPay = expState.settings.defaultPaymentMethod || (tx?tx.paymentMethod:"");
+    /* عند التعديل نعرض طريقة المعاملة نفسها؛ وعند الإضافة نبدأ بالافتراضي المحفوظ. */
+    const defPay = (tx&&tx.paymentMethod) || expState.settings.defaultPaymentMethod || "مدى";
     const catOpts = cats.map(c=>'<option value="'+c.id+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</option>').join("");
     /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
     const active = expPreferredActiveTrip();
@@ -13108,7 +13117,7 @@
       '</section>'+
       '<button type="button" class="exp-toggle-more" id="efMore">تفاصيل إضافية (اختياري) ▾</button>'+
       '<div id="efExtra" class="exp-expense-extra" hidden>'+
-        '<div class="exp-extra-group"><div class="exp-extra-title">💳 الدفع والشراء <small>اختياري</small></div><div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
+        '<div class="exp-extra-group"><div class="exp-extra-title">💳 الدفع والشراء <small>يتذكر آخر اختيار · الافتراضي مدى</small></div><div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
         '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE, tx&&tx.purchaseMethod)+'</select></div></div></div>'+
         '<div class="exp-extra-group"><div class="exp-extra-title">📌 الارتباط والسياق <small>للتقارير الدقيقة</small></div>'+
         (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
