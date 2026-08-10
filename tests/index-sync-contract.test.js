@@ -505,5 +505,8 @@ test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>
   assert.match(html,/البيانات الأساسية/);
   assert.match(html,/التوقيت والتصنيف/);
   assert.match(html,/حفظ المصروف/);
+  assert.match(html,/الدفع والشراء/);
+  assert.match(html,/الارتباط والسياق/);
+  assert.match(html,/efFxMore/);
   assert.match(html,/c\.showInWeeklyBudget!==false/);
 });

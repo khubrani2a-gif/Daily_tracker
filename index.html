@@ -1474,6 +1474,9 @@
   .exp-section-title{display:flex;align-items:center;gap:.5rem;margin:0 0 .7rem}.exp-section-step{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border-radius:50%;background:var(--accent);color:#fff;font-size:.7rem;font-weight:800}.exp-section-title b,.exp-section-title small{display:block}.exp-section-title b{font-size:.82rem;color:var(--ink)}.exp-section-title small{font-size:.69rem;color:var(--muted);margin-top:.06rem}
   .exp-expense-section .exp-field:last-child{margin-bottom:0}.exp-expense-form .exp-field input.amount{background:var(--paper);border:1.5px solid var(--accent);min-height:54px;font-size:1.45rem}
   .exp-expense-extra{margin-top:.15rem}.exp-expense-savebar{margin-top:1rem;padding-top:.7rem;border-top:1px solid var(--line)}.exp-expense-savebar small{display:block;color:var(--muted);font-size:.72rem;text-align:center;margin-bottom:.45rem}.exp-expense-savebar .exp-save{margin:0;min-height:52px;box-shadow:0 9px 18px color-mix(in srgb,var(--accent) 22%,transparent)}
+  .exp-extra-group{border:1px solid var(--line);background:var(--chip-bg);border-radius:14px;padding:.75rem;margin:.65rem 0}.exp-extra-group:last-child{margin-bottom:0}.exp-extra-title{display:flex;align-items:center;gap:.4rem;color:var(--accent);font-size:.78rem;font-weight:800;margin-bottom:.65rem}.exp-extra-title small{color:var(--muted);font-size:.7rem;font-weight:500}
+  .exp-fx-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.5rem;border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:.62rem .7rem;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;margin:.65rem 0 0}.exp-fx-toggle span{color:var(--muted);font-size:.72rem;font-weight:500}.exp-fx-toggle:hover,.exp-fx-toggle:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+  .exp-expense-extra .exp-fx-box{margin:.45rem 0 0;background:var(--paper)}.exp-expense-extra .exp-check{margin:.15rem 0 .65rem}
   @media(max-width:430px){.exp-expense-section{padding:.7rem}.exp-expense-head{top:-1rem}.exp-expense-form .exp-grid2{gap:.45rem}}
   .exp-fx-box{border:1px solid var(--line);border-radius:12px;padding:.6rem;margin-bottom:.7rem;background:var(--chip-bg)}
   .exp-fx-out{font-size:.82rem;font-weight:700;color:var(--accent);min-height:1rem;margin-top:.2rem}
@@ -13100,25 +13103,27 @@
       '<div class="exp-field"><label>تفاصيل المصروف (اختياري)</label><input id="efDetails" placeholder="مثال: تموين الأسبوع أو اسم المتجر" value="'+expEsc(legacyDetails)+'"></div>'+
       '</section>'+
       '<section class="exp-expense-section" aria-label="وقت المصروف ونوعه"><div class="exp-section-title"><span class="exp-section-step">٢</span><div><b>التوقيت والتصنيف</b><small>يمكن تعديله لاحقًا من سجل المصروفات</small></div></div>'+
-      (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
       '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="efDate" value="'+(tx?tx.transactionDate:todayStr())+'"><div class="exp-date-shortcuts"><button type="button" data-exp-date="0">اليوم</button><button type="button" data-exp-date="-1">أمس</button></div></div>'+
       '<div class="exp-field"><label>النوع</label><select id="efType"><option value="expense"'+(!tx||tx.transactionType==="expense"?" selected":"")+'>مصروف</option><option value="transfer"'+(tx&&tx.transactionType==="transfer"?" selected":"")+'>تحويل/سداد بطاقة</option></select></div></div>'+
       '</section>'+
       '<button type="button" class="exp-toggle-more" id="efMore">تفاصيل إضافية (اختياري) ▾</button>'+
       '<div id="efExtra" class="exp-expense-extra" hidden>'+
-        '<div class="exp-fx-box"><div class="exp-card-hint" style="margin:0 0 .4rem">مبلغ بعملة أجنبية (اختياري) — يُحسب الريال تلقائيًا ويمكن تعديله يدويًا</div>'+
+        '<div class="exp-extra-group"><div class="exp-extra-title">💳 الدفع والشراء <small>اختياري</small></div><div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
+        '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE, tx&&tx.purchaseMethod)+'</select></div></div></div>'+
+        '<div class="exp-extra-group"><div class="exp-extra-title">📌 الارتباط والسياق <small>للتقارير الدقيقة</small></div>'+
+        (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
+        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT, tx&&tx.context)+'</select></div>'+
+        '<div class="exp-field"><label>المستفيد</label><select id="efBen">'+expOptions(EXP_BENEF, tx&&tx.beneficiary)+'</select></div></div>'+
+        '<div class="exp-field"><label>الدولة/المدينة</label><input id="efCountry" placeholder="اختياري" value="'+expEsc(tx&&tx.merchantCountry||"")+'"></div>'+
+        '<label class="exp-check"><input type="checkbox" id="efCount"'+(initCount?" checked":"")+'> تُحتسب ضمن الميزانية الأسبوعية العادية</label>'+
+        '<div class="exp-field"><label>ملاحظة</label><input id="efNote" placeholder="اختياري" value="'+expEsc(tx&&tx.description||"")+'"></div></div>'+
+        '<button type="button" class="exp-fx-toggle" id="efFxMore"><b>🌍 مبلغ بعملة أجنبية</b><span>'+(tx&&tx.originalAmountMinor!=null?"مُدخل":"اختياري")+' ▾</span></button>'+
+        '<div class="exp-fx-box" id="efFxBox"'+(tx&&tx.originalAmountMinor!=null?"":" hidden")+'><div class="exp-card-hint" style="margin:0 0 .4rem">يُحسب الريال تلقائيًا ويمكن تعديله يدويًا</div>'+
         '<div class="exp-grid2"><div class="exp-field"><label>المبلغ الأصلي</label><input id="efFxAmt" inputmode="decimal" placeholder="٠" value="'+(tx&&tx.originalAmountMinor!=null?(tx.originalAmountMinor/100):"")+'"></div>'+
         '<div class="exp-field"><label>العملة</label><select id="efFxCur">'+expOptions(EXP_CURRENCIES, tx&&tx.originalCurrency)+'</select></div></div>'+
         '<div class="exp-grid2"><div class="exp-field"><label>سعر التحويل (١ وحدة = ؟ ر.س)</label><input id="efFxRate" inputmode="decimal" placeholder="٠" value="'+(tx&&tx.exchangeRate!=null?tx.exchangeRate:"")+'"></div>'+
         '<div class="exp-field"><label>&nbsp;</label><button type="button" class="exp-secondary" id="efFxCalc" style="width:100%">احسب الريال ↺</button></div></div>'+
         '<div class="exp-fx-out" id="efFxOut"></div></div>'+
-        '<div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
-        '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE, tx&&tx.purchaseMethod)+'</select></div></div>'+
-        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT, tx&&tx.context)+'</select></div>'+
-        '<div class="exp-field"><label>المستفيد</label><select id="efBen">'+expOptions(EXP_BENEF, tx&&tx.beneficiary)+'</select></div></div>'+
-        '<div class="exp-field"><label>الدولة/المدينة</label><input id="efCountry" placeholder="اختياري" value="'+expEsc(tx&&tx.merchantCountry||"")+'"></div>'+
-        '<label class="exp-check"><input type="checkbox" id="efCount"'+(initCount?" checked":"")+'> تُحتسب ضمن الميزانية الأسبوعية العادية</label>'+
-        '<div class="exp-field"><label>ملاحظة</label><input id="efNote" placeholder="اختياري" value="'+expEsc(tx&&tx.description||"")+'"></div>'+
       '</div>'+
       '<div class="exp-expense-savebar"><small>يُحفظ المصروف تلقائيًا في سجلك، ويمكنك تعديله لاحقًا.</small><button class="exp-save" id="efSave">'+(tx?"حفظ التعديل":"حفظ المصروف")+'</button></div>'+
       '</div>'
@@ -13143,6 +13148,7 @@
     g("#efSaveCustomToggle").onclick=()=>{saveCustom=!saveCustom;syncSavedCustomChoice();}; syncSavedCustomChoice();
     expFormBox.querySelectorAll("[data-exp-date]").forEach(button=>button.onclick=()=>{const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+(+button.dataset.expDate||0));g("#efDate").value=date.toISOString().slice(0,10);});
     g("#efMore").onclick=()=>{ const x=g("#efExtra"); x.hidden=!x.hidden; g("#efMore").textContent = x.hidden?"تفاصيل إضافية (اختياري) ▾":"إخفاء التفاصيل ▴"; };
+    if(g("#efFxMore")) g("#efFxMore").onclick=()=>{const box=g("#efFxBox"),btn=g("#efFxMore");box.hidden=!box.hidden;btn.querySelector("span").textContent=(box.hidden?"اختياري ▾":"إخفاء ▴");};
     /* عند تغيير الرحلة: حدّث الافتراضي لاحتساب الميزانية الأسبوعية من إعداد الرحلة (قابل للتعديل يدويًا) */
     if(g("#efTrip")) g("#efTrip").onchange=()=>{ const tid=g("#efTrip").value; const cb=g("#efCount"); if(cb) cb.checked = tid? !!(expTripById(tid)||{}).includeInWeeklyBudgets : true; };
     /* حساب الريال من العملة الأجنبية × سعر التحويل (وحدة صغرى صحيحة، بلا أخطاء عائمة) */
