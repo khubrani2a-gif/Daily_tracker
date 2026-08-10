@@ -8549,12 +8549,19 @@
     window.location.href="tel:"+phone;
     return true;
   }
+  function taskCopyValue(value,message,promptLabel){
+    const text=String(value||"").trim(); if(!text)return;
+    const done=()=>hifzShowToast(message);
+    const legacyCopy=()=>{const field=document.createElement("textarea");field.value=text;field.setAttribute("readonly","");field.style.cssText="position:fixed;opacity:0;pointer-events:none";document.body.appendChild(field);field.select();let copied=false;try{copied=document.execCommand("copy");}catch(e){}field.remove();return copied;};
+    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(text).then(done).catch(()=>{if(legacyCopy())done();else prompt(promptLabel,text);});
+    else if(legacyCopy())done();else prompt(promptLabel,text);
+  }
   function taskCopyPhone(value){
-    const phone=taskNormalizePhone(value); if(!phone)return;
-    const done=()=>hifzShowToast("تم نسخ رقم الجوال 📋");
-    const legacyCopy=()=>{const field=document.createElement("textarea");field.value=phone;field.setAttribute("readonly","");field.style.cssText="position:fixed;opacity:0;pointer-events:none";document.body.appendChild(field);field.select();let copied=false;try{copied=document.execCommand("copy");}catch(e){}field.remove();return copied;};
-    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(phone).then(done).catch(()=>{if(legacyCopy())done();else prompt("انسخ رقم الجوال:",phone);});
-    else if(legacyCopy())done();else prompt("انسخ رقم الجوال:",phone);
+    const phone=taskNormalizePhone(value); if(phone)taskCopyValue(phone,"تم نسخ رقم الجوال 📋","انسخ رقم الجوال:");
+  }
+  function taskCopyLink(value){
+    let url="";try{const parsed=new URL(String(value||""));if(/^https?:$/.test(parsed.protocol))url=parsed.href;}catch(e){}
+    if(url)taskCopyValue(url,"تم نسخ الرابط 🔗","انسخ الرابط:");
   }
   const TASK_WEEKDAY_LABELS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   const TASK_WEEKDAY_SHORT=["أحد","اثن","ثلث","أرب","خمي","جمع","سبت"];
@@ -8886,7 +8893,7 @@
       if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
       else row.append(chk, input, metaBtn, del, flag);
       const taskLink=taskSafeExternalUrl(item.link), taskPhone=taskSafePhone(item.phone), metaParts=taskMetaText(item); if(metaParts.length||taskLink||taskPhone){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
-        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);}
+        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);const copy=document.createElement("button");copy.type="button";copy.className="task-meta-chip task-meta-link";copy.title="نسخ الرابط";copy.setAttribute("aria-label","نسخ الرابط");copy.textContent="📋 نسخ الرابط";copy.onclick=event=>{event.preventDefault();event.stopPropagation();taskCopyLink(taskLink);};meta.appendChild(copy);}
         if(taskPhone){const call=document.createElement("button");call.type="button";call.className="task-meta-chip task-meta-link";call.title="اتصال بالرقم المرتبط بالمهمة";call.setAttribute("aria-label","اتصال بالرقم المرتبط بالمهمة");call.textContent="📞 اتصال";call.onclick=event=>{event.preventDefault();event.stopPropagation();taskCallPhone(taskPhone);};meta.appendChild(call);const copy=document.createElement("button");copy.type="button";copy.className="task-meta-chip task-meta-link";copy.title="نسخ رقم الجوال";copy.setAttribute("aria-label","نسخ رقم الجوال");copy.textContent="📋 نسخ الرقم";copy.onclick=event=>{event.preventDefault();event.stopPropagation();taskCopyPhone(taskPhone);};meta.appendChild(copy);}
         row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}

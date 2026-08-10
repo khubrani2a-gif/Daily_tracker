@@ -361,9 +361,11 @@ test("advanced tasks include statuses, subtasks, links, phone contacts, reminder
   assert.match(html,/function taskNormalizePhone\(/);
   assert.match(html,/function taskCallPhone\(/);
   assert.match(html,/function taskCopyPhone\(/);
+  assert.match(html,/function taskCopyLink\(/);
   assert.match(html,/window\.location\.href="tel:"\+phone/);
   assert.match(html,/📞 اتصال/);
   assert.match(html,/📋 نسخ الرقم/);
+  assert.match(html,/📋 نسخ الرابط/);
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
 });
 
