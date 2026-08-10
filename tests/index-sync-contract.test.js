@@ -118,7 +118,17 @@ test("financial review renders a non-mutating visual risk scan in every period",
   assert.match(html,/expReportVisualScan\(r,"هذا الأسبوع"\)/);
   assert.match(html,/expReportVisualScan\(r,"هذا الشهر"\)/);
   assert.match(html,/expReportVisualScan\(yr,"هذه السنة"\)/);
-  assert.match(sw,/const CACHE = "mufakkirati-v125"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v126"/);
+});
+
+test("financial review compares each period with its matching previous period",()=>{
+  ["expDateShift","expPreviousPeriodRange","expReportPeriodComparison"].forEach(name=>assert.match(html,new RegExp("function "+name+"\\("),name));
+  assert.match(html,/labels\[0\]\+" حتى اليوم"/);
+  assert.match(html,/expReportPeriodComparison\(r,"daily"\)/);
+  assert.match(html,/expReportPeriodComparison\(r,"weekly"\)/);
+  assert.match(html,/expReportPeriodComparison\(r,"monthly"\)/);
+  assert.match(html,/expReportPeriodComparison\(yr,"yearly"\)/);
+  assert.match(sw,/const CACHE = "mufakkirati-v126"/);
 });
 
 test("daily history is cached and below-fold content is deferred at startup",()=>{
