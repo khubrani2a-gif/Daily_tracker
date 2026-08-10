@@ -498,5 +498,8 @@ test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>
   assert.match(html,/efSaveCustomToggle/);
   assert.match(html,/aria-pressed/);
   assert.match(html,/سيظهر هذا الاسم ضمن خيارات هذه الفئة/);
+  assert.match(html,/efRecentSubChips/);
+  assert.match(html,/الأكثر استخدامًا/);
+  assert.match(html,/data-exp-date/);
   assert.match(html,/c\.showInWeeklyBudget!==false/);
 });

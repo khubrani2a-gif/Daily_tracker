@@ -1451,6 +1451,8 @@
   .exp-travel-banner .tb-title{font-weight:700;font-size:.82rem;color:var(--accent)}
   .exp-travel-banner .tb-sub{font-size:.8rem;color:var(--ink);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exp-travel-banner .tb-add{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:.45rem .7rem;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .exp-check{display:flex;align-items:center;gap:.5rem;font-size:.86rem;color:var(--ink);font-weight:600;margin:.2rem 0 .7rem;cursor:pointer}
+  .exp-check input{width:18px;height:18px;accent-color:var(--accent)}
   .exp-save-custom-toggle{width:100%;display:flex;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:12px;padding:.7rem .75rem;font-family:inherit;cursor:pointer;margin:.35rem 0 .1rem}
   .exp-save-custom-toggle:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
   .exp-save-custom-mark{width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--chk-border);border-radius:7px;color:transparent;font-weight:900;flex:0 0 auto}
@@ -1458,6 +1460,11 @@
   .exp-save-custom-toggle[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
   .exp-save-custom-toggle[aria-pressed="true"] .exp-save-custom-mark{background:var(--accent);border-color:var(--accent);color:#fff}
   .exp-save-custom-toggle[aria-pressed="true"] .exp-save-custom-copy small{color:var(--accent)}
+  .exp-recent-subs{margin:.15rem 0 .6rem;padding:.55rem .6rem;border:1px solid var(--line);border-radius:12px;background:var(--chip-bg)}
+  .exp-recent-subs[hidden]{display:none}.exp-recent-title{display:block;color:var(--muted);font-size:.72rem;font-weight:700;margin-bottom:.35rem}
+  .exp-recent-chips,.exp-date-shortcuts{display:flex;flex-wrap:wrap;gap:.35rem}.exp-recent-chip,.exp-date-shortcuts button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:.34rem .55rem;font:inherit;font-size:.75rem;font-weight:700;cursor:pointer}
+  .exp-recent-chip.active,.exp-date-shortcuts button:active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .exp-date-shortcuts{margin-top:.35rem}.exp-date-shortcuts button{font-size:.7rem;padding:.27rem .5rem;color:var(--muted)}
   .exp-fx-box{border:1px solid var(--line);border-radius:12px;padding:.6rem;margin-bottom:.7rem;background:var(--chip-bg)}
   .exp-fx-out{font-size:.82rem;font-weight:700;color:var(--accent);min-height:1rem;margin-top:.2rem}
   .exp-sync-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:-.5rem 0 .9rem;padding:.15rem .1rem}
@@ -13075,11 +13082,11 @@
       '<div class="exp-field"><label>المبلغ (ر.س)</label><input class="amount" id="efAmount" inputmode="decimal" placeholder="٠" value="'+(tx?(tx.amountMinor/100):"")+'"></div>'+
       '<div class="exp-err" id="efErr"></div>'+
       '<div class="exp-field"><label>الفئة الرئيسية</label><input id="efCatSearch" placeholder="ابحث: قهوة، بنزين، سيارة…" autocomplete="off"><select id="efCat">'+catOpts+'</select></div>'+
-      '<div class="exp-field" id="efSubField"><label>الفئة الفرعية</label><div class="exp-chips" id="efSubChips"></div></div>'+
+      '<div class="exp-field" id="efSubField"><label>الفئة الفرعية</label><div class="exp-recent-subs" id="efRecentSubs" hidden><span class="exp-recent-title">الأكثر استخدامًا</span><div class="exp-recent-chips" id="efRecentSubChips"></div></div><div class="exp-chips" id="efSubChips"></div></div>'+
       '<div class="exp-field" id="efCustomWrap" hidden><label>اكتب نوع المصروف</label><input id="efCustomSub" maxlength="70" placeholder="مثال: تظليل السيارة" value="'+expEsc(curCustom)+'"><button type="button" class="exp-save-custom-toggle" id="efSaveCustomToggle" aria-pressed="false"><span class="exp-save-custom-mark" aria-hidden="true">✓</span><span class="exp-save-custom-copy"><b>حفظ كفئة فرعية دائمة</b><small id="efSaveCustomHint">اضغط هنا لتظهر ضمن خيارات هذه الفئة لاحقًا.</small></span></button></div>'+
       '<div class="exp-field"><label>تفاصيل المصروف (اختياري)</label><input id="efDetails" placeholder="مثال: تموين الأسبوع أو اسم المتجر" value="'+expEsc(legacyDetails)+'"></div>'+
       (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
-      '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="efDate" value="'+(tx?tx.transactionDate:todayStr())+'"></div>'+
+      '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="efDate" value="'+(tx?tx.transactionDate:todayStr())+'"><div class="exp-date-shortcuts"><button type="button" data-exp-date="0">اليوم</button><button type="button" data-exp-date="-1">أمس</button></div></div>'+
       '<div class="exp-field"><label>النوع</label><select id="efType"><option value="expense"'+(!tx||tx.transactionType==="expense"?" selected":"")+'>مصروف</option><option value="transfer"'+(tx&&tx.transactionType==="transfer"?" selected":"")+'>تحويل/سداد بطاقة</option></select></div></div>'+
       '<button type="button" class="exp-toggle-more" id="efMore">تفاصيل إضافية (اختياري) ▾</button>'+
       '<div id="efExtra" hidden>'+
@@ -13101,13 +13108,15 @@
     );
     const g=id=>expFormBox.querySelector(id);
     let selectedSubId=curSubId;
+    const selectSubcategory=(id)=>{const cat=expCatById(g("#efCat").value);selectedSubId=id||"";["#efSubChips","#efRecentSubChips"].forEach(sel=>g(sel).querySelectorAll("[data-subchip]").forEach(x=>x.classList.toggle("active",x.dataset.subchip===selectedSubId)));const s=expSubcategoryById(cat,selectedSubId);g("#efCustomWrap").hidden=!(s&&s.name==="أخرى");};
     const renderSubcategories=()=>{
       const cat=expCatById(g("#efCat").value), subs=(cat&&cat.subcategories||[]).filter(s=>s&&s.isActive!==false&&!s.archivedAt);
       if(!subs.some(s=>s.id===selectedSubId)) selectedSubId="";
       g("#efSubField").hidden=!cat||cat.section!=="variable";
       g("#efSubChips").innerHTML=subs.length?subs.map(s=>'<button type="button" class="exp-chip'+(s.id===selectedSubId?' active':'')+'" data-subchip="'+s.id+'">'+expEsc(s.name)+'</button>').join(""):'<span class="exp-card-hint">لا توجد فئات فرعية بعد.</span>';
-      g("#efSubChips").querySelectorAll("[data-subchip]").forEach(b=>b.onclick=()=>{selectedSubId=b.dataset.subchip;g("#efSubChips").querySelectorAll("[data-subchip]").forEach(x=>x.classList.toggle("active",x===b));const s=expSubcategoryById(cat,selectedSubId);g("#efCustomWrap").hidden=!(s&&s.name==="أخرى");});
-      const selected=expSubcategoryById(cat,selectedSubId); g("#efCustomWrap").hidden=!(selected&&selected.name==="أخرى");
+      const used=new Map();(expState.transactions||[]).filter(t=>t&&!t.deletedAt&&t.transactionType!=="transfer"&&t.categoryId===(cat&&cat.id)&&t.subcategoryId).forEach(t=>{const sub=subs.find(s=>s.id===t.subcategoryId);if(!sub||sub.name==="أخرى")return;const prev=used.get(sub.id)||{sub,count:0,last:0};prev.count++;prev.last=Math.max(prev.last,+t.updatedAt||0,Date.parse((t.transactionDate||"")+"T12:00:00")||0);used.set(sub.id,prev);});
+      const recent=[...used.values()].sort((a,b)=>b.count-a.count||b.last-a.last).slice(0,4);g("#efRecentSubs").hidden=!recent.length;g("#efRecentSubChips").innerHTML=recent.map(row=>'<button type="button" class="exp-recent-chip'+(row.sub.id===selectedSubId?' active':'')+'" data-subchip="'+row.sub.id+'">'+expEsc(row.sub.name)+'</button>').join("");
+      expFormBox.querySelectorAll("[data-subchip]").forEach(b=>b.onclick=()=>selectSubcategory(b.dataset.subchip));selectSubcategory(selectedSubId);
     };
     g("#efCatSearch").oninput=()=>{const q=expNormCategoryText(g("#efCatSearch").value);Array.from(g("#efCat").options).forEach(o=>{const cat=expCatById(o.value), words=[o.textContent,cat&&EXP_CATEGORY_ALIASES[cat.name]].concat((cat&&cat.subcategories||[]).map(s=>s.name));o.hidden=!!q&&!words.some(x=>expNormCategoryText(x).includes(q));});};
     g("#efCat").onchange=()=>{selectedSubId="";g("#efCustomSub").value="";renderSubcategories();};
@@ -13115,6 +13124,7 @@
     let saveCustom=false;
     const syncSavedCustomChoice=()=>{const toggle=g("#efSaveCustomToggle"), hint=g("#efSaveCustomHint");if(!toggle||!hint)return;toggle.setAttribute("aria-pressed",String(saveCustom));hint.textContent=saveCustom?"✓ سيظهر هذا الاسم ضمن خيارات هذه الفئة في المرة القادمة.":"اضغط هنا لتظهر ضمن خيارات هذه الفئة لاحقًا.";};
     g("#efSaveCustomToggle").onclick=()=>{saveCustom=!saveCustom;syncSavedCustomChoice();}; syncSavedCustomChoice();
+    expFormBox.querySelectorAll("[data-exp-date]").forEach(button=>button.onclick=()=>{const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+(+button.dataset.expDate||0));g("#efDate").value=date.toISOString().slice(0,10);});
     g("#efMore").onclick=()=>{ const x=g("#efExtra"); x.hidden=!x.hidden; g("#efMore").textContent = x.hidden?"تفاصيل إضافية (اختياري) ▾":"إخفاء التفاصيل ▴"; };
     /* عند تغيير الرحلة: حدّث الافتراضي لاحتساب الميزانية الأسبوعية من إعداد الرحلة (قابل للتعديل يدويًا) */
     if(g("#efTrip")) g("#efTrip").onchange=()=>{ const tid=g("#efTrip").value; const cb=g("#efCount"); if(cb) cb.checked = tid? !!(expTripById(tid)||{}).includeInWeeklyBudgets : true; };
