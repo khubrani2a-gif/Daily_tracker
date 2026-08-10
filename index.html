@@ -978,7 +978,7 @@
   .task-weekday-picker{display:flex;gap:.35rem;flex-wrap:wrap}
   .task-weekday-choice{border:1px solid var(--line);background:var(--paper);color:var(--muted);border-radius:9px;padding:.38rem .55rem;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
   .task-weekday-choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-  .task-month-day{display:flex;align-items:center;gap:.45rem;color:var(--muted);font-size:.78rem}.task-month-day input{width:76px}
+  .task-month-day{display:flex;align-items:center;gap:.45rem;color:var(--muted);font-size:.78rem}.task-month-day input{width:76px}.task-postpone-stats{margin:.75rem 0 0;padding:.65rem .75rem;border:1px solid var(--line);border-radius:11px;background:var(--chip-bg);font-size:.76rem;color:var(--muted);line-height:1.65}.task-postpone-stats b{color:var(--ink)}.task-postpone-stats ul{margin:.35rem 0 0;padding:0 1.1rem 0 0}
   .task-postpone-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-top:.8rem}.task-postpone-actions button,.task-sheet-secondary{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.55rem;font:inherit;font-weight:700;cursor:pointer}.task-postpone-actions button:hover,.task-postpone-actions button:focus-visible,.task-sheet-secondary:hover,.task-sheet-secondary:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
   .task-postpone-hint{margin:.65rem 0 0;color:var(--muted);font-size:.74rem;line-height:1.55}
   .task-schedule-summary{margin:-.15rem 0 .8rem;padding:.58rem .7rem;border-radius:11px;background:var(--chip-bg);color:var(--muted);font-size:.76rem;line-height:1.55}.task-schedule-summary b{color:var(--ink)}
@@ -8576,6 +8576,16 @@
     let url="";try{const parsed=new URL(String(value||""));if(/^https?:$/.test(parsed.protocol))url=parsed.href;}catch(e){}
     if(url)taskCopyValue(url,"تم نسخ الرابط 🔗","انسخ الرابط:");
   }
+  function taskPostponeReasonStats(item){
+    const counts=new Map(); let total=0;
+    (Array.isArray(item&&item.postponeHistory)?item.postponeHistory:[]).forEach(entry=>{total++;const reason=String(entry&&entry.reason||"").trim();if(reason)counts.set(reason,(counts.get(reason)||0)+1);});
+    return {total,reasons:[...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],"ar")).slice(0,3)};
+  }
+  function taskPostponeStatsHtml(item){
+    const stats=taskPostponeReasonStats(item); if(!stats.total)return "";
+    const reasons=stats.reasons.length?'<ul>'+stats.reasons.map(([reason,count])=>'<li>'+expEsc(reason)+' — '+count.toLocaleString("ar-EG")+' مرة</li>').join("")+'</ul>':'<small>لم تُسجّل أسباب للتأجيل بعد.</small>';
+    return '<div class="task-postpone-stats"><b>ملخص التأجيل</b> · '+stats.total.toLocaleString("ar-EG")+' مرة'+reasons+'</div>';
+  }
   const TASK_WEEKDAY_LABELS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   const TASK_WEEKDAY_SHORT=["أحد","اثن","ثلث","أرب","خمي","جمع","سبت"];
   function taskDateObject(value){return /^\d{4}-\d{2}-\d{2}$/.test(value||"")?new Date(value+"T12:00:00"):null;}
@@ -8586,19 +8596,21 @@
     return days.length?days:[taskAnchorDate(item,fallback).getDay()];
   }
   function taskMonthlyOccurrenceDay(item,fallback){return Math.max(1,Math.min(31,Math.round(+(item&&item.repeatMonthlyDay)||taskAnchorDate(item,fallback).getDate())));}
+  function taskMonthlyOccurrenceMode(item){return ["date","last_day","first_workday"].includes(item&&item.repeatMonthlyMode)?item.repeatMonthlyMode:"date";}
   function taskMonthLastDay(date){return new Date(date.getFullYear(),date.getMonth()+1,0).getDate();}
+  function taskFirstWorkdayOfMonth(date){const first=new Date(date.getFullYear(),date.getMonth(),1,12);while(first.getDay()===5||first.getDay()===6)first.setDate(first.getDate()+1);return first.getDate();}
   function taskOccursOnDate(item,anchorDate,dateStr){
     const date=taskDateObject(dateStr), anchor=taskAnchorDate(item,anchorDate);
     if(!date||date<anchor)return false;
     if(item.repeat==="daily")return true;
     if(item.repeat==="weekly")return taskRepeatWeekdays(item,anchorDate).includes(date.getDay());
-    if(item.repeat==="monthly")return date.getDate()===Math.min(taskMonthlyOccurrenceDay(item,anchorDate),taskMonthLastDay(date));
+    if(item.repeat==="monthly"){const mode=taskMonthlyOccurrenceMode(item);if(mode==="last_day")return date.getDate()===taskMonthLastDay(date);if(mode==="first_workday")return date.getDate()===taskFirstWorkdayOfMonth(date);return date.getDate()===Math.min(taskMonthlyOccurrenceDay(item,anchorDate),taskMonthLastDay(date));}
     return false;
   }
   function taskRepeatLabel(item){
     if(item.repeat==="daily")return "يوميًا";
     if(item.repeat==="weekly")return "أسبوعيًا · "+taskRepeatWeekdays(item).map(day=>TASK_WEEKDAY_SHORT[day]).join("، ");
-    if(item.repeat==="monthly")return "شهريًا · يوم "+taskMonthlyOccurrenceDay(item).toLocaleString("ar-EG");
+    if(item.repeat==="monthly"){const mode=taskMonthlyOccurrenceMode(item);return mode==="last_day"?"شهريًا · آخر يوم":mode==="first_workday"?"شهريًا · أول يوم عمل":"شهريًا · يوم "+taskMonthlyOccurrenceDay(item).toLocaleString("ar-EG");}
     return "";
   }
   function taskNextOccurrenceDate(item,afterDate){
@@ -8619,6 +8631,7 @@
     target.repeat=source.repeat||"none";
     if(Array.isArray(source.repeatDays))target.repeatDays=source.repeatDays.slice();else delete target.repeatDays;
     if(source.repeatMonthlyDay)target.repeatMonthlyDay=source.repeatMonthlyDay;else delete target.repeatMonthlyDay;
+    if(taskMonthlyOccurrenceMode(source)!=="date")target.repeatMonthlyMode=taskMonthlyOccurrenceMode(source);else delete target.repeatMonthlyMode;
     return target;
   }
   function taskVisibleOnDate(item,dateStr){return !(item&&item.postponedToDate&&item.postponedToDate!==dateStr);}
@@ -8635,7 +8648,7 @@
     if(targetDate!==sourceDate){
       let target;try{target=JSON.parse(localStorage.getItem(storageKey(targetDate))||"null");}catch(e){} if(!target)target=blankState();ensureIds(target);target.tasks=Array.isArray(target.tasks)?target.tasks:[];
       const next=Object.assign({},item,{id:newId(),done:false,status:"pending",dueDate:targetDate,dueTime:targetTime,repeat:"none",postponedFromDate:sourceDate});
-      delete next.postponedToDate;delete next.postponedToTime;delete next.repeatDays;delete next.repeatMonthlyDay;
+      delete next.postponedToDate;delete next.postponedToTime;delete next.repeatDays;delete next.repeatMonthlyDay;delete next.repeatMonthlyMode;
       const existing=target.tasks.find(entry=>entry&&entry.postponedFromDate===sourceDate&&(entry.recurrenceRootId||entry.id)===root);
       if(existing)Object.assign(existing,next);else target.tasks.push(next);
       localStorage.setItem(storageKey(targetDate),JSON.stringify(target));
@@ -8644,13 +8657,19 @@
     save();
   }
   function taskPostponeOpen(item,rerender){
-    const baseTime=item.dueTime||"09:00", tomorrow=taskDatePlus(currentDate,1);
-    const sheet=taskSheet("⏱ تأجيل المهمة",'<p class="task-history-empty">يؤجَّل هذا التنفيذ فقط؛ لا يتغير تكرار المهمة القادم.</p><div class="task-postpone-actions"><button type="button" data-postpone="hour">بعد ساعة</button><button type="button" data-postpone="evening">هذا المساء</button><button type="button" data-postpone="tomorrow">غدًا</button></div><div class="task-fields" style="margin-top:.8rem"><label>تاريخ آخر<input id="taskPostponeDate" type="date" value="'+expEsc(currentDate)+'"></label><label>وقت اختياري<input id="taskPostponeTime" type="time" value="'+expEsc(baseTime)+'"></label><label class="task-field-wide">سبب التأجيل <small>(اختياري)</small><input id="taskPostponeReason" maxlength="120" placeholder="مثال: انتظار رد أو ضيق الوقت"></label></div><div class="exp-err" id="taskPostponeErr"></div><button type="button" class="task-sheet-save" id="taskPostponeCustom">تأجيل إلى الموعد المحدد</button>');
+    const baseTime=item.dueTime||"09:00", tomorrow=taskDatePlus(currentDate,1), nextWeek=taskDatePlus(currentDate,7);
+    const sheet=taskSheet("⏱ تأجيل المهمة",'<p class="task-history-empty">يؤجَّل هذا التنفيذ فقط؛ لا يتغير تكرار المهمة القادم.</p><div class="task-postpone-actions"><button type="button" data-postpone="hour">بعد ساعة</button><button type="button" data-postpone="evening">هذا المساء</button><button type="button" data-postpone="tomorrow">غدًا</button><button type="button" data-postpone="next-week">الأسبوع القادم</button></div><div class="task-fields" style="margin-top:.8rem"><label>تاريخ آخر<input id="taskPostponeDate" type="date" value="'+expEsc(currentDate)+'"></label><label>وقت اختياري<input id="taskPostponeTime" type="time" value="'+expEsc(baseTime)+'"></label><label class="task-field-wide">سبب التأجيل <small>(اختياري)</small><input id="taskPostponeReason" maxlength="120" placeholder="مثال: انتظار رد أو ضيق الوقت"></label></div><div class="exp-err" id="taskPostponeErr"></div><button type="button" class="task-sheet-save" id="taskPostponeCustom">تأجيل إلى الموعد المحدد</button>');
     const apply=(date,time)=>{const reason=sheet.over.querySelector("#taskPostponeReason").value.trim();taskPostpone(item,date,time,reason);sheet.close();rerender();};
     sheet.over.querySelector('[data-postpone="hour"]').onclick=()=>apply(currentDate,taskTimePlus(baseTime,60));
     sheet.over.querySelector('[data-postpone="evening"]').onclick=()=>apply(baseTime<"19:00"?currentDate:tomorrow,"19:00");
     sheet.over.querySelector('[data-postpone="tomorrow"]').onclick=()=>apply(tomorrow,baseTime);
+    sheet.over.querySelector('[data-postpone="next-week"]').onclick=()=>apply(nextWeek,baseTime);
     sheet.over.querySelector("#taskPostponeCustom").onclick=()=>{const date=sheet.over.querySelector("#taskPostponeDate").value,time=sheet.over.querySelector("#taskPostponeTime").value;if(!date){sheet.over.querySelector("#taskPostponeErr").textContent="اختر تاريخ التأجيل.";return;}apply(date,time);};
+  }
+  function taskDuplicate(item){
+    const copy={id:newId(),text:(item.text||"مهمة")+" (نسخة)",done:false,status:"pending",dueDate:currentDate,dueTime:item.dueTime||"",reminderMinutes:+item.reminderMinutes||0,repeat:"none",category:item.category||"",link:item.link||"",contactName:item.contactName||"",phone:item.phone||"",subtasks:(item.subtasks||[]).map(step=>({id:newId(),text:step.text||"",done:false}))};
+    state.tasks=Array.isArray(state.tasks)?state.tasks:[]; state.tasks.push(copy); save();
+    return copy;
   }
   function taskSheet(title, bodyHtml){
     const over=document.createElement("div"); over.className="task-sheet-overlay"; over.setAttribute("role","dialog"); over.setAttribute("aria-modal","true"); over.setAttribute("aria-label",title);
@@ -8674,7 +8693,7 @@
   function taskOpenMeta(item, rerender){
     const cats=TASK_CATEGORIES.map(c=>'<option value="'+c+'"'+(item.category===c?' selected':'')+'>'+c+'</option>').join("");
     const status=taskStatus(item), subtasks=(item.subtasks||[]).map(s=>s.text||"").filter(Boolean).join("\n");
-    const selectedDays=new Set(taskRepeatWeekdays(item,item.dueDate||currentDate)), subtaskDone=(item.subtasks||[]).filter(step=>step.done).length;
+    const selectedDays=new Set(taskRepeatWeekdays(item,item.dueDate||currentDate)), subtaskDone=(item.subtasks||[]).filter(step=>step.done).length, monthlyMode=taskMonthlyOccurrenceMode(item), postponeStats=taskPostponeStatsHtml(item);
     const weekdayButtons=TASK_WEEKDAY_LABELS.map((label,day)=>'<button type="button" class="task-weekday-choice" data-tm-weekday="'+day+'" aria-pressed="'+(selectedDays.has(day)?"true":"false")+'" title="'+label+'">'+TASK_WEEKDAY_SHORT[day]+'</button>').join("");
     const sheet=taskSheet("تفاصيل: "+(item.text||"المهمة"),'<p class="task-schedule-summary"><b>'+expEsc(item.text||"مهمة")+'</b><br>'+taskScheduleSummary(item)+'</p><div class="task-fields">'+
       '<label>الحالة<select id="tmStatus"><option value="pending"'+(status==="pending"?' selected':'')+'>جديدة</option><option value="in_progress"'+(status==="in_progress"?' selected':'')+'>قيد التنفيذ</option><option value="deferred"'+(status==="deferred"?' selected':'')+'>مؤجلة</option><option value="done"'+(status==="done"?' selected':'')+'>مكتملة</option><option value="cancelled"'+(status==="cancelled"?' selected':'')+'>ملغاة</option></select></label>'+
@@ -8683,27 +8702,29 @@
       '<label>التكرار<select id="tmRepeat"><option value="none">بدون تكرار</option><option value="daily"'+(item.repeat==="daily"?' selected':'')+'>يومي</option><option value="weekly"'+(item.repeat==="weekly"?' selected':'')+'>أسبوعي</option><option value="monthly"'+(item.repeat==="monthly"?' selected':'')+'>شهري</option></select></label>'+
       '<label>التذكير<select id="tmReminder"><option value="0">عند الموعد</option><option value="5"'+(+item.reminderMinutes===5?' selected':'')+'>قبل ٥ دقائق</option><option value="15"'+(+item.reminderMinutes===15?' selected':'')+'>قبل ١٥ دقيقة</option><option value="30"'+(+item.reminderMinutes===30?' selected':'')+'>قبل ٣٠ دقيقة</option><option value="60"'+(+item.reminderMinutes===60?' selected':'')+'>قبل ساعة</option></select></label>'+
       '<div class="task-recurrence-options" id="tmWeeklyOptions"'+(item.repeat==="weekly"?"":" hidden")+'><b>أيام التكرار</b><div class="task-week-presets"><button type="button" data-tm-week-preset="workdays">أيام العمل</button><button type="button" data-tm-week-preset="weekend">عطلة نهاية الأسبوع</button></div><span class="task-postpone-hint">أيام مخصصة: اختر الأزرار أدناه.</span><div class="task-weekday-picker">'+weekdayButtons+'</div></div>'+
-      '<div class="task-recurrence-options" id="tmMonthlyOptions"'+(item.repeat==="monthly"?"":" hidden")+'><b>تكرار شهري</b><label class="task-month-day">في اليوم <input id="tmMonthlyDay" type="number" min="1" max="31" inputmode="numeric" value="'+taskMonthlyOccurrenceDay(item,item.dueDate||currentDate)+'"> من كل شهر</label></div>'+
+      '<div class="task-recurrence-options" id="tmMonthlyOptions"'+(item.repeat==="monthly"?"":" hidden")+'><b>تكرار شهري</b><label class="task-month-day">الطريقة <select id="tmMonthlyMode"><option value="date"'+(monthlyMode==="date"?" selected":"")+'>يوم محدد</option><option value="last_day"'+(monthlyMode==="last_day"?" selected":"")+'>آخر يوم بالشهر</option><option value="first_workday"'+(monthlyMode==="first_workday"?" selected":"")+'>أول يوم عمل</option></select></label><label class="task-month-day" id="tmMonthlyDayWrap"'+(monthlyMode==="date"?"":" hidden")+'>في اليوم <input id="tmMonthlyDay" type="number" min="1" max="31" inputmode="numeric" value="'+taskMonthlyOccurrenceDay(item,item.dueDate||currentDate)+'"> من كل شهر</label></div>'+
       '<label class="task-field-wide">رابط مرتبط<input id="tmLink" type="url" inputmode="url" placeholder="https://…" value="'+expEsc(item.link||"")+'"></label>'+
       '<label>جهة الاتصال <small>(اختياري)</small><input id="tmContactName" maxlength="70" autocomplete="name" placeholder="مثال: أحمد — فني التكييف" value="'+expEsc(item.contactName||"")+'"></label>'+
       '<label>رقم الجوال <small>(اختياري)</small><input id="tmPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx أو +966…" value="'+expEsc(item.phone||"")+'"></label>'+
       '<label class="task-field-wide">المهام الفرعية <small>('+subtaskDone.toLocaleString("ar-EG")+' من '+(item.subtasks||[]).length.toLocaleString("ar-EG")+' مكتملة) · مهمة في كل سطر</small><textarea id="tmSubtasks" placeholder="الخطوة الأولى&#10;الخطوة الثانية">'+expEsc(subtasks)+'</textarea></label>'+
-      '</div><div class="exp-err" id="tmErr"></div><button type="button" class="task-sheet-secondary" id="tmPostpone">⏱ تأجيل سريع</button><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
-    const repeat=sheet.over.querySelector("#tmRepeat"), weekly=sheet.over.querySelector("#tmWeeklyOptions"), monthly=sheet.over.querySelector("#tmMonthlyOptions"), dateInput=sheet.over.querySelector("#tmDate");
-    const setRecurrenceControls=()=>{weekly.hidden=repeat.value!=="weekly";monthly.hidden=repeat.value!=="monthly";if(repeat.value==="weekly"&&!sheet.over.querySelector('[data-tm-weekday][aria-pressed="true"]')){const day=taskAnchorDate({dueDate:dateInput.value},currentDate).getDay(),button=sheet.over.querySelector('[data-tm-weekday="'+day+'"]');if(button)button.setAttribute("aria-pressed","true");}};
+      '</div>'+postponeStats+'<div class="task-postpone-actions"><button type="button" id="tmPostpone">⏱ تأجيل سريع</button><button type="button" id="tmDuplicate">⧉ نسخ المهمة</button></div><div class="exp-err" id="tmErr"></div><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
+    const repeat=sheet.over.querySelector("#tmRepeat"), weekly=sheet.over.querySelector("#tmWeeklyOptions"), monthly=sheet.over.querySelector("#tmMonthlyOptions"), monthlyModeInput=sheet.over.querySelector("#tmMonthlyMode"), monthlyDayWrap=sheet.over.querySelector("#tmMonthlyDayWrap"), dateInput=sheet.over.querySelector("#tmDate");
+    const setRecurrenceControls=()=>{weekly.hidden=repeat.value!=="weekly";monthly.hidden=repeat.value!=="monthly";monthlyDayWrap.hidden=monthlyModeInput.value!=="date";if(repeat.value==="weekly"&&!sheet.over.querySelector('[data-tm-weekday][aria-pressed="true"]')){const day=taskAnchorDate({dueDate:dateInput.value},currentDate).getDay(),button=sheet.over.querySelector('[data-tm-weekday="'+day+'"]');if(button)button.setAttribute("aria-pressed","true");}};
     repeat.onchange=setRecurrenceControls;
+    monthlyModeInput.onchange=setRecurrenceControls;
     sheet.over.querySelectorAll("[data-tm-weekday]").forEach(button=>button.onclick=()=>button.setAttribute("aria-pressed",button.getAttribute("aria-pressed")!=="true"?"true":"false"));
     sheet.over.querySelectorAll("[data-tm-week-preset]").forEach(button=>button.onclick=()=>{const chosen=button.dataset.tmWeekPreset==="workdays"?[0,1,2,3,4]:[5,6];sheet.over.querySelectorAll("[data-tm-weekday]").forEach(dayButton=>dayButton.setAttribute("aria-pressed",chosen.includes(+dayButton.dataset.tmWeekday)?"true":"false"));});
     sheet.over.querySelector("#tmPostpone").onclick=()=>{sheet.close();taskPostponeOpen(item,rerender);};
+    sheet.over.querySelector("#tmDuplicate").onclick=()=>{taskDuplicate(item);sheet.close();rerender();hifzShowToast("أُضيفت نسخة من المهمة ⧉");};
     sheet.over.querySelector("#tmSave").onclick=()=>{
       const link=sheet.over.querySelector("#tmLink").value.trim(), contactName=sheet.over.querySelector("#tmContactName").value.trim(), phoneRaw=sheet.over.querySelector("#tmPhone").value.trim(), phone=taskNormalizePhone(phoneRaw), err=sheet.over.querySelector("#tmErr");
       if(link){ try{ const u=new URL(link); if(!/^https?:$/.test(u.protocol)) throw new Error(); }catch(e){ err.textContent="أدخل رابطًا صحيحًا يبدأ بـ http أو https."; return; } }
       if(phoneRaw&&!phone){ err.textContent="أدخل رقم جوال صحيحًا من ٧ إلى ١٥ رقمًا."; return; }
       item.dueDate=sheet.over.querySelector("#tmDate").value||""; item.dueTime=sheet.over.querySelector("#tmTime").value||"";
       item.repeat=sheet.over.querySelector("#tmRepeat").value; item.category=sheet.over.querySelector("#tmCategory").value||"";
-      if(item.repeat==="weekly"){const days=[...sheet.over.querySelectorAll('[data-tm-weekday][aria-pressed="true"]')].map(button=>+button.dataset.tmWeekday);item.repeatDays=days.length?days:[taskAnchorDate(item,currentDate).getDay()];delete item.repeatMonthlyDay;}
-      else if(item.repeat==="monthly"){item.repeatMonthlyDay=Math.max(1,Math.min(31,Math.round(+sheet.over.querySelector("#tmMonthlyDay").value||taskAnchorDate(item,currentDate).getDate())));delete item.repeatDays;}
-      else {delete item.repeatDays;delete item.repeatMonthlyDay;}
+      if(item.repeat==="weekly"){const days=[...sheet.over.querySelectorAll('[data-tm-weekday][aria-pressed="true"]')].map(button=>+button.dataset.tmWeekday);item.repeatDays=days.length?days:[taskAnchorDate(item,currentDate).getDay()];delete item.repeatMonthlyDay;delete item.repeatMonthlyMode;}
+      else if(item.repeat==="monthly"){const mode=monthlyModeInput.value;item.repeatMonthlyDay=Math.max(1,Math.min(31,Math.round(+sheet.over.querySelector("#tmMonthlyDay").value||taskAnchorDate(item,currentDate).getDate())));if(mode==="date")delete item.repeatMonthlyMode;else item.repeatMonthlyMode=mode;delete item.repeatDays;}
+      else {delete item.repeatDays;delete item.repeatMonthlyDay;delete item.repeatMonthlyMode;}
       item.reminderMinutes=+sheet.over.querySelector("#tmReminder").value||0; item.link=link; item.contactName=contactName; item.phone=phone;
       item.status=sheet.over.querySelector("#tmStatus").value; item.done=item.status==="done";
       const old=new Map((item.subtasks||[]).map(s=>[(s.text||"").trim(),s]));
@@ -9351,7 +9372,7 @@
     const summary='<div class="daily-review-summary"><div><b>'+done.toLocaleString("ar-EG")+'</b>مهام مكتملة</div><div><b>'+pending.length.toLocaleString("ar-EG")+'</b>مهام متبقية</div><div><b>'+state.prayers.filter(isPrayed).length.toLocaleString("ar-EG")+'</b>صلوات مسجلة</div><div><b>'+state.water.toLocaleString("ar-EG")+'</b>أكواب ماء</div><div><b>'+focus.toLocaleString("ar-EG")+'</b>دقائق تركيز</div><div><b>'+expMoney(spent)+'</b>مصروف اليوم</div></div>';
     const carry=pending.map((item,i)=>'<label class="daily-carry-row"><input type="checkbox" data-carry="'+i+'" checked><span>'+expEsc(itemText(item))+'</span></label>').join("")||'<p class="task-history-empty">لا توجد مهام متبقية للنقل.</p>';
     const sheet=taskSheet("🌙 إغلاق اليوم",summary+'<div class="task-fields"><label class="task-field-wide">أفضل شيء أنجزته<textarea id="dailyReviewWin" maxlength="180"></textarea></label><label class="task-field-wide">ما الذي عطّلك؟<textarea id="dailyReviewBlock" maxlength="180"></textarea></label><label class="task-field-wide">أهم شيء للغد<textarea id="dailyReviewTomorrow" maxlength="180"></textarea></label></div><p class="task-history-empty">اختر المهام التي تريد نقلها إلى الغد:</p><div id="dailyCarryList">'+carry+'</div><button type="button" class="task-sheet-save" id="dailyReviewSave">حفظ وإغلاق اليوم</button>');
-    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);const tomorrow=fmtDate(d);let next;try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){}if(!next)next=blankState();ensureIds(next);next.tasks=next.tasks||[];const addNext=(text,source)=>{if(!text||next.tasks.some(t=>itemText(t)===text&&!itemDone(t)))return;next.tasks.push({id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:(source&&source.dueTime)||"",reminderMinutes:+((source&&source.reminderMinutes)||0),repeat:(source&&source.repeat)||"none",category:(source&&source.category)||"شخصي",link:(source&&source.link)||"",contactName:(source&&source.contactName)||"",phone:(source&&source.phone)||"",subtasks:((source&&source.subtasks)||[]).map(s=>Object.assign({},s))});};sheet.over.querySelectorAll("[data-carry]").forEach(box=>{if(!box.checked)return;const src=pending[+box.dataset.carry];if(src)addNext(itemText(src),src);});const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim();addNext(tomorrowText,null);localStorage.setItem(storageKey(tomorrow),JSON.stringify(next));state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};dailyRouteSaveEvent("review","إغلاق اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();renderTodayOverview();};
+    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);const tomorrow=fmtDate(d);let next;try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){}if(!next)next=blankState();ensureIds(next);next.tasks=next.tasks||[];const addNext=(text,source)=>{if(!text||next.tasks.some(t=>itemText(t)===text&&!itemDone(t)))return;const task={id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:(source&&source.dueTime)||"",reminderMinutes:+((source&&source.reminderMinutes)||0),category:(source&&source.category)||"شخصي",link:(source&&source.link)||"",contactName:(source&&source.contactName)||"",phone:(source&&source.phone)||"",subtasks:((source&&source.subtasks)||[]).map(s=>Object.assign({},s))};if(source)taskCopyRecurrenceFields(source,task);else task.repeat="none";next.tasks.push(task);};sheet.over.querySelectorAll("[data-carry]").forEach(box=>{if(!box.checked)return;const src=pending[+box.dataset.carry];if(src)addNext(itemText(src),src);});const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim();addNext(tomorrowText,null);localStorage.setItem(storageKey(tomorrow),JSON.stringify(next));state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};dailyRouteSaveEvent("review","إغلاق اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();renderTodayOverview();};
   }
   /* ---------- قواعد الاقتراح ومركز القرارات: اقتراحات فقط، بلا تنفيذ صامت ---------- */
   const DECISION_RULES_KEY="h2do-decision-rules-v1";

@@ -371,12 +371,13 @@ test("advanced tasks include statuses, subtasks, links, phone contacts, reminder
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
 });
 
-test("task scheduling supports postponement plus daily, selected-weekday, and monthly repeats",()=>{
-  ["taskPostponeOpen","taskPostpone","taskOccursOnDate","taskNextOccurrenceDate","taskRepeatWeekdays","taskMonthlyOccurrenceDay"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
-  ["tmPostpone","tmWeeklyOptions","tmMonthlyOptions","tmMonthlyDay","taskPostponeReason","أيام العمل","عطلة نهاية الأسبوع","المرة القادمة"].forEach(text=>assert.ok(html.includes(text),text));
+test("task scheduling supports postponement, duplication, and flexible repeats",()=>{
+  ["taskPostponeOpen","taskPostpone","taskDuplicate","taskPostponeReasonStats","taskOccursOnDate","taskNextOccurrenceDate","taskRepeatWeekdays","taskMonthlyOccurrenceDay","taskMonthlyOccurrenceMode","taskFirstWorkdayOfMonth"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  ["tmPostpone","tmDuplicate","tmWeeklyOptions","tmMonthlyOptions","tmMonthlyMode","tmMonthlyDay","taskPostponeReason","next-week","أيام العمل","عطلة نهاية الأسبوع","آخر يوم بالشهر","أول يوم عمل","ملخص التأجيل","المرة القادمة"].forEach(text=>assert.ok(html.includes(text),text));
   assert.match(html,/option value="monthly"/);
   assert.match(html,/data-tm-weekday/);
   assert.match(html,/postponedFromDate/);
+  assert.match(html,/repeatMonthlyMode/);
   assert.match(html,/يؤجَّل هذا التنفيذ فقط؛ لا يتغير تكرار المهمة القادم/);
 });
 
