@@ -111,6 +111,16 @@ test("new expenses default their context to normal without overwriting older tra
   assert.match(html,/expOptions\(EXP_CONTEXT,defCtx,EXP_OPTION_META\.context\)/);
 });
 
+test("financial review renders a non-mutating visual risk scan in every period",()=>{
+  ["expCategoryPlanInRange","expReportScanRows","expReportRisk","expReportVisualScan"].forEach(name=>assert.match(html,new RegExp("function "+name+"\\("),name));
+  assert.match(html,/مصروفات السفر المستقلة والالتزامات تظهر في أقسامها الخاصة/);
+  assert.match(html,/expReportVisualScan\(r,"اليوم"\)/);
+  assert.match(html,/expReportVisualScan\(r,"هذا الأسبوع"\)/);
+  assert.match(html,/expReportVisualScan\(r,"هذا الشهر"\)/);
+  assert.match(html,/expReportVisualScan\(yr,"هذه السنة"\)/);
+  assert.match(sw,/const CACHE = "mufakkirati-v125"/);
+});
+
 test("daily history is cached and below-fold content is deferred at startup",()=>{
   assert.match(html,/let allDaysCache = null/);
   assert.match(html,/function invalidateAllDaysCache\(\)/);

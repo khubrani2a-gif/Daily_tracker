@@ -1423,6 +1423,12 @@
   .exp-stat{background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;padding:.6rem;text-align:center}
   .exp-stat small{display:block;color:var(--muted);font-size:.72rem;margin-bottom:.25rem}
   .exp-stat b{font-size:1.05rem;font-weight:700}
+  /* المسح المالي في المراجعة: يترجم الأرقام إلى قرار بصري سريع من دون تغيير البيانات. */
+  .exp-fin-scan{margin:.75rem 0 1rem;border:1px solid var(--line);background:var(--paper);border-radius:15px;padding:.72rem}.exp-fin-scan-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.55rem}.exp-fin-scan-head b{font-size:.9rem;color:var(--accent)}.exp-fin-scan-head small{color:var(--muted);font-size:.7rem}
+  .exp-fin-risk{display:flex;align-items:flex-start;gap:.55rem;border-radius:12px;padding:.6rem .65rem;margin-bottom:.65rem;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line))}.exp-fin-risk.danger{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 38%,var(--line))}.exp-fin-risk.near{background:var(--sand);border-color:color-mix(in srgb,var(--gold) 40%,var(--line))}.exp-fin-risk-icon{font-size:1.15rem;line-height:1.2}.exp-fin-risk-copy{min-width:0;flex:1}.exp-fin-risk-copy b,.exp-fin-risk-copy span{display:block}.exp-fin-risk-copy b{font-size:.82rem}.exp-fin-risk-copy span{color:var(--muted);font-size:.73rem;line-height:1.5;margin-top:.1rem}
+  .exp-fin-scan-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem}.exp-fin-scan-stat{background:var(--chip-bg);border-radius:10px;padding:.42rem;text-align:center}.exp-fin-scan-stat small,.exp-fin-scan-stat b{display:block}.exp-fin-scan-stat small{font-size:.65rem;color:var(--muted)}.exp-fin-scan-stat b{font-size:.78rem;margin-top:.1rem}
+  .exp-fin-row{display:grid;grid-template-columns:minmax(88px,1fr) 1.45fr auto;gap:.45rem;align-items:center;margin:.48rem 0}.exp-fin-row-label{font-size:.75rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.exp-fin-track{height:9px;background:var(--line);border-radius:999px;overflow:hidden}.exp-fin-track i{display:block;height:100%;background:var(--accent);border-radius:inherit}.exp-fin-track i.near{background:var(--gold)}.exp-fin-track i.danger{background:var(--danger)}.exp-fin-row-value{text-align:left;font-size:.69rem;color:var(--muted);white-space:nowrap}.exp-fin-row-value b{display:block;color:var(--ink);font-size:.73rem}.exp-fin-scan-note{color:var(--muted);font-size:.68rem;margin-top:.45rem}
+  @media(max-width:390px){.exp-fin-row{grid-template-columns:minmax(70px,1fr) 1.15fr auto;gap:.32rem}.exp-fin-row-label{font-size:.7rem}.exp-fin-row-value{font-size:.63rem}.exp-fin-row-value b{font-size:.68rem}}
   .exp-txitem{display:flex;align-items:center;gap:.5rem;padding:.5rem .2rem;border-bottom:1px solid var(--line)}
   .exp-txitem:last-child{border-bottom:none}
   .exp-txitem .t-main{flex:1;min-width:0}
@@ -13434,6 +13440,36 @@
   function expNavBar(label){
     return '<div class="exp-rep-nav"><button id="expRepPrev">›</button><div class="exp-rep-label">'+label+'</div><button id="expRepNext">‹</button></div>';
   }
+  /* الخطة لفترة محددة تُحسب من ميزانيات الأسابيع الفعلية؛ لذلك تستمر صحيحة إذا تغيرت الميزانية خلال السنة. */
+  function expCategoryPlanInRange(cat,r){
+    if(!cat||!r||!r.start||!r.end)return 0;
+    let cursor=expWeekRange(r.start).start, total=0, guard=0;
+    while(cursor<=r.end && guard++<60){
+      const wr=expWeekRange(cursor), start=wr.start<r.start?r.start:wr.start, end=wr.end>r.end?r.end:wr.end;
+      const days=Math.max(0,Math.round((new Date(end+"T12:00:00")-new Date(start+"T12:00:00"))/86400000)+1);
+      total+=expBudgetForWeek(cat,wr.start)*days/7;
+      const next=new Date(cursor+"T12:00:00"); next.setDate(next.getDate()+7); cursor=fmtDate(next);
+    }
+    return Math.max(0,Math.round(total));
+  }
+  function expReportScanRows(r){
+    const byCat=expByCategory(r,t=>expClassify(t)==="variable"&&expCountsWeekly(t));
+    return Object.keys(byCat).map(id=>{const cat=expCatById(id), actual=Math.max(0,byCat[id]||0), plan=expCategoryPlanInRange(cat,r);return {id,cat,actual,plan,pct:plan?Math.round(actual/plan*100):null};})
+      .filter(row=>row.cat&&row.actual>0).sort((a,b)=>b.actual-a.actual);
+  }
+  function expReportRisk(rows){
+    const budgeted=rows.filter(row=>row.plan>0), over=budgeted.filter(row=>row.actual>row.plan).sort((a,b)=>(b.actual-b.plan)-(a.actual-a.plan)), near=budgeted.filter(row=>row.actual<=row.plan&&row.pct>=80).sort((a,b)=>b.pct-a.pct);
+    if(over.length){const first=over[0];return {kind:"danger",icon:"🚨",title:"خطر: تجاوزت الميزانية",text:_arn(over.length)+" فئة متجاوزة؛ أكبرها «"+expEsc(first.cat.name)+"» بـ "+expMoney(first.actual-first.plan)+"."};}
+    if(near.length){const first=near[0];return {kind:"near",icon:"🟠",title:"تنبيه: اقتربت من الحد",text:"«"+expEsc(first.cat.name)+"» عند "+_arn(first.pct)+"٪ من ميزانيتها."};}
+    if(budgeted.length)return {kind:"ok",icon:"🟢",title:"ضمن الميزانية",text:"لا توجد فئة وصلت إلى ٨٠٪ من ميزانيتها في هذه الفترة."};
+    return {kind:"neutral",icon:"🔎",title:"لا توجد ميزانية للمقارنة",text:"تظهر الفئات الأعلى صرفًا، لكن أضف ميزانية لفحص مستوى الخطر."};
+  }
+  function expReportVisualScan(r,label){
+    const rows=expReportScanRows(r), total=rows.reduce((sum,row)=>sum+row.actual,0), planned=rows.reduce((sum,row)=>sum+row.plan,0), risk=expReportRisk(rows);
+    if(!rows.length)return '<section class="exp-fin-scan" aria-label="المسح المالي"><div class="exp-fin-scan-head"><b>🔎 المسح المالي · '+label+'</b><small>حسب الفئة</small></div><div class="exp-fin-risk"><div class="exp-fin-risk-icon">✅</div><div class="exp-fin-risk-copy"><b>لا توجد مصروفات متغيرة</b><span>أضف مصروفاتك لتظهر قراءة بصرية حسب الفئات.</span></div></div></section>';
+    const chart=rows.slice(0,5).map(row=>{const pct=row.plan?row.pct:Math.round(row.actual/Math.max(1,total)*100), kind=row.plan?(pct>100?"danger":pct>=80?"near":"") : "", width=Math.max(4,Math.min(100,pct)); const meta=row.plan?(''+_arn(pct)+'٪ من الخطة'):(''+_arn(pct)+'٪ من الصرف'); return '<div class="exp-fin-row"><div class="exp-fin-row-label">'+(row.cat.icon?row.cat.icon+" ":"")+expEsc(row.cat.name)+'</div><div class="exp-fin-track"><i class="'+kind+'" style="width:'+width+'%"></i></div><div class="exp-fin-row-value"><b>'+expMoney(row.actual)+'</b>'+meta+'</div></div>';}).join("");
+    return '<section class="exp-fin-scan" aria-label="المسح المالي"><div class="exp-fin-scan-head"><b>🔎 المسح المالي · '+label+'</b><small>أعلى ٥ فئات</small></div><div class="exp-fin-risk '+risk.kind+'"><div class="exp-fin-risk-icon">'+risk.icon+'</div><div class="exp-fin-risk-copy"><b>'+risk.title+'</b><span>'+risk.text+'</span></div></div><div class="exp-fin-scan-stats"><div class="exp-fin-scan-stat"><small>المصروف المصنّف</small><b>'+expMoney(total)+'</b></div><div class="exp-fin-scan-stat"><small>الخطة للفترة</small><b>'+(planned?expMoney(planned):"—")+'</b></div><div class="exp-fin-scan-stat"><small>فئات تحتاج متابعة</small><b>'+_arn(rows.filter(row=>row.plan&&row.pct>=80).length)+'</b></div></div>'+chart+'<div class="exp-fin-scan-note">المسح يقارن المصروفات المتغيرة المحتسبة ضمن الميزانية بخطط الفئات؛ مصروفات السفر المستقلة والالتزامات تظهر في أقسامها الخاصة.</div></section>';
+  }
   function expWireNav(shift){
     const p=document.getElementById("expRepPrev"), n=document.getElementById("expRepNext");
     if(p) p.onclick=()=>{ shift(-1); expRenderReport(); };
@@ -13561,6 +13597,7 @@
       '<div class="exp-stat-grid"><div class="exp-stat"><small>صافي الصرف</small><b>'+expMoney(net)+'</b></div>'+
       '<div class="exp-stat"><small>عدد المعاملات</small><b>'+_arn(txs.filter(t=>t.transactionType!=="transfer").length)+'</b></div>'+
       '<div class="exp-stat"><small>استرجاعات</small><b>'+expMoney(refunds)+'</b></div></div>'+
+      expReportVisualScan(r,"اليوم")+
       (travelNet!==0?'<div class="exp-foot" style="border:none;margin-bottom:.5rem"><div class="exp-foot-row"><span>عادي</span><b>'+expMoney(normalNet)+'</b></div><div class="exp-foot-row"><span>✈️ سفر</span><b>'+expMoney(travelNet)+'</b></div></div>':'')+
       (catLines?'<div class="exp-sec-head">حسب الفئة</div><div class="exp-foot" style="border:none">'+catLines+'</div>':'')+
       (fixedTxs.length?'<div class="exp-sec-head">الالتزامات الشهرية</div>'+fixedTxs.map(expTxRow).join(""):'')+
@@ -13591,6 +13628,7 @@
       '<div class="exp-stat"><small>'+(remain<0?"التجاوز":"المتبقي")+'</small><b>'+expMoney(Math.abs(remain))+'</b></div>'+
       '<div class="exp-stat"><small>✈️ مصروفات السفر</small><b>'+expMoney(travelSpent)+'</b></div>'+
       '<div class="exp-stat"><small>إجمالي المصروف الفعلي</small><b>'+expMoney(totalActual)+'</b></div></div>'+
+      expReportVisualScan(r,"هذا الأسبوع")+
       (travelSpent!==0?'<div class="exp-card-hint">«المتبقي» يعتمد على الميزانية الأسبوعية العادية فقط — مصروفات السفر لا تُنقصه.</div>':'')+
       '<div class="exp-sec-head">الإنفاق حسب اليوم</div><div class="exp-barmini">'+dayBars+'</div>'+
       '<div class="exp-sec-head">حسب الفئة'+(topCat?' · الأعلى: '+expEsc(topCat.name):'')+'</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف متغيّر.</div>')+'</div>'+
@@ -13633,6 +13671,7 @@
       '<div class="exp-stat"><small>الإجمالي الصافي</small><b>'+expMoney(total)+'</b></div>'+
       '<div class="exp-stat"><small>التزامات غير مدفوعة</small><b>'+expMoney(unpaid)+'</b></div>'+
       '<div class="exp-stat"><small>مدفوعة جزئيًا (متبقٍ)</small><b>'+expMoney(partial)+'</b></div></div>'+
+      expReportVisualScan(r,"هذا الشهر")+
       '<div class="exp-sec-head">الإنفاق حسب الأسبوع</div><div class="exp-barmini">'+weekBars+'</div>'+
       '<div class="exp-sec-head">الالتزامات الشهرية (الدفعات)'+(pausedCount?' · '+_arn(pausedCount)+' متوقف':'')+'</div><div class="exp-foot" style="border:none">'+(fixedLines||'<div class="exp-empty">لا دفعات التزامات هذا الشهر.</div>')+'</div>'+
       '<div class="exp-sec-head">أعلى الفئات (المتغيّرة)</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف متغيّر.</div>')+'</div>';
@@ -13669,6 +13708,7 @@
       '<div class="exp-stat"><small>متوسط شهري</small><b>'+expMoney(avg)+'</b></div>'+
       '<div class="exp-stat"><small>استرجاعات</small><b>'+expMoney(refunds)+'</b></div>'+
       '<div class="exp-stat"><small>ثابت/متغيّر</small><b>'+_arn(fixedPct)+'٪ / '+_arn(varPct)+'٪</b></div></div>'+
+      expReportVisualScan(yr,"هذه السنة")+
       '<div class="exp-sec-head">مقارنة شهرية</div><div class="exp-barmini">'+monthBars+'</div>'+
       (topMonths.length?'<div class="exp-sec-head">أعلى الشهور</div><div class="exp-foot" style="border:none">'+topMonths.map(m=>'<div class="exp-foot-row"><span>'+EXP_MONTHS[m.mm-1]+'</span><b>'+expMoney(m.v)+'</b></div>').join("")+'</div>':'')+
       '<div class="exp-sec-head">أعلى الفئات</div><div class="exp-foot" style="border:none">'+(catLines||'<div class="exp-empty">لا صرف.</div>')+'</div>'+
