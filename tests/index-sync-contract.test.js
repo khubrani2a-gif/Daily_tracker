@@ -488,11 +488,12 @@ test("daily route connects capture, focused execution, and day closing to existi
 });
 
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
-  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","expClearDuplicatedLegacyHomeBudgets","legacyBudgetPlacementV4","expMoveLegacyFoodTransactions","legacyFoodTransactionsV5","expRestoreLegacyHomeTransactions","legacyHomeTransactionsV6","expCorrectLegacyHomeBatchV7","legacyHomeBatchV7","expMoveExceptionalToUnplannedV8","legacyExceptionalToUnplannedV8","expRestoreExceptionalBudgetV9","legacyExceptionalBudgetV9","expMarkHistoricalUnificationV10","legacyHistoryUnifiedV10","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
+  ["EXP_CATEGORY_SEED","EXP_LEGACY_CATEGORY_MAP","expEnsureCategoryHierarchy","expMoveLegacyBudgetTimelines","expMoveLegacyBudgetTimelinesByName","legacyBudgetPlacementV3","expClearDuplicatedLegacyHomeBudgets","legacyBudgetPlacementV4","expMoveLegacyFoodTransactions","legacyFoodTransactionsV5","expRestoreLegacyHomeTransactions","legacyHomeTransactionsV6","expCorrectLegacyHomeBatchV7","legacyHomeBatchV7","expMoveExceptionalToUnplannedV8","legacyExceptionalToUnplannedV8","expRestoreExceptionalBudgetV9","legacyExceptionalBudgetV9","expMarkHistoricalUnificationV10","legacyHistoryUnifiedV10","subcategoryId","customSubcategory","showInWeeklyBudget","expOpenSubcategoryManager","expEnsureSavedCustomSubcategory","expTxSubcategoryLabel"].forEach(name=>assert.ok(html.includes(name),name));
   assert.match(html,/"expdcat_"\+i/);
   assert.match(html,/expMergeSubcategories/);
   assert.match(html,/expEnsureCategoryHierarchy\(out\)/);
   assert.match(html,/اكتب نوع المصروف عند اختيار «أخرى»/);
-  assert.match(html,/حفظ هذا التصنيف للاستخدام لاحقًا/);
+  assert.match(html,/حفظ كفئة فرعية دائمة/);
+  assert.match(html,/ستظهر تلقائيًا ضمن خيارات هذه الفئة/);
   assert.match(html,/c\.showInWeeklyBudget!==false/);
 });
