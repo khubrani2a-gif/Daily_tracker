@@ -352,7 +352,7 @@ test("family hub keeps finance, shopping, and household-task entry points",()=>{
 });
 
 test("advanced tasks include statuses, subtasks, links, phone contacts, reminders, and weekly view",()=>{
-  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmPhone","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmContactName","tmPhone","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["taskStatus","taskActive","taskSetDone","taskWeekOpen"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
   ["pending","in_progress","deferred","done","cancelled"].forEach(status=>assert.ok(html.includes(status),status));
   assert.match(html,/item\.subtasks=lines\.map/);
@@ -362,10 +362,12 @@ test("advanced tasks include statuses, subtasks, links, phone contacts, reminder
   assert.match(html,/function taskCallPhone\(/);
   assert.match(html,/function taskCopyPhone\(/);
   assert.match(html,/function taskCopyLink\(/);
+  assert.match(html,/function taskOpenWhatsApp\(/);
   assert.match(html,/window\.location\.href="tel:"\+phone/);
   assert.match(html,/📞 اتصال/);
   assert.match(html,/📋 نسخ الرقم/);
   assert.match(html,/📋 نسخ الرابط/);
+  assert.match(html,/💬 واتساب/);
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
 });
 
