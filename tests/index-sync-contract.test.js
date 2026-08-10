@@ -97,12 +97,12 @@ test("expense payment defaults to Mada and preserves the transaction method whil
   assert.match(html,/const defPay = \(tx&&tx\.paymentMethod\) \|\| expState\.settings\.defaultPaymentMethod \|\| "مدى"/);
 });
 
-test("optional expense choices use visual emoji buttons while preserving stored values",()=>{
+test("optional expense choices retain native select boxes with visual emoji labels",()=>{
   assert.match(html,/const EXP_OPTION_META = \{/);
-  ["💳 مدى","🍎 Apple Pay","🏪 من المتجر","🛵 توصيل","🙋 أنا","👨‍👩‍👧 الأسرة"].forEach(label=>assert.ok(html.includes(label),label));
-  assert.match(html,/function expChoiceButtons\(id,label,options,selected,meta\)/);
-  assert.match(html,/data-exp-choice=/);
-  assert.match(html,/field\.value=button\.dataset\.value/);
+  ["💳 مدى","🍎 Apple Pay","🏪 من المتجر","🛵 توصيل","🙋 أنا","❤️ الزوج\/ة","👨‍👩‍👧 الأسرة"].forEach(label=>assert.ok(html.includes(label),label));
+  assert.match(html,/function expOptions\(arr, sel, meta\)/);
+  assert.ok(html.includes("'<option value=\"'+expEsc(v)+'\"'"));
+  assert.doesNotMatch(html,/function expChoiceButtons/);
   assert.match(html,/لمن هذا المصروف؟/);
 });
 
