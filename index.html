@@ -3972,7 +3972,7 @@
     const n = pendingTasks.length + pendingPr.length;
     if(!n) return;
     if(confirm("لديك "+n+" من المهام غير المنجزة من يوم "+prevDate+"\nهل تريد نقلها إلى هذا اليوم؟")){
-      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = taskCopyRecurrenceFields(t,{id:newId(), text:t.text, done:false, status:t.status==="in_progress"?"in_progress":"pending", dueDate:dateStr, dueTime:t.dueTime||"", reminderMinutes:+t.reminderMinutes||0, category:t.category||"", link:t.link||"", subtasks:(t.subtasks||[]).map(s=>Object.assign({},s)), recurrenceRootId:t.recurrenceRootId||t.id}); });
+      pendingTasks.slice(0,N_TASKS).forEach((t,i)=>{ state.tasks[i] = taskCopyRecurrenceFields(t,{id:newId(), text:t.text, done:false, status:t.status==="in_progress"?"in_progress":"pending", dueDate:dateStr, dueTime:t.dueTime||"", reminderMinutes:+t.reminderMinutes||0, category:t.category||"", link:t.link||"", phone:t.phone||"", subtasks:(t.subtasks||[]).map(s=>Object.assign({},s)), recurrenceRootId:t.recurrenceRootId||t.id}); });
       pendingPr.slice(0,N_PRIORITIES).forEach((t,i)=>{ state.priorities[i] = {id:newId(), text:t.text, done:false}; });
     }
     ensureIds(state);   /* ضمان معرّف لكلّ عنصر قبل الحفظ */
@@ -8537,6 +8537,12 @@
     if(Array.isArray(item.subtasks)&&item.subtasks.length) parts.push("☑ "+item.subtasks.filter(s=>s.done).length.toLocaleString("ar-EG")+"/"+item.subtasks.length.toLocaleString("ar-EG"));
     return parts;
   }
+  function taskNormalizePhone(value){
+    const raw=String(value||"").trim().replace(/[٠-٩]/g,d=>String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+    const digits=raw.replace(/\D/g,"");
+    if(digits.length<7||digits.length>15)return "";
+    return raw.startsWith("+")?"+"+digits:digits;
+  }
   const TASK_WEEKDAY_LABELS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   const TASK_WEEKDAY_SHORT=["أحد","اثن","ثلث","أرب","خمي","جمع","سبت"];
   function taskDateObject(value){return /^\d{4}-\d{2}-\d{2}$/.test(value||"")?new Date(value+"T12:00:00"):null;}
@@ -8646,6 +8652,7 @@
       '<div class="task-recurrence-options" id="tmWeeklyOptions"'+(item.repeat==="weekly"?"":" hidden")+'><b>أيام التكرار</b><div class="task-week-presets"><button type="button" data-tm-week-preset="workdays">أيام العمل</button><button type="button" data-tm-week-preset="weekend">عطلة نهاية الأسبوع</button></div><span class="task-postpone-hint">أيام مخصصة: اختر الأزرار أدناه.</span><div class="task-weekday-picker">'+weekdayButtons+'</div></div>'+
       '<div class="task-recurrence-options" id="tmMonthlyOptions"'+(item.repeat==="monthly"?"":" hidden")+'><b>تكرار شهري</b><label class="task-month-day">في اليوم <input id="tmMonthlyDay" type="number" min="1" max="31" inputmode="numeric" value="'+taskMonthlyOccurrenceDay(item,item.dueDate||currentDate)+'"> من كل شهر</label></div>'+
       '<label class="task-field-wide">رابط مرتبط<input id="tmLink" type="url" inputmode="url" placeholder="https://…" value="'+expEsc(item.link||"")+'"></label>'+
+      '<label class="task-field-wide">رقم الجوال <small>(اختياري)</small><input id="tmPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xxxxxxxx أو +966…" value="'+expEsc(item.phone||"")+'"></label>'+
       '<label class="task-field-wide">المهام الفرعية <small>('+subtaskDone.toLocaleString("ar-EG")+' من '+(item.subtasks||[]).length.toLocaleString("ar-EG")+' مكتملة) · مهمة في كل سطر</small><textarea id="tmSubtasks" placeholder="الخطوة الأولى&#10;الخطوة الثانية">'+expEsc(subtasks)+'</textarea></label>'+
       '</div><div class="exp-err" id="tmErr"></div><button type="button" class="task-sheet-secondary" id="tmPostpone">⏱ تأجيل سريع</button><button type="button" class="task-sheet-save" id="tmSave">حفظ التفاصيل</button>');
     const repeat=sheet.over.querySelector("#tmRepeat"), weekly=sheet.over.querySelector("#tmWeeklyOptions"), monthly=sheet.over.querySelector("#tmMonthlyOptions"), dateInput=sheet.over.querySelector("#tmDate");
@@ -8655,14 +8662,15 @@
     sheet.over.querySelectorAll("[data-tm-week-preset]").forEach(button=>button.onclick=()=>{const chosen=button.dataset.tmWeekPreset==="workdays"?[0,1,2,3,4]:[5,6];sheet.over.querySelectorAll("[data-tm-weekday]").forEach(dayButton=>dayButton.setAttribute("aria-pressed",chosen.includes(+dayButton.dataset.tmWeekday)?"true":"false"));});
     sheet.over.querySelector("#tmPostpone").onclick=()=>{sheet.close();taskPostponeOpen(item,rerender);};
     sheet.over.querySelector("#tmSave").onclick=()=>{
-      const link=sheet.over.querySelector("#tmLink").value.trim(), err=sheet.over.querySelector("#tmErr");
+      const link=sheet.over.querySelector("#tmLink").value.trim(), phoneRaw=sheet.over.querySelector("#tmPhone").value.trim(), phone=taskNormalizePhone(phoneRaw), err=sheet.over.querySelector("#tmErr");
       if(link){ try{ const u=new URL(link); if(!/^https?:$/.test(u.protocol)) throw new Error(); }catch(e){ err.textContent="أدخل رابطًا صحيحًا يبدأ بـ http أو https."; return; } }
+      if(phoneRaw&&!phone){ err.textContent="أدخل رقم جوال صحيحًا من ٧ إلى ١٥ رقمًا."; return; }
       item.dueDate=sheet.over.querySelector("#tmDate").value||""; item.dueTime=sheet.over.querySelector("#tmTime").value||"";
       item.repeat=sheet.over.querySelector("#tmRepeat").value; item.category=sheet.over.querySelector("#tmCategory").value||"";
       if(item.repeat==="weekly"){const days=[...sheet.over.querySelectorAll('[data-tm-weekday][aria-pressed="true"]')].map(button=>+button.dataset.tmWeekday);item.repeatDays=days.length?days:[taskAnchorDate(item,currentDate).getDay()];delete item.repeatMonthlyDay;}
       else if(item.repeat==="monthly"){item.repeatMonthlyDay=Math.max(1,Math.min(31,Math.round(+sheet.over.querySelector("#tmMonthlyDay").value||taskAnchorDate(item,currentDate).getDate())));delete item.repeatDays;}
       else {delete item.repeatDays;delete item.repeatMonthlyDay;}
-      item.reminderMinutes=+sheet.over.querySelector("#tmReminder").value||0; item.link=link;
+      item.reminderMinutes=+sheet.over.querySelector("#tmReminder").value||0; item.link=link; item.phone=phone;
       item.status=sheet.over.querySelector("#tmStatus").value; item.done=item.status==="done";
       const old=new Map((item.subtasks||[]).map(s=>[(s.text||"").trim(),s]));
       const lines=[...new Set(sheet.over.querySelector("#tmSubtasks").value.split(/\n+/).map(s=>s.trim()).filter(Boolean))];
@@ -8726,7 +8734,7 @@
       if(!previous||due>previous.due)candidates.set(root,{task,due,root});
     });});
     let changed=false;
-    candidates.forEach(({task:src,root})=>{ if(state.tasks.some(t=>itemFilled(t)&&(t.recurrenceRootId||t.id)===root))return; const copy=taskCopyRecurrenceFields(src,{id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,category:src.category||"",link:src.link||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}); const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
+    candidates.forEach(({task:src,root})=>{ if(state.tasks.some(t=>itemFilled(t)&&(t.recurrenceRootId||t.id)===root))return; const copy=taskCopyRecurrenceFields(src,{id:newId(),text:src.text,done:false,status:"pending",dueDate:dateStr,dueTime:src.dueTime||"",reminderMinutes:+src.reminderMinutes||0,category:src.category||"",link:src.link||"",phone:src.phone||"",subtasks:(src.subtasks||[]).map(s=>({id:newId(),text:s.text||"",done:false})),recurrenceRootId:root}); const free=state.tasks.findIndex(t=>!itemFilled(t)); if(free>=0) state.tasks[free]=copy; else state.tasks.push(copy); changed=true; });
     if(changed){ localStorage.setItem(storageKey(dateStr),JSON.stringify(state)); invalidateAllDaysCache(); }
   }
   function renderRows(containerId, items, colors, opts){
@@ -8856,6 +8864,7 @@
         }
         item.text = ""; save(); if(!rowsRendering) requestAnimationFrame(rerender);
       };
+      const taskSafePhone = (value)=>taskNormalizePhone(value);
       const flag = document.createElement("span");
       flag.className = "task-flag";
       flag.style.background = colors[idx % colors.length];
@@ -8863,8 +8872,10 @@
       const del=document.createElement("button"); del.type="button"; del.className="task-delete-btn"; del.textContent="🗑"; del.title="حذف المهمة"; del.setAttribute("aria-label","حذف المهمة: "+(item.text||"")); del.onclick=()=>deleteTask(item);
       if(handle){ row.append(handle, chk, input, metaBtn, del, flag); wireDrag(handle, row); }
       else row.append(chk, input, metaBtn, del, flag);
-      const taskLink=taskSafeExternalUrl(item.link), metaParts=taskMetaText(item); if(metaParts.length||taskLink){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
-        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);} row.appendChild(meta); }
+      const taskLink=taskSafeExternalUrl(item.link), taskPhone=taskSafePhone(item.phone), metaParts=taskMetaText(item); if(metaParts.length||taskLink||taskPhone){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
+        if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);}
+        if(taskPhone){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href="tel:"+taskPhone;a.title="اتصال بالرقم المرتبط بالمهمة";a.setAttribute("aria-label","اتصال بالرقم المرتبط بالمهمة");a.textContent="📞 اتصال";meta.appendChild(a);}
+        row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
       box.appendChild(row);
     };
@@ -9224,7 +9235,7 @@
     const source=dailyRouteSource(item), tomorrow=dailyRouteTomorrow(); let next;
     try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){} if(!next)next=blankState(); ensureIds(next);
     const text=itemText(item); next.tasks=next.tasks||[];
-    let target=null;if(!next.tasks.some(t=>itemText(t)===text&&!itemDone(t))){target=taskCopyRecurrenceFields(source,{id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:source.dueTime||"",reminderMinutes:+source.reminderMinutes||0,category:source.category||"",link:source.link||"",subtasks:(source.subtasks||[]).map(s=>Object.assign({},s))});next.tasks.push(target);}
+    let target=null;if(!next.tasks.some(t=>itemText(t)===text&&!itemDone(t))){target=taskCopyRecurrenceFields(source,{id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:source.dueTime||"",reminderMinutes:+source.reminderMinutes||0,category:source.category||"",link:source.link||"",phone:source.phone||"",subtasks:(source.subtasks||[]).map(s=>Object.assign({},s))});next.tasks.push(target);}
     const before={sourceId:source.id,status:taskStatus(source),done:!!source.done,tomorrow,targetId:target&&target.id};source.status="deferred";source.done=false;localStorage.setItem(storageKey(tomorrow),JSON.stringify(next));return before;
   }
   function dailyRouteOpenReplan(){
@@ -9305,7 +9316,7 @@
     const summary='<div class="daily-review-summary"><div><b>'+done.toLocaleString("ar-EG")+'</b>مهام مكتملة</div><div><b>'+pending.length.toLocaleString("ar-EG")+'</b>مهام متبقية</div><div><b>'+state.prayers.filter(isPrayed).length.toLocaleString("ar-EG")+'</b>صلوات مسجلة</div><div><b>'+state.water.toLocaleString("ar-EG")+'</b>أكواب ماء</div><div><b>'+focus.toLocaleString("ar-EG")+'</b>دقائق تركيز</div><div><b>'+expMoney(spent)+'</b>مصروف اليوم</div></div>';
     const carry=pending.map((item,i)=>'<label class="daily-carry-row"><input type="checkbox" data-carry="'+i+'" checked><span>'+expEsc(itemText(item))+'</span></label>').join("")||'<p class="task-history-empty">لا توجد مهام متبقية للنقل.</p>';
     const sheet=taskSheet("🌙 إغلاق اليوم",summary+'<div class="task-fields"><label class="task-field-wide">أفضل شيء أنجزته<textarea id="dailyReviewWin" maxlength="180"></textarea></label><label class="task-field-wide">ما الذي عطّلك؟<textarea id="dailyReviewBlock" maxlength="180"></textarea></label><label class="task-field-wide">أهم شيء للغد<textarea id="dailyReviewTomorrow" maxlength="180"></textarea></label></div><p class="task-history-empty">اختر المهام التي تريد نقلها إلى الغد:</p><div id="dailyCarryList">'+carry+'</div><button type="button" class="task-sheet-save" id="dailyReviewSave">حفظ وإغلاق اليوم</button>');
-    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);const tomorrow=fmtDate(d);let next;try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){}if(!next)next=blankState();ensureIds(next);next.tasks=next.tasks||[];const addNext=(text,source)=>{if(!text||next.tasks.some(t=>itemText(t)===text&&!itemDone(t)))return;next.tasks.push({id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:(source&&source.dueTime)||"",reminderMinutes:+((source&&source.reminderMinutes)||0),repeat:(source&&source.repeat)||"none",category:(source&&source.category)||"شخصي",link:(source&&source.link)||"",subtasks:((source&&source.subtasks)||[]).map(s=>Object.assign({},s))});};sheet.over.querySelectorAll("[data-carry]").forEach(box=>{if(!box.checked)return;const src=pending[+box.dataset.carry];if(src)addNext(itemText(src),src);});const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim();addNext(tomorrowText,null);localStorage.setItem(storageKey(tomorrow),JSON.stringify(next));state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};dailyRouteSaveEvent("review","إغلاق اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();renderTodayOverview();};
+    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);const tomorrow=fmtDate(d);let next;try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){}if(!next)next=blankState();ensureIds(next);next.tasks=next.tasks||[];const addNext=(text,source)=>{if(!text||next.tasks.some(t=>itemText(t)===text&&!itemDone(t)))return;next.tasks.push({id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:(source&&source.dueTime)||"",reminderMinutes:+((source&&source.reminderMinutes)||0),repeat:(source&&source.repeat)||"none",category:(source&&source.category)||"شخصي",link:(source&&source.link)||"",phone:(source&&source.phone)||"",subtasks:((source&&source.subtasks)||[]).map(s=>Object.assign({},s))});};sheet.over.querySelectorAll("[data-carry]").forEach(box=>{if(!box.checked)return;const src=pending[+box.dataset.carry];if(src)addNext(itemText(src),src);});const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim();addNext(tomorrowText,null);localStorage.setItem(storageKey(tomorrow),JSON.stringify(next));state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};dailyRouteSaveEvent("review","إغلاق اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();renderTodayOverview();};
   }
   /* ---------- قواعد الاقتراح ومركز القرارات: اقتراحات فقط، بلا تنفيذ صامت ---------- */
   const DECISION_RULES_KEY="h2do-decision-rules-v1";

@@ -351,13 +351,15 @@ test("family hub keeps finance, shopping, and household-task entry points",()=>{
   assert.match(html,/category==="أخرى"&&!custom/);
 });
 
-test("advanced tasks include statuses, subtasks, links, reminders, and weekly view",()=>{
-  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
+test("advanced tasks include statuses, subtasks, links, phone contacts, reminders, and weekly view",()=>{
+  ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmPhone","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["taskStatus","taskActive","taskSetDone","taskWeekOpen"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
   ["pending","in_progress","deferred","done","cancelled"].forEach(status=>assert.ok(html.includes(status),status));
   assert.match(html,/item\.subtasks=lines\.map/);
   assert.match(html,/task\.reminderMinutes/);
   assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
+  assert.match(html,/function taskNormalizePhone\(/);
+  assert.match(html,/📞 اتصال/);
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
 });
 
