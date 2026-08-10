@@ -494,6 +494,7 @@ test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>
   assert.match(html,/expEnsureCategoryHierarchy\(out\)/);
   assert.match(html,/اكتب نوع المصروف عند اختيار «أخرى»/);
   assert.match(html,/حفظ كفئة فرعية دائمة/);
-  assert.match(html,/ستظهر تلقائيًا ضمن خيارات هذه الفئة/);
+  assert.match(html,/syncSavedCustomChoice/);
+  assert.match(html,/سيظهر هذا الاسم ضمن خيارات هذه الفئة/);
   assert.match(html,/c\.showInWeeklyBudget!==false/);
 });
