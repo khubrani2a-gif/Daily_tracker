@@ -1451,11 +1451,13 @@
   .exp-travel-banner .tb-title{font-weight:700;font-size:.82rem;color:var(--accent)}
   .exp-travel-banner .tb-sub{font-size:.8rem;color:var(--ink);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .exp-travel-banner .tb-add{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:.45rem .7rem;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap}
-  .exp-check{display:flex;align-items:center;gap:.5rem;font-size:.86rem;color:var(--ink);font-weight:600;margin:.2rem 0 .35rem;cursor:pointer}
-  .exp-check input{width:18px;height:18px;accent-color:var(--accent)}
-  .exp-check.is-selected{color:var(--accent)}
-  .exp-custom-hint{display:block;color:var(--muted);font-size:.76rem;line-height:1.5}
-  .exp-custom-hint.is-selected{color:var(--accent);font-weight:700}
+  .exp-save-custom-toggle{width:100%;display:flex;align-items:center;gap:.65rem;text-align:right;border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:12px;padding:.7rem .75rem;font-family:inherit;cursor:pointer;margin:.35rem 0 .1rem}
+  .exp-save-custom-toggle:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+  .exp-save-custom-mark{width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--chk-border);border-radius:7px;color:transparent;font-weight:900;flex:0 0 auto}
+  .exp-save-custom-copy{min-width:0}.exp-save-custom-copy b,.exp-save-custom-copy small{display:block}.exp-save-custom-copy b{font-size:.86rem}.exp-save-custom-copy small{color:var(--muted);font-size:.74rem;font-weight:400;line-height:1.5;margin-top:.08rem}
+  .exp-save-custom-toggle[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  .exp-save-custom-toggle[aria-pressed="true"] .exp-save-custom-mark{background:var(--accent);border-color:var(--accent);color:#fff}
+  .exp-save-custom-toggle[aria-pressed="true"] .exp-save-custom-copy small{color:var(--accent)}
   .exp-fx-box{border:1px solid var(--line);border-radius:12px;padding:.6rem;margin-bottom:.7rem;background:var(--chip-bg)}
   .exp-fx-out{font-size:.82rem;font-weight:700;color:var(--accent);min-height:1rem;margin-top:.2rem}
   .exp-sync-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:-.5rem 0 .9rem;padding:.15rem .1rem}
@@ -13074,7 +13076,7 @@
       '<div class="exp-err" id="efErr"></div>'+
       '<div class="exp-field"><label>الفئة الرئيسية</label><input id="efCatSearch" placeholder="ابحث: قهوة، بنزين، سيارة…" autocomplete="off"><select id="efCat">'+catOpts+'</select></div>'+
       '<div class="exp-field" id="efSubField"><label>الفئة الفرعية</label><div class="exp-chips" id="efSubChips"></div></div>'+
-      '<div class="exp-field" id="efCustomWrap" hidden><label>اكتب نوع المصروف</label><input id="efCustomSub" maxlength="70" placeholder="مثال: تظليل السيارة" value="'+expEsc(curCustom)+'"><label class="exp-check" for="efSaveCustom"><input type="checkbox" id="efSaveCustom"> حفظ كفئة فرعية دائمة</label><small class="exp-custom-hint" id="efSaveCustomHint">لن تُحفظ ضمن الخيارات إلا عند تحديد المربع.</small></div>'+
+      '<div class="exp-field" id="efCustomWrap" hidden><label>اكتب نوع المصروف</label><input id="efCustomSub" maxlength="70" placeholder="مثال: تظليل السيارة" value="'+expEsc(curCustom)+'"><button type="button" class="exp-save-custom-toggle" id="efSaveCustomToggle" aria-pressed="false"><span class="exp-save-custom-mark" aria-hidden="true">✓</span><span class="exp-save-custom-copy"><b>حفظ كفئة فرعية دائمة</b><small id="efSaveCustomHint">اضغط هنا لتظهر ضمن خيارات هذه الفئة لاحقًا.</small></span></button></div>'+
       '<div class="exp-field"><label>تفاصيل المصروف (اختياري)</label><input id="efDetails" placeholder="مثال: تموين الأسبوع أو اسم المتجر" value="'+expEsc(legacyDetails)+'"></div>'+
       (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
       '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="efDate" value="'+(tx?tx.transactionDate:todayStr())+'"></div>'+
@@ -13110,8 +13112,9 @@
     g("#efCatSearch").oninput=()=>{const q=expNormCategoryText(g("#efCatSearch").value);Array.from(g("#efCat").options).forEach(o=>{const cat=expCatById(o.value), words=[o.textContent,cat&&EXP_CATEGORY_ALIASES[cat.name]].concat((cat&&cat.subcategories||[]).map(s=>s.name));o.hidden=!!q&&!words.some(x=>expNormCategoryText(x).includes(q));});};
     g("#efCat").onchange=()=>{selectedSubId="";g("#efCustomSub").value="";renderSubcategories();};
     renderSubcategories();
-    const syncSavedCustomChoice=()=>{const box=g("#efSaveCustom"), label=box&&box.closest(".exp-check"), hint=g("#efSaveCustomHint");if(!box||!hint)return;const chosen=box.checked;if(label)label.classList.toggle("is-selected",chosen);hint.classList.toggle("is-selected",chosen);hint.textContent=chosen?"✓ سيظهر هذا الاسم ضمن خيارات هذه الفئة في المرة القادمة.":"لن تُحفظ ضمن الخيارات إلا عند تحديد المربع.";};
-    g("#efSaveCustom").addEventListener("change",syncSavedCustomChoice); syncSavedCustomChoice();
+    let saveCustom=false;
+    const syncSavedCustomChoice=()=>{const toggle=g("#efSaveCustomToggle"), hint=g("#efSaveCustomHint");if(!toggle||!hint)return;toggle.setAttribute("aria-pressed",String(saveCustom));hint.textContent=saveCustom?"✓ سيظهر هذا الاسم ضمن خيارات هذه الفئة في المرة القادمة.":"اضغط هنا لتظهر ضمن خيارات هذه الفئة لاحقًا.";};
+    g("#efSaveCustomToggle").onclick=()=>{saveCustom=!saveCustom;syncSavedCustomChoice();}; syncSavedCustomChoice();
     g("#efMore").onclick=()=>{ const x=g("#efExtra"); x.hidden=!x.hidden; g("#efMore").textContent = x.hidden?"تفاصيل إضافية (اختياري) ▾":"إخفاء التفاصيل ▴"; };
     /* عند تغيير الرحلة: حدّث الافتراضي لاحتساب الميزانية الأسبوعية من إعداد الرحلة (قابل للتعديل يدويًا) */
     if(g("#efTrip")) g("#efTrip").onchange=()=>{ const tid=g("#efTrip").value; const cb=g("#efCount"); if(cb) cb.checked = tid? !!(expTripById(tid)||{}).includeInWeeklyBudgets : true; };
@@ -13141,7 +13144,7 @@
       const hasFx = !isNaN(fxAmt) && fxAmt>0 && g("#efFxCur") && g("#efFxCur").value;
       expSaving=true; g("#efSave").disabled=true;
       let savedCustom=null;
-      if(selectedSub&&selectedSub.name==="أخرى"&&g("#efSaveCustom").checked&&chosenCat) savedCustom=expEnsureSavedCustomSubcategory(chosenCat,customSub);
+      if(selectedSub&&selectedSub.name==="أخرى"&&saveCustom&&chosenCat) savedCustom=expEnsureSavedCustomSubcategory(chosenCat,customSub);
       const resolvedSubId=savedCustom?savedCustom.id:selectedSubId||null;
       const resolvedCustomSub=savedCustom?null:(selectedSub&&selectedSub.name==="أخرى"?customSub:null);
       const resolvedSubcategory=savedCustom?savedCustom.name:(selectedSub?(selectedSub.name==="أخرى"?customSub:selectedSub.name):null);

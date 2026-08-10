@@ -74,7 +74,8 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
 
     await page.locator("#expAddBtn").click(); await page.locator("#efAmount").fill("12"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"أخرى"}).click(); await page.locator("#efCustomSub").fill("قسم المخبز");
-    await page.locator("#efSaveCustom").evaluate(el=>{ el.checked=true; el.dispatchEvent(new Event("change",{bubbles:true})); });
+    await page.locator("#efSaveCustomToggle").click();
+    assert.equal(await page.locator("#efSaveCustomToggle").getAttribute("aria-pressed"),"true");
     await page.locator("#efSave").click(); await page.waitForTimeout(80);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     const savedBakery=state.categories.find(c=>c.id==="legacy_food").subcategories.find(s=>s.name==="قسم المخبز");
