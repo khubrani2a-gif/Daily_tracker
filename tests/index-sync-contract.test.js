@@ -257,7 +257,7 @@ test("unified calendar opens saved days and lists upcoming recurring tasks",()=>
   ["calendarTaskOccurrences","calendarTaskCounts","calendarOpenDay","calendarRenderUpcoming","renderCalendar","openCalendarView"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
   assert.match(html,/data-stats-period="calendar"/);
   assert.match(html,/btn\.onclick=\(\)=>calendarOpenDay\(key\)/);
-  assert.match(html,/task\.repeat==="daily"\|\|task\.repeat==="weekly"/);
+  assert.match(html,/\["daily","weekly","monthly"\]\.includes\(task\.repeat\)/);
   assert.match(html,/document\.getElementById\("taskCalendarBtn"\)\.onclick=openCalendarView/);
 });
 
@@ -359,6 +359,15 @@ test("advanced tasks include statuses, subtasks, links, reminders, and weekly vi
   assert.match(html,/task\.reminderMinutes/);
   assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
   assert.match(html,/document\.getElementById\("taskWeekBtn"\)\.onclick=taskWeekOpen/);
+});
+
+test("task scheduling supports postponement plus daily, selected-weekday, and monthly repeats",()=>{
+  ["taskPostponeOpen","taskPostpone","taskOccursOnDate","taskNextOccurrenceDate","taskRepeatWeekdays","taskMonthlyOccurrenceDay"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
+  ["tmPostpone","tmWeeklyOptions","tmMonthlyOptions","tmMonthlyDay","taskPostponeReason","أيام العمل","عطلة نهاية الأسبوع","المرة القادمة"].forEach(text=>assert.ok(html.includes(text),text));
+  assert.match(html,/option value="monthly"/);
+  assert.match(html,/data-tm-weekday/);
+  assert.match(html,/postponedFromDate/);
+  assert.match(html,/يؤجَّل هذا التنفيذ فقط؛ لا يتغير تكرار المهمة القادم/);
 });
 
 test("advanced statistics support KPI customization, month comparison, day analysis, and suggested goals",()=>{
