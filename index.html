@@ -992,7 +992,7 @@
   .template-manager-copy{min-width:0}.template-manager-copy small{display:block;color:var(--muted);margin-top:.15rem}.template-manager-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}.template-manager-actions button{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:8px;padding:.34rem .48rem;font-family:inherit;font-size:.68rem;font-weight:700;cursor:pointer}.template-manager-actions button.danger{border-color:var(--danger);color:var(--danger)}.template-manager-actions button.hidden-toggle{border-color:var(--accent);color:var(--accent)}
   .task-sheet-inline-confirm{margin-top:.75rem;padding:.7rem;border:1px solid var(--danger);border-radius:11px;background:var(--chip-bg);font-size:.78rem;color:var(--ink)}
   .task-sheet-inline-confirm p{margin:0 0 .55rem;line-height:1.6}.task-sheet-inline-confirm-actions{display:flex;gap:.45rem}.task-sheet-inline-confirm button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.4rem .65rem;font-family:inherit;font-weight:700;cursor:pointer}.task-sheet-inline-confirm .danger{background:var(--danger);border-color:var(--danger);color:#fff}
-  .task-meta-link{color:var(--accent);text-decoration:none;border:1px solid var(--line)}
+  .task-meta-link{color:var(--accent);text-decoration:none;border:1px solid var(--line);font:inherit;cursor:pointer}
   .task-week-list{display:flex;flex-direction:column;gap:.55rem}
   .task-week-day{border:1px solid var(--line);border-radius:13px;padding:.65rem;background:var(--chip-bg)}
   .task-week-day h4{display:flex;justify-content:space-between;gap:.5rem;color:var(--accent);font-size:.84rem;margin-bottom:.35rem}
@@ -8543,6 +8543,19 @@
     if(digits.length<7||digits.length>15)return "";
     return raw.startsWith("+")?"+"+digits:digits;
   }
+  function taskCallPhone(value){
+    const phone=taskNormalizePhone(value); if(!phone)return false;
+    /* يجب أن يبقى الانتقال داخل حدث الضغط نفسه كي يفتحه iOS/Android كتطبيق اتصال. */
+    window.location.href="tel:"+phone;
+    return true;
+  }
+  function taskCopyPhone(value){
+    const phone=taskNormalizePhone(value); if(!phone)return;
+    const done=()=>hifzShowToast("تم نسخ رقم الجوال 📋");
+    const legacyCopy=()=>{const field=document.createElement("textarea");field.value=phone;field.setAttribute("readonly","");field.style.cssText="position:fixed;opacity:0;pointer-events:none";document.body.appendChild(field);field.select();let copied=false;try{copied=document.execCommand("copy");}catch(e){}field.remove();return copied;};
+    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(phone).then(done).catch(()=>{if(legacyCopy())done();else prompt("انسخ رقم الجوال:",phone);});
+    else if(legacyCopy())done();else prompt("انسخ رقم الجوال:",phone);
+  }
   const TASK_WEEKDAY_LABELS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   const TASK_WEEKDAY_SHORT=["أحد","اثن","ثلث","أرب","خمي","جمع","سبت"];
   function taskDateObject(value){return /^\d{4}-\d{2}-\d{2}$/.test(value||"")?new Date(value+"T12:00:00"):null;}
@@ -8874,7 +8887,7 @@
       else row.append(chk, input, metaBtn, del, flag);
       const taskLink=taskSafeExternalUrl(item.link), taskPhone=taskSafePhone(item.phone), metaParts=taskMetaText(item); if(metaParts.length||taskLink||taskPhone){ const meta=document.createElement("div"); meta.className="task-meta-line"; meta.innerHTML=metaParts.map(x=>'<span class="task-meta-chip">'+x+'</span>').join("");
         if(taskLink){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href=taskLink;a.title="يفتح الرابط في هذه النافذة";a.setAttribute("aria-label","فتح الرابط في هذه النافذة");a.textContent="🔗 فتح الرابط";a.addEventListener("click",(event)=>{ event.preventDefault(); window.location.assign(taskLink); });meta.appendChild(a);}
-        if(taskPhone){const a=document.createElement("a");a.className="task-meta-chip task-meta-link";a.href="tel:"+taskPhone;a.title="اتصال بالرقم المرتبط بالمهمة";a.setAttribute("aria-label","اتصال بالرقم المرتبط بالمهمة");a.textContent="📞 اتصال";meta.appendChild(a);}
+        if(taskPhone){const call=document.createElement("button");call.type="button";call.className="task-meta-chip task-meta-link";call.title="اتصال بالرقم المرتبط بالمهمة";call.setAttribute("aria-label","اتصال بالرقم المرتبط بالمهمة");call.textContent="📞 اتصال";call.onclick=event=>{event.preventDefault();event.stopPropagation();taskCallPhone(taskPhone);};meta.appendChild(call);const copy=document.createElement("button");copy.type="button";copy.className="task-meta-chip task-meta-link";copy.title="نسخ رقم الجوال";copy.setAttribute("aria-label","نسخ رقم الجوال");copy.textContent="📋 نسخ الرقم";copy.onclick=event=>{event.preventDefault();event.stopPropagation();taskCopyPhone(taskPhone);};meta.appendChild(copy);}
         row.appendChild(meta); }
       if(Array.isArray(item.subtasks)&&item.subtasks.length){const subs=document.createElement("div");subs.className="task-subtasks-line";item.subtasks.forEach(sub=>{const b=document.createElement("button");b.type="button";b.className="task-subtask"+(sub.done?" done":"");b.textContent=(sub.done?"✓ ":"○ ")+sub.text;b.setAttribute("aria-pressed",String(!!sub.done));b.onclick=()=>{sub.done=!sub.done;save();rerender();};subs.appendChild(b);});row.appendChild(subs);}
       box.appendChild(row);
