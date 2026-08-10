@@ -1475,6 +1475,7 @@
   .exp-expense-section .exp-field:last-child{margin-bottom:0}.exp-expense-form .exp-field input.amount{background:var(--paper);border:1.5px solid var(--accent);min-height:54px;font-size:1.45rem}
   .exp-expense-extra{margin-top:.15rem}.exp-expense-savebar{margin-top:1rem;padding-top:.7rem;border-top:1px solid var(--line)}.exp-expense-savebar small{display:block;color:var(--muted);font-size:.72rem;text-align:center;margin-bottom:.45rem}.exp-expense-savebar .exp-save{margin:0;min-height:52px;box-shadow:0 9px 18px color-mix(in srgb,var(--accent) 22%,transparent)}
   .exp-extra-group{border:1px solid var(--line);background:var(--chip-bg);border-radius:14px;padding:.75rem;margin:.65rem 0}.exp-extra-group:last-child{margin-bottom:0}.exp-extra-title{display:flex;align-items:center;gap:.4rem;color:var(--accent);font-size:.78rem;font-weight:800;margin-bottom:.65rem}.exp-extra-title small{color:var(--muted);font-size:.7rem;font-weight:500}
+  .exp-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.42rem}.exp-choice-chip{min-width:0;display:flex;align-items:center;gap:.38rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.55rem .6rem;font:inherit;font-size:.8rem;font-weight:700;text-align:right;cursor:pointer;transition:.12s}.exp-choice-chip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.exp-choice-chip:hover,.exp-choice-chip:focus-visible{border-color:var(--accent);outline:none}.exp-choice-chip[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 14%,var(--paper));border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 28%,transparent)}.exp-choice-chip[aria-pressed="true"]:after{content:"✓";margin-inline-start:auto;font-weight:900}.exp-choice-chip.is-empty{color:var(--muted);font-weight:600}
   .exp-fx-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.5rem;border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:.62rem .7rem;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;margin:.65rem 0 0}.exp-fx-toggle span{color:var(--muted);font-size:.72rem;font-weight:500}.exp-fx-toggle:hover,.exp-fx-toggle:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
   .exp-expense-extra .exp-fx-box{margin:.45rem 0 0;background:var(--paper)}.exp-expense-extra .exp-check{margin:.15rem 0 .65rem}
   @media(max-width:430px){.exp-expense-section{padding:.7rem}.exp-expense-head{top:-1rem}.exp-expense-form .exp-grid2{gap:.45rem}}
@@ -11304,6 +11305,13 @@
   const EXP_PURCHASE = ["محلي","توصيل","سفري","متجر إلكتروني","أخرى"];
   const EXP_CONTEXT  = ["عادي","سفر","عمل","مناسبة","طارئ"];
   const EXP_BENEF    = ["لي","الزوج","مشترك","الأسرة","أخرى"];
+  /* رموز العرض فقط؛ تظل القيم المحفوظة كما هي للحفاظ على التقارير والسجل القديم. */
+  const EXP_OPTION_META = {
+    payment:{"مدى":"💳 مدى","Apple Pay":"🍎 Apple Pay","نقد":"💵 نقد","بطاقة ائتمانية":"🏦 بطاقة","تحويل":"↔️ تحويل","أخرى":"✍️ أخرى"},
+    purchase:{"محلي":"🏪 من المتجر","توصيل":"🛵 توصيل","سفري":"✈️ سفر","متجر إلكتروني":"🛒 إلكتروني","أخرى":"✍️ أخرى"},
+    context:{"عادي":"☀️ عادي","سفر":"✈️ سفر","عمل":"💼 عمل","مناسبة":"🎉 مناسبة","طارئ":"🚨 طارئ"},
+    beneficiary:{"لي":"🙋 أنا","الزوج":"❤️ الزوج","مشترك":"🤝 مشترك","الأسرة":"👨‍👩‍👧 الأسرة","أخرى":"✍️ شخص آخر"}
+  };
   const EXP_MONTHS   = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
   const _pad2 = n=> String(n).padStart(2,"0");
   const _arn = n=> Number(n).toLocaleString("ar-EG");
@@ -13019,6 +13027,11 @@
   expFormOverlay.addEventListener("click", e=>{ if(e.target===expFormOverlay) expCloseForm(); });
 
   function expOptions(arr, sel){ return ['<option value="">—</option>'].concat(arr.map(v=>'<option'+(v===sel?' selected':'')+'>'+expEsc(v)+'</option>')).join(""); }
+  function expChoiceButtons(id,label,options,selected,meta){
+    const current=options.includes(selected)?selected:"";
+    const one=(value,text,empty)=>'<button type="button" class="exp-choice-chip'+(empty?' is-empty':'')+'" data-exp-choice="'+id+'" data-value="'+expEsc(value)+'" aria-pressed="'+(value===current?'true':'false')+'"><span>'+text+'</span></button>';
+    return '<input type="hidden" id="'+id+'" value="'+expEsc(current)+'"><div class="exp-choice-grid" role="group" aria-label="'+expEsc(label)+'">'+options.map(value=>one(value,expEsc((meta&&meta[value])||value),false)).join("")+one("","— بدون تحديد",true)+'</div>';
+  }
 
   function expOpenSavingForm(goalId){
     const goal=goalId?(expState.savingsGoals||[]).find(g=>g.id===goalId):null;
@@ -13117,12 +13130,12 @@
       '</section>'+
       '<button type="button" class="exp-toggle-more" id="efMore">تفاصيل إضافية (اختياري) ▾</button>'+
       '<div id="efExtra" class="exp-expense-extra" hidden>'+
-        '<div class="exp-extra-group"><div class="exp-extra-title">💳 الدفع والشراء <small>يتذكر آخر اختيار · الافتراضي مدى</small></div><div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label><select id="efPay">'+expOptions(EXP_PAYMENTS, defPay)+'</select></div>'+
-        '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE, tx&&tx.purchaseMethod)+'</select></div></div></div>'+
+        '<div class="exp-extra-group"><div class="exp-extra-title">💳 الدفع والشراء <small>يتذكر آخر اختيار · الافتراضي مدى</small></div><div class="exp-grid2"><div class="exp-field"><label>طريقة الدفع</label>'+expChoiceButtons("efPay","طريقة الدفع",EXP_PAYMENTS,defPay,EXP_OPTION_META.payment)+'</div>'+
+        '<div class="exp-field"><label>طريقة الشراء</label>'+expChoiceButtons("efPur","طريقة الشراء",EXP_PURCHASE,tx&&tx.purchaseMethod,EXP_OPTION_META.purchase)+'</div></div></div>'+
         '<div class="exp-extra-group"><div class="exp-extra-title">📌 الارتباط والسياق <small>للتقارير الدقيقة</small></div>'+
         (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
-        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT, tx&&tx.context)+'</select></div>'+
-        '<div class="exp-field"><label>المستفيد</label><select id="efBen">'+expOptions(EXP_BENEF, tx&&tx.beneficiary)+'</select></div></div>'+
+        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label>'+expChoiceButtons("efCtx","سياق المصروف",EXP_CONTEXT,tx&&tx.context,EXP_OPTION_META.context)+'</div>'+
+        '<div class="exp-field"><label>لمن هذا المصروف؟</label>'+expChoiceButtons("efBen","لمن هذا المصروف؟",EXP_BENEF,tx&&tx.beneficiary,EXP_OPTION_META.beneficiary)+'</div></div>'+
         '<div class="exp-field"><label>الدولة/المدينة</label><input id="efCountry" placeholder="اختياري" value="'+expEsc(tx&&tx.merchantCountry||"")+'"></div>'+
         '<label class="exp-check"><input type="checkbox" id="efCount"'+(initCount?" checked":"")+'> تُحتسب ضمن الميزانية الأسبوعية العادية</label>'+
         '<div class="exp-field"><label>ملاحظة</label><input id="efNote" placeholder="اختياري" value="'+expEsc(tx&&tx.description||"")+'"></div></div>'+
@@ -13138,6 +13151,11 @@
       '</div>'
     );
     const g=id=>expFormBox.querySelector(id);
+    expFormBox.querySelectorAll("[data-exp-choice]").forEach(button=>button.onclick=()=>{
+      const field=g("#"+button.dataset.expChoice); if(!field)return;
+      field.value=button.dataset.value;
+      expFormBox.querySelectorAll('[data-exp-choice="'+button.dataset.expChoice+'"]').forEach(item=>item.setAttribute("aria-pressed",String(item===button)));
+    });
     let selectedSubId=curSubId;
     const selectSubcategory=(id)=>{const cat=expCatById(g("#efCat").value);selectedSubId=id||"";["#efSubChips","#efRecentSubChips"].forEach(sel=>g(sel).querySelectorAll("[data-subchip]").forEach(x=>x.classList.toggle("active",x.dataset.subchip===selectedSubId)));const s=expSubcategoryById(cat,selectedSubId);g("#efCustomWrap").hidden=!(s&&s.name==="أخرى");};
     const renderSubcategories=()=>{
