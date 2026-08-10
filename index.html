@@ -13093,6 +13093,8 @@
     const legacyDetails=tx?(tx.description||(!tx.subcategoryId?tx.subcategory||"":"")):"";
     /* عند التعديل نعرض طريقة المعاملة نفسها؛ وعند الإضافة نبدأ بالافتراضي المحفوظ. */
     const defPay = (tx&&tx.paymentMethod) || expState.settings.defaultPaymentMethod || "مدى";
+    /* المصروف الجديد عادي في الغالب؛ لا نفرض هذا السياق على سجل قديم عند تعديله. */
+    const defCtx = tx ? (tx.context||"") : "عادي";
     const catOpts = cats.map(c=>'<option value="'+c.id+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+(c.icon?c.icon+" ":"")+expEsc(c.name)+'</option>').join("");
     /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
     const active = expPreferredActiveTrip();
@@ -13129,7 +13131,7 @@
         '<div class="exp-field"><label>طريقة الشراء</label><select id="efPur">'+expOptions(EXP_PURCHASE,tx&&tx.purchaseMethod,EXP_OPTION_META.purchase)+'</select></div></div></div>'+
         '<div class="exp-extra-group"><div class="exp-extra-title">📌 الارتباط والسياق <small>للتقارير الدقيقة</small></div>'+
         (showTripField? '<div class="exp-field"><label>الرحلة</label><select id="efTrip">'+tripOpts+'</select></div>':'')+
-        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT,tx&&tx.context,EXP_OPTION_META.context)+'</select></div>'+
+        '<div class="exp-grid2"><div class="exp-field"><label>السياق</label><select id="efCtx">'+expOptions(EXP_CONTEXT,defCtx,EXP_OPTION_META.context)+'</select></div>'+
         '<div class="exp-field"><label>لمن هذا المصروف؟</label><select id="efBen">'+expOptions(EXP_BENEF,tx&&tx.beneficiary,EXP_OPTION_META.beneficiary)+'</select></div></div>'+
         '<div class="exp-field"><label>الدولة/المدينة</label><input id="efCountry" placeholder="اختياري" value="'+expEsc(tx&&tx.merchantCountry||"")+'"></div>'+
         '<label class="exp-check"><input type="checkbox" id="efCount"'+(initCount?" checked":"")+'> تُحتسب ضمن الميزانية الأسبوعية العادية</label>'+

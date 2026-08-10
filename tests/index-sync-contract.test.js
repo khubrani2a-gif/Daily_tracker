@@ -106,6 +106,11 @@ test("optional expense choices retain native select boxes with visual emoji labe
   assert.match(html,/لمن هذا المصروف؟/);
 });
 
+test("new expenses default their context to normal without overwriting older transactions",()=>{
+  assert.match(html,/const defCtx = tx \? \(tx\.context\|\|""\) : "عادي"/);
+  assert.match(html,/expOptions\(EXP_CONTEXT,defCtx,EXP_OPTION_META\.context\)/);
+});
+
 test("daily history is cached and below-fold content is deferred at startup",()=>{
   assert.match(html,/let allDaysCache = null/);
   assert.match(html,/function invalidateAllDaysCache\(\)/);
