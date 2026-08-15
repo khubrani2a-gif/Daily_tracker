@@ -100,7 +100,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   trips:[] });
 
 (async()=>{
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("1. Expenses: server-first success then CACHE FALLBACK on resume (contract parity)");
   store[expKey] = seedExp();

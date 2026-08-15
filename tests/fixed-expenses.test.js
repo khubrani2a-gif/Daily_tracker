@@ -16,7 +16,7 @@ const openFinance=async(p)=>{
 const clickTxt=async(p,sel,txt)=>{ const els=await p.$$(sel); for(const e of els){ if(((await e.textContent())||"").includes(txt)){ await e.click(); return true; } } return false; };
 async function page(b){ const ctx=await b.newContext({viewport:{width:1000,height:900}}); const p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message)); return p; }
 (async()=>{
-  const b=await chromium.launch();
+  const b=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("A. Record fixed payment: NOT under a variable category, marked fixed");
   let p=await page(b);

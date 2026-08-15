@@ -19,7 +19,7 @@ const fixtures = {
   "F10 malformed JSON": "###not-json###"
 };
 (async()=>{
-  const b=await chromium.launch();
+  const b=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   console.log("fixture".padEnd(42)+"| startupOK | error");
   for(const [name, fx] of Object.entries(fixtures)){
     const ctx=await b.newContext({viewport:{width:800,height:700}}); const p=await ctx.newPage();

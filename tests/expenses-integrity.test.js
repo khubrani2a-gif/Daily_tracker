@@ -85,7 +85,7 @@ const GROUPS = process.argv.slice(2).filter(a=>!a.startsWith("-"));
 const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
 
 (async()=>{
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   /* ============================================================
      العطل 3 — تطبيع الوحدة الصغرى (سلاسل/مشوّه) بمبالغ دقيقة

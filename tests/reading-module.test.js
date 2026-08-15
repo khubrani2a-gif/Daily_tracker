@@ -34,7 +34,7 @@ const rdSettings = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-r
 const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-reading-stats-cache")) || {});
 
 (async()=>{
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("A. Empty state -> add material (book/page) -> becomes focus automatically");
   let p = await page(b);

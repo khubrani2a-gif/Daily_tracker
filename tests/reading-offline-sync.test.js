@@ -109,7 +109,7 @@ function seedLocalItem(){
 }
 
 (async()=>{
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("A. Offline: local Reading change works immediately, local-first, with zero pending server writes visible");
   const ctx = await b.newContext({viewport:{width:1000,height:900}});

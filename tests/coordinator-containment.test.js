@@ -33,7 +33,7 @@ async function device(b){ const ctx=await b.newContext({viewport:{width:1000,hei
   await p.addInitScript(FAKE); return p; }
 const dayKey="users/U1/days/"+today();
 (async()=>{
-  const b=await chromium.launch();
+  const b=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("A. Cross-device DAILY (prayer) pulls on foreground via coordinator (server-first)");
   // pre-seed remote day doc (simulating device A push)

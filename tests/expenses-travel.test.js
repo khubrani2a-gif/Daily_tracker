@@ -34,7 +34,7 @@ function seed(extra){ return (a)=>{ localStorage.clear(); const now=Date.now(); 
   localStorage.setItem("h2do-expenses",JSON.stringify(data)); }; }
 const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",els=>els.map(e=>e.querySelector("small").textContent+"|"+e.querySelector("b").textContent)); const f=s.find(x=>x.startsWith(label)); return f?f.split("|")[1]:null; };
 (async()=>{
-  const b=await chromium.launch();
+  const b=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   let p=await b.newPage({viewport:{width:1000,height:900}}); p.on("pageerror",e=>errs.push(e.message));
   await p.addInitScript(seed(), {tk:today()});
   await p.goto(fileUrl); await p.waitForTimeout(700);

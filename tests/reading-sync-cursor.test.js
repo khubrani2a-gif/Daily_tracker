@@ -157,7 +157,7 @@ async function quickLogSession(p, mins){
 }
 
 (async()=>{
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
 
   console.log("1. Server-first: first successful pull loads the whole collection (no where clause)");
   resetServerStore();

@@ -19,7 +19,7 @@ const {chromium}={chromium:loadChromium()};
 const fileUrl="file://"+path.resolve(__dirname,"..","index.html");
 
 async function open(){
-  const browser=await chromium.launch();
+  const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   const ctx=await browser.newContext({viewport:{width:390,height:844}});
   const page=await ctx.newPage();
   const errs=[]; page.on("pageerror",e=>errs.push(e.message.split("\n")[0]));
@@ -164,7 +164,7 @@ function customFixture(){
     trips:[],savingsGoals:[],recurringTransactions:[],familyShopping:[],familyEvents:[],activityLog:[]};
 }
 async function openSeeded(fixture){
-  const browser=await chromium.launch();
+  const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   const ctx=await browser.newContext({viewport:{width:390,height:844}});
   const page=await ctx.newPage();
   const errs=[]; page.on("pageerror",e=>errs.push(e.message.split("\n")[0]));

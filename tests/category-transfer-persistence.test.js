@@ -76,17 +76,20 @@ const catOf=(state,id)=>{const t=state.transactions.find(x=>x.id===id);return t?
 const spentIn=(state,categoryId)=>state.transactions
   .filter(t=>!t.deletedAt&&t.categoryId===categoryId)
   .reduce((sum,t)=>sum+(t.transactionType==="refund"?-t.amountMinor:t.amountMinor),0);
+const dateKey=(offset=0)=>{const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10);};
 
 test("manual expense-category transfer survives close/reopen and full reload",async()=>{
-  const browser=await chromium.launch();
+  const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   const ctx=await browser.newContext({viewport:{width:390,height:844}});
   const page=await ctx.newPage();
   const errs=[]; page.on("pageerror",e=>errs.push(e.message.split("\n")[0]));
   try{
+    const fixture=buildFixture();
+    fixture.transactions.forEach(tx=>{ tx.transactionDate=dateKey(0); });
     await page.addInitScript(data=>{
       window.__MFKR_TEST__=true;
       if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data));
-    },buildFixture());
+    },fixture);
     await page.route("https://www.gstatic.com/firebasejs/**",r=>r.abort());
     await page.goto(fileUrl); await page.waitForTimeout(700);
 
@@ -100,12 +103,12 @@ test("manual expense-category transfer survives close/reopen and full reload",as
       const tab=page.locator('.exp-tab[data-view="'+view+'"]');
       if(await tab.count()){
         await tab.click(); await page.waitForTimeout(350);
-        if(await page.locator('[data-catmenu="'+HOME_ID+'"]').count()) break;
+        if(await page.locator('[data-catmenu="'+HOME_ID+'"]:visible').count()) break;
       }
     }
 
     /* نفس مسار المستخدم: قائمة الفئة ← «نقل مصروفات هذا الأسبوع» */
-    await page.locator('[data-catmenu="'+HOME_ID+'"]').first().click(); await page.waitForTimeout(300);
+    await page.locator('[data-catmenu="'+HOME_ID+'"]:visible').first().click(); await page.waitForTimeout(300);
     await page.locator(".prio-menu-item").filter({hasText:"نقل مصروفات"}).first().click(); await page.waitForTimeout(400);
     assert.equal(await page.locator("[data-var-move]").count(),5,"الحوار يعرض مصروفات الأسبوع الخمسة");
 
@@ -125,7 +128,7 @@ test("manual expense-category transfer survives close/reopen and full reload",as
     assert.ok(state.transactions.find(t=>t.id==="tx_tamween_1").categoryPinnedAt>0,"يُختم الإسناد اليدوي");
     /* المبالغ والتواريخ والمعرّفات لا تتغيّر بالنقل */
     assert.equal(state.transactions.find(t=>t.id==="tx_tamween_1").amountMinor,6673);
-    assert.equal(state.transactions.find(t=>t.id==="tx_tamween_1").transactionDate,"2026-07-27");
+    assert.equal(state.transactions.find(t=>t.id==="tx_tamween_1").transactionDate,dateKey(0));
     assert.equal(state.transactions.length,5);
 
     /* إغلاق العائلة وإعادة فتحها */
@@ -160,7 +163,7 @@ test("manual expense-category transfer survives close/reopen and full reload",as
 test("automatic legacy correction still heals unpinned transactions",async()=>{
   /* حماية من الإفراط في الإصلاح: السجلات غير المختومة يجب أن تظل قابلة للمداواة التلقائية،
      كي لا نُبطل سلوك التصحيح التاريخي المقصود للنسخ السحابية. */
-  const browser=await chromium.launch();
+  const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
   const ctx=await browser.newContext({viewport:{width:390,height:844}});
   const page=await ctx.newPage();
   try{
