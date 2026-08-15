@@ -264,7 +264,7 @@
     width:max-content;max-width:100%;margin:0 auto 1rem;padding:.35rem;background:color-mix(in srgb,var(--paper) 92%,transparent);
     border:1px solid var(--line);border-radius:99px;box-shadow:var(--shadow-sm);backdrop-filter:blur(12px)
   }
-  .quick-nav a,.quick-nav button{color:var(--muted);text-decoration:none;font-size:.78rem;font-weight:600;padding:.42rem .7rem;border-radius:99px;white-space:nowrap;transition:.15s;border:0;background:none;font-family:inherit;cursor:pointer}
+  .quick-nav a,.quick-nav button{color:var(--muted);text-decoration:none;font-size:.76rem;font-weight:600;padding:.42rem .58rem;border-radius:99px;white-space:nowrap;transition:.15s;border:0;background:none;font-family:inherit;cursor:pointer;flex:1 1 0;min-width:0;text-align:center}
   .quick-nav a:hover,.quick-nav a:focus-visible,.quick-nav button:hover,.quick-nav button:focus-visible{color:var(--accent);background:var(--accent-soft);outline:none}
   .quick-nav a.active{color:#fff;background:var(--accent)}
   .quick-nav [hidden]{display:none}
@@ -279,9 +279,9 @@
     .today-overview-head{display:grid;grid-template-columns:1fr auto}.today-focus{grid-column:1/-1;max-width:none;margin-top:.55rem}.today-customize{grid-column:2;grid-row:1}
     .today-metrics{grid-template-columns:1fr 1fr}
     .weekly-goal-banner{grid-template-columns:auto 1fr}.weekly-goal-action{grid-column:1/-1;width:100%}.weekly-goal-steps{grid-column:1/-1;flex-direction:column}.weekly-goal-step{width:100%}
-    .quick-nav{position:fixed;top:auto;right:.65rem;left:.65rem;bottom:calc(.65rem + env(safe-area-inset-bottom, 0px));width:auto;max-width:none;margin:0;justify-content:space-around;border-radius:18px;z-index:900;padding:.4rem .25rem}
-    .quick-nav a,.quick-nav button{display:flex;flex-direction:column;align-items:center;gap:.08rem;font-size:.64rem;padding:.35rem .32rem}
-    .quick-nav a span,.quick-nav button span{font-size:1.05rem}
+    .quick-nav{position:fixed;top:auto;right:.55rem;left:.55rem;bottom:calc(.65rem + env(safe-area-inset-bottom, 0px));width:auto;max-width:none;margin:0;justify-content:space-around;gap:.18rem;border-radius:18px;z-index:900;padding:.36rem .18rem}
+    .quick-nav a,.quick-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.08rem;font-size:.58rem;padding:.38rem .16rem;line-height:1.15;min-height:42px}
+    .quick-nav a span,.quick-nav button span{font-size:1rem;line-height:1}
     .today-priority-chip{max-width:150px}.today-remaining{width:100%;margin:0}
   }
 
@@ -2155,6 +2155,37 @@
   .exp-report-tools{display:flex;gap:.5rem;margin:.7rem 0}
   .exp-report-tools input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:.55rem .65rem;font-family:inherit}
   .exp-report-tools button{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+  /* ===== التعلّم ===== */
+  .learning-card{border-color:rgba(37,99,145,.28)}
+  .learning-card .ib-title .ico{color:#256391}
+  .learning-summary{border:1px solid var(--line);background:linear-gradient(135deg,rgba(37,99,145,.10),var(--paper));border-radius:14px;padding:.8rem;margin:.45rem 0 .8rem}
+  .learning-summary-title{display:flex;align-items:center;justify-content:space-between;gap:.55rem;color:#256391;font-weight:800;font-size:.9rem;margin-bottom:.45rem}
+  .learning-summary-main{font-size:.88rem;line-height:1.7;color:var(--ink)}
+  .learning-summary-main b{display:block;font-size:1rem;color:var(--ink)}
+  .learning-summary-main small{display:block;color:var(--muted);font-size:.72rem;margin-top:.12rem}
+  .learning-actions,.learning-tools{display:grid;gap:.45rem}
+  .learning-actions{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.65rem}
+  .learning-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .learning-actions button,.learning-tool-btn,.learning-add-btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:11px;padding:.6rem .7rem;font-family:inherit;font-weight:700;cursor:pointer;text-align:center}
+  .learning-actions button:first-child,.learning-add-btn{background:#256391;color:#fff;border-color:#256391}
+  .learning-tool-btn{min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.18rem}
+  .learning-tool-btn span{font-size:1.25rem}.learning-tool-btn small{font-size:.68rem;color:var(--muted);font-weight:600}
+  .learning-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
+  .learning-item{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:.7rem}
+  .learning-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.55rem}
+  .learning-item-title{font-weight:800;color:var(--ink);line-height:1.5}
+  .learning-item-meta{font-size:.72rem;color:var(--muted);line-height:1.6;margin-top:.15rem}
+  .learning-status{display:inline-flex;align-items:center;gap:.2rem;border:1px solid rgba(37,99,145,.25);background:rgba(37,99,145,.08);color:#256391;border-radius:99px;padding:.18rem .5rem;font-size:.68rem;font-weight:800;white-space:nowrap}
+  .learning-row-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end;margin-top:.55rem}
+  .learning-row-actions button{border:1px solid var(--line);background:var(--chip-bg);color:var(--ink);border-radius:9px;padding:.35rem .55rem;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
+  .learning-row-actions .danger{color:var(--danger);border-color:var(--danger)}
+  .learning-empty{border:1px dashed var(--line);border-radius:12px;padding:.8rem;text-align:center;color:var(--muted);font-size:.8rem;line-height:1.7;background:var(--chip-bg)}
+  .learning-week-day{border:1px solid var(--line);border-radius:12px;padding:.65rem;background:var(--chip-bg)}
+  .learning-week-day.today{border-color:#256391;background:rgba(37,99,145,.08)}
+  .learning-week-day h4{margin:0 0 .45rem;color:#256391;font-size:.86rem}
+  .learning-progress{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.45rem 0 .2rem}
+  .learning-progress i{display:block;height:100%;background:#256391;border-radius:99px;width:0}
+  @media(max-width:420px){.learning-tools,.learning-actions{grid-template-columns:1fr}.learning-tool-btn{min-height:54px}}
   @media(max-width:620px){
     .header-top>div:last-child{width:100%;min-width:0}
     .date-nav{justify-content:center;flex-wrap:wrap}
@@ -2321,6 +2352,7 @@
   <nav class="quick-nav" aria-label="التنقل الرئيسي">
     <a href="#prayerCard" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
     <a href="#prayerCard" data-app-view="iman"><span>📿</span>إيمانيات</a>
+    <a href="#learningCard" data-app-view="learning"><span>🎓</span>التعلّم</a>
     <a href="#sportCard" data-app-view="sport"><span>❤️</span>الصحة</a>
     <a href="#expensesCard" data-app-view="expenses"><span>👨‍👩‍👧</span>العائلة</a>
     <a href="#readingCard" data-app-view="more"><span>•••</span>المزيد</a>
@@ -2338,6 +2370,7 @@
         <button type="button" class="customize-filter active" data-card-filter="all">الكل</button>
         <button type="button" class="customize-filter" data-card-filter="today">اليوم</button>
         <button type="button" class="customize-filter" data-card-filter="iman">إيمانيات</button>
+        <button type="button" class="customize-filter" data-card-filter="learning">التعلّم</button>
         <button type="button" class="customize-filter" data-card-filter="sport">الصحة</button>
         <button type="button" class="customize-filter" data-card-filter="expenses">العائلة</button>
         <button type="button" class="customize-filter" data-card-filter="more">المزيد</button>
@@ -2537,6 +2570,26 @@
           </div>
         </div>
         <div id="rdCardBody"></div>
+      </div>
+
+      <div class="card learning-card" id="learningCard">
+        <div class="ib-head">
+          <div>
+            <h2 class="ib-title"><span class="ico">🎓</span> رحلة التعلّم</h2>
+            <div class="ib-sub">محاضراتك، تحضيرك، ودوراتك المهنية في مكان هادئ واحد</div>
+          </div>
+        </div>
+        <section class="learning-summary" aria-labelledby="learningSummaryTitle">
+          <div class="learning-summary-title"><span id="learningSummaryTitle">ملخص اليوم الأكاديمي</span><span aria-hidden="true">🎓</span></div>
+          <div class="learning-summary-main" id="learningSummary"></div>
+          <div class="learning-actions" id="learningSummaryActions"></div>
+        </section>
+        <div class="learning-tools" aria-label="أدوات التعلّم">
+          <button type="button" class="learning-tool-btn" id="learningScheduleBtn"><span>🗓️</span>جدول المحاضرات<small id="learningScheduleHint"></small></button>
+          <button type="button" class="learning-tool-btn" id="learningPrepBtn"><span>✍️</span>تحضير المحاضرات<small id="learningPrepHint"></small></button>
+          <button type="button" class="learning-tool-btn" id="learningCoursesBtn"><span>🏅</span>الدورات والشهادات<small id="learningCoursesHint"></small></button>
+          <button type="button" class="learning-tool-btn" id="learningReadingBtn"><span>📚</span>القراءة المهنية<small id="learningReadingHint"></small></button>
+        </div>
       </div>
 
       <div class="card" id="sportCard">
@@ -4033,7 +4086,7 @@
   const syncLast = document.getElementById("syncLast");
   const syncRetry = document.getElementById("syncRetry");
   const GLOBAL_SYNC_AT_KEY = "h2do-last-global-sync";
-  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"];
+  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","learning"];
   const syncCoordinator = MufSyncCore.createCoordinator({moduleNames:SYNC_MODULES, debounceMs:350, throttleMs:1000});
 
   /* أهداف أسبوعية مستقلة عن اليوم: تبقى ظاهرة طوال الأسبوع وتندمج بأحدث تعديل لكل أسبوع. */
@@ -4192,7 +4245,8 @@
       witr:o=>witrPullRemote(Object.assign({},o,{trigger})),
       hifz:o=>hifzPullRemote(Object.assign({},o,{trigger})),
       expenses:o=>expPullRemote(Object.assign({},o,{trigger})),
-      weeklyGoals:o=>wgPullRemote(Object.assign({},o,{trigger}))
+      weeklyGoals:o=>wgPullRemote(Object.assign({},o,{trigger})),
+      learning:o=>learningPullRemote(Object.assign({},o,{trigger}))
     };
     return syncCoordinator.syncAll(trigger,options,pullers).then(summary=>{
       renderGlobalSyncStatus(summary,false);
@@ -4357,7 +4411,7 @@
   }
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
-    const names=["daily","quran","customWorship","witr","hifz","expenses","reading"];
+    const names=["daily","quran","customWorship","witr","hifz","expenses","reading","learning"];
     let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
     names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
       if(s.inFlight) flight=true;
@@ -10596,6 +10650,148 @@
     const shift=delta=>{const day=new Date(dateStr+"T12:00:00");day.setDate(day.getDate()+delta);const next=fmtDate(day);if(next>todayStr())return;sheet.close();goto(next);activityOpen(next);};sheet.over.querySelector("#activityPrev").onclick=()=>shift(-1);sheet.over.querySelector("#activityNext").onclick=()=>shift(1);
   }
 
+  /* ---------- التعلّم: محاضرات، تحضير، دورات، وقراءة مهنية ---------- */
+  const LEARNING_KEY="h2do-learning-v1";
+  const LEARNING_SCHEMA=1;
+  const LEARNING_DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  const LEARNING_PREP_STATUS=["لم يبدأ","قيد التحضير","جاهزة","تم تقديمها"];
+  const LEARNING_COURSE_STATUS=["مخطط لها","قيد التعلّم","متوقفة مؤقتًا","مكتملة"];
+  const LEARNING_READ_STATUS=["للقراءة","أقرأ الآن","مكتمل"];
+  const LEARNING_READ_TYPES=["كتاب","بحث","مرجع","مادة تعليمية"];
+  function learningBlank(){return {schema:LEARNING_SCHEMA,schedule:[],preparations:[],courses:[],professionalReading:[],updatedAt:0};}
+  function learningText(value,max){return String(value==null?"":value).trim().slice(0,max||500);}
+  function learningUrl(value){const v=learningText(value,500);if(!v)return "";try{const u=new URL(v);return /^https?:$/.test(u.protocol)?u.href:"";}catch(e){return "";}}
+  function learningId(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7);}
+  function learningNormalize(raw){
+    const out=learningBlank(), src=raw&&typeof raw==="object"?raw:{};
+    const cleanDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
+    const cleanTime=v=>/^\d{2}:\d{2}$/.test(String(v||""))?String(v):"";
+    out.schedule=(Array.isArray(src.schedule)?src.schedule:[]).filter(Boolean).map(item=>{
+      const recurrence=item.recurrence==="once"?"once":"weekly", day=Number.isInteger(+item.day)?Math.max(0,Math.min(6,+item.day)):0;
+      return {id:learningText(item.id,80)||learningId("lec"),courseName:learningText(item.courseName,120),courseCode:learningText(item.courseCode,40),section:learningText(item.section,60),day,startTime:cleanTime(item.startTime),endTime:cleanTime(item.endTime),room:learningText(item.room,100),recurrence,date:recurrence==="once"?cleanDate(item.date):"",notes:learningText(item.notes,1000),prepId:learningText(item.prepId,80),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null};
+    }).filter(item=>item.courseName&&item.startTime&&(item.recurrence==="weekly"||item.date));
+    out.preparations=(Array.isArray(src.preparations)?src.preparations:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("prep"),title:learningText(item.title,140),course:learningText(item.course,120),lectureId:learningText(item.lectureId,80),targetDate:cleanDate(item.targetDate),status:LEARNING_PREP_STATUS.includes(item.status)?item.status:"لم يبدأ",objectives:learningText(item.objectives,1200),materials:learningText(item.materials,1000),activity:learningText(item.activity,500),links:learningText(item.links,1000),notes:learningText(item.notes,1500),reflection:learningText(item.reflection,1500),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.title);
+    out.courses=(Array.isArray(src.courses)?src.courses:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("course"),name:learningText(item.name,140),provider:learningText(item.provider,100),category:learningText(item.category,80),startDate:cleanDate(item.startDate),targetDate:cleanDate(item.targetDate),progress:Math.max(0,Math.min(100,Math.round(+item.progress||0))),nextStep:learningText(item.nextStep,220),url:learningUrl(item.url),notes:learningText(item.notes,1200),status:LEARNING_COURSE_STATUS.includes(item.status)?item.status:"مخطط لها",createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.name);
+    out.professionalReading=(Array.isArray(src.professionalReading)?src.professionalReading:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("read"),title:learningText(item.title,160),author:learningText(item.author,120),type:LEARNING_READ_TYPES.includes(item.type)?item.type:"كتاب",related:learningText(item.related,140),current:learningText(item.current,80),totalPages:Math.max(0,Math.min(20000,Math.round(+item.totalPages||0))),targetDate:cleanDate(item.targetDate),url:learningUrl(item.url),notes:learningText(item.notes,1200),status:LEARNING_READ_STATUS.includes(item.status)?item.status:"للقراءة",createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.title);
+    out.updatedAt=+src.updatedAt||0; return out;
+  }
+  function learningLoad(){try{return learningNormalize(JSON.parse(localStorage.getItem(LEARNING_KEY)||"null"));}catch(e){return learningBlank();}}
+  function learningSave(data){const normalized=learningNormalize(data);normalized.updatedAt=Date.now();localStorage.setItem(LEARNING_KEY,JSON.stringify(normalized));if(db&&user)learningPullRemote("localSave");learningRenderHome();return normalized;}
+  function learningActive(key){return learningLoad()[key].filter(item=>!item.deletedAt);}
+  function learningMerge(local,remote){
+    const a=learningNormalize(local), b=learningNormalize(remote), out=learningBlank(); out.updatedAt=Math.max(a.updatedAt,b.updatedAt);
+    ["schedule","preparations","courses","professionalReading"].forEach(key=>{
+      const rows=new Map(); a[key].concat(b[key]).forEach(item=>{const prev=rows.get(item.id); if(!prev||(+item.updatedAt||0)>=(+prev.updatedAt||0)) rows.set(item.id,item);});
+      out[key]=Array.from(rows.values());
+    });
+    return out;
+  }
+  function learningDocRef(){return db.collection("users").doc(user.uid).collection("meta").doc("learning");}
+  function learningPushRemote(data){if(!db||!user)return Promise.resolve({ok:false,reason:"noauth"});return learningDocRef().set(JSON.parse(JSON.stringify(data))).then(()=>({ok:true})).catch(error=>({ok:false,error:(error&&error.message)||String(error)}));}
+  function learningPullRemote(trigger){if(!db||!user)return Promise.resolve({module:"learning",status:"skipped",reason:"noauth"});return joinOrRun("learning",()=>_learningPullWork(trigger));}
+  function _learningPullWork(trigger){
+    syncBegin("learning",trigger);
+    return getDocServerFirst(learningDocRef()).then(snap=>{
+      const cache=_fromCache(snap), local=learningLoad(); let reconcile=Promise.resolve({ok:true}), changed=false;
+      if(!snap.exists){if(!cache&&local.updatedAt)reconcile=learningPushRemote(local);}
+      else{const remote=learningNormalize(snap.data());if(!cache)dataDetectCollectionConflicts("learning","records",local.schedule.concat(local.preparations,local.courses,local.professionalReading),remote.schedule.concat(remote.preparations,remote.courses,remote.professionalReading),"دمج سجلات التعلّم حسب آخر تحديث");const merged=learningMerge(local,remote);changed=JSON.stringify(local)!==JSON.stringify(merged);const remoteNeedsUpdate=JSON.stringify(remote)!==JSON.stringify(merged);if(changed){localStorage.setItem(LEARNING_KEY,JSON.stringify(merged));safeRun("learning:render",learningRenderHome);}if(!cache&&remoteNeedsUpdate)reconcile=learningPushRemote(merged);}
+      return Promise.resolve(reconcile).then(write=>{const ok=!(write&&write.ok===false);syncEnd("learning",ok,snap,ok?null:new Error("reconWriteFailed"));return {module:"learning",status:ok?(cache?"cacheFallback":"success"):"failed",source:cache?"cache":"server",changed,reconWriteOk:ok};});
+    }).catch(error=>{diagErr("learningPullRemote",error);syncEnd("learning",false,null,error);return {module:"learning",status:"failed",error:(error&&error.message)||String(error)};});
+  }
+  function learningLectureOccurs(item,dateStr){const d=new Date(dateStr+"T12:00:00");return item.recurrence==="weekly"?item.day===d.getDay():item.date===dateStr;}
+  function learningLectureDate(item,baseDate){
+    if(item.recurrence==="once")return item.date||"9999-12-31";
+    const base=new Date(baseDate+"T12:00:00"), d=new Date(base);d.setDate(base.getDate()+((item.day-base.getDay()+7)%7));return fmtDate(d);
+  }
+  function learningNextLecture(dateStr){
+    const rows=learningActive("schedule"), now=todayStr()===dateStr?new Date():new Date(dateStr+"T00:00:00");
+    const candidates=[]; rows.forEach(item=>{for(let i=0;i<30;i++){const d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+i);const key=fmtDate(d);if(learningLectureOccurs(item,key)){const at=new Date(key+"T"+item.startTime+":00");if(at>=now)candidates.push({item,date:key,at});break;}}});
+    return candidates.sort((a,b)=>a.at-b.at)[0]||null;
+  }
+  function learningUrgentPrep(dateStr){
+    const rows=learningActive("preparations").filter(item=>item.status!=="تم تقديمها"), score=item=>new Date((item.targetDate||learningLectureDate(learningActive("schedule").find(lec=>lec.id===item.lectureId)||{},dateStr)||"9999-12-31")+"T00:00:00").getTime();
+    return rows.sort((a,b)=>score(a)-score(b)||(+b.updatedAt||0)-(+a.updatedAt||0))[0]||null;
+  }
+  function learningSetText(parent,cls,text){const el=document.createElement("div");el.className=cls;el.textContent=text;parent.appendChild(el);return el;}
+  function learningChip(text){const chip=document.createElement("span");chip.className="learning-status";chip.textContent=text;return chip;}
+  function learningButton(text,fn,cls){const b=document.createElement("button");b.type="button";b.textContent=text;if(cls)b.className=cls;b.onclick=fn;return b;}
+  function learningRenderHome(){
+    const summary=document.getElementById("learningSummary"), actions=document.getElementById("learningSummaryActions"); if(!summary||!actions)return;
+    const data=learningLoad(), today=todayStr(), next=learningNextLecture(today), urgent=learningUrgentPrep(today); summary.textContent=""; actions.textContent="";
+    document.getElementById("learningScheduleHint").textContent=learningActive("schedule").length.toLocaleString("ar-EG")+" محاضرات";
+    document.getElementById("learningPrepHint").textContent=learningActive("preparations").filter(p=>p.status!=="تم تقديمها").length.toLocaleString("ar-EG")+" قيد المتابعة";
+    document.getElementById("learningCoursesHint").textContent=learningActive("courses").filter(c=>c.status!=="مكتملة").length.toLocaleString("ar-EG")+" نشطة";
+    document.getElementById("learningReadingHint").textContent=learningActive("professionalReading").filter(r=>r.status!=="مكتمل").length.toLocaleString("ar-EG")+" للقراءة";
+    if(!data.schedule.length&&!data.preparations.length&&!data.courses.length&&!data.professionalReading.length){learningSetText(summary,"","لا توجد بيانات تعلّم محفوظة بعد.");actions.appendChild(learningButton("إضافة أول محاضرة",()=>learningOpenSchedule(true)));return;}
+    if(next){const b=document.createElement("b");b.textContent="المحاضرة القادمة: "+next.item.courseName;summary.appendChild(b);learningSetText(summary,"",LEARNING_DAYS[new Date(next.date+"T12:00:00").getDay()]+" · "+next.item.startTime+(next.item.room?" · "+next.item.room:""));learningSetText(summary,"",next.item.section?("الشعبة: "+next.item.section):"");}
+    else learningSetText(summary,"","لا توجد محاضرات اليوم");
+    if(urgent){const small=document.createElement("small");small.textContent="الأكثر إلحاحًا: "+urgent.title+" · "+urgent.status;summary.appendChild(small);}
+    actions.append(learningButton("فتح التحضير",()=>learningOpenPreparations(false)),learningButton("عرض الجدول",()=>learningOpenSchedule(false)));
+  }
+  function learningField(parent,label,id,type,wide){
+    const wrap=document.createElement("label"); if(wide)wrap.className="task-field-wide"; wrap.textContent=label;
+    const input=document.createElement(type==="textarea"?"textarea":"input"); input.id=id; if(type&&type!=="textarea")input.type=type; input.maxLength=type==="textarea"?1500:180; wrap.appendChild(input); parent.appendChild(wrap); return input;
+  }
+  function learningSelect(parent,label,id,options,wide){const wrap=document.createElement("label");if(wide)wrap.className="task-field-wide";wrap.textContent=label;const select=document.createElement("select");select.id=id;options.forEach(([value,text])=>{const option=document.createElement("option");option.value=value;option.textContent=text;select.appendChild(option);});wrap.appendChild(select);parent.appendChild(wrap);return select;}
+  function learningOpenForm(kind,id,afterSave){
+    const data=learningLoad(), key={schedule:"schedule",prep:"preparations",course:"courses",read:"professionalReading"}[kind], existing=(data[key]||[]).find(item=>item.id===id), title=({schedule:"محاضرة",prep:"تحضير محاضرة",course:"دورة أو شهادة",read:"قراءة مهنية"})[kind];
+    const sheet=taskSheet((existing?"تعديل ":"إضافة ")+title,'<div class="task-fields" id="learningFormFields"></div><div class="exp-err" id="learningFormErr"></div><button type="button" class="task-sheet-save" id="learningFormSave">حفظ</button>');
+    const fields=sheet.over.querySelector("#learningFormFields"), err=sheet.over.querySelector("#learningFormErr"), get=id=>sheet.over.querySelector("#"+id);
+    if(kind==="schedule"){
+      learningField(fields,"اسم المقرر","lfCourse","text",true).value=existing?.courseName||""; learningField(fields,"رمز المقرر","lfCode","text").value=existing?.courseCode||""; learningField(fields,"الشعبة/المجموعة","lfSection","text").value=existing?.section||""; learningSelect(fields,"اليوم","lfDay",LEARNING_DAYS.map((d,i)=>[String(i),d])).value=String(existing?.day??new Date().getDay()); learningField(fields,"وقت البداية","lfStart","time").value=existing?.startTime||""; learningField(fields,"وقت النهاية","lfEnd","time").value=existing?.endTime||""; learningField(fields,"القاعة/الموقع","lfRoom","text",true).value=existing?.room||""; learningSelect(fields,"التكرار","lfRec",[["weekly","متكررة أسبوعيًا"],["once","محاضرة لمرة واحدة"]],true).value=existing?.recurrence||"weekly"; learningField(fields,"تاريخ المحاضرة الواحدة","lfDate","date").value=existing?.date||""; learningField(fields,"ملاحظات","lfNotes","textarea",true).value=existing?.notes||"";
+    }else if(kind==="prep"){
+      learningField(fields,"عنوان التحضير أو موضوع المحاضرة","lfTitle","text",true).value=existing?.title||""; learningField(fields,"المقرر المرتبط","lfCourse","text").value=existing?.course||""; learningSelect(fields,"محاضرة مجدولة","lfLecture",[["","بدون ربط"]].concat(learningActive("schedule").map(l=>[l.id,l.courseName+" · "+LEARNING_DAYS[l.day]+" "+l.startTime])),true).value=existing?.lectureId||""; learningField(fields,"تاريخ مستهدف","lfDate","date").value=existing?.targetDate||""; learningSelect(fields,"الحالة","lfStatus",LEARNING_PREP_STATUS.map(s=>[s,s])).value=existing?.status||"لم يبدأ"; learningField(fields,"أهداف التعلم","lfObjectives","textarea",true).value=existing?.objectives||""; learningField(fields,"قائمة الشرائح/المواد","lfMaterials","textarea",true).value=existing?.materials||""; learningField(fields,"فكرة نشاط أو تحقق سريع","lfActivity","textarea",true).value=existing?.activity||""; learningField(fields,"روابط ومراجع","lfLinks","textarea",true).value=existing?.links||""; learningField(fields,"ملاحظات التدريس","lfNotes","textarea",true).value=existing?.notes||""; learningField(fields,"تأمل بعد المحاضرة","lfReflection","textarea",true).value=existing?.reflection||"";
+    }else if(kind==="course"){
+      learningField(fields,"اسم الدورة أو الشهادة","lfName","text",true).value=existing?.name||""; learningField(fields,"الجهة","lfProvider","text").value=existing?.provider||""; learningField(fields,"التصنيف","lfCategory","text").value=existing?.category||""; learningField(fields,"تاريخ البداية","lfStartDate","date").value=existing?.startDate||""; learningField(fields,"موعد مستهدف للإنهاء","lfTarget","date").value=existing?.targetDate||""; learningField(fields,"التقدم %","lfProgress","number").value=existing?.progress??0; learningField(fields,"الوحدة الحالية أو الخطوة القادمة","lfNext","text",true).value=existing?.nextStep||""; learningField(fields,"رابط الدورة","lfUrl","url",true).value=existing?.url||""; learningSelect(fields,"الحالة","lfStatus",LEARNING_COURSE_STATUS.map(s=>[s,s])).value=existing?.status||"مخطط لها"; learningField(fields,"ملاحظات","lfNotes","textarea",true).value=existing?.notes||"";
+    }else{
+      learningField(fields,"العنوان","lfTitle","text",true).value=existing?.title||""; learningField(fields,"المؤلف/المصدر","lfAuthor","text").value=existing?.author||""; learningSelect(fields,"النوع","lfType",LEARNING_READ_TYPES.map(s=>[s,s])).value=existing?.type||"كتاب"; learningField(fields,"مرتبط بـ","lfRelated","text").value=existing?.related||""; learningField(fields,"الصفحة/القسم الحالي","lfCurrent","text").value=existing?.current||""; learningField(fields,"إجمالي الصفحات","lfTotal","number").value=existing?.totalPages||""; learningField(fields,"تاريخ مستهدف","lfTarget","date").value=existing?.targetDate||""; learningField(fields,"رابط","lfUrl","url",true).value=existing?.url||""; learningSelect(fields,"الحالة","lfStatus",LEARNING_READ_STATUS.map(s=>[s,s])).value=existing?.status||"للقراءة"; learningField(fields,"ملاحظات","lfNotes","textarea",true).value=existing?.notes||"";
+    }
+    get("learningFormSave").onclick=()=>{const now=Date.now(), item=Object.assign({},existing||{id:learningId(kind),createdAt:now}, {updatedAt:now,deletedAt:null});
+      if(kind==="schedule"){Object.assign(item,{courseName:learningText(get("lfCourse").value,120),courseCode:learningText(get("lfCode").value,40),section:learningText(get("lfSection").value,60),day:+get("lfDay").value,startTime:get("lfStart").value,endTime:get("lfEnd").value,room:learningText(get("lfRoom").value,100),recurrence:get("lfRec").value,date:get("lfDate").value,notes:learningText(get("lfNotes").value,1000),prepId:item.prepId||""}); if(!item.courseName||!item.startTime||(item.recurrence==="once"&&!item.date)){err.textContent="أدخل اسم المقرر ووقت البداية، وحدد التاريخ للمحاضرة الواحدة.";return;}}
+      else if(kind==="prep"){Object.assign(item,{title:learningText(get("lfTitle").value,140),course:learningText(get("lfCourse").value,120),lectureId:get("lfLecture").value,targetDate:get("lfDate").value,status:get("lfStatus").value,objectives:learningText(get("lfObjectives").value,1200),materials:learningText(get("lfMaterials").value,1000),activity:learningText(get("lfActivity").value,500),links:learningText(get("lfLinks").value,1000),notes:learningText(get("lfNotes").value,1500),reflection:learningText(get("lfReflection").value,1500)}); if(!item.title){err.textContent="اكتب عنوان التحضير.";return;}}
+      else if(kind==="course"){const progress=Math.round(+get("lfProgress").value||0); if(progress<0||progress>100){err.textContent="نسبة التقدم يجب أن تكون بين 0 و100.";return;} const url=learningUrl(get("lfUrl").value); if(get("lfUrl").value&&!url){err.textContent="أدخل رابطًا يبدأ بـ http أو https.";return;} Object.assign(item,{name:learningText(get("lfName").value,140),provider:learningText(get("lfProvider").value,100),category:learningText(get("lfCategory").value,80),startDate:get("lfStartDate").value,targetDate:get("lfTarget").value,progress,url,nextStep:learningText(get("lfNext").value,220),status:get("lfStatus").value,notes:learningText(get("lfNotes").value,1200)}); if(!item.name){err.textContent="اكتب اسم الدورة أو الشهادة.";return;}}
+      else{const url=learningUrl(get("lfUrl").value); if(get("lfUrl").value&&!url){err.textContent="أدخل رابطًا يبدأ بـ http أو https.";return;} Object.assign(item,{title:learningText(get("lfTitle").value,160),author:learningText(get("lfAuthor").value,120),type:get("lfType").value,related:learningText(get("lfRelated").value,140),current:learningText(get("lfCurrent").value,80),totalPages:Math.max(0,Math.min(20000,Math.round(+get("lfTotal").value||0))),targetDate:get("lfTarget").value,url,status:get("lfStatus").value,notes:learningText(get("lfNotes").value,1200)}); if(!item.title){err.textContent="اكتب عنوان مادة القراءة.";return;}}
+      const list=data[key], index=list.findIndex(row=>row.id===item.id); if(index>=0)list[index]=item; else list.push(item); learningSave(data); sheet.close(); if(typeof afterSave==="function")afterSave(); else if(kind==="schedule")learningOpenSchedule(false); else learningOpenList(kind);
+    };
+  }
+  function learningDelete(kind,id,rerender){const data=learningLoad(), key={schedule:"schedule",prep:"preparations",course:"courses",read:"professionalReading"}[kind], item=data[key].find(row=>row.id===id);if(!item||!confirm("حذف هذا السجل؟"))return;item.deletedAt=Date.now();item.updatedAt=Date.now();learningSave(data);rerender();}
+  function learningItemRow(kind,item,rerender){
+    const row=document.createElement("div");row.className="learning-item";const head=document.createElement("div");head.className="learning-item-head";const copy=document.createElement("div");copy.className="learning-item-copy";learningSetText(copy,"learning-item-title",item.courseName||item.title||item.name);let meta="";
+    if(kind==="schedule")meta=[item.courseCode,item.section,LEARNING_DAYS[item.day],item.startTime+(item.endTime?"-"+item.endTime:""),item.room,item.recurrence==="once"?item.date:"متكررة"].filter(Boolean).join(" · ");
+    if(kind==="prep")meta=[item.course,item.targetDate,item.lectureId?"مرتبطة بمحاضرة":""].filter(Boolean).join(" · ");
+    if(kind==="course")meta=[item.provider,item.category,item.nextStep].filter(Boolean).join(" · ");
+    if(kind==="read")meta=[item.author,item.type,item.related,item.current].filter(Boolean).join(" · ");
+    learningSetText(copy,"learning-item-meta",meta||"—");head.append(copy,learningChip(item.status||item.recurrence));row.appendChild(head);
+    if(kind==="course"){const bar=document.createElement("div");bar.className="learning-progress";const fill=document.createElement("i");fill.style.width=(item.progress||0)+"%";bar.appendChild(fill);row.appendChild(bar);learningSetText(row,"learning-item-meta",(item.progress||0).toLocaleString("ar-EG")+"٪");}
+    const actions=document.createElement("div");actions.className="learning-row-actions";actions.append(learningButton("تفاصيل",()=>learningShowDetails(kind,item)),learningButton("تعديل",()=>learningOpenForm(kind,item.id,rerender)),learningButton("حذف",()=>learningDelete(kind,item.id,rerender),"danger"));row.appendChild(actions);return row;
+  }
+  function learningShowDetails(kind,item){
+    const sheet=taskSheet("تفاصيل التعلّم",'<div class="task-history-list" id="learningDetails"></div>'), host=sheet.over.querySelector("#learningDetails"), add=(label,value)=>{if(!value)return;const row=document.createElement("div");row.className="learning-item";learningSetText(row,"learning-item-title",label);learningSetText(row,"learning-item-meta",value);host.appendChild(row);};
+    Object.entries(item).forEach(([key,value])=>{if(["id","createdAt","updatedAt","deletedAt"].includes(key))return;add(key,String(value||""));});
+    if(item.url){const a=document.createElement("a");a.href=item.url;a.target="_blank";a.rel="noopener noreferrer";a.textContent="فتح الرابط";a.className="learning-add-btn";host.appendChild(a);}
+  }
+  function learningOpenSchedule(addFirst){
+    const sheet=taskSheet("🗓️ جدول المحاضرات",'<button type="button" class="learning-add-btn" id="learningAddLecture">＋ إضافة محاضرة</button><div class="learning-list" id="learningScheduleList"></div>');
+    const render=()=>{const host=sheet.over.querySelector("#learningScheduleList");host.textContent="";const rows=learningActive("schedule"), today=todayStr(), base=new Date(today+"T12:00:00"), weekStart=new Date(base);weekStart.setDate(base.getDate()-base.getDay());const dayNow=base.getDay();if(!rows.length){const empty=document.createElement("div");empty.className="learning-empty";empty.textContent="لا توجد محاضرات محفوظة بعد.";host.appendChild(empty);return;}LEARNING_DAYS.forEach((day,index)=>{const dayDate=new Date(weekStart);dayDate.setDate(weekStart.getDate()+index);const key=fmtDate(dayDate);const dayRows=rows.filter(r=>r.recurrence==="weekly"?r.day===index:r.date===key).sort((a,b)=>a.startTime.localeCompare(b.startTime));const box=document.createElement("section");box.className="learning-week-day"+(index===dayNow?" today":"");const h=document.createElement("h4");h.textContent=day+" · "+key+(index===dayNow?" · اليوم":"");box.appendChild(h);if(!dayRows.length)learningSetText(box,"learning-item-meta","لا توجد محاضرات.");dayRows.forEach(row=>box.appendChild(learningItemRow("schedule",row,render)));host.appendChild(box);});};
+    sheet.over.querySelector("#learningAddLecture").onclick=()=>learningOpenForm("schedule",null,render); render(); if(addFirst){sheet.close();learningOpenForm("schedule");}
+  }
+  function learningOpenList(kind){
+    const cfg={prep:["✍️ تحضير المحاضرات","＋ إضافة تحضير","preparations"],course:["🏅 الدورات والشهادات","＋ إضافة دورة أو شهادة","courses"],read:["📚 القراءة المهنية","＋ إضافة قراءة","professionalReading"]}[kind];
+    const sheet=taskSheet(cfg[0],'<button type="button" class="learning-add-btn" id="learningAddItem"></button><div class="learning-list" id="learningList"></div>');
+    sheet.over.querySelector("#learningAddItem").textContent=cfg[1];
+    const render=()=>{const host=sheet.over.querySelector("#learningList");host.textContent="";let rows=learningActive(cfg[2]);if(kind==="prep")rows.sort((a,b)=>(a.status==="تم تقديمها")-(b.status==="تم تقديمها")||(a.targetDate||"9999").localeCompare(b.targetDate||"9999"));if(kind==="course")rows.sort((a,b)=>(a.status==="مكتملة")-(b.status==="مكتملة")||b.progress-a.progress);if(kind==="read")rows.sort((a,b)=>(a.status==="مكتمل")-(b.status==="مكتمل")||(a.targetDate||"9999").localeCompare(b.targetDate||"9999"));if(!rows.length){const empty=document.createElement("div");empty.className="learning-empty";empty.textContent="لا توجد سجلات هنا بعد.";host.appendChild(empty);return;}rows.forEach(item=>host.appendChild(learningItemRow(kind,item,render)));};
+    sheet.over.querySelector("#learningAddItem").onclick=()=>learningOpenForm(kind,null,render); render();
+  }
+  function learningOpenPreparations(){learningOpenList("prep");}
+  function learningInit(){
+    document.getElementById("learningScheduleBtn").onclick=()=>learningOpenSchedule(false);
+    document.getElementById("learningPrepBtn").onclick=()=>learningOpenPreparations(false);
+    document.getElementById("learningCoursesBtn").onclick=()=>learningOpenList("course");
+    document.getElementById("learningReadingBtn").onclick=()=>learningOpenList("read");
+    learningRenderHome();
+    try{window.__mfkrLearning={load:learningLoad,normalize:learningNormalize,nextLecture:learningNextLecture,urgentPrep:learningUrgentPrep,save:learningSave,merge:learningMerge};}catch(e){}
+  }
+
   function renderAll(){
     /* ترحيل معرّفات + تنظيف روابط مكسورة مرّة واحدة لأي حالة وصلت (تحميل قديم/مزامنة) ثم حفظها لتثبيتها */
     safeRun("renderAll:migrate", ()=>{ let migrated = ensureIds(state); if(validateLinks(state)) migrated = true; if(migrated) save(); });
@@ -10615,6 +10811,7 @@
     safeRun("renderProgress", renderProgress);
     safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
     safeRun("renderReadingCard", ()=>{ if(typeof renderReadingCard === "function") renderReadingCard(); });
+    safeRun("renderLearningCard", ()=>{ if(typeof learningRenderHome === "function") learningRenderHome(); });
   }
 
   /* ---------- Date navigation ---------- */
@@ -10807,7 +11004,7 @@
   }
   function dataReviewConflict(id){ const list=dataConflictLoad(), item=list.find(entry=>entry.id===id); if(item){ item.reviewed=true; localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list)); dataRenderCenter(); } }
   function dataClearReviewed(){ const list=dataConflictLoad(), reviewed=list.filter(item=>item.reviewed).length; if(!reviewed){ alert("لا توجد تعارضات مراجَعة لمسحها."); return; } localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.filter(item=>!item.reviewed))); dataRenderCenter(); }
-  const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية"};
+  const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية",learning:"التعلّم"};
   function dataFormatBytes(bytes){ if(bytes<1024) return bytes+" ب"; if(bytes<1048576) return (bytes/1024).toFixed(1)+" ك.ب"; return (bytes/1048576).toFixed(1)+" م.ب"; }
   function dataRenderCenter(){
     const backups=dataLoadBackups(), conflicts=dataConflictLoad(), unresolved=conflicts.filter(item=>!item.reviewed), days=Object.keys(allDays()).length;
@@ -14053,7 +14250,7 @@
   ];
   function compactPrefsLoad(){
     let raw={}; try{raw=JSON.parse(localStorage.getItem(HOME_COMPACT_PREF_KEY)||"{}")||{};}catch(e){}
-    const valid=new Set(["today","iman","sport","expenses","more","shared"]), out={};
+    const valid=new Set(["today","iman","learning","sport","expenses","more","shared"]), out={};
     Object.entries(raw).forEach(([view,ids])=>{ if(valid.has(view)&&Array.isArray(ids)) out[view]=[...new Set(ids.filter(id=>typeof id==="string"))]; });
     return out;
   }
@@ -14130,6 +14327,7 @@
     {id:"ibadahCard",icon:"📿",label:"العبادات والعادات",view:"iman"},
     {id:"quranCard",icon:"📖",label:"القرآن",view:"iman"},
     {id:"hifzCard",icon:"📗",label:"حفظ القرآن",view:"iman"},
+    {id:"learningCard",icon:"🎓",label:"رحلة التعلّم",view:"learning"},
     {id:"sportCard",icon:"🏃",label:"الرياضة",view:"sport"},
     {id:"healthCard",icon:"⚖️",label:"الصحة",view:"sport"},
     {id:"waterCard",icon:"💧",label:"شرب الماء",view:"sport"},
@@ -14143,7 +14341,7 @@
     {id:"notesCard",icon:"🗒️",label:"الملاحظات",view:"more"},
     {id:"ratingCard",icon:"🌟",label:"تقييم اليوم",view:"more"}
   ];
-  const CARD_VIEW_LABELS={today:"اليوم",iman:"إيمانيات",sport:"الصحة",expenses:"العائلة",more:"المزيد"};
+  const CARD_VIEW_LABELS={today:"اليوم",iman:"إيمانيات",learning:"التعلّم",sport:"الصحة",expenses:"العائلة",more:"المزيد"};
   function personalizeDefault(){ return {order:CARD_DEFS.map(d=>d.id),hidden:[],views:{}}; }
   function personalizeLoad(){
     let raw={};
@@ -14265,15 +14463,16 @@
   /* ---------- تنقل الجوال بخمس وجهات ---------- */
   const APP_VIEW_KEY="h2do-mobile-view";
   const APP_VIEW_GROUPS={
-    today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard","memoryCard","notesCard","ratingCard"]
+    today:["tasksCard","prioritiesCard"], iman:["prayerCard","ibadahCard","quranCard","hifzCard"], learning:["learningCard"], sport:["sportCard","healthCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard","memoryCard","notesCard","ratingCard"]
   };
   const COMPACT_VIEW_CARDS={
-    today:["prayerCard","tasksCard","waterCard"], iman:["prayerCard","ibadahCard"], sport:["sportCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard"]
+    today:["prayerCard","tasksCard","waterCard"], iman:["prayerCard","ibadahCard"], learning:["learningCard"], sport:["sportCard","waterCard"], expenses:["expensesCard"], more:["readingCard","activityCard","intentionCard"]
   };
   const NAV_PREF_KEY="h2do-bottom-nav-v1";
   const NAV_DEFS=[
     {view:"today",icon:"☀️",label:"اليوم"},
     {view:"iman",icon:"📿",label:"إيمانيات"},
+    {view:"learning",icon:"🎓",label:"التعلّم"},
     {view:"sport",icon:"❤️",label:"الصحة"},
     {view:"expenses",icon:"👨‍👩‍👧",label:"العائلة"},
     {view:"more",icon:"•••",label:"المزيد"}
@@ -15414,6 +15613,7 @@
   safeRun("tomorrowPanel:init", renderTomorrowPanel);
   safeRun("onboardInit", onboardInit);
   safeRun("rdInit", rdInit);
+  safeRun("learningInit", learningInit);
   safeRun("renderReadingCard:init", renderReadingCard);
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
 })();

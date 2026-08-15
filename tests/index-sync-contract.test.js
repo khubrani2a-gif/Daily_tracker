@@ -59,8 +59,8 @@ test("global lifecycle events are each registered exactly once",()=>{
   assert.doesNotMatch(html,/\.(?:onfocus|onpageshow|onvisibilitychange)\s*=/);
 });
 
-test("all seven modules participate in the coordinator",()=>{
-  ["pullRemote(currentDate","qPullRemote(","wCustomPullRemote(","witrPullRemote(","hifzPullRemote(","expPullRemote(","wgPullRemote("].forEach(call=>assert.ok(html.includes(call),call));
+test("all eight modules participate in the coordinator",()=>{
+  ["pullRemote(currentDate","qPullRemote(","wCustomPullRemote(","witrPullRemote(","hifzPullRemote(","expPullRemote(","wgPullRemote(","learningPullRemote("].forEach(call=>assert.ok(html.includes(call),call));
   assert.match(core,/Promise\.allSettled/);
 });
 
@@ -72,6 +72,7 @@ test("Firestore paths remain unchanged and onSnapshot is absent",()=>{
   assert.match(html,/collection\("hifzSegments"\)/);
   assert.match(html,/collection\("meta"\)\.doc\("expenses"\)/);
   assert.match(html,/collection\("meta"\)\.doc\("weeklyGoals"\)/);
+  assert.match(html,/collection\("meta"\)\.doc\("learning"\)/);
   assert.doesNotMatch(html,/onSnapshot/);
 });
 
@@ -118,7 +119,7 @@ test("financial review renders a non-mutating visual risk scan in every period",
   assert.match(html,/expReportVisualScan\(r,"هذا الأسبوع"\)/);
   assert.match(html,/expReportVisualScan\(r,"هذا الشهر"\)/);
   assert.match(html,/expReportVisualScan\(yr,"هذه السنة"\)/);
-  assert.match(sw,/const CACHE = "mufakkirati-v127"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v128"/);
 });
 
 test("financial review compares each period with its matching previous period",()=>{
@@ -128,7 +129,7 @@ test("financial review compares each period with its matching previous period",(
   assert.match(html,/expReportPeriodComparison\(r,"weekly"\)/);
   assert.match(html,/expReportPeriodComparison\(r,"monthly"\)/);
   assert.match(html,/expReportPeriodComparison\(yr,"yearly"\)/);
-  assert.match(sw,/const CACHE = "mufakkirati-v127"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v128"/);
 });
 
 test("daily history is cached and below-fold content is deferred at startup",()=>{
@@ -171,7 +172,7 @@ test("today overview and responsive quick navigation remain wired",()=>{
   assert.match(html,/const changed=appView!==view;/);
   assert.match(html,/if\(!changed\) return;/);
   assert.match(html,/<div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">/);
-  ["today","iman","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
+  ["today","iman","learning","sport","expenses","more"].forEach(view=>assert.ok(html.includes('data-app-view="'+view+'"'),view));
   assert.match(html,/const APP_VIEW_GROUPS=/);
   assert.match(html,/function renderTodayOverview\(/);
   assert.match(html,/function renderTomorrowPanel\(/);
@@ -397,7 +398,7 @@ test("shared shopping uses the same searchable category pattern as expenses",()=
   assert.match(html,/البحث في أقسام التسوق/);
   assert.match(html,/categorySearch\.oninput=.*Array\.from\(categoryInput\.options\)/);
   assert.match(html,/قسم التسوق/);
-  assert.match(sw,/const CACHE = "mufakkirati-v127"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v128"/);
 });
 
 test("advanced tasks include statuses, subtasks, links, phone contacts, reminders, and weekly view",()=>{
@@ -454,7 +455,7 @@ test("weekly goals persist by week, merge by item timestamp, and render on home"
   ["wgWeekStart","wgLoad","wgMerge","wgSave","wgToggleDone","wgToggleStep","wgPullRemote","renderWeeklyGoalBanner"].forEach(name=>{
     assert.match(html,new RegExp("function "+name+"\\("),name);
   });
-  assert.match(html,/SYNC_MODULES = \["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals"\]/);
+  assert.match(html,/SYNC_MODULES = \["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","learning"\]/);
   assert.match(html,/left\.updatedAt\|\|0\)>\=\(right\.updatedAt\|\|0\)/);
 });
 

@@ -306,7 +306,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("historical raw day document not rewritten/mutated by navigation", JSON.parse(rawOldDay).worship.reading === true);
   await p.close();
 
-  console.log("H. Backup: real export/import round-trip through the actual buttons (v2 envelope) and legacy flat-file compatibility");
+  console.log("H. Backup: real export/import round-trip through the actual buttons (entries envelope) and legacy flat-file compatibility");
   const os = require("os");
   const fs = require("fs");
   p = await page(b);
@@ -317,35 +317,45 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
     localStorage.setItem("h2do-tracker:"+tk, JSON.stringify({prayers:[true,false,false,false,false,false], updatedAt: now}));
   }, today());
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  const [download] = await Promise.all([ p.waitForEvent("download"), p.click("#exportBtn") ]);
+  await p.click("#dataManageBtn"); await p.waitForTimeout(150);
+  ok("data center export control is visible before download", await p.locator("#exportBtn").isVisible());
+  const downloadPromise = p.waitForEvent("download");
+  await p.click("#exportBtn");
+  const download = await downloadPromise;
   const exportPath = path.join(os.tmpdir(), "rd-backup-test-"+Date.now()+".json");
   await download.saveAs(exportPath);
   const exportedPayload = JSON.parse(fs.readFileSync(exportPath, "utf8"));
-  ok("real export produces a v2 envelope (format+version)", exportedPayload.format==="mufakkirati-backup" && exportedPayload.version===2);
-  ok("real export includes the day document", !!exportedPayload.days[today()]);
-  ok("real export includes reading items via modules.reading", exportedPayload.modules && exportedPayload.modules.reading && exportedPayload.modules.reading.items.length===1);
-  ok("real export excludes active draft/stats cache (not part of modules.reading shape)", !("draftId" in exportedPayload.modules.reading) && !("byDate" in exportedPayload.modules.reading));
+  ok("real export produces the schema entries envelope", exportedPayload.schema===1 && exportedPayload.entries && typeof exportedPayload.entries==="object");
+  ok("real export includes the day document", !!exportedPayload.entries["h2do-tracker:"+today()]);
+  ok("real export includes reading items via h2do entries", JSON.parse(exportedPayload.entries["h2do-reading-items"]).length===1);
+  ok("real export includes reading settings via h2do entries", !!exportedPayload.entries["h2do-reading-settings"]);
 
-  // fresh device importing that real v2 file through the real import button
+  // fresh device importing that real exported file through the real import button
   let p2 = await page(b);
-  await p2.addInitScript(()=>{ localStorage.clear(); });
   await p2.goto(fileUrl); await p2.waitForTimeout(600);
   p2.once("dialog", d=> d.accept());
   await p2.setInputFiles("#importFile", exportPath);
   await p2.waitForTimeout(500);
+  await p2.click("#dataManageBtn"); await p2.waitForTimeout(150);
+  p2.once("dialog", d=> d.accept());
+  await p2.locator(".data-row-actions .restore:visible").first().click();
+  await p2.waitForTimeout(500);
   let importedItems = await rdItems(p2);
-  ok("v2 import merges reading item by id via the real import flow", importedItems.length===1 && importedItems[0].id==="IT1");
+  ok("entries import merges reading item by id via the real import flow", importedItems.length===1 && importedItems[0].id==="IT1");
   const importedDay = await p2.evaluate((tk)=> JSON.parse(localStorage.getItem("h2do-tracker:"+tk)), today());
-  ok("v2 import still imports day documents (unrelated-module claim not made, days still work)", importedDay && importedDay.prayers[0]===true);
+  ok("entries import still imports day documents", importedDay && importedDay.prayers[0]===true);
 
   // legacy flat backup (no 'format'/'version'/'modules' keys at all) — the exact pre-v100 shape — must still import cleanly
   const legacyPath = path.join(os.tmpdir(), "rd-legacy-backup-"+Date.now()+".json");
   fs.writeFileSync(legacyPath, JSON.stringify({ "2025-06-01": { prayers:[true,false,false,false,false,false], updatedAt: Date.now() } }));
   let p3 = await page(b);
-  await p3.addInitScript(()=>{ localStorage.clear(); });
   await p3.goto(fileUrl); await p3.waitForTimeout(600);
   p3.once("dialog", d=> d.accept());
   await p3.setInputFiles("#importFile", legacyPath);
+  await p3.waitForTimeout(500);
+  await p3.click("#dataManageBtn"); await p3.waitForTimeout(150);
+  p3.once("dialog", d=> d.accept());
+  await p3.locator(".data-row-actions .restore:visible").first().click();
   await p3.waitForTimeout(500);
   const legacyDay = await p3.evaluate(()=> JSON.parse(localStorage.getItem("h2do-tracker:2025-06-01")));
   ok("legacy flat backup (pre-v100, no envelope) still imports correctly", legacyDay && legacyDay.prayers[0]===true);
