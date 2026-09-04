@@ -143,6 +143,26 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   ok("ambiguous flagged needsReview", amb.needsReview===true);
   await p.close();
 
+  console.log("G. Salary cycle card shows the accounting month obligations even when due date is after cycle end");
+  p=await page(b);
+  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now(), month=tk.slice(0,7);
+    const data={version:2,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
+      categories:[],
+      fixedTemplates:[
+        {id:"T27",categoryId:null,name:"التزام يوم ٢٧",defaultAmountMinor:27000,amountType:"fixed",dueDay:27,recurrence:"monthly",startMonth:month,endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},createdAt:now,updatedAt:now,archivedAt:null},
+        {id:"T30",categoryId:null,name:"التزام يوم ٣٠",defaultAmountMinor:30000,amountType:"fixed",dueDay:30,recurrence:"monthly",startMonth:month,endMonth:null,note:null,isActive:true,sortOrder:1,overrides:{},createdAt:now,updatedAt:now,archivedAt:null}
+      ],
+      instances:[],transactions:[],trips:[]};
+    localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, today());
+  await p.goto(fileUrl); await p.waitForTimeout(700);
+  await openFinance(p);
+  const cycleCard=await p.$eval("#expFixedCard",e=>e.textContent);
+  ok("cycle card includes day-27 obligation for the current salary-cycle accounting month", cycleCard.includes("التزام يوم ٢٧"));
+  ok("cycle card includes day-30 obligation for the current salary-cycle accounting month", cycleCard.includes("التزام يوم ٣٠"));
+  s=await rd(p);
+  ok("both accounting-month instances were generated without deleting existing data", s.instances.filter(i=>["T27","T30"].includes(i.templateId)).length===2);
+  await p.close();
+
   console.log("\nRESULT: "+PASS+" passed, "+FAIL+" failed");
   console.log("PAGE JS ERRORS:", errs.length? [...new Set(errs)] : "none");
   await b.close();
