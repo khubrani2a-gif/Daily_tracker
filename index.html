@@ -4086,7 +4086,7 @@
   const syncLast = document.getElementById("syncLast");
   const syncRetry = document.getElementById("syncRetry");
   const GLOBAL_SYNC_AT_KEY = "h2do-last-global-sync";
-  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","learning"];
+  const SYNC_MODULES = ["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","reading","learning"];
   const syncCoordinator = MufSyncCore.createCoordinator({moduleNames:SYNC_MODULES, debounceMs:350, throttleMs:1000});
 
   /* أهداف أسبوعية مستقلة عن اليوم: تبقى ظاهرة طوال الأسبوع وتندمج بأحدث تعديل لكل أسبوع. */
@@ -4246,6 +4246,7 @@
       hifz:o=>hifzPullRemote(Object.assign({},o,{trigger})),
       expenses:o=>expPullRemote(Object.assign({},o,{trigger})),
       weeklyGoals:o=>wgPullRemote(Object.assign({},o,{trigger})),
+      reading:o=>rdPullRemote(trigger),
       learning:o=>learningPullRemote(Object.assign({},o,{trigger}))
     };
     return syncCoordinator.syncAll(trigger,options,pullers).then(summary=>{
@@ -4374,7 +4375,9 @@
       ["witr", ()=> witrPullRemote(trigger)],
       ["hifz", ()=> hifzPullRemote(trigger)],
       ["expenses", ()=> expPullRemote({trigger:trigger, manual:!!opts.forceServer})],
-      ["reading", ()=> rdPullRemote(trigger)]
+      ["weeklyGoals", ()=> wgPullRemote(trigger)],
+      ["reading", ()=> rdPullRemote(trigger)],
+      ["learning", ()=> learningPullRemote(trigger)]
     ];
     return Promise.allSettled(jobs.map(([name, fn])=>{
       try{ return Promise.resolve(fn()).catch(e=>{ diagErr("pull:"+name, e); return {module:name, status:"failed"}; }); }
@@ -4411,7 +4414,7 @@
   }
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
-    const names=["daily","quran","customWorship","witr","hifz","expenses","reading","learning"];
+    const names=SYNC_MODULES;
     let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
     names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
       if(s.inFlight) flight=true;
@@ -14004,7 +14007,7 @@
   }
   /* حالة مزامنة كل قسم (مشتقّة من SYNC_STATE — دقيقة، لا تُظهر نجاحًا كاملًا إن نجح قسم واحد) */
   function expModStatusHtml(){
-    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",reading:"القراءة"};
+    const labels={daily:"اليوميّات (صلاة/مهام/صحة…)",quran:"القرآن/الورد",customWorship:"العبادات المخصّصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية",reading:"القراءة",learning:"التعلّم"};
     return Object.keys(labels).map(n=>{ const s=SYNC_STATE[n]; let tag,cls;
       if(!s || (!s.lastServerSuccessAt && !s.lastCacheFallbackAt && !s.lastError && !s.inFlight)){ tag="—"; cls="partial"; }
       else if(s.inFlight){ tag="جارٍ"; cls="near"; }

@@ -378,20 +378,22 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("other cards still rendered (sport card present)", !!(await p.$("#sportCard")));
   await p.close();
 
-  console.log("J. Sync: reading is the 7th independent module (status rows, coordinator wiring)");
+  console.log("J. Sync: reading participates in the nine-module global sync status");
   p = await page(b);
   await p.addInitScript(()=>{ window.__MFKR_TEST__ = true; localStorage.clear(); });
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  const modKeys = await p.evaluate(()=> Object.keys(JSON.parse(JSON.stringify({daily:1,quran:1,customWorship:1,witr:1,hifz:1,expenses:1,reading:1}))));
-  ok("module list has 7 entries including reading", modKeys.length===7 && modKeys.includes("reading"));
+  const modKeys = await p.evaluate(()=> Object.keys(JSON.parse(JSON.stringify({daily:1,quran:1,customWorship:1,witr:1,hifz:1,expenses:1,weeklyGoals:1,reading:1,learning:1}))));
+  ok("module list has 9 entries including reading", modKeys.length===9 && modKeys.includes("reading"));
   const readingModuleState = await p.evaluate(()=> window.__mfkrSync.module("reading"));
   ok("reading module reachable via the same read-only coordinator diagnostics as other modules", readingModuleState && typeof readingModuleState.inFlight === "boolean");
   await p.click("#expOpenBtn"); await p.waitForTimeout(300);
   await p.click('.exp-tab[data-view="settings"]'); await p.waitForTimeout(300);
   const rowCount = (await p.$$("#expModStatus .exp-foot-row")).length;
-  ok("per-module status list shows exactly 7 rows (Reading added as the 7th)", rowCount===7);
+  ok("per-module status list shows exactly 9 rows", rowCount===9);
   const statusHtml = await p.$eval("#expModStatus", e=> e.textContent);
   ok("Reading's Arabic label 'القراءة' present in per-module status", statusHtml.includes("القراءة"));
+  ok("weekly goals label 'الأهداف الأسبوعية' present in per-module status", statusHtml.includes("الأهداف الأسبوعية"));
+  ok("learning label 'التعلّم' present in per-module status", statusHtml.includes("التعلّم"));
   await p.close();
 
   console.log("L. Derived stats cache: no repeated full-history rebuild on normal renderAll/goto; rebuild only when the cache is actually invalid, and it then matches direct totals");
