@@ -12408,8 +12408,6 @@
     for(let d=new Date(start.getFullYear(),start.getMonth(),1);d<=end;d.setMonth(d.getMonth()+1)) months.push([d.getFullYear(),d.getMonth()+1]);
     const byId=new Map();
     months.flatMap(([year,month])=>expMonthInstances(year,month)).filter(inst=>expInRange(inst.dueDate,cycle)).forEach(inst=>byId.set(inst.id,inst));
-    const cycleMonth=cycle.end.slice(0,7), year=+cycleMonth.slice(0,4), month=+cycleMonth.slice(5,7);
-    expMonthInstances(year,month).forEach(inst=>byId.set(inst.id,inst));
     return Array.from(byId.values()).sort((a,b)=>{ const ta=expTplById(a.templateId)||{}, tb=expTplById(b.templateId)||{}; return (ta.sortOrder||0)-(tb.sortOrder||0); });
   }
   function expRecalcInstance(inst){

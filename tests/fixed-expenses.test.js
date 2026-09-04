@@ -143,7 +143,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   ok("ambiguous flagged needsReview", amb.needsReview===true);
   await p.close();
 
-  console.log("G. Salary cycle card shows the accounting month obligations even when due date is after cycle end");
+  console.log("G. Salary cycle card keeps obligations scoped to the actual 27-26 date range");
   p=await page(b);
   await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now(), month=tk.slice(0,7);
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
@@ -157,10 +157,10 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   await p.goto(fileUrl); await p.waitForTimeout(700);
   await openFinance(p);
   const cycleCard=await p.$eval("#expFixedCard",e=>e.textContent);
-  ok("cycle card includes day-27 obligation for the current salary-cycle accounting month", cycleCard.includes("التزام يوم ٢٧"));
-  ok("cycle card includes day-30 obligation for the current salary-cycle accounting month", cycleCard.includes("التزام يوم ٣٠"));
+  ok("cycle card excludes day-27 obligation when it falls after the cycle end", !cycleCard.includes("التزام يوم ٢٧"));
+  ok("cycle card excludes day-30 obligation when it falls after the cycle end", !cycleCard.includes("التزام يوم ٣٠"));
   s=await rd(p);
-  ok("both accounting-month instances were generated without deleting existing data", s.instances.filter(i=>["T27","T30"].includes(i.templateId)).length===2);
+  ok("out-of-cycle instances remain generated without deleting existing data", s.instances.filter(i=>["T27","T30"].includes(i.templateId)).length===2);
   await p.close();
 
   console.log("\nRESULT: "+PASS+" passed, "+FAIL+" failed");
