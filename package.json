@@ -1,0 +1,6 @@
+{
+  "name": "mufakkirati-daily-tracker",
+  "private": true,
+  "scripts": { "test": "node --test --test-concurrency=1 tests/*.test.js" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

@@ -16,16 +16,30 @@ const test=require("node:test");
 const assert=require("node:assert/strict");
 const path=require("node:path");
 const {chromium}={chromium:loadChromium()};
-const fileUrl="file://"+path.resolve(__dirname,"..","index.html");
+const fs=require("node:fs");
+const appRoot=path.resolve(__dirname,"..");
+const appUrl="http://category.test/index.html";
+/* A file:// reload can expose empty storage to init scripts and reseed deleted
+   records. A stable HTTP origin makes persistence assertions reproducible. */
+async function routeApp(page){
+  await page.route("http://category.test/**",route=>{
+    const pathname=new URL(route.request().url()).pathname;
+    const file=path.resolve(appRoot,"."+pathname);
+    if(!file.startsWith(appRoot+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()) return route.fulfill({status:404,body:""});
+    const type=file.endsWith(".html")?"text/html":file.endsWith(".js")?"application/javascript":file.endsWith(".css")?"text/css":"application/octet-stream";
+    return route.fulfill({contentType:type,body:fs.readFileSync(file)});
+  });
+}
 
 async function open(){
   const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
-  const ctx=await browser.newContext({viewport:{width:390,height:844}});
+  const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
   const page=await ctx.newPage();
   const errs=[]; page.on("pageerror",e=>errs.push(e.message.split("\n")[0]));
   await page.addInitScript(()=>{ window.__MFKR_TEST__=true; });
   await page.route("https://www.gstatic.com/firebasejs/**",r=>r.abort());
-  await page.goto(fileUrl); await page.waitForTimeout(700);
+  await routeApp(page);
+  await page.goto(appUrl); await page.waitForTimeout(700);
   return {browser,ctx,page,errs};
 }
 const varAll=page=>page.evaluate(()=>window.__mfkrExp.varAll());
@@ -165,13 +179,16 @@ function customFixture(){
 }
 async function openSeeded(fixture){
   const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined);
-  const ctx=await browser.newContext({viewport:{width:390,height:844}});
+  const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
   const page=await ctx.newPage();
   const errs=[]; page.on("pageerror",e=>errs.push(e.message.split("\n")[0]));
   await page.addInitScript(data=>{ window.__MFKR_TEST__=true;
-    if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data)); },fixture);
+    if(window.top!==window || sessionStorage.getItem("categoryFixtureSeeded")) return;
+    localStorage.setItem("h2do-expenses",JSON.stringify(data));
+    sessionStorage.setItem("categoryFixtureSeeded","1"); },fixture);
   await page.route("https://www.gstatic.com/firebasejs/**",r=>r.abort());
-  await page.goto(fileUrl); await page.waitForTimeout(700);
+  await routeApp(page);
+  await page.goto(appUrl); await page.waitForTimeout(700);
   return {browser,ctx,page,errs};
 }
 

@@ -53,7 +53,7 @@ test("learning schema supports schedule, preparation, courses, and professional 
 test("learning synchronizes additively and is included in existing backup surface",()=>{
   assert.match(script,/collection\("meta"\)\.doc\("learning"\)/);
   assert.match(script,/learningPullRemote\(trigger\)/);
-  assert.match(script,/\["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","learning"\]/);
+  assert.match(script,/\["daily","quran","customWorship","witr","hifz","expenses","weeklyGoals","reading","learning"\]/);
   assert.match(script,/DATA_MODULE_LABELS=\{[^}]*learning:"التعلّم"/);
   assert.match(script,/function dataOwnedKey\(key\)\{ return !!key&&key\.startsWith\("h2do-"\); \}/);
   assert.match(script,/if\(db&&user\)learningPullRemote\("localSave"\)/);
@@ -95,7 +95,7 @@ test("backup export and import restore learning data without duplicates",()=>{
   const dataOwnedKey=new Function(sourceFunction("dataOwnedKey")+"; return dataOwnedKey;")();
   const dataBuildSnapshot=new Function("localStorage","storageKey","DATA_BACKUP_KEY","DATA_VERSION","Blob",sourceFunction("dataOwnedKey")+";"+sourceFunction("dataBuildSnapshot")+"; return dataBuildSnapshot;")(localStorage,storageKey,DATA_BACKUP_KEY,DATA_VERSION,Blob);
   const dataNormalizeImported=new Function("storageKey","DATA_VERSION","DATA_BACKUP_KEY","DATA_MAX_IMPORT_BYTES","DATA_MAX_IMPORT_ENTRIES",sourceFunction("dataOwnedKey")+";"+sourceFunction("dataNormalizeImported")+"; return dataNormalizeImported;")(storageKey,DATA_VERSION,DATA_BACKUP_KEY,DATA_MAX_IMPORT_BYTES,DATA_MAX_IMPORT_ENTRIES);
-  const dataApplySnapshot=new Function("localStorage","DATA_BACKUP_KEY",sourceFunction("dataOwnedKey")+";"+sourceFunction("dataApplySnapshot")+"; return dataApplySnapshot;")(localStorage,DATA_BACKUP_KEY);
+  const dataApplySnapshot=new Function("localStorage","DATA_BACKUP_KEY",'const PREFIX="h2do-tracker:",DAILY_PENDING_KEY="h2do-pending-days-v1",RESTORE_PENDING_KEY="h2do-restore-pending-v1",DATA_BASELINE_KEY="h2do-sync-baselines",DATA_CONFLICT_KEY="h2do-sync-conflicts";'+sourceFunction("dataOwnedKey")+";"+sourceFunction("dataValidatedEntries")+";"+sourceFunction("dataApplySnapshot")+"; return dataApplySnapshot;")(localStorage,DATA_BACKUP_KEY);
   assert.equal(dataOwnedKey("h2do-learning-v1"),true);
   const learning={schema:1,schedule:[{id:"lec1",courseName:"فقه التعليم",day:1,startTime:"09:00",recurrence:"weekly",updatedAt:10}],preparations:[{id:"prep1",title:"مدخل المقرر",status:"قيد التحضير",updatedAt:11}],courses:[{id:"course1",name:"تصميم المقرر",progress:40,status:"قيد التعلّم",updatedAt:12}],professionalReading:[{id:"read1",title:"بحث تربوي",type:"بحث",status:"أقرأ الآن",updatedAt:13}],updatedAt:20};
   localStorage.setItem("h2do-learning-v1",JSON.stringify(learning));

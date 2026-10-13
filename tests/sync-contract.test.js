@@ -83,7 +83,7 @@ async function device(b){
   await p.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
   await p.exposeBinding("__rSet",(s,path,json)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; store[path]=json; writeCount[path]=(writeCount[path]||0)+1; return false; });
   await p.exposeBinding("__rDel",(s,path)=>{ if(writeFailPath && path.indexOf(writeFailPath)>=0) return true; delete store[path]; return false; });
-  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
+  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(Object.assign({id:k.split("/").pop()},JSON.parse(store[k]))); }catch(e){} } }); return out; });
   await p.exposeBinding("__rRead",(s,path,src)=>{ if(src!=="cache") readCount[path]=(readCount[path]||0)+1; return { reject: (serverDown && src==="server"), fromCache: (src==="cache"), delay: (readDelayPath && path.indexOf(readDelayPath)>=0)? readDelayMs : 0 }; });
   await p.addInitScript(()=>{ window.__MFKR_TEST__ = true; });   // enable write-capable sync test hook
   await p.addInitScript(FAKE);
@@ -201,8 +201,8 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   await F.waitForFunction(()=> !window.__mfkrSync.inFlight("daily"), null, {timeout:5000}).catch(()=>{});
   // newer data on server; delay the daily read so run B overlaps run A
   store[dayKey] = JSON.stringify({date:today(), prayers:[true,false,false,false,false], worship:{}, water:0, tasks:[], priorities:[], updatedAt:9e14});
-  readCount[dayKey] = 0;
-  readDelayPath = "/days/"; readDelayMs = 500;
+  readCount["users/U1/days"] = 0;
+  readDelayPath = "/days"; readDelayMs = 500;
   const joinRes = await F.evaluate(()=>{
     const rA = window.__mfkrSync.pullAll("A-owner", {});     // owns the slow real read
     return new Promise((resolve)=> setTimeout(()=>{
@@ -220,7 +220,7 @@ const seedExp = (extraTx)=> JSON.stringify({ version:2,
   ok("newer server data reached local state (prayers[0]=true)", ls && ls.prayers && ls.prayers[0]===true);
   const domChecked = await F.evaluate(()=> !!document.querySelector('#prayers .prayer.done'));
   ok("rendered UI reflects the newer data (a prayer shows done)", domChecked);
-  ok("exactly one physical read for daily despite two overlapping runs", (readCount[dayKey]||0)===1);
+  ok("exactly one physical read for daily despite two overlapping runs", (readCount["users/U1/days"]||0)===1);
   const st5 = await F.evaluate(()=> window.__mfkrSync.state());
   const allIdle = Object.keys(st5).every(k=> st5[k].inFlight===false);
   ok("all module inFlight flags are false after join settles", allIdle);
