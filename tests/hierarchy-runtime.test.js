@@ -10,8 +10,9 @@ function loadChromium(){
 const test=require("node:test");
 const assert=require("node:assert/strict");
 const path=require("node:path");
+const {serveLocalSite,siteUrl}=require("./local-site.cjs");
 const {chromium}= {chromium:loadChromium()};
-const fileUrl="file://"+path.resolve(__dirname,"..","index.html");
+const fileUrl=siteUrl;
 const today=()=>new Date().toISOString().slice(0,10);
 
 test("expense hierarchy migrates legacy data and saves predefined and custom subcategories",async()=>{
@@ -21,7 +22,8 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     fixedTemplates:[],instances:[],transactions:[{id:"old",amountMinor:1000,transactionDate:"2026-06-15",categoryId:"legacy_food",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null},{id:"old_exceptional",amountMinor:28060,transactionDate:"2026-07-27",categoryId:"legacy_exceptional",transactionType:"expense",subcategory:"",createdAt:now,updatedAt:now,deletedAt:null}],trips:[{id:"legacy_trip",name:"رحلة قديمة",createdAt:now,updatedAt:now,allocations:[{categoryId:"legacy_food",amountMinor:10000,createdAt:now},{categoryId:"legacy_exceptional",amountMinor:5000,createdAt:now}]}],recurringTransactions:[{id:"legacy_food_recurring",name:"طعام رحلة",categoryId:"legacy_food",createdAt:now,updatedAt:now,deletedAt:null}]};
   const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:undefined); const ctx=await browser.newContext({viewport:{width:390,height:844}}); const page=await ctx.newPage();
   try{
-    await page.addInitScript(data=>{ if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data)); },legacy);
+    await serveLocalSite(page);
+    await page.addInitScript(data=>{ if(window!==window.top||sessionStorage.getItem("hierarchy-seeded"))return;sessionStorage.setItem("hierarchy-seeded","1");localStorage.setItem("h2do-expenses",JSON.stringify(data)); },legacy);
     await page.goto(fileUrl); await page.waitForTimeout(350);
     let state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     const food=state.categories.find(c=>c.id==="legacy_food");

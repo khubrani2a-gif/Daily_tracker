@@ -13,7 +13,8 @@
 function __loadChromium(){const c=[process.env.PW_PATH,"playwright","/opt/node22/lib/node_modules/playwright"].filter(Boolean);for(const x of c){try{return require(x).chromium;}catch(e){}}console.error("Playwright not found. Set PW_PATH=/path/to/playwright");process.exit(2);}
 const { chromium } = { chromium: __loadChromium() };
 const path = require("path");
-const fileUrl = "file://" + path.resolve(__dirname, "..", "index.html");
+const {serveLocalSite,siteUrl}=require("./local-site.cjs");
+const fileUrl = siteUrl;
 const today = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 const daysAgo = (n)=>{ const d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 
@@ -23,6 +24,7 @@ const errs = [];
 async function page(b){
   const ctx = await b.newContext({viewport:{width:1000,height:900}});
   const p = await ctx.newPage();
+  await serveLocalSite(p);
   // These local-storage cases must not depend on live Firebase or prayer APIs.
   await p.route("https://**/*", route=>route.abort());
   /* نقتصر على أخطاء JS غير المُلتقطة (pageerror) — نفس نهج بقيّة المجموعة (fixed-expenses/expenses-travel/coordinator-containment).
