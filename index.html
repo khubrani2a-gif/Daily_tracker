@@ -10973,7 +10973,12 @@
   let restorePromise=null;
   function restorePending(){try{return JSON.parse(localStorage.getItem(RESTORE_PENDING_KEY)||"null");}catch(e){return null;}}
   function dataValidatedEntries(snapshot){
-    const entries=(snapshot&&snapshot.entries)||{},out={};
+    const entries=Object.assign({},(snapshot&&snapshot.entries)||{}),out={};
+    // A quota failure can leave the newest day only in the durable journal; backups must restore it too.
+    if(entries[DAILY_PENDING_KEY]){
+      const pending=JSON.parse(entries[DAILY_PENDING_KEY]);
+      Object.entries(pending||{}).forEach(([date,entry])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&entry&&entry.value)entries[storageKey(date)]=JSON.stringify(entry.value);});
+    }
     Object.keys(entries).forEach(key=>{
       if(!dataOwnedKey(key)||[DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY].includes(key))return;
       const raw=String(entries[key]);

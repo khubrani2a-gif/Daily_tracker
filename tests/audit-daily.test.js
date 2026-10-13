@@ -68,3 +68,6 @@ await p.evaluate(()=>{audit.login();audit.dataApplySnapshot({entries:{'h2do-qura
 await p.waitForFunction(()=>document.body.inert);await p.waitForTimeout(100);await p.clock.fastForward(16000);assert.equal(await p.evaluate(()=>window.restoreAttempt),false);assert.equal(await p.evaluate(()=>document.body.inert),false);
 await p.evaluate(()=>audit.qSave({page:11,updatedAt:Date.now()}));control.holdWrites=false;(control.pendingWrites||[]).forEach(resolve=>resolve());await p.waitForTimeout(100);assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('h2do-quran')).page),11);assert.ok(await p.evaluate(()=>audit.restorePending()));
 }));
+test('backup restores the newest journal value after a partial local day write',()=>withDevice(async({p})=>{
+const value=await p.evaluate(()=>{const date='2026-10-02',old={...audit.blankState(),notes:'older day'},newer={...old,notes:'durable journal edit',updatedAt:2};localStorage.setItem(audit.storageKey(date),JSON.stringify(old));localStorage.setItem('h2do-pending-days-v1',JSON.stringify({[date]:{base:old,value:newer}}));const backup=audit.dataBuildSnapshot('test');audit.dataApplySnapshot(backup);return JSON.parse(localStorage.getItem(audit.storageKey(date))).notes;});assert.equal(value,'durable journal edit');
+}));
