@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only the collections used by the app are client-accessible.
+    // Match a single document level so future server-only subcollections
+    // do not accidentally inherit a recursive client-write grant.
+    match /users/{uid}/{collection}/{document} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && collection in ['days', 'meta', 'hifzSegments', 'readingItems', 'readingSessions'];
+    }
+  }
+}
