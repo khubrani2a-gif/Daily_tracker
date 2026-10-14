@@ -404,7 +404,7 @@ test("advanced tasks include statuses, subtasks, links, phone contacts, reminder
   ["pending","in_progress","deferred","done","cancelled"].forEach(status=>assert.ok(html.includes(status),status));
   assert.match(html,/item\.subtasks=lines\.map/);
   assert.match(html,/task\.reminderMinutes/);
-  assert.match(html,/notifyDue\(task\.dueTime,lead\)/);
+  assert.match(html,/plannerNotificationRows\(\)\.forEach/);
   assert.match(html,/function taskNormalizePhone\(/);
   assert.match(html,/function taskCallPhone\(/);
   assert.match(html,/function taskCopyPhone\(/);
