@@ -151,7 +151,7 @@ function seedLocalItem(){
 }
 
 async function quickLogSession(p, mins){
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", String(mins));
   await p.click("#qlSave"); await p.waitForTimeout(150);
 }
@@ -241,7 +241,7 @@ async function quickLogSession(p, mins){
   const sBefore = await A.evaluate(()=> (JSON.parse(localStorage.getItem("h2do-reading-sessions"))||[])[0]);
   ok("seed session created", !!sBefore && !sBefore.deletedAt);
   // حذف (شاهد قبر) عبر الواجهة الحقيقية — يفتح شاشة اليوم أوّلًا
-  await A.click("#rdFocusBlock"); await A.waitForSelector('[data-rdsess-del="'+sBefore.id+'"]');
+  await A.click('a[data-app-view="more"]'); await A.click("#rdFocusBlock"); await A.waitForSelector('[data-rdsess-del="'+sBefore.id+'"]');
   await A.click('[data-rdsess-del="'+sBefore.id+'"]'); await A.waitForSelector("#hifzDialogOk");
   await A.click("#hifzDialogOk"); await A.waitForTimeout(300);
   let localAfterDelete = await A.evaluate(()=> JSON.parse(localStorage.getItem("h2do-reading-sessions"))||[]);

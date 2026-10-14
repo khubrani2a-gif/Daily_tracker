@@ -121,7 +121,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     /* صرامة: كسر سلسلةً لا يُقرّب — يبقى مشوّهًا ويحفظ الخام "12.5" ويُسهم بصفر */
     ok("fractional STRING '12.5' → invalid, raw='12.5', amountMinor 0 (NOT rounded)", byId.FRS.amountMinor===0 && byId.FRS.amountInvalid===true && byId.FRS.amountRaw==="12.5");
     /* الإجمالي الدقيق عبر التقرير اليومي: 80000+50000+30000+0+0+0+0 - 20000 = 140000 (لا تسلسل، لا NaN، لا تقريب) */
-    await p.click("#expOpenBtn"); await p.waitForTimeout(250);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(250);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="daily"]'); await p.waitForTimeout(200);
     ok("exact daily net = 1400 (strings summed, invalid/fractional as 0, refund subtracted)", (await stat(p,"صافي الصرف"))==="١٬٤٠٠ ر.س");
@@ -173,7 +173,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const p = await device(b);
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"4");
-    await p.click("#expOpenBtn"); await p.waitForTimeout(250);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(250);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
     ok("fixed actual = 1000 (fixed payment counted here)", (await stat(p,"الثابتة الفعلية"))==="١٬٠٠٠ ر.س");
@@ -323,7 +323,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"1b");
     ok("liveTrips excludes the deleted trip", (await p.evaluate(()=> window.__mfkrExp.liveTrips())).indexOf("DT")<0);
     /* التقرير السنوي: DT لا تظهر كبند رحلة، والعدّاد يستثنيها */
-    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
     ok("yearly trip count = 1 (deleted trip excluded)", (await stat(p,"عدد الرحلات"))==="١");
@@ -415,7 +415,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const p = await device(b);
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"6");
-    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
     /* الإجمالي = 300 (عادي) + 500 (سفر متغيّر) = 800، والسفر متداخل ضمنه لا يُضاف ثالثًا */
@@ -465,7 +465,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("fixed instance recalculated: paid back to 0, status unpaid (FX1 no longer live)", st.instances.find(i=>i.id==="INST").paidAmountMinor===0 && st.instances.find(i=>i.id==="INST").status==="unpaid");
     ok("single batched write (one localStorage snapshot after the op, not one per tx)", true);   /* verified structurally: expDeleteTripWithExpenses calls expSave once */
     /* التقارير: الإجماليات لم تعد تشمل VT1/FX1؛ N1 المستقلة تبقى */
-    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
     await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
     ok("monthly: fixed actual = 0 (deleted fixed payment excluded)", (await stat(p,"الثابتة الفعلية"))==="٠ ر.س");
@@ -514,7 +514,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const p2 = await device(b);
     await p2.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data2);
     await p2.goto(fileUrl); await p2.waitForTimeout(800); await verifyFake(p2,"7b");
-    await p2.click("#expOpenBtn"); await p2.waitForTimeout(200);
+    await p2.click('a[data-app-view="expenses"]'); await p2.click("#expOpenBtn"); await p2.waitForTimeout(200);
     await p2.click('.exp-tab[data-view="trips"]'); await p2.waitForTimeout(200);
     /* افتح قائمة خيارات الصفّ مباشرةً (النقر على الصفّ نفسه ينتقل لصفحة التفاصيل ويُزيل زرّ القائمة) */
     await p2.click('[data-tripmenu="TR2"]'); await p2.waitForTimeout(200);
@@ -588,7 +588,7 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     const p = await device(b);
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"7c");
-    await p.click("#expOpenBtn"); await p.waitForTimeout(200);
+    await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
     await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
     await p.click('[data-tripmenu="TR4"]'); await p.waitForTimeout(200);
     const menuItems = await p.$$(".prio-menu-item");

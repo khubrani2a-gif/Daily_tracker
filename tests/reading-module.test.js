@@ -48,7 +48,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("empty-state copy present", cardText0.includes("ابدأ رحلتك مع مادة جديدة"));
   ok("empty-state add button present", !!(await p.$("#rdEmptyAdd")));
   ok("empty-state pick-from-library button present", !!(await p.$("#rdEmptyPick")));
-  await p.click("#rdEmptyAdd"); await p.waitForTimeout(250);
+  await p.click('a[data-app-view="more"]'); await p.click("#rdEmptyAdd"); await p.waitForTimeout(250);
   await p.fill("#itTitle", "كتاب تجريبي");
   await p.selectOption("#itType", "book");
   await p.selectOption("#itUnit", "page");
@@ -68,7 +68,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   p = await page(b);
   await p.addInitScript(()=>{ localStorage.clear(); });
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  await p.click("#readingCard #rdEmptyAdd"); await p.waitForTimeout(200);
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdEmptyAdd"); await p.waitForTimeout(200);
   await p.selectOption("#itUnit", "percent");
   let totalWrapDisplay = await p.$eval("#itTotalWrap", e=> getComputedStyle(e).display);
   ok("percent unit still shows position field (total hidden by app logic, no crash)", totalWrapDisplay !== "");
@@ -90,7 +90,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
     localStorage.setItem("h2do-reading-settings", JSON.stringify({schemaVersion:1,focusItemId:"IT1",dailyGoal:null,createdAt:now,updatedAt:now}));
   }, today());
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForTimeout(200);
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForTimeout(200);
   await p.fill("#qlMins", "20");
   await p.fill("#qlStart", "10");
   await p.fill("#qlEnd", "35");
@@ -106,7 +106,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("stats cache today units page=25", todayAgg && todayAgg.unitsByUnit.page === 25);
 
   // position correction: no new session, no unitsRead credit
-  await p.click("#rdFocusBlock"); await p.waitForSelector("#rdCorrectBtn");
+  await p.click('a[data-app-view="more"]'); await p.click("#rdFocusBlock"); await p.waitForSelector("#rdCorrectBtn");
   await p.click("#rdCorrectBtn"); await p.waitForSelector("#cpSave");
   await p.fill("#cpVal", "50");
   await p.click("#cpSave"); await p.waitForTimeout(300);
@@ -136,7 +136,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   let c0 = await rdCache(p);
   ok("initial cache reflects seeded session (10 pages, 600s)", c0.byDate[today()].unitsByUnit.page===10 && c0.byDate[today()].durationSeconds===600);
   // edit the session via the today view's edit button (opening the overlay first)
-  await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-edit="S1"]');
+  await p.click('a[data-app-view="more"]'); await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-edit="S1"]');
   await p.click('[data-rdsess-edit="S1"]'); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "15");
   await p.fill("#qlStart", "0");
@@ -172,12 +172,12 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   });
   await p.goto(fileUrl); await p.waitForTimeout(600);
   // session 1: 0 -> 10, WITH position update
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "10"); await p.fill("#qlStart", "0"); await p.fill("#qlEnd", "10");
   await p.click("#qlSave"); await p.waitForTimeout(250);
   ok("session 1 moved position to 10", (await rdItems(p))[0].currentUnit===10);
   // session 2: 10 -> 20, WITH position update (now the latest position-driving session)
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "10"); await p.fill("#qlStart", "10"); await p.fill("#qlEnd", "20");
   await p.click("#qlSave"); await p.waitForTimeout(250);
   ok("session 2 moved position to 20", (await rdItems(p))[0].currentUnit===20);
@@ -185,7 +185,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   const s2id = allSess.find(s=>s.endUnit===20).id;
   const s1id = allSess.find(s=>s.endUnit===10).id;
   // delete session 2 (the latest, currentUnit(20) === its endUnit(20), no later session) -> restores to session 1's endUnit (10)
-  await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-del="'+s2id+'"]');
+  await p.click('a[data-app-view="more"]'); await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-del="'+s2id+'"]');
   await p.click('[data-rdsess-del="'+s2id+'"]'); await p.waitForSelector("#hifzDialogOk");
   await p.click("#hifzDialogOk"); await p.waitForTimeout(300);
   ok("deleting the latest position-driving session restores position to the prior session's endUnit (10)", (await rdItems(p))[0].currentUnit===10);
@@ -203,15 +203,15 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
     localStorage.setItem("h2do-reading-settings", JSON.stringify({schemaVersion:1,focusItemId:"IT1",dailyGoal:null,createdAt:now,updatedAt:now}));
   });
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "10"); await p.fill("#qlStart", "0"); await p.fill("#qlEnd", "10");
   await p.click("#qlSave"); await p.waitForTimeout(250);
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "10"); await p.fill("#qlStart", "10"); await p.fill("#qlEnd", "20");
   await p.click("#qlSave"); await p.waitForTimeout(250);
   allSess = await rdSessions(p);
   const earlyId = allSess.find(s=>s.endUnit===10).id;
-  await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-del="'+earlyId+'"]');
+  await p.click('a[data-app-view="more"]'); await p.click("#rdFocusBlock"); await p.waitForSelector('[data-rdsess-del="'+earlyId+'"]');
   await p.click('[data-rdsess-del="'+earlyId+'"]'); await p.waitForSelector("#hifzDialogOk");
   await p.click("#hifzDialogOk"); await p.waitForTimeout(300);
   ok("deleting a non-latest session preserves current position (still 20, not rolled back)", (await rdItems(p))[0].currentUnit===20);
@@ -230,12 +230,12 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
     localStorage.setItem("__seeded__", "1");
   }, today());
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#rdTimerClock");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#rdTimerClock");
   ok("reading overlay opened on 'اليوم' after starting timer", await p.evaluate(()=> !document.getElementById("rdOverlay").hidden));
   // simulate elapsed time by rewriting the draft's startedAt into the past, then reload (survives reload / duration derived from timestamps, not a running counter)
   await p.evaluate(()=>{ const d=JSON.parse(localStorage.getItem("h2do-reading-active-session")); d.startedAt = Date.now() - 65*1000; localStorage.setItem("h2do-reading-active-session", JSON.stringify(d)); });
   await p.reload(); await p.waitForFunction(()=> document.getElementById("datePicker") && document.getElementById("datePicker").value, {timeout:8000}); await p.waitForTimeout(150);
-  await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#rdTimerClock"); // draft already active for same item -> reopens overlay (does not restart)
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#rdTimerClock"); // draft already active for same item -> reopens overlay (does not restart)
   await p.waitForTimeout(200);
   const clockTxt = await p.$eval("#rdTimerClock", e=> e.textContent);
   ok("timer clock shows elapsed >=1 minute computed from timestamps after reload (not '00:00')", clockTxt !== "00:00" && clockTxt !== "00:01");
@@ -249,7 +249,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
 
   // historical date guard: navigate to yesterday, attempt to start a session -> must NOT create a draft, must prompt to return to today
   await p.click("#prevDay"); await p.waitForTimeout(400);
-  await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#hifzDialogBody");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#hifzDialogBody");
   const guardDialogText = await p.$eval("#hifzDialogBody", e=> e.textContent);
   ok("historical-date start shows a guard dialog (not a silently-started timer)", guardDialogText.includes("اليوم فقط") || guardDialogText.includes("تاريخًا سابقًا"));
   await p.click("#hifzDialogCancel"); await p.waitForTimeout(150);
@@ -258,7 +258,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   // stale draft handling: seed an old (>3h) draft, then attempt to start -> resume/finish/discard prompt (not silent overwrite)
   await p.click("#nextDay"); await p.waitForTimeout(300); // back to today
   await p.evaluate(()=>{ localStorage.setItem("h2do-reading-active-session", JSON.stringify({draftId:"old1", itemId:"IT1", startedAt: Date.now()-4*3600*1000, startUnit:0})); });
-  await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#expFormBox .exp-optbtn");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdStartBtn"); await p.waitForSelector("#expFormBox .exp-optbtn");
   const staleDialogText = await p.$eval("#expFormBox", e=> e.textContent);
   ok("stale draft triggers resume/finish/discard prompt", staleDialogText.includes("متابعة الجلسة") && staleDialogText.includes("تجاهلها"));
   await p.click('#expFormBox [data-act="discard"]'); await p.waitForTimeout(200);
@@ -274,7 +274,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
     localStorage.setItem("h2do-reading-settings", JSON.stringify({schemaVersion:1,focusItemId:"IT1",dailyGoal:null,createdAt:now,updatedAt:now}));
   }, today());
   await p.goto(fileUrl); await p.waitForTimeout(600);
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "10");
   await p.fill("#qlStart", "15");
   await p.fill("#qlEnd", "20");
@@ -392,7 +392,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("module list has 9 entries including reading", modKeys.length===9 && modKeys.includes("reading"));
   const readingModuleState = await p.evaluate(()=> window.__mfkrSync.module("reading"));
   ok("reading module reachable via the same read-only coordinator diagnostics as other modules", readingModuleState && typeof readingModuleState.inFlight === "boolean");
-  await p.click("#expOpenBtn"); await p.waitForTimeout(300);
+  await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(300);
   await p.click('.exp-tab[data-view="settings"]'); await p.waitForTimeout(300);
   const rowCount = (await p.$$("#expModStatus .exp-foot-row")).length;
   ok("per-module status list shows exactly 9 rows", rowCount===9);
@@ -436,7 +436,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("16 date navigations (each a full goto()->renderAll()->renderReadingCard cycle) triggered ZERO additional full rebuilds (still exactly 1)", rebuildCount===1);
 
   // إضافة جلسة فعلية عاديّة عبر الواجهة — تُحدَّث الذاكرة تفاضليًا لا بإعادة بناء كاملة
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "5");
   await p.click("#qlSave"); await p.waitForTimeout(300);
   rebuildCount = await p.evaluate(()=> window.__mfkrSync.rdRebuildCount());

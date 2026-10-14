@@ -2286,6 +2286,42 @@
     .daily-route-head{align-items:flex-start;flex-wrap:wrap}
   }
 
+
+  /* The same sections and reading order at every size. Empty legacy columns do not take space. */
+  .page>.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:start}
+  .page>.grid>.col{display:contents}
+  .page>.grid>.col>.card{min-width:0;max-width:100%;margin:0;scroll-margin-top:88px}
+  .page>.grid>.col>.card[hidden],.today-overview[hidden],.section-heading[hidden],.section-empty[hidden]{display:none!important}
+  .section-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin:.6rem 0 1rem;scroll-margin-top:88px}
+  .section-heading h2{font-family:"Thmanyah Display","Thmanyah Sans",serif;color:var(--accent);font-size:1.25rem;margin:0}
+  .section-heading p{font-size:.8rem;color:var(--muted);margin:.25rem 0 0}
+  .section-heading button,.section-empty button{min-height:44px}
+  .section-empty{padding:1.5rem;background:var(--paper);border:1px solid var(--line);border-radius:16px;text-align:center;margin:1rem 0}
+  .section-empty button{font:inherit;color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.5rem .8rem;margin-top:.6rem;cursor:pointer}
+  #todayOverview{scroll-margin-top:88px}
+  @media(min-width:701px){
+    body{padding:1.25rem clamp(1rem,3vw,2.5rem) 2rem}
+    .page{max-width:1180px}
+    .quick-nav{width:100%;max-width:100%;margin:.8rem 0 1rem;top:.5rem;gap:.35rem;border-radius:16px;padding:.4rem;box-sizing:border-box;z-index:80}
+    .quick-nav a,.quick-nav button{display:flex;justify-content:center;align-items:center;gap:.45rem;min-height:48px;font-size:.88rem;padding:.55rem .5rem;border-radius:11px}
+    .quick-nav a span{font-size:1.1rem}
+    .page>.grid>.col>.card{padding:1rem 1.1rem}
+  }
+  @media(min-width:1000px){
+    .page>.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .page>.grid>.col>#learningCard,.page>.grid>.col>#expensesCard,.page>.grid>.col>#readingCard,.page>.grid>.col>#hifzCard{grid-column:1/-1}
+    .page>.grid.single-card{grid-template-columns:minmax(0,1fr)}
+  }
+  @media(min-width:701px) and (max-width:999px){
+    .overview-main{grid-template-columns:minmax(0,1fr)}
+    .quick-nav a,.quick-nav button{font-size:.8rem;gap:.3rem}
+  }
+  @media(max-width:700px){
+    .page>.grid>.col>.card,#todayOverview,.section-heading{scroll-margin-top:12px}
+    .section-heading{margin:.5rem 0 .8rem}
+  }
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
 </style>
 </head>
 <body>
@@ -2353,7 +2389,22 @@
     </div>
   </header>
 
-  <section class="today-overview" aria-labelledby="todayOverviewTitle">
+  <nav class="quick-nav" aria-label="التنقل الرئيسي">
+    <a href="#view-today" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
+    <a href="#view-iman" data-app-view="iman"><span>📿</span>إيمانيات</a>
+    <a href="#view-learning" data-app-view="learning"><span>🎓</span>التعلّم</a>
+    <a href="#view-sport" data-app-view="sport"><span>❤️</span>الصحة</a>
+    <a href="#view-expenses" data-app-view="expenses"><span>👨‍👩‍👧</span>العائلة</a>
+    <a href="#view-more" data-app-view="more"><span>•••</span>المزيد</a>
+  </nav>
+
+  <section class="section-heading" id="sectionHeading" aria-labelledby="sectionTitle" hidden>
+    <div><h2 id="sectionTitle" tabindex="-1"></h2><p id="sectionDate"></p></div>
+    <button type="button" class="today-mode" id="sectionModeBtn" aria-pressed="false">عرض مختصر</button>
+  </section>
+  <div class="section-empty" id="sectionEmpty" hidden><p>بطاقات هذا القسم مخفية حسب إعداداتك.</p><button type="button" id="sectionCustomize">تخصيص البطاقات</button></div>
+
+  <section class="today-overview" id="todayOverview" aria-labelledby="todayOverviewTitle">
     <div class="today-overview-head">
       <div class="today-overview-title" id="todayOverviewTitle">ملخص اليوم
         <span class="today-overview-date" id="todayOverviewDate"></span>
@@ -2457,14 +2508,7 @@
     <details class="tomorrow-panel overview-disclosure" id="tomorrowPanel"><summary id="tomorrowTitle">خطة الغد</summary><div class="tomorrow-items" id="tomorrowItems" aria-live="polite"></div><p id="tomorrowHint"></p></details>
   </section>
 
-  <nav class="quick-nav" aria-label="التنقل الرئيسي">
-    <a href="#prayerCard" data-app-view="today" class="active"><span>☀️</span>اليوم</a>
-    <a href="#prayerCard" data-app-view="iman"><span>📿</span>إيمانيات</a>
-    <a href="#learningCard" data-app-view="learning"><span>🎓</span>التعلّم</a>
-    <a href="#sportCard" data-app-view="sport"><span>❤️</span>الصحة</a>
-    <a href="#expensesCard" data-app-view="expenses"><span>👨‍👩‍👧</span>العائلة</a>
-    <a href="#readingCard" data-app-view="more"><span>•••</span>المزيد</a>
-  </nav>
+
 
   <div class="customize-overlay" id="customizeOverlay" hidden>
     <section class="customize-sheet" role="dialog" aria-modal="true" aria-labelledby="customizeTitle">
@@ -9482,9 +9526,10 @@
   function dailyRouteFocusMinutes(s){return ((s&&s.dailyRoute&&s.dailyRoute.events)||[]).reduce((sum,event)=>sum+((event&&event.type&&event.type.startsWith("focus_")&&Number(event.minutes)>0)?Number(event.minutes):0),0);}
   function dailyRouteSpent(date){try{return expActiveTx().filter(tx=>tx.transactionDate===date&&tx.transactionType!=="transfer").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);}catch(e){return 0;}}
   function overviewNavigate(view,id){
-    appViewSet(view);
+    const targetView=CARD_DEFS.some(def=>def.id===id)?cardView(id):view;
+    appViewSet(navIsHidden(targetView)?"more":targetView);
     const target=document.getElementById(id);
-    if(target){target.classList.remove("compact-hidden");target.scrollIntoView({behavior:"smooth",block:"start"});}
+    if(target){target.hidden=false;target.classList.remove("compact-hidden","mobile-view-hidden");document.getElementById("sectionEmpty").hidden=true;target.scrollIntoView({behavior:"smooth",block:"start"});}
   }
   function overviewRefresh(){renderTaskLists();renderWater();renderProgress();}
   function overviewTaskDetail(task){
@@ -10418,8 +10463,9 @@
       expOpenOverlay(); expOpenExpenseForm(row.id); return;
     }
     goto(row.date);
-    const meta=GLOBAL_SEARCH_TYPES[row.type], mobile=window.matchMedia("(max-width:700px)").matches;
-    if(mobile) appViewSet(meta.view);
+    const meta=GLOBAL_SEARCH_TYPES[row.type];
+    const targetView=CARD_DEFS.some(def=>def.id===meta.target)?cardView(meta.target):meta.view;
+    appViewSet(navIsHidden(targetView)?"more":targetView);
     setTimeout(()=>{
       if(row.type==="task"){
         const task=(state.tasks||[]).find(item=>item.id===row.id);
@@ -10431,7 +10477,7 @@
       }
       if(row.type==="review"){ activityOpen(row.date); return; }
       const target=document.getElementById(meta.target); if(!target) return;
-      target.hidden=false; target.classList.remove("mobile-view-hidden"); target.scrollIntoView({behavior:"smooth",block:"start"});
+      target.hidden=false; target.classList.remove("mobile-view-hidden","compact-hidden"); document.getElementById("sectionEmpty").hidden=true; target.scrollIntoView({behavior:"smooth",block:"start"});
       target.setAttribute("tabindex","-1"); target.focus({preventScroll:true});
     },80);
   }
@@ -11097,6 +11143,7 @@
   function goto(dateStr){
     if(dateStr!==currentDate){document.getElementById("dailyRouteOptions").open=false;document.getElementById("overviewRemainingMore").open=false;}
     currentDate = dateStr;
+    document.getElementById("sectionDate").textContent=new Date(dateStr+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
     /* المزامنة لا تعتمد على نجاح الرسم: كل خطوة معزولة، والسحب يعمل دائمًا حتى لو فشل الرسم */
     safeRun("goto:picker", ()=>{ picker.value = dateStr; });
     const existed = safeRun("goto:load", ()=> load(dateStr));
@@ -14666,7 +14713,7 @@
     document.body.classList.toggle("home-compact-today",compact&&view==="today");
     compactApplyCards(view);
     if(status) status.textContent=compact?(hiddenCount?"العرض المختصر نشط: أُخفيت "+hiddenCount.toLocaleString("ar-EG")+" عناصر حسب اختيارك.":"العرض المختصر نشط، ولم تحدد عناصر لإخفائها في هذا القسم بعد."):"";
-    if(button){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار كل بطاقات هذا القسم":"تطبيق بطاقاتك المخفية في هذا القسم";}
+    for(const button of [document.getElementById("homeModeBtn"),document.getElementById("sectionModeBtn")].filter(Boolean)){button.setAttribute("aria-pressed",compact?"true":"false");button.textContent=compact?"عرض كامل":"عرض مختصر";button.title=compact?"إظهار كل بطاقات هذا القسم":"تطبيق بطاقاتك المخفية في هذا القسم";}
   }
   function homeModeInit(){const button=document.getElementById("homeModeBtn");if(button)button.onclick=()=>{homeCompact=!homeCompact;localStorage.setItem(HOME_MODE_KEY,homeCompact?"compact":"full");homeModeRender();if(typeof appViewApply==="function") appViewApply();};homeModeRender();}
   function compactSettingsOpen(){
@@ -14889,7 +14936,7 @@
     navPrefs.order.forEach(view=>{ const link=nav.querySelector('[data-app-view="'+view+'"]'); if(link){ link.hidden=navIsHidden(view); nav.appendChild(link); } });
   }
   function navCardsForView(view){
-    const base=CARD_DEFS.filter(def=>cardView(def.id)===view).map(def=>def.id);
+    const base=cardPrefs.order.filter(id=>cardView(id)===view);
     if(view!=="more") return base;
     const hiddenCards=navPrefs.hidden.flatMap(hiddenView=>CARD_DEFS.filter(def=>cardView(def.id)===hiddenView).map(def=>def.id));
     return [...new Set(base.concat(hiddenCards))];
@@ -14916,25 +14963,63 @@
   }
   let appView=localStorage.getItem(APP_VIEW_KEY)||"today";if(appView==="quran"){appView="iman";localStorage.setItem(APP_VIEW_KEY,appView);}
   function appViewApply(){
+    if(!NAV_DEFS.some(def=>def.view===appView))appView="today";
     if(typeof homeModeRender==="function") homeModeRender();
-    const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(navCardsForView(appView).filter(id=>!homeCompact||!compactHiddenForView(appView).has(id)));
-    CARD_DEFS.forEach(def=>{ const el=document.getElementById(def.id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(def.id)); });
+    const allowed=new Set(navCardsForView(appView).filter(id=>!homeCompact||!compactHiddenForView(appView).has(id)));
+    let visible=0;
+    CARD_DEFS.forEach(def=>{
+      const el=document.getElementById(def.id);if(!el)return;
+      el.classList.toggle("mobile-view-hidden",!allowed.has(def.id));
+      if(allowed.has(def.id)&&!el.hidden&&!el.classList.contains("compact-hidden"))visible++;
+    });
+    document.querySelector(".page>.grid").classList.toggle("single-card",visible===1);
+    document.getElementById("todayOverview").hidden=appView!=="today";
+    document.getElementById("sectionHeading").hidden=appView==="today";
+    document.getElementById("sectionTitle").textContent=CARD_VIEW_LABELS[appView];
+    document.getElementById("sectionDate").textContent=new Date(currentDate+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
+    document.getElementById("sectionEmpty").hidden=visible>0||appView==="today";
     document.querySelectorAll("a[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
-  function appViewSet(view){
+  function appViewSet(view,options={}){
     if(!NAV_DEFS.some(def=>def.view===view)) return;
     const changed=appView!==view;
     appView=view; localStorage.setItem(APP_VIEW_KEY,view); appViewApply();
-    /* الضغط على القسم المفتوح لا يعيد المستخدم إلى أول بطاقة فيه؛ مهم عندما يكون
-       الشريط الثابت قريبًا من محتوى قابل للضغط في أسفل الشاشة. */
+    if(options.history!=="none"){
+      const hash="#view-"+view;
+      if(location.hash!==hash)history[options.history==="push"?"pushState":"replaceState"](history.state,"",hash);
+    }
+    /* Re-selecting the active section preserves the current reading position. */
     if(!changed) return;
-    const cards=navCardsForView(view).filter(id=>!homeCompact||!compactHiddenForView(view).has(id));
-    const first=document.getElementById(cards[0])||document.querySelector(".today-overview");
-    window.scrollTo({top:first.offsetTop-8,behavior:"smooth"});
+    if(options.scroll!==false){
+      const target=document.getElementById(view==="today"?"todayOverview":"sectionHeading");
+      target.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
+    }
+  }
+  function appViewOpenHash(scroll=true){
+    const hash=location.hash.slice(1), view=hash.startsWith("view-")?hash.slice(5):null;
+    const card=CARD_DEFS.find(def=>def.id===hash);
+    if(view&&NAV_DEFS.some(def=>def.view===view))appViewSet(view,{history:"none",scroll});
+    else if(card){
+      appViewSet(navIsHidden(cardView(card.id))?"more":cardView(card.id),{history:"none",scroll:false});
+      const target=document.getElementById(card.id);
+      target.hidden=false;target.classList.remove("compact-hidden","mobile-view-hidden");
+      document.getElementById("sectionEmpty").hidden=true;
+      if(scroll)target.scrollIntoView({behavior:"auto",block:"start"});
+    }
   }
   function appViewInit(){
-    document.querySelectorAll("a[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
-    window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
+    document.querySelectorAll("a[data-app-view]").forEach(link=>link.onclick=e=>{e.preventDefault();appViewSet(link.dataset.appView,{history:"push"});});
+    document.getElementById("sectionModeBtn").onclick=()=>document.getElementById("homeModeBtn").click();
+    document.getElementById("sectionCustomize").onclick=personalizeOpen;
+    document.addEventListener("click",e=>{
+      const link=e.target.closest("a[href^='#']");
+      if(!link||link.hasAttribute("data-app-view")||link.hasAttribute("data-overview-view"))return;
+      if(CARD_DEFS.some(def=>"#"+def.id===link.hash)){e.preventDefault();history.pushState(history.state,"",link.hash);appViewOpenHash();}
+    });
+    window.addEventListener("popstate",()=>{if(!location.hash){appViewSet("today",{history:"none"});}else appViewOpenHash();});
+    window.addEventListener("hashchange",()=>appViewOpenHash());
+    navApply();appViewApply();appViewOpenHash(false);
+    if(!location.hash)history.replaceState(history.state,"","#view-"+appView);
   }
 
   /* ---------- إعداد البداية والأهداف اليومية ---------- */

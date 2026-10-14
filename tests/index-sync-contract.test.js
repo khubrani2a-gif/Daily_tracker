@@ -316,7 +316,7 @@ test("global search indexes daily content and expenses with filters",()=>{
   ["globalSearchIndex","globalSearchNorm","globalSearchRender","globalSearchOpenResult","globalSearchOpen","globalSearchInit"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
   ["task","note","memory","expense"].forEach(type=>assert.match(html,new RegExp('value="'+type+'"'),type));
   assert.match(html,/expActiveTx\(\)/);
-  assert.match(html,/appViewSet\(view\)/);
+  assert.match(html,/function appViewSet\(view[,)]/);
   assert.match(html,/expOpenExpenseForm\(row\.id\)/);
 });
 
