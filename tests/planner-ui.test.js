@@ -88,3 +88,28 @@ test('a reminder before midnight fires for tomorrows event once and disabled rem
 test('moving into an occupied period requires an explicit conflict choice',()=>run(async p=>{await add(p,'الأول',async()=>{await setTime(p,'10:00');await p.locator('#tmEnd').fill('11:00');});await add(p,'الثاني',async()=>{await setTime(p,'13:00');await p.locator('#tmEnd').fill('14:00');});await p.evaluate(()=>{const row=__mfkrPlanner.rows(null,null,false).find(r=>r.task.text==='الثاني');__mfkrPlanner.move(row,audit.todayStr(),'10:30');});assert.equal((await all(p)).find(r=>r.task.text==='الثاني').task.dueTime,'13:00');await p.locator('#plannerMoveAnyway').click();assert.equal((await all(p)).find(r=>r.task.text==='الثاني').task.endTime,'11:30');}));
 test('postponing one repeat to the next repeat day preserves both obligations',()=>run(async p=>{await add(p,'ورد يومي');await p.evaluate(()=>{const row=__mfkrPlanner.rows(null,null,false)[0];__mfkrPlanner.move(row,__mfkrPlanner.core.plus(audit.todayStr(),1));});assert.equal(await p.evaluate(()=>{const date=__mfkrPlanner.core.plus(audit.todayStr(),1);return __mfkrPlanner.rows(date,date).filter(r=>r.date===date&&r.task.status==='pending').length;}),2);await p.evaluate(()=>audit.go(__mfkrPlanner.core.plus(audit.todayStr(),1)));assert.equal(await p.evaluate(()=>audit.get().tasks.filter(t=>t.text==='ورد يومي'&&t.status==='pending').length),2);}));
 test('appointment filter in global search opens the same appointment record',()=>run(async p=>{await add(p,'موعد مراجعة',async()=>{await p.locator('#tmAllDay').check();});await p.locator('#globalSearchBtn').click();await p.locator('#globalSearchType').selectOption('appointment');await p.locator('#globalSearchInput').fill('مراجعة');await p.locator('#globalSearchResults button').filter({hasText:'موعد مراجعة'}).first().click();assert.equal(await p.locator('#tmKind').inputValue(),'appointment');assert.equal(await p.locator('#tmText').inputValue(),'موعد مراجعة');}));
+
+test('untimed legacy reminders do not block edits and explain how to enable them',()=>run(async p=>{
+  await add(p,'مراجعة الملف');
+  await p.evaluate(()=>{const t=audit.get().tasks.find(t=>t.text==='مراجعة الملف');t.reminders=[15,0];audit.save();__mfkrPlanner.open(__mfkrPlanner.rows(null,null,false).find(r=>r.task.id===t.id));});
+  await p.locator('#tmText').fill('مراجعة الملف المعدل');
+  await p.locator('#tmSave').click();
+  assert.equal(await p.locator('#tmErr').count(),0,'stale reminders must not block an untimed task');
+  assert.deepEqual((await all(p))[0].task.reminders,[]);
+}));
+test('reminder choices pause for all-day and resume when time is restored',()=>run(async p=>{
+  await add(p,'موعد متابعة',async()=>{await setTime(p,'17:00');await p.locator('#tmEnd').fill('18:00');await p.locator('#plannerDetails > summary').click();await p.getByText('التذكير',{exact:true}).last().click();await p.locator('#tmReminder').selectOption('15');});
+  await p.locator('.planner-row-main').click();await p.getByText('التذكير',{exact:true}).last().click();
+  await p.locator('#tmAllDay').check();assert.equal(await p.locator('#tmReminder').isDisabled(),true);
+  assert.match(await p.locator('#plannerReminderState').innerText(),/دون تنبيه/);
+  await p.locator('#plannerReminderSchedule').click();assert.equal(await p.locator('#tmAllDay').isChecked(),false);
+  assert.equal(await p.locator('#tmReminder').isDisabled(),false);assert.equal(await p.locator('#tmReminder').inputValue(),'15');
+  await p.locator('#tmAllDay').check();await p.locator('#tmSave').click();assert.equal(await p.locator('#tmErr').count(),0);assert.deepEqual((await all(p))[0].task.reminders,[]);
+}));
+test('expanded editor fields stay inside the sheet at narrow and intermediate widths',()=>run(async p=>{
+  await p.locator('#plannerAdd').click();await p.locator('#plannerDetails > summary').click();
+  await p.locator('#plannerReminders > summary').click();
+  for(const width of [320,390,430,520,768,1366]){await p.setViewportSize({width,height:844});
+    assert.equal(await p.locator('.task-sheet').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'inner form overflow at '+width);
+  }
+}));
