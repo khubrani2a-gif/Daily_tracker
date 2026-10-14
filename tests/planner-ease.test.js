@@ -67,3 +67,9 @@ test('quick editing a projected occurrence preserves the next recurrence and its
 test('a stale reorder never recreates a task deleted while actions were open',()=>run(async p=>{
   await seed(p,[{text:'ألف'},{text:'باء'}]);await card(p,'باء').locator('[data-planner-quick]').click();await p.evaluate(()=>{audit.get().tasks=audit.get().tasks.filter(t=>t.text!=='ألف');audit.save();});await p.locator('#plannerOrderUp').click();assert.deepEqual((await rows(p)).map(r=>r.task.text),['باء']);
 }));
+
+test('full week remains available without forcing page-wide scrolling on smaller screens',()=>run(async p=>{
+  await seed(p,[{text:'اجتماع',dueTime:'11:00'}]);await p.locator('[data-planner-view="upcoming"]').click();await p.locator('#plannerLayout').selectOption('week-all');
+  for(const width of [390,820,1366]){await p.setViewportSize({width,height:900});await p.evaluate(()=>__mfkrPlanner.render());assert.equal(await p.locator('.planner-week .planner-day').count(),7);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await p.locator('.planner-calendar-main').evaluate(el=>el.scrollWidth>el.clientWidth),true);}
+  await p.locator('#plannerLayout').selectOption('week');assert.equal(await p.locator('.planner-full-week').count(),0);assert.equal(await p.locator('.planner-week .planner-day').count(),3);
+}));
