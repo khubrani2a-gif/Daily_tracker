@@ -4,6 +4,33 @@ let b;test.before(async()=>b=await chromium.launch());test.after(async()=>b.clos
 async function run(fn){const d=await device(b);try{await fn(d.p,d);assert.deepEqual(d.errors,[]);}finally{await d.c.close();}}
 async function add(p,text,extra){await p.locator('#plannerAdd').click();await p.locator('#tmText').fill(text);if(extra)await extra();await p.locator('#tmSave').click();assert.equal(await p.locator('#tmErr').count(),0,'save must close successfully');}
 const all=p=>p.evaluate(()=>__mfkrPlanner.rows(null,null,false).map(r=>({task:r.task,day:r.day,date:r.date})));
+test('compact contact shows only valid actions, closes accessibly and leaves steps usable',()=>run(async p=>{
+  await add(p,'مراجعة العيادة',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmLink').fill('https://example.com/visit?a=1&b=2');await p.locator('#tmPhone').fill('٠٥٥١٢٣٤٥٦٧');await p.locator('#tmContactName').fill('الاستقبال');await p.locator('#tmSubtasks').fill('التقرير\nالهوية');});
+  const trigger=p.locator('[data-planner-contact]'),pop=p.locator('#plannerContactPopover');
+  assert.equal(await pop.count(),0);await trigger.focus();await p.keyboard.press('Enter');
+  assert.equal(await trigger.getAttribute('aria-expanded'),'true');assert.equal(await pop.locator('a').count(),3);assert.equal(await pop.locator('a').first().evaluate(el=>el===document.activeElement),true);
+  assert.equal(await pop.getByRole('link',{name:/اتصال/}).getAttribute('href'),'tel:0551234567');assert.equal(await pop.getByRole('link',{name:/واتساب/}).getAttribute('href'),'https://wa.me/966551234567');assert.equal(await pop.getByRole('link',{name:/فتح الرابط/}).getAttribute('href'),'https://example.com/visit?a=1&b=2');
+  await p.keyboard.press('Escape');assert.equal(await pop.count(),0);assert.equal(await trigger.evaluate(el=>el===document.activeElement),true);
+  await trigger.click();await p.locator('#tasks h3').first().click();assert.equal(await pop.count(),0);
+  await p.locator('.planner-inline-steps summary').click();await trigger.click();await trigger.click();assert.equal(await pop.count(),0);assert.equal(await p.locator('.planner-inline-steps').getAttribute('open'),'');
+  await p.evaluate(()=>{window.contactClicks=[];document.addEventListener('click',event=>{const a=event.target.closest('#plannerContactPopover a');if(a){event.preventDefault();contactClicks.push(a.getAttribute('href'));}},true);});
+  for(const name of [/فتح الرابط/,/اتصال/,/واتساب/]){await trigger.click();await pop.getByRole('link',{name}).click();await pop.waitFor({state:'detached'});assert.equal(await pop.count(),0);}
+  assert.deepEqual(await p.evaluate(()=>contactClicks),['https://example.com/visit?a=1&b=2','tel:0551234567','https://wa.me/966551234567']);
+  await p.locator('.planner-inline-steps input').first().check();assert.equal((await all(p))[0].task.subtasks[0].done,true);assert.equal(await p.locator('.planner-overlay').count(),0);
+}));
+test('compact contact hides absent or unsafe data and fits narrow phones, tablets and laptops',()=>run(async p=>{
+  await add(p,'بدون بيانات');assert.equal(await p.locator('[data-planner-contact]').count(),0);
+  await p.evaluate(()=>{const t=audit.get().tasks.find(t=>t.text==='بدون بيانات');t.link='javascript:alert(1)';t.phone='12';audit.save();__mfkrPlanner.render();});assert.equal(await p.locator('[data-planner-contact]').count(),0);
+  await p.evaluate(()=>{const t=audit.get().tasks.find(t=>t.text==='بدون بيانات');t.link='https://example.com/';t.contactName='<img src=x onerror=alert(1)>';audit.save();__mfkrPlanner.render();});
+  await p.locator('[data-planner-contact]').click();assert.equal(await p.locator('#plannerContactPopover a').count(),1);assert.equal(await p.locator('#plannerContactPopover img').count(),0);assert.match(await p.locator('#plannerContactPopover').innerText(),/<img/);await p.keyboard.press('Escape');
+  await p.evaluate(()=>{const t=audit.get().tasks.find(t=>t.text==='بدون بيانات');t.link='';t.phone='+966551234567';t.subtasks=[{id:'s1',text:'خطوة طويلة للاختبار',done:false}];audit.save();__mfkrPlanner.render();});
+  for(const width of [320,390,768,820,1024,1366]){await p.setViewportSize({width,height:844});await p.locator('[data-planner-contact]').click();assert.equal(await p.locator('#plannerContactPopover a').count(),2);const rect=await p.locator('#plannerContactPopover').boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=width&&rect.y>=0&&rect.y+rect.height<=844);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await p.keyboard.press('Escape');}
+}));
+test('compact contact opens its safe web link after dismissing the popup',()=>run(async(p,d)=>{
+  await add(p,'ملف',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmLink').fill('https://example.com/planner-test');});
+  await d.c.route('https://example.com/**',route=>route.fulfill({status:200,body:'local navigation fixture'}));
+  await p.locator('[data-planner-contact]').click();const opened=d.c.waitForEvent('page');await p.locator('#plannerContactPopover a').click();const tab=await opened;await tab.waitForURL('https://example.com/planner-test');assert.equal(await p.locator('#plannerContactPopover').count(),0);await tab.close();
+}));
 test('checking several editor steps on a projected occurrence then saving does not duplicate it',()=>run(async p=>{
   await add(p,'رياضة يومية',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmSubtasks').fill('إحماء\nمشي');});
   await p.evaluate(()=>{const date=__mfkrPlanner.core.plus(audit.todayStr(),1);__mfkrPlanner.open(__mfkrPlanner.rows(date,date).find(r=>r.date===date));});
