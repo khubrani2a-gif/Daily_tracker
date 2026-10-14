@@ -55,13 +55,21 @@
   }
   function range(t){const start=minutes(t.dueTime);if(start===null||t.allDay)return null;let end=minutes(t.endTime);if(end===null&&t.durationMinutes)end=start+Number(t.durationMinutes);if(end===null||end<=start)return null;return {start:Math.max(0,start-(+t.bufferMinutes||0)),end};}
   function conflicts(t,rows){const a=range(t);if(!a||!t.dueDate)return [];return rows.filter(r=>r.task.id!==t.id&&r.date===t.dueDate&&active(r.task)).flatMap(r=>{const b=range(r.task);if(!b)return [];const overlap=Math.min(a.end,b.end)-Math.max(a.start,b.start);return overlap>0?[{row:r,minutes:overlap}]:[];});}
-  function slots(rows,s,start,end,duration){
-    const a=minutes(start),b=minutes(end);if(a===null||b===null||b<=a||!duration)return [];
+  function slots(rows,s,start,end,duration,buffer=0){
+    const a=minutes(start),b=minutes(end);duration=Number(duration);buffer=Math.max(0,Number(buffer)||0);
+    if(a===null||b===null||b<=a||!Number.isFinite(duration)||duration<=0||duration+buffer>b-a)return [];
     const busy=rows.filter(r=>r.date===s&&active(r.task)).map(r=>range(r.task)).filter(Boolean).sort((x,y)=>x.start-y.start),out=[];let cursor=a;
-    busy.forEach(r=>{if(r.start-cursor>=duration)out.push({start:time(cursor),end:time(cursor+duration)});cursor=Math.max(cursor,r.end);});if(b-cursor>=duration)out.push({start:time(cursor),end:time(cursor+duration)});return out.filter(x=>minutes(x.end)<=b).slice(0,3);
+    const add=limit=>{if(limit-cursor>=duration+buffer)out.push({start:time(cursor+buffer),end:time(cursor+buffer+duration)});};
+    busy.forEach(r=>{if(r.end<=a||r.start>=b)return;add(Math.min(r.start,b));cursor=Math.max(cursor,r.end);});add(b);return out.slice(0,3);
+  }
+  function review(rows){
+    const included=rows.filter(r=>!r.external&&!r.task.deletedAt&&!['cancelled','skipped'].includes(r.task.status));
+    const completed=included.filter(r=>r.task.done||r.task.status==='done'),measured=completed.filter(r=>Number(r.task.durationMinutes)>0&&Number(r.task.actualMinutes)>0);
+    const estimated=measured.reduce((n,r)=>n+Number(r.task.durationMinutes),0),actual=measured.reduce((n,r)=>n+Number(r.task.actualMinutes),0);
+    return {total:included.length,completed:completed.length,measured:measured.length,estimated,actual,unknown:included.filter(r=>!(Number(r.task.durationMinutes)>0)).length};
   }
   function parse(text,base){
-    const v=String(text).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))),out={};
+    const v=String(text).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))),out={};if(!date(base))return out;
     if(/بعد غد|بعد بكر[هةا]/.test(v))out.dueDate=plus(base,2);else if(/غد|بكر[هةا]/.test(v))out.dueDate=plus(base,1);else if(/اليوم/.test(v))out.dueDate=base;
     const weekday=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'].findIndex(x=>v.replace(/أ|إ/g,'ا').includes(x.replace(/أ|إ/g,'ا')));
     if(!out.dueDate&&weekday>=0)out.dueDate=plus(base,(weekday-date(base).getDay()+7)%7||7);
@@ -70,7 +78,13 @@
     if(m){let hour=+m[1];const min=+(m[2]||0);if(hour<=23&&min<60){if(m[3]){if(hour<=12){hour=hour%12+(/^م/.test(m[3])?12:0);out.dueTime=pad(hour)+':'+pad(min);}}else if(hour>12||hour===0)out.dueTime=pad(hour)+':'+pad(min);else out.ambiguousTime=true;}}
     const duration=v.match(/لمدة\s*(\d+)\s*(دقيقة|دقائق|ساعة|ساعات)/);if(duration)out.durationMinutes=+duration[1]*(duration[2].includes('ساع')?60:1);else if(/نصف ساعة/.test(v))out.durationMinutes=30;else if(/ربع ساعة/.test(v))out.durationMinutes=15;
     if(/موعد|اجتماع|زيارة|محاضرة/.test(v))out.kind='appointment';
-    if(/كل يوم|يومي/.test(v))out.repeat='daily';else if(/كل أسبوع|أسبوعي/.test(v))out.repeat='weekly';else if(/كل شهر|شهري/.test(v))out.repeat='monthly';
+    if(/كل يوم|يومي/.test(v))out.repeat='daily';else if(/كل أسبوع|كل اسبوع|أسبوعي|اسبوعي/.test(v))out.repeat='weekly';else if(/كل شهر|شهري/.test(v))out.repeat='monthly';else if(/كل سنة|كل عام|سنوي/.test(v))out.repeat='yearly';
+    const interval=v.match(/كل\s+(\d+)\s+(يوم|أيام|ايام|أسبوع|أسابيع|اسبوع|اسابيع|شهر|أشهر|اشهر|شهور|سنة|سنوات|عام|أعوام)/);
+    if(interval&&+interval[1]>0&&+interval[1]<=99){out.repeat=/يوم|أيام|ايام/.test(interval[2])?'daily':/سبوع|سابيع/.test(interval[2])?'weekly':/شهر|شهور/.test(interval[2])?'monthly':'yearly';out.repeatInterval=+interval[1];}
+    if(/كل أسبوعين|كل اسبوعين/.test(v)){out.repeat='weekly';out.repeatInterval=2;}
+    if(/كل شهرين/.test(v)){out.repeat='monthly';out.repeatInterval=2;}
+    if(out.repeat==='weekly'){const weekdays=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'].flatMap((d,i)=>v.replace(/[أإ]/g,'ا').includes(d.replace(/[أإ]/g,'ا'))?[i]:[]);if(weekdays.length)out.repeatDays=weekdays;}
+
     return out;
   }
   const escape=s=>String(s||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,');
@@ -83,5 +97,5 @@
     (t.reminders||[]).forEach(n=>{if(Number.isFinite(n)&&n>=0)lines.push('BEGIN:VALARM','TRIGGER:-PT'+n+'M','ACTION:DISPLAY','DESCRIPTION:'+escape(t.text),'END:VALARM');});lines.push('END:VEVENT','END:VCALENDAR');
     return lines.map(line=>{let out='',bytes=0;for(const c of line){const n=new TextEncoder().encode(c).length;if(bytes+n>73){out+='\r\n ';bytes=1;}out+=c;bytes+=n;}return out;}).join('\r\n')+'\r\n';
   }
-  return {date,key,plus,days,minutes,time,active,occurs,next,afterCompletion,range,conflicts,slots,parse,ics};
+  return {date,key,plus,days,minutes,time,active,occurs,next,afterCompletion,range,conflicts,slots,review,parse,ics};
 });
