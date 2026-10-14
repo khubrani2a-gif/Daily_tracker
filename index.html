@@ -2237,6 +2237,55 @@
     #appHeader .sync-btn{flex:1;padding:.4rem .6rem}
   }
 
+
+  /* A single next step, with secondary tools progressively disclosed. */
+  .today-overview [hidden]{display:none!important}
+  .today-overview button,.today-overview summary{min-height:44px}
+  .today-overview button:disabled{opacity:.55;cursor:default}
+  .today-overview button,.today-overview summary,.today-overview a{touch-action:manipulation}
+  .today-overview :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .today-overview summary{cursor:pointer;color:var(--accent);font-weight:700;padding:.55rem .65rem;border-radius:10px;font-size:.8rem}
+  .today-overview summary small{font-weight:400;color:var(--muted);margin-inline-start:.5rem}
+  .today-overview-head{margin-bottom:.75rem}
+  .today-overview .today-metrics{margin-bottom:.8rem;grid-template-columns:repeat(4,minmax(0,1fr))}
+  a.today-metric{color:inherit;text-decoration:none;min-width:0}
+  .today-metric-top{align-items:flex-start;flex-direction:column;gap:.2rem}
+  .today-metric small{display:block;font-size:.68rem;color:var(--muted);margin-top:.3rem}
+  .overview-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:.8rem;align-items:start}
+  .overview-main .daily-route{margin:0;padding:1rem}
+  .overview-rest{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:.8rem;min-width:0}
+  .overview-rest .daily-route-head{margin-bottom:.4rem}
+  .overview-rest-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.6rem;text-align:start;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);padding:.6rem 0;font:inherit;cursor:pointer}
+  .overview-rest-row span{min-width:0;overflow-wrap:anywhere;font-size:.85rem}
+  .overview-rest-row small{display:block;color:var(--muted);font-size:.72rem;margin-top:.15rem}
+  .overview-rest-row:last-child{border-bottom:0}
+  .overview-rest-row .overview-row-arrow{color:var(--accent);flex-shrink:0}
+  .overview-empty{color:var(--muted);font-size:.8rem;line-height:1.7;margin:.5rem 0}
+  .overview-options{border:1px solid var(--line);border-radius:10px;background:var(--paper);max-width:100%;min-width:0}
+  .overview-options[open]{flex-basis:100%}
+  .overview-button-group{display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem;min-width:0}
+  .overview-button-group button,.overview-footer button,.overview-feedback button{border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);padding:.45rem .65rem;font:inherit;font-size:.8rem;cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+  .overview-footer{display:flex;justify-content:flex-end;margin-top:.65rem}
+  .overview-footer button{color:var(--accent)}
+  .overview-disclosure{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-top:.6rem;padding:.2rem}
+  .overview-disclosure .quick-template-bar{margin:.5rem}
+  .overview-disclosure .tomorrow-items,.overview-disclosure>p{padding:.5rem}
+  .overview-feedback{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.6rem;padding:.5rem .7rem;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;font-size:.8rem}
+  .today-overview .decision-center{margin:.65rem 0 0;padding:.2rem .7rem}
+  .today-overview .decision-row{flex-wrap:wrap}
+  .today-overview .decision-row div{flex:1;min-width:180px}
+  .today-overview .smart-actions{margin:.7rem 0}
+  .today-overview .now-panel{margin:.5rem;border-color:var(--line)}
+  .daily-route-task{overflow-wrap:anywhere}
+  @media(max-width:700px){
+    .overview-main{grid-template-columns:minmax(0,1fr)}
+    .today-overview .today-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+    .today-overview{padding:.75rem}
+    .overview-disclosure summary small{display:block;margin-inline-start:1rem}
+    .overview-main .daily-route{padding:.75rem}
+    .daily-route-head{align-items:flex-start;flex-wrap:wrap}
+  }
+
 </style>
 </head>
 <body>
@@ -2310,76 +2359,87 @@
         <span class="today-overview-date" id="todayOverviewDate"></span>
       </div>
       <button type="button" class="today-mode" id="homeModeBtn" aria-pressed="false">عرض مختصر</button>
-      <div class="today-focus" id="todayFocus" aria-live="polite"></div>
+      <div class="today-focus" hidden id="todayFocus" aria-live="polite"></div>
     </div>
+    <div class="today-metrics">
+      <a class="today-metric" href="#prayerCard" data-overview-view="iman">
+        <div class="today-metric-top"><span>🕌 الصلوات</span><b id="todayPrayerValue">٠ / ٦</b></div>
+        <div class="today-metric-bar"><i id="todayPrayerBar"></i></div>
+      </a>
+      <a class="today-metric" href="#tasksCard" data-overview-view="today">
+        <div class="today-metric-top"><span>✅ المهام</span><b id="todayTaskValue">٠ / ٠</b></div>
+        <div class="today-metric-bar"><i id="todayTaskBar"></i></div>
+      </a>
+      <a class="today-metric" href="#quranCard" data-overview-view="iman">
+        <div class="today-metric-top"><span>📖 القرآن</span><b id="todayQuranValue">٠ / ٥</b></div>
+        <div class="today-metric-bar"><i id="todayQuranBar"></i></div><small id="overviewQuranHint"></small>
+      </a>
+      <a class="today-metric" href="#waterCard" data-overview-view="sport">
+        <div class="today-metric-top"><span>💧 الماء</span><b id="todayWaterValue">٠ / ٨</b></div>
+        <div class="today-metric-bar"><i id="todayWaterBar"></i></div>
+      </a>
+    </div>
+    <div class="overview-main">
     <section class="daily-route" id="dailyRoute" aria-labelledby="dailyRouteTitle">
-      <div class="daily-route-head"><b id="dailyRouteTitle">🧭 مسار اليوم</b><span><small id="dailyRouteStatus"></small> <button type="button" id="dailyRouteSettings" aria-label="ضبط اقتراحات مسار اليوم">⚙️</button></span></div>
+      <div class="daily-route-head"><b id="dailyRouteTitle">خطوتك التالية</b><small id="dailyRouteStatus"></small></div>
       <div class="daily-route-task" id="dailyRouteTask"></div>
       <div class="daily-route-actions">
         <button type="button" class="primary" id="dailyRouteStart">ابدأ التركيز</button>
         <button type="button" id="dailyRouteDone">تم الإنجاز</button>
-        <button type="button" id="dailyRouteDefer">أجّل</button>
-        <button type="button" id="dailyRoutePlan">☀️ جهّز يومي</button>
-        <button type="button" id="dailyRouteReplan">🔄 رتّب المتبقي</button>
-        <button type="button" id="dailyRouteUndo" hidden>↩️ تراجع</button>
-        <button type="button" id="dailyRouteSimple">🚨 وضع مبسط</button>
-        <button type="button" id="dailyRouteInbox">📥 إدخال سريع</button>
-        <button type="button" id="dailyRouteFamily">👨‍👩‍👧 موعد عائلي</button>
-        <button type="button" class="route-muted" id="dailyRouteWeekly">📅 مراجعة الأسبوع</button>
-        <button type="button" class="route-muted" id="dailyRoutePatterns">📈 أنماط الأسبوع</button>
-        <button type="button" class="route-muted" id="dailyRouteArchive">🗂️ أرشيف الأيام</button>
-        <button type="button" class="route-muted" id="dailyRouteClose">🌙 إغلاق اليوم</button>
+        <details class="overview-options" id="dailyRouteOptions"><summary>خيارات</summary><div class="overview-button-group">
+          <button type="button" id="dailyRoutePin">تثبيت هذه المهمة</button>
+          <button type="button" id="dailyRouteChoose">اختيار مهمة أخرى</button>
+          <button type="button" id="dailyRouteEdit">تعديل الموعد والتفاصيل</button>
+          <button type="button" id="dailyRouteDefer">تأجيل إلى موعد آخر</button>
+        </div></details>
       </div>
     </section>
-    <section class="decision-center" id="decisionCenter" aria-labelledby="decisionCenterTitle">
-      <div class="decision-center-head"><span id="decisionCenterTitle">🧠 قرارات مهمة</span><button type="button" id="decisionRulesBtn">⚙️ القواعد</button></div>
-      <div id="decisionCenterList"></div>
+    <section class="overview-rest" aria-labelledby="overviewRestTitle">
+      <div class="daily-route-head"><b id="overviewRestTitle">باقي اليوم</b><small id="todayRemaining"></small></div>
+      <div id="overviewRemainingList"></div>
+      <details id="overviewRemainingMore"><summary>عرض الباقي</summary><div id="overviewRemainingExtra"></div></details>
     </section>
-    <section class="now-panel" id="nowPanel" aria-labelledby="nowPanelTitle">
-      <div class="now-panel-head"><span id="nowPanelTitle">⚡ لوحة الآن</span><span><span class="now-panel-hint">اضغط للانتقال</span> <button type="button" id="nowPanelSettings" aria-label="تخصيص لوحة الآن">⚙️</button></span></div>
+    </div>
+    <div class="overview-feedback" id="overviewFeedback" hidden><span id="overviewFeedbackText" role="status" aria-live="polite"></span><button type="button" id="overviewUndo">تراجع</button></div>
+    <section class="decision-center" id="decisionCenter" aria-label="تنبيهات تحتاج مراجعة" hidden><div id="decisionCenterList"></div></section>
+    <div class="smart-actions" id="smartActions" aria-label="إضافة سريعة">
+<button type="button" id="quickTaskBtn">＋ مهمة</button>
+<button type="button" id="quickExpenseBtn">＋ مصروف</button>
+<button type="button" id="quickWaterBtn">💧 كوب ماء</button>
+      <details class="overview-options" id="overviewMoreActions"><summary>المزيد</summary><div class="overview-button-group">
+      <span class="quick-custom-actions" id="quickCustomActions"></span>
+<button type="button" id="quickActionsCatalogBtn">⚡ كل الإجراءات</button>
+<button type="button" id="quickCustomActionBtn">＋ اختصار سريع</button>
+<button type="button" id="quickManageActionsBtn">⚙ إدارة الاختصارات</button>
+<button type="button" id="shareWeekBtn">↗ مشاركة الأسبوع</button>
+<button type="button" id="dailyRouteInbox">📥 إدخال سريع</button>
+<button type="button" id="dailyRouteFamily">👨‍👩‍👧 موعد عائلي</button>
+      </div>    <section class="now-panel" id="nowPanel" aria-labelledby="nowPanelTitle">
+      <div class="now-panel-head"><span id="nowPanelTitle">اختصارات الأقسام</span><span><span class="now-panel-hint">اضغط للانتقال</span> <button type="button" id="nowPanelSettings" aria-label="تخصيص لوحة الآن">⚙️</button></span></div>
       <div class="now-panel-items" id="nowPanelItems"></div>
     </section>
-    <div class="today-metrics">
-      <div class="today-metric">
-        <div class="today-metric-top"><span>🕌 الصلوات</span><b id="todayPrayerValue">٠ / ٦</b></div>
-        <div class="today-metric-bar"><i id="todayPrayerBar"></i></div>
-      </div>
-      <div class="today-metric">
-        <div class="today-metric-top"><span>✅ المهام</span><b id="todayTaskValue">٠ / ٠</b></div>
-        <div class="today-metric-bar"><i id="todayTaskBar"></i></div>
-      </div>
-      <div class="today-metric">
-        <div class="today-metric-top"><span>📖 القرآن</span><b id="todayQuranValue">٠ / ٥</b></div>
-        <div class="today-metric-bar"><i id="todayQuranBar"></i></div>
-      </div>
-      <div class="today-metric">
-        <div class="today-metric-top"><span>💧 الماء</span><b id="todayWaterValue">٠ / ٨</b></div>
-        <div class="today-metric-bar"><i id="todayWaterBar"></i></div>
-      </div>
+</details>
     </div>
-    <div class="today-priority-strip" id="todayPriorityStrip">
-      <span class="today-priority-label">أهم الأولويات</span>
-      <span id="todayPriorityItems"></span>
-      <span class="today-remaining" id="todayRemaining"></span>
-    </div>
-    <p class="home-mode-status" id="homeModeStatus">العرض المختصر نشط: الصلاة، المهام، والماء فقط. استخدم «عرض كامل» لإظهار بقية الأدوات.</p>
+    <p class="quick-action-feedback" id="quickActionFeedback" role="status" aria-live="polite"></p>
+    <p class="home-mode-status" id="homeModeStatus">العرض المختصر نشط. استخدم «عرض كامل» لإظهار الأدوات المخفية.</p>
+    <details class="overview-disclosure" id="overviewPlanning"><summary>ترتيب يومي <small>الأولويات والقوالب ومراجعة الأسبوع</small></summary>
+      <div class="overview-button-group">
+<button type="button" id="dailyRoutePlan">☀️ جهّز يومي</button>
+<button type="button" id="dailyRouteReplan">🔄 رتّب المتبقي</button>
+<button type="button" id="dailyRouteUndo" hidden>↩️ تراجع</button>
+<button type="button" class="route-muted" id="dailyRouteWeekly">📅 مراجعة الأسبوع</button>
+<button type="button" class="route-muted" id="dailyRoutePatterns">📈 أنماط الأسبوع</button>
+<button type="button" class="route-muted" id="dailyRouteArchive">🗂️ أرشيف الأيام</button>
+<button type="button" id="dailyRouteSimple">🚨 وضع مبسط</button>
+<button type="button" id="dailyRouteSettings" aria-label="ضبط اقتراحات مسار اليوم">⚙️</button>
+<button type="button" id="decisionRulesBtn">⚙️ القواعد</button>
+      </div>
     <div class="weekly-goal-banner" id="weeklyGoalBanner" hidden>
       <span class="weekly-goal-ico" aria-hidden="true">🎯</span>
       <div class="weekly-goal-copy"><small id="weeklyGoalLabel">هدف هذا الأسبوع</small><b id="weeklyGoalText"></b></div>
       <button type="button" class="weekly-goal-action" id="weeklyGoalDone" aria-pressed="false">تحديد كمكتمل</button>
       <div class="weekly-goal-steps" id="weeklyGoalSteps" aria-label="خطوات هدف الأسبوع"></div>
     </div>
-    <div class="smart-actions" id="smartActions" aria-label="اختصارات سريعة">
-      <button type="button" id="quickTaskBtn">＋ مهمة</button>
-      <button type="button" id="quickExpenseBtn">＋ مصروف</button>
-      <button type="button" id="quickWaterBtn">💧 كوب ماء</button>
-      <span class="quick-custom-actions" id="quickCustomActions"></span>
-      <button type="button" id="quickActionsCatalogBtn">⚡ كل الإجراءات</button>
-      <button type="button" id="quickCustomActionBtn">＋ اختصار سريع</button>
-      <button type="button" id="quickManageActionsBtn">⚙ إدارة الاختصارات</button>
-      <button type="button" id="shareWeekBtn">↗ مشاركة الأسبوع</button>
-    </div>
-    <p class="quick-action-feedback" id="quickActionFeedback" role="status" aria-live="polite"></p>
     <div class="quick-template-bar" id="quickTemplateBar" aria-label="قوالب سريعة">
       <button type="button" data-quick-template="morning">☀️ روتين صباحي</button>
       <button type="button" data-quick-template="evening">🌙 روتين مسائي</button>
@@ -2392,11 +2452,9 @@
       <p class="quick-template-status" id="quickTemplateStatus">اختر قالبًا لإضافته إلى مهام اليوم.</p>
       <p class="quick-template-feedback" id="quickTemplateFeedback" role="status" aria-live="polite"></p>
     </div>
-    <section class="tomorrow-panel" id="tomorrowPanel" aria-labelledby="tomorrowTitle">
-      <h3 id="tomorrowTitle">🗓️ لوحة الغد</h3>
-      <div class="tomorrow-items" id="tomorrowItems" aria-live="polite"></div>
-      <p id="tomorrowHint"></p>
-    </section>
+    </details>
+    <div class="overview-footer"><button type="button" class="route-muted" id="dailyRouteClose">🌙 مراجعة اليوم</button></div>
+    <details class="tomorrow-panel overview-disclosure" id="tomorrowPanel"><summary id="tomorrowTitle">خطة الغد</summary><div class="tomorrow-items" id="tomorrowItems" aria-live="polite"></div><p id="tomorrowHint"></p></details>
   </section>
 
   <nav class="quick-nav" aria-label="التنقل الرئيسي">
@@ -9343,8 +9401,8 @@
     try{ if(expState&&typeof expSalaryCycleStatus==="function"){ const cycle=expSalaryCycleStatus(todayStr()); if(cycle.salary>0){financeTitle="المتبقي من الراتب";financeDetail=expMoney(cycle.remaining)+" · "+_arn(cycle.days)+" أيام";} } }catch(e){}
     const rows=[
       {id:"prayer",icon:"🕌",title:"الصلاة: "+prayerName,detail:prayerTime?"موعدها "+fmt12(prayerTime):"سجّل الصلاة التالية",go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById("prayerCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
-      {id:"task",icon:"✅",title:planned?itemText(planned):"لا توجد مهمة معلّقة",detail:planned?(planned.dueTime?"موعدها "+planned.dueTime:"أقرب أولوية لديك"):"أضف مهمة أو أولوية",go:()=>{appViewSet("today");setTimeout(()=>document.getElementById("tasksCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
-      {id:"worship",icon:counter?"📿":"📖",title:counter?counter.text:"ورد القرآن",detail:counter?("العداد: "+_arn(counter.count||0)+" / "+_arn(counter.target||0)):(qRemain?"بقي "+_arn(qRemain)+" صفحات":"اكتمل ورد اليوم"),go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById(counter?"ibadahCard":"quranCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"task",icon:"✅",title:"المهام",detail:"فتح قائمة المهام والأولويات",go:()=>{appViewSet("today");setTimeout(()=>document.getElementById("tasksCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
+      {id:"worship",icon:counter?"📿":"📖",title:counter?counter.text:"ورد القرآن",detail:counter?("العداد: "+_arn(counter.count||0)+" / "+_arn(counter.target||0)):(currentDate!==todayStr()?"فتح ورد اليوم الحالي":qRemain?"بقي "+_arn(qRemain)+" صفحات":"اكتمل ورد اليوم"),go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById(counter?"ibadahCard":"quranCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
       {id:"health",icon:"💧",title:"الماء والصحة",detail:state.water<waterGoal()?"بقي "+_arn(waterGoal()-state.water)+" أكواب":"اكتمل هدف الماء اليوم",go:()=>{appViewSet("sport");setTimeout(()=>document.getElementById("waterCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);}},
       {id:"finance",icon:"💰",title:financeTitle,detail:financeDetail,go:()=>{expOpenOverlay();expSetView("dash");}}
     ];
@@ -9376,15 +9434,32 @@
   function dailyRouteSettingsLoad(){try{const x=JSON.parse(localStorage.getItem(DAILY_ROUTE_SETTINGS_KEY)||"{}");return {habitFallback:x.habitFallback!==false,family:x.family!==false,patterns:x.patterns!==false};}catch(e){return {habitFallback:true,family:true,patterns:true};}}
   function dailyRouteSettingsSave(value){localStorage.setItem(DAILY_ROUTE_SETTINGS_KEY,JSON.stringify(value));renderTodayOverview();}
   function dailyRoutePlanIds(){return state&&state.dailyRoute&&Array.isArray(state.dailyRoute.planIds)?state.dailyRoute.planIds:[];}
+  function overviewTasks(){
+    const seen=new Set();
+    return (state.priorities||[]).concat(state.tasks||[]).filter(item=>{
+      const source=dailyRouteSource(item);
+      if(!taskActive(source)||seen.has(source.id))return false;
+      seen.add(source.id);return true;
+    }).map(dailyRouteSource);
+  }
   function dailyRouteCandidates(){
-    const priority=(state.priorities||[]).filter(itemFilled).filter(item=>!itemDone(item)).filter(item=>taskStatus(item)!=="cancelled"&&taskStatus(item)!=="deferred");
-    const tasks=(state.tasks||[]).filter(taskActive).filter(item=>!itemDone(item)).filter(item=>taskStatus(item)!=="deferred");
-    const planned=dailyRoutePlanIds();
-    return priority.concat(tasks).sort((a,b)=>{const ap=planned.indexOf(a.id),bp=planned.indexOf(b.id);if(ap>=0||bp>=0)return (ap<0?99:ap)-(bp<0?99:bp);return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");});
+    const planned=dailyRoutePlanIds(), pinned=state.dailyRoute&&state.dailyRoute.pinnedId;
+    const now=new Date().toTimeString().slice(0,5), today=currentDate===todayStr();
+    const rank=item=>item.id===pinned?-1:today&&item.dueTime&&item.dueTime>now?2:0;
+    return overviewTasks().filter(item=>!itemDone(item)&&taskStatus(item)!=="deferred").sort((a,b)=>{
+      const rankDiff=rank(a)-rank(b);if(rankDiff)return rankDiff;
+      // Upcoming appointments remain chronological; a later planned appointment must not hide an earlier one.
+      if(rank(a)===2)return a.dueTime.localeCompare(b.dueTime);
+      const ap=planned.includes(a.id)||((state.priorities||[]).some(p=>planned.includes(p.id)&&p.sourceTaskId===a.id));
+      const bp=planned.includes(b.id)||((state.priorities||[]).some(p=>planned.includes(p.id)&&p.sourceTaskId===b.id));
+      if(ap!==bp)return ap?-1:1;
+      return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
+    });
   }
   function dailyRouteCurrent(){ return dailyRouteCandidates()[0]||null; }
   function dailyRouteSource(item){ return item&&item.sourceTaskId?(taskById(item.sourceTaskId)||item):item; }
   function dailyRouteReason(item){
+    if(state.dailyRoute&&state.dailyRoute.pinnedId===item.id)return "لأنك ثبّتها لتكون خطوتك التالية";
     if(dailyRoutePlanIds().includes(item.id)) return "لأنك اخترتها ضمن أهم ٣ أولويات اليوم";
     if(item.dueTime) return "لأن لها موعدًا عند "+item.dueTime;
     if(item.category==="منزل") return "لأنها مهمة منزلية أو عائلية معلّقة";
@@ -9406,30 +9481,115 @@
   }
   function dailyRouteFocusMinutes(s){return ((s&&s.dailyRoute&&s.dailyRoute.events)||[]).reduce((sum,event)=>sum+((event&&event.type&&event.type.startsWith("focus_")&&Number(event.minutes)>0)?Number(event.minutes):0),0);}
   function dailyRouteSpent(date){try{return expActiveTx().filter(tx=>tx.transactionDate===date&&tx.transactionType!=="transfer").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);}catch(e){return 0;}}
+  function overviewNavigate(view,id){
+    appViewSet(view);
+    const target=document.getElementById(id);
+    if(target){target.classList.remove("compact-hidden");target.scrollIntoView({behavior:"smooth",block:"start"});}
+  }
+  function overviewRefresh(){renderTaskLists();renderWater();renderProgress();}
+  function overviewTaskDetail(task){
+    const status=taskStatus(task), steps=(task.subtasks||[]).filter(step=>!step.done).length;
+    return (status==="done"?"مكتملة":status==="deferred"?"مؤجلة":task.dueTime?"الموعد: "+task.dueTime:"بدون موعد محدد")+(steps?" · بقي "+steps.toLocaleString("ar-EG")+" خطوات":"");
+  }
+  function overviewRenderRemaining(mode,current){
+    let rows=mode==="past"?overviewTasks():dailyRouteCandidates().filter(item=>item.id!==current?.id);
+    if(mode!=="past")rows=rows.concat(overviewTasks().filter(item=>taskStatus(item)==="deferred"));
+    document.getElementById("overviewRestTitle").textContent=mode==="past"?"مهام ذلك اليوم":mode==="future"?"بقية الخطة":"باقي اليوم";
+    document.getElementById("todayRemaining").textContent=rows.length.toLocaleString("ar-EG")+" مهام";
+    const host=document.getElementById("overviewRemainingList"), extra=document.getElementById("overviewRemainingExtra");
+    host.replaceChildren();extra.replaceChildren();
+    rows.forEach((task,i)=>{
+      const button=document.createElement("button");button.type="button";button.className="overview-rest-row";
+      const copy=document.createElement("span"), small=document.createElement("small"), arrow=document.createElement("span");
+      copy.textContent=itemText(task);small.textContent=overviewTaskDetail(task);copy.appendChild(small);arrow.textContent="‹";arrow.className="overview-row-arrow";arrow.setAttribute("aria-hidden","true");
+      button.append(copy,arrow);button.onclick=()=>taskOpenMeta(task,overviewRefresh);(i<3?host:extra).appendChild(button);
+    });
+    if(!rows.length){const empty=document.createElement("p");empty.className="overview-empty";empty.textContent=mode==="past"?"لا توجد مهام مسجلة لهذا اليوم.":"لا توجد مهام أخرى في القائمة.";host.appendChild(empty);}
+    const more=document.getElementById("overviewRemainingMore");more.hidden=rows.length<=3;more.querySelector("summary").textContent="عرض الباقي ("+Math.max(0,rows.length-3).toLocaleString("ar-EG")+")";
+  }
+  function overviewChoose(){
+    const choices=dailyRouteCandidates(), sheet=taskSheet("اختر خطوتك التالية",'<p class="task-history-empty">تُثبّت المهمة المختارة في هذا اليوم حتى تنجزها أو تلغي تثبيتها.</p><div id="overviewChoices"></div>');
+    const host=sheet.over.querySelector("#overviewChoices");
+    choices.forEach(task=>{const b=document.createElement("button");b.type="button";b.className="overview-rest-row";b.textContent=itemText(task)+" · "+overviewTaskDetail(task);b.onclick=()=>{state.dailyRoute=state.dailyRoute||{};state.dailyRoute.pinnedId=task.id;save();sheet.close();renderTodayOverview();document.getElementById("dailyRouteStart").focus();};host.appendChild(b);});
+  }
+  let overviewUndoTicket=null, overviewUndoTimer=null;
+  function overviewOfferUndo(text,restore){
+    clearTimeout(overviewUndoTimer);
+    overviewUndoTicket={date:currentDate,until:Date.now()+30000,text,restore};
+    overviewUndoTimer=setTimeout(()=>{overviewUndoTicket=null;overviewRenderUndo();},30000);
+    overviewRenderUndo();
+  }
+  function overviewRenderUndo(){
+    const host=document.getElementById("overviewFeedback"), ticket=overviewUndoTicket;
+    if(!host)return;host.hidden=!ticket||ticket.date!==currentDate||Date.now()>ticket.until;
+    if(host.hidden)return;
+    document.getElementById("overviewFeedbackText").textContent=ticket.text;
+    document.getElementById("overviewUndo").onclick=()=>{
+      if(overviewUndoTicket!==ticket||ticket.date!==currentDate||Date.now()>ticket.until)return;
+      overviewUndoTicket=null;clearTimeout(overviewUndoTimer);
+      const restored=ticket.restore();
+      if(restored){save();overviewRefresh();}
+      overviewRenderUndo();smartActionNotice(restored?"تم التراجع.":"تغيّر السجل بعد العملية؛ راجعه من قسمه قبل التعديل.");
+    };
+  }
+  function overviewComplete(item){
+    const source=dailyRouteSource(item), id=source.id, date=currentDate;
+    const fields=["done","status","postponedToDate","postponedToTime"];
+    const before=Object.fromEntries(fields.map(key=>[key,source[key]]));
+    taskSetDone(source,true);
+    const after=Object.fromEntries(fields.map(key=>[key,source[key]]));
+    dailyRouteSaveEvent("done",itemText(source));
+    overviewOfferUndo("تم إنجاز «"+itemText(source)+"»",()=>{
+      const target=overviewTasks().find(task=>task.id===id);
+      if(currentDate!==date||!target||fields.some(key=>target[key]!==after[key]))return false;
+      fields.forEach(key=>{if(before[key]===undefined)delete target[key];else target[key]=before[key];});
+      dailyRouteSaveEvent("undo_done",itemText(target));return true;
+    });
+    overviewRefresh();
+  }
+  function overviewAddWater(){
+    if(currentDate>todayStr()){smartActionNotice("اختر اليوم الحالي أو يومًا سابقًا لتسجيل الماء.");return;}
+    const before=Number(state.water)||0, after=Math.min(waterGoal(),before+1);
+    if(after<=before){smartActionNotice("اكتمل هدف الماء المسجل.");return;}
+    state.water=after;save();renderWater();renderProgress();
+    overviewOfferUndo("تم تسجيل كوب ماء",()=>{if(state.water!==after)return false;state.water=before;return true;});
+  }
   function dailyRouteRender(){
     const host=document.getElementById("dailyRoute"); if(!host||!state)return;
-    const settings=dailyRouteSettingsLoad();
+    const settings=dailyRouteSettingsLoad(), mode=currentDate<todayStr()?"past":currentDate>todayStr()?"future":"today";
     const task=dailyRouteCurrent(), all=dailyRouteCandidates();
     const title=document.getElementById("dailyRouteTask"), status=document.getElementById("dailyRouteStatus");
     const start=document.getElementById("dailyRouteStart"), done=document.getElementById("dailyRouteDone"), defer=document.getElementById("dailyRouteDefer"), replan=document.getElementById("dailyRouteReplan");
-    if(task){
-      const due=task.dueTime?"موعدها "+task.dueTime:"المهمة التالية من أولوياتك";
-      const essentials=homeCompact?dailyRouteEssentials():[];
-      title.innerHTML="🎯 "+expEsc(itemText(task))+"<small>"+expEsc(due)+" · "+expEsc(dailyRouteReason(task))+" · بقي "+all.length.toLocaleString("ar-EG")+" مهام قابلة للتنفيذ"+(essentials.length?"<br>الحد الأدنى: "+expEsc(essentials.join(" · ")):"")+"</small>";
-      status.textContent=(dailyRoutePlanIds().includes(task.id)?"من خطة اليوم" : "ماذا أفعل الآن؟")+(all.length>=5?" · يوم مزدحم":""); start.textContent="ابدأ التركيز";start.hidden=false;done.hidden=false;defer.hidden=false;
-      start.onclick=()=>dailyRouteOpenFocus(task); done.onclick=()=>{taskSetDone(dailyRouteSource(task),true);dailyRouteSaveEvent("done",itemText(task));renderTaskLists();renderProgress();};
-      defer.onclick=()=>{const source=dailyRouteSource(task);source.status="deferred";source.done=false;dailyRouteSaveEvent("deferred",itemText(task));renderTaskLists();renderProgress();};
+    const options=document.getElementById("dailyRouteOptions");
+    document.getElementById("dailyRouteTitle").textContent=mode==="past"?"سجل الإنجاز":mode==="future"?"خطة اليوم المحدد":"خطوتك التالية";
+    const upcoming=task&&mode==="today"&&task.dueTime&&task.dueTime>new Date().toTimeString().slice(0,5);
+    start.hidden=true;done.hidden=true;options.hidden=mode==="past"||!task;
+    if(mode==="past"){
+      const completed=overviewTasks().filter(itemDone).length;
+      title.textContent="أنجزت "+completed.toLocaleString("ar-EG")+" من "+overviewTasks().length.toLocaleString("ar-EG")+" مهام";
+      status.textContent="سجل اليوم المحدد";
+      const note=document.createElement("small");note.textContent=(state.dailyRoute&&state.dailyRoute.review&&state.dailyRoute.review.win)||"يمكنك مراجعة المهام وتعديل سجلاتها من القائمة.";title.appendChild(note);
+    }else if(task){
+      title.innerHTML=expEsc(itemText(task))+"<small>"+(task.dueTime?"الموعد: <bdi>"+expEsc(task.dueTime)+"</bdi> · ":"بدون موعد محدد · ")+expEsc(dailyRouteReason(task))+"</small>";
+      const preparation=(task.subtasks||[]).filter(step=>!step.done).length;
+      if(preparation)title.innerHTML+="<small>بقي "+preparation.toLocaleString("ar-EG")+" خطوات داخل المهمة</small>";
+      status.textContent=mode==="future"?"للتخطيط":upcoming?"موعد قادم":state.dailyRoute?.pinnedId===task.id?"مثبّتة باختيارك":"مقترحة لك";
+      start.hidden=false;start.textContent=mode==="future"||upcoming?"عرض التفاصيل":"ابدأ التركيز";
+      start.onclick=mode==="future"||upcoming?()=>taskOpenMeta(task,overviewRefresh):()=>dailyRouteOpenFocus(task);
+      done.hidden=mode!=="today";done.onclick=()=>overviewComplete(task);
+      defer.hidden=mode==="future";defer.onclick=()=>{options.open=false;taskPostponeOpen(task,overviewRefresh);};
+      document.getElementById("dailyRouteEdit").onclick=()=>{options.open=false;taskOpenMeta(task,overviewRefresh);};
+      const pin=document.getElementById("dailyRoutePin");pin.textContent=state.dailyRoute?.pinnedId===task.id?"إلغاء تثبيت المهمة":"تثبيت هذه المهمة";
+      pin.onclick=()=>{state.dailyRoute=state.dailyRoute||{};state.dailyRoute.pinnedId=state.dailyRoute.pinnedId===task.id?null:task.id;save();options.open=false;renderTodayOverview();};
+      document.getElementById("dailyRouteChoose").onclick=()=>{options.open=false;overviewChoose();};
     }else{
-      const habit=settings.habitFallback?dailyRouteHabit():null;
-      if(habit){
-        title.innerHTML="📿 وردك الحالي: "+expEsc(habit.label)+"<small>لا توجد مهمة عاجلة الآن؛ هذه عادة ناقصة ومناسبة لهذه اللحظة.</small>";
-        status.textContent="خطوة إيمانية خفيفة"; start.hidden=false;start.textContent="فتح العادة";done.hidden=true;defer.hidden=true;
-        start.onclick=()=>{appViewSet("iman");setTimeout(()=>document.getElementById("ibadahCard")?.scrollIntoView({behavior:"smooth",block:"start"}),100);dailyRouteSaveEvent("habit_context",habit.label);};
-      }else{
-        title.innerHTML="✨ لا توجد مهمة معلّقة الآن<small>أضف فكرة أو مهمة سريعة، أو راجع إغلاق اليوم.</small>";
-        status.textContent="يوم هادئ"; start.hidden=true;done.hidden=true;defer.hidden=true;
-      }
+      status.textContent=mode==="future"?"للتخطيط":"";
+      title.innerHTML=mode==="future"?"لا توجد مهام مخططة لهذا اليوم<small>يمكنك إضافة مهمة أو استخدام القوالب من «ترتيب يومي».</small>":"لا توجد مهام معلّقة<small>وقتك متاح للراحة، ويمكنك مراجعة يومك عندما ترغب.</small>";
+      // Optional habit fallback remains available through the existing preference.
+      const habit=mode==="today"&&settings.habitFallback&&dailyRouteHabit();
+      if(habit){start.hidden=false;start.textContent="فتح وردك: "+habit.label;status.textContent="خطوة إيمانية خفيفة";start.onclick=()=>overviewNavigate("iman","ibadahCard");}
     }
+    overviewRenderRemaining(mode,mode==="past"?null:task);
     document.getElementById("dailyRouteInbox").onclick=dailyRouteOpenInbox;
     const family=document.getElementById("dailyRouteFamily");family.hidden=!settings.family;family.onclick=dailyRouteOpenFamilyAppointment;
     document.getElementById("dailyRoutePlan").onclick=dailyRouteOpenPlan;
@@ -9440,7 +9600,12 @@
     const patterns=document.getElementById("dailyRoutePatterns");patterns.hidden=!settings.patterns;patterns.onclick=dailyRouteOpenPatterns;
     document.getElementById("dailyRouteArchive").onclick=dailyRouteOpenArchive;
     document.getElementById("dailyRouteSettings").onclick=dailyRouteOpenSettings;
-    document.getElementById("dailyRouteClose").onclick=dailyRouteOpenClose;
+    const close=document.getElementById("dailyRouteClose");close.hidden=mode==="future";close.textContent=mode==="past"?"مراجعة هذا اليوم":"مراجعة اليوم";close.onclick=dailyRouteOpenClose;
+    document.getElementById("dailyRoutePlan").hidden=mode==="past";
+    replan.hidden=mode==="past"||all.length<2;
+    document.getElementById("overviewPlanning").querySelector("summary").firstChild.textContent=mode==="past"?"أدوات اليوم ":"ترتيب يومي ";
+    document.getElementById("tomorrowTitle").textContent=mode==="today"?"خطة الغد":"خطة اليوم التالي";
+    overviewRenderUndo();
   }
   function dailyRouteOpenSettings(){
     const settings=dailyRouteSettingsLoad(), row=(id,label,checked)=>'<label class="daily-carry-row"><input type="checkbox" data-route-setting="'+id+'" '+(checked?"checked":"")+'><span>'+label+'</span></label>';
@@ -9448,7 +9613,7 @@
     sheet.over.querySelector("#dailyRouteSettingsSave").onclick=()=>{const next={habitFallback:false,family:false,patterns:false};sheet.over.querySelectorAll("[data-route-setting]").forEach(box=>next[box.dataset.routeSetting]=box.checked);dailyRouteSettingsSave(next);sheet.close();};
   }
   function dailyRouteOpenPlan(){
-    const choices=dailyRouteCandidates().slice(0,12), selected=new Set(dailyRoutePlanIds());
+    const choices=dailyRouteCandidates(), selected=new Set(dailyRoutePlanIds());
     const habitCount=(typeof wAllItemsForDate==="function"?wAllItemsForDate(currentDate):[]).filter(item=>!state.worship[item.id]).length;
     const sportMissing=!sportDone(state), q=qLoad(), qMissing=Math.max(0,q.target-Math.max(0,q.page-q.startPage));
     const timed=choices.filter(item=>item.dueTime), morning=timed.filter(item=>item.dueTime<"12:00").length, afternoon=timed.filter(item=>item.dueTime>="12:00"&&item.dueTime<"18:00").length, evening=timed.filter(item=>item.dueTime>="18:00").length;
@@ -9462,19 +9627,38 @@
     const source=dailyRouteSource(item), tomorrow=dailyRouteTomorrow(); let next;
     try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){} if(!next)next=blankState(); ensureIds(next);
     const text=itemText(item); next.tasks=next.tasks||[];
-    let target=null;if(!next.tasks.some(t=>itemText(t)===text&&!itemDone(t))){target=taskCopyRecurrenceFields(source,{id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:source.dueTime||"",reminderMinutes:+source.reminderMinutes||0,category:source.category||"",link:source.link||"",contactName:source.contactName||"",phone:source.phone||"",subtasks:(source.subtasks||[]).map(s=>Object.assign({},s))});next.tasks.push(target);}
-    const before={sourceId:source.id,status:taskStatus(source),done:!!source.done,tomorrow,targetId:target&&target.id};source.status="deferred";source.done=false;persistDay(tomorrow,next);return before;
+    let target=null;if(!next.tasks.some(t=>t.carriedFromTaskId===source.id&&t.carriedFromDate===currentDate)){target=taskCopyRecurrenceFields(source,{id:newId(),carriedFromTaskId:source.id,carriedFromDate:currentDate,text,done:false,status:"pending",dueDate:tomorrow,dueTime:source.dueTime||"",reminderMinutes:+source.reminderMinutes||0,category:source.category||"",link:source.link||"",contactName:source.contactName||"",phone:source.phone||"",subtasks:(source.subtasks||[]).map(s=>Object.assign({},s))});next.tasks.push(target);}
+    const before={sourceId:source.id,status:taskStatus(source),done:!!source.done,tomorrow,targetId:target&&target.id,targetSnapshot:target?JSON.stringify(target):null};source.status="deferred";source.done=false;persistDay(tomorrow,next);return before;
   }
   function dailyRouteOpenReplan(){
-    const choices=dailyRouteCandidates().slice(0,12), planned=new Set(dailyRoutePlanIds());
+    const choices=dailyRouteCandidates(), planned=new Set(dailyRoutePlanIds());
     const rows=choices.map((item,i)=>'<label class="daily-carry-row"><input type="checkbox" data-replan="'+i+'" '+(planned.has(item.id)||(!planned.size&&i<3)?"checked":"")+'><span>'+expEsc(itemText(item))+'</span></label>').join("");
-    const now=new Date(), hours=Math.max(0,Math.ceil((new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now)/3600000)), capacity=Math.max(1,Math.floor(hours*2));
-    const hint=choices.length>capacity?"بقي نحو "+hours.toLocaleString("ar-EG")+" ساعات، بينما لديك "+choices.length.toLocaleString("ar-EG")+" مهام. نقترح الاكتفاء بـ "+Math.min(3,capacity).toLocaleString("ar-EG")+" أولويات ونقل الباقي عند رغبتك.":"بقي نحو "+hours.toLocaleString("ar-EG")+" ساعات؛ اختر ما تريد الإبقاء عليه بوضوح.";
-    const sheet=taskSheet("🔄 إعادة ترتيب المتبقي",'<p class="task-history-empty">'+hint+'</p><div id="dailyReplanList">'+rows+'</div><label class="daily-carry-row"><input type="checkbox" id="dailyReplanMove"><span>انقل غير المختار إلى الغد</span></label><div class="exp-err" id="dailyReplanErr"></div><button type="button" class="task-sheet-save" id="dailyReplanSave">حفظ الترتيب</button>');
+    const hint="اختر حتى ٣ مهام أساسية. يبقى الباقي في هذا اليوم، إلا إذا اخترت نقله إلى اليوم التالي.";
+    const sheet=taskSheet("🔄 إعادة ترتيب المتبقي",'<p class="task-history-empty">'+hint+'</p><div id="dailyReplanList">'+rows+'</div><label class="daily-carry-row"><input type="checkbox" id="dailyReplanMove"><span>انقل غير المختار إلى الغد</span></label><p id="dailyReplanPreview" class="task-history-empty" role="status"></p><div class="exp-err" id="dailyReplanErr"></div><button type="button" class="task-sheet-save" id="dailyReplanSave">حفظ الترتيب</button>');
+    const preview=()=>{
+      const kept=[...sheet.over.querySelectorAll("[data-replan]:checked")].map(box=>choices[+box.dataset.replan]);
+      const moving=sheet.over.querySelector("#dailyReplanMove").checked?choices.filter(item=>!kept.includes(item)):[];
+      sheet.over.querySelector("#dailyReplanPreview").textContent=moving.length?"سينتقل إلى "+dailyRouteTomorrow()+": "+moving.map(item=>itemText(item)).join("، "):"لن تُنقل أي مهمة. ستتغير الأولويات فقط.";
+    };
+    sheet.over.querySelectorAll("input").forEach(input=>input.onchange=preview);preview();
     sheet.over.querySelector("#dailyReplanSave").onclick=()=>{const kept=[...sheet.over.querySelectorAll("[data-replan]:checked")].map(box=>choices[+box.dataset.replan]).filter(Boolean);if(kept.length>3){sheet.over.querySelector("#dailyReplanErr").textContent="اختر ٣ مهام كحد أقصى حتى تكون بقية اليوم قابلة للتنفيذ.";return;}const move=sheet.over.querySelector("#dailyReplanMove").checked,moves=move?choices.filter(item=>!kept.includes(item)).map(dailyRouteMoveToTomorrow).filter(Boolean):[];state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.planIds=kept.map(item=>item.id);if(moves.length)state.dailyRoute.undo={type:"replan",at:Date.now(),moves};dailyRouteSaveEvent("replan",move?"إعادة ترتيب ونقل المتبقي":"إعادة ترتيب المتبقي");sheet.close();renderTaskLists();renderProgress();};
   }
   function dailyRouteUndoReplan(){
-    const undo=state.dailyRoute&&state.dailyRoute.undo;if(!undo||undo.type!=="replan")return;let restored=0;(undo.moves||[]).forEach(move=>{const source=taskById(move.sourceId);if(source){source.status=move.status||"pending";source.done=!!move.done;restored++;}if(move.targetId&&move.tomorrow){let next;try{next=JSON.parse(localStorage.getItem(storageKey(move.tomorrow))||"null");}catch(e){}if(next&&Array.isArray(next.tasks)){next.tasks=next.tasks.filter(task=>task.id!==move.targetId);persistDay(move.tomorrow,next);}}});delete state.dailyRoute.undo;dailyRouteSaveEvent("undo_replan","التراجع عن نقل "+restored.toLocaleString("ar-EG")+" مهام");renderTaskLists();renderProgress();}
+    const undo=state.dailyRoute&&state.dailyRoute.undo;if(!undo||undo.type!=="replan")return;
+    let restored=0;
+    (undo.moves||[]).forEach(move=>{
+      const source=overviewTasks().find(item=>item.id===move.sourceId);
+      if(!source||taskStatus(source)!=="deferred")return;
+      if(move.targetId&&move.tomorrow){
+        const next=smartReadDay(move.tomorrow), target=(next.tasks||[]).find(task=>task.id===move.targetId);
+        if(!target||!move.targetSnapshot||JSON.stringify(target)!==move.targetSnapshot)return;
+        next.tasks=next.tasks.filter(task=>task.id!==move.targetId);persistDay(move.tomorrow,next);
+      }
+      source.status=move.status||"pending";source.done=!!move.done;restored++;
+    });
+    delete state.dailyRoute.undo;dailyRouteSaveEvent("undo_replan","التراجع عن نقل "+restored.toLocaleString("ar-EG")+" مهام");overviewRefresh();
+    smartActionNotice("تمت استعادة "+restored.toLocaleString("ar-EG")+" مهام. تُترك المهام التي عُدّلت بعد النقل دون تغيير.");
+  }
   function dailyRouteToggleSimple(){
     if(!homeCompact){
       /* إعداد افتراضي محافظ: يبقي مسار اليوم والمهام والمقاييس، ويخفي التفاصيل الاختيارية فقط. يمكن تغييره من الإعدادات المشتركة لاحقًا. */
@@ -9533,18 +9717,34 @@
     sheet.over.querySelector(".task-sheet-close").onclick=sheet.close;
     const finish=(type)=>{stop();const minutes=elapsedMs?Math.max(1,Math.round(elapsedMs/60000)):0,note=sheet.over.querySelector("#dailyFocusNote").value.trim(),source=dailyRouteSource(task);source.focusNotes=Array.isArray(source.focusNotes)?source.focusNotes:[];if(note)source.focusNotes.push({text:note,at:Date.now()});dailyRouteSaveEvent(type,itemText(task)+(minutes?" · "+minutes.toLocaleString("ar-EG")+" دقيقة":"")+(note?" · "+note:""),{minutes});return {source,minutes};};
     sheet.over.querySelector("#dailyFocusToggle").onclick=e=>{if(timer){stop();e.currentTarget.textContent="متابعة الجلسة";}else{if(activeMs()>=25*60000)return;startedAt=Date.now();timer=setInterval(()=>{seconds=Math.max(0,25*60-Math.floor(activeMs()/1000));fmt();if(seconds===0){stop();e.currentTarget.textContent="انتهت الجلسة";}},1000);e.currentTarget.textContent="إيقاف مؤقت";}};
-    sheet.over.querySelector("#dailyFocusDone").onclick=()=>{const out=finish("focus_done");taskSetDone(out.source,true);save();sheet.close();renderTaskLists();renderProgress();};
+    sheet.over.querySelector("#dailyFocusDone").onclick=()=>{const out=finish("focus_done");sheet.close();overviewComplete(out.source);};
     sheet.over.querySelector("#dailyFocusProgress").onclick=()=>{const out=finish("focus_progress");out.source.status="in_progress";save();sheet.close();renderTaskLists();renderProgress();};
     sheet.over.querySelector("#dailyFocusAgain").onclick=()=>{const out=finish("focus_again");out.source.status="in_progress";save();sheet.close();renderTaskLists();renderProgress();};
     sheet.over.querySelector("#dailyFocusBlocked").onclick=()=>{const out=finish("focus_blocked");out.source.status="deferred";out.source.done=false;save();sheet.close();renderTaskLists();renderProgress();};
   }
   function dailyRouteOpenClose(){
-    const pending=dailyRouteCandidates(), done=(state.tasks||[]).filter(taskActive).filter(itemDone).length+(state.priorities||[]).filter(itemFilled).filter(itemDone).length;
+    const pending=dailyRouteCandidates(), done=overviewTasks().filter(itemDone).length;
     const focus=dailyRouteFocusMinutes(state), spent=dailyRouteSpent(currentDate);
     const summary='<div class="daily-review-summary"><div><b>'+done.toLocaleString("ar-EG")+'</b>مهام مكتملة</div><div><b>'+pending.length.toLocaleString("ar-EG")+'</b>مهام متبقية</div><div><b>'+state.prayers.filter(isPrayed).length.toLocaleString("ar-EG")+'</b>صلوات مسجلة</div><div><b>'+state.water.toLocaleString("ar-EG")+'</b>أكواب ماء</div><div><b>'+focus.toLocaleString("ar-EG")+'</b>دقائق تركيز</div><div><b>'+expMoney(spent)+'</b>مصروف اليوم</div></div>';
-    const carry=pending.map((item,i)=>'<label class="daily-carry-row"><input type="checkbox" data-carry="'+i+'" checked><span>'+expEsc(itemText(item))+'</span></label>').join("")||'<p class="task-history-empty">لا توجد مهام متبقية للنقل.</p>';
-    const sheet=taskSheet("🌙 إغلاق اليوم",summary+'<div class="task-fields"><label class="task-field-wide">أفضل شيء أنجزته<textarea id="dailyReviewWin" maxlength="180"></textarea></label><label class="task-field-wide">ما الذي عطّلك؟<textarea id="dailyReviewBlock" maxlength="180"></textarea></label><label class="task-field-wide">أهم شيء للغد<textarea id="dailyReviewTomorrow" maxlength="180"></textarea></label></div><p class="task-history-empty">اختر المهام التي تريد نقلها إلى الغد:</p><div id="dailyCarryList">'+carry+'</div><button type="button" class="task-sheet-save" id="dailyReviewSave">حفظ وإغلاق اليوم</button>');
-    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);const tomorrow=fmtDate(d);let next;try{next=JSON.parse(localStorage.getItem(storageKey(tomorrow))||"null");}catch(e){}if(!next)next=blankState();ensureIds(next);next.tasks=next.tasks||[];const addNext=(text,source)=>{if(!text||next.tasks.some(t=>itemText(t)===text&&!itemDone(t)))return;const task={id:newId(),text,done:false,status:"pending",dueDate:tomorrow,dueTime:(source&&source.dueTime)||"",reminderMinutes:+((source&&source.reminderMinutes)||0),category:(source&&source.category)||"شخصي",link:(source&&source.link)||"",contactName:(source&&source.contactName)||"",phone:(source&&source.phone)||"",subtasks:((source&&source.subtasks)||[]).map(s=>Object.assign({},s))};if(source)taskCopyRecurrenceFields(source,task);else task.repeat="none";next.tasks.push(task);};sheet.over.querySelectorAll("[data-carry]").forEach(box=>{if(!box.checked)return;const src=pending[+box.dataset.carry];if(src)addNext(itemText(src),src);});const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim();addNext(tomorrowText,null);persistDay(tomorrow,next);state.dailyRoute=state.dailyRoute&&typeof state.dailyRoute==="object"?state.dailyRoute:{};state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};dailyRouteSaveEvent("review","إغلاق اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();renderTodayOverview();};
+    const carry=pending.map((item,i)=>'<label class="daily-carry-row"><input type="checkbox" data-carry="'+i+'"><span>'+expEsc(itemText(item))+'</span></label>').join("")||'<p class="task-history-empty">لا توجد مهام متبقية للنقل.</p>';
+    const sheet=taskSheet("مراجعة اليوم",summary+'<div class="task-fields"><label class="task-field-wide">أفضل شيء أنجزته<textarea id="dailyReviewWin" maxlength="180"></textarea></label><label class="task-field-wide">ما الذي عطّلك؟<textarea id="dailyReviewBlock" maxlength="180"></textarea></label><label class="task-field-wide">أهم شيء للغد<textarea id="dailyReviewTomorrow" maxlength="180"></textarea></label></div><p class="task-history-empty">اختر المهام التي تريد نقلها إلى اليوم التالي ('+expEsc(dailyRouteTomorrow())+'):</p><div id="dailyCarryList">'+carry+'</div><button type="button" class="task-sheet-save" id="dailyReviewSave">حفظ المراجعة</button>');
+    sheet.over.querySelector("#dailyReviewWin").value=state.dailyRoute?.review?.win||"";
+    sheet.over.querySelector("#dailyReviewBlock").value=state.dailyRoute?.review?.blocker||"";
+    sheet.over.querySelector("#dailyReviewTomorrow").value=state.dailyRoute?.review?.tomorrow||"";
+    sheet.over.querySelector("#dailyReviewSave").onclick=()=>{
+      const chosen=[...sheet.over.querySelectorAll("[data-carry]:checked")].map(box=>pending[+box.dataset.carry]).filter(Boolean);
+      const moves=chosen.map(dailyRouteMoveToTomorrow);
+      const tomorrowText=sheet.over.querySelector("#dailyReviewTomorrow").value.trim(), tomorrow=dailyRouteTomorrow();
+      if(tomorrowText){
+        const next=smartReadDay(tomorrow);ensureIds(next);next.tasks=next.tasks||[];
+        if(!next.tasks.some(task=>itemText(task,next.tasks)===tomorrowText&&!itemDone(task,next.tasks)))next.tasks.push({id:newId(),text:tomorrowText,done:false,status:"pending",dueDate:tomorrow,repeat:"none"});
+        persistDay(tomorrow,next);
+      }
+      state.dailyRoute=state.dailyRoute||{};
+      if(moves.length)state.dailyRoute.undo={type:"replan",at:Date.now(),moves};
+      state.dailyRoute.review={at:Date.now(),win:sheet.over.querySelector("#dailyReviewWin").value.trim(),blocker:sheet.over.querySelector("#dailyReviewBlock").value.trim(),tomorrow:tomorrowText};
+      dailyRouteSaveEvent("review","مراجعة اليوم",{focusMinutes:focus,spentMinor:spent});sheet.close();overviewRefresh();
+    };
   }
   /* ---------- قواعد الاقتراح ومركز القرارات: اقتراحات فقط، بلا تنفيذ صامت ---------- */
   const DECISION_RULES_KEY="h2do-decision-rules-v1";
@@ -9572,7 +9772,7 @@
     if(reading)out.push({id:"morning-reading",icon:"📖",title:"ورد الصباح لم يُسجّل بعد",detail:"بقي "+reading.remaining.toLocaleString("ar-EG")+" صفحات من هدف القرآن اليوم.",action:"فتح القرآن",go:()=>{appViewSet("iman");setTimeout(()=>document.getElementById("quranCard")?.scrollIntoView({behavior:"smooth",block:"start"}),80);}});
     return out.slice(0,3);
   }
-  function renderDecisionCenter(){const host=document.getElementById("decisionCenterList");if(!host)return;const rows=decisionItems();host.innerHTML=rows.length?rows.map((row,i)=>'<div class="decision-row"><div><b>'+row.icon+" "+expEsc(row.title)+'</b><small>'+expEsc(row.detail)+'</small></div><button type="button" data-decision="'+i+'">'+row.action+'</button></div>').join(""):'<p class="task-history-empty">لا توجد قرارات عاجلة الآن.</p>';host.querySelectorAll("[data-decision]").forEach(button=>button.onclick=()=>rows[+button.dataset.decision].go());const settings=document.getElementById("decisionRulesBtn");if(settings)settings.onclick=decisionRulesOpen;}
+  function renderDecisionCenter(){const host=document.getElementById("decisionCenterList");if(!host)return;const rows=currentDate===todayStr()?decisionItems().filter(row=>row.id!=="morning-reading"&&row.id!=="family"):[];document.getElementById("decisionCenter").hidden=!rows.length;host.innerHTML=rows.length?rows.map((row,i)=>'<div class="decision-row"><div><b>'+row.icon+" "+expEsc(row.title)+'</b><small>'+expEsc(row.detail)+'</small></div><button type="button" data-decision="'+i+'">'+row.action+'</button></div>').join(""):'<p class="task-history-empty">لا توجد قرارات عاجلة الآن.</p>';host.querySelectorAll("[data-decision]").forEach(button=>button.onclick=()=>rows[+button.dataset.decision].go());const settings=document.getElementById("decisionRulesBtn");if(settings)settings.onclick=decisionRulesOpen;}
   function decisionRulesOpen(){
     const rules=decisionRulesLoad(),row=(id,label,checked)=>'<label class="daily-carry-row"><input type="checkbox" data-decision-rule="'+id+'" '+(checked?"checked":"")+'><span>'+label+'</span></label>';
     const sheet=taskSheet("⚙️ قواعد الاقتراح",'<p class="task-history-empty">القواعد تقترح فقط ولا تنفذ تعديلًا أو نقلًا من دون موافقتك.</p>'+row("family","عند بقاء تجهيزات موعد عائلي",rules.family)+row("deferred","عند تكرار تأجيل مهمة",rules.deferred)+'<label class="daily-carry-row"><span>عدد مرات التأجيل قبل الاقتراح</span><select id="decisionDeferredLimit">'+[2,3,4,5].map(n=>'<option value="'+n+'" '+(rules.deferredLimit===n?'selected':'')+'>'+n.toLocaleString("ar-EG")+' مرات</option>').join("")+'</select></label>'+row("unplanned","عند وجود مصروف غير مخطط خلال الأسبوع",rules.unplanned)+row("morningReading","بعد الفجر: اقترح ورد القرآن إن كان ناقصًا",rules.morningReading)+'<button type="button" class="task-sheet-save" id="decisionRulesSave">حفظ القواعد</button>');
@@ -9580,53 +9780,24 @@
   }
   function renderTodayOverview(){
     if(!state || !document.getElementById("todayOverviewTitle")) return;
-    const ar = n=>Number(n||0).toLocaleString("ar-EG");
-    const pct = (part,total)=> total ? Math.min(100,Math.round(part/total*100)) : 0;
-    const setMetric = (name,part,total)=>{
-      document.getElementById("today"+name+"Value").textContent = ar(part)+" / "+ar(total);
-      document.getElementById("today"+name+"Bar").style.width = pct(part,total)+"%";
+    const ar=n=>Number(n||0).toLocaleString("ar-EG"), today=currentDate===todayStr();
+    const setMetric=(name,part,total)=>{
+      document.getElementById("today"+name+"Value").textContent=ar(part)+" من "+ar(total);
+      document.getElementById("today"+name+"Bar").style.width=(total?Math.min(100,Math.round(part/total*100)):0)+"%";
     };
-
-    const prayerDone = state.prayers.filter(isPrayed).length;
-    const tasks = (state.tasks||[]).filter(taskActive);
-    const priorities = (state.priorities||[]).filter(itemFilled);
-    const taskDone = tasks.filter(t=>itemDone(t)).length + priorities.filter(p=>itemDone(p)).length;
-    const taskTotal = tasks.length + priorities.length;
-    const q = qLoad();
-    const qRead = Math.max(0,q.page-q.startPage);
-    setMetric("Prayer",prayerDone,PRAYERS.length);
-    setMetric("Task",taskDone,taskTotal);
-    setMetric("Quran",qRead,q.target);
+    document.getElementById("quickWaterBtn").disabled=currentDate>todayStr();
+    document.getElementById("quickWaterBtn").title=currentDate>todayStr()?"تسجيل الماء متاح لليوم الحالي والأيام السابقة":"";
+    const tasks=overviewTasks(), q=qLoad(), qRead=Math.max(0,q.page-q.startPage);
+    setMetric("Prayer",state.prayers.filter(isPrayed).length,PRAYERS.length);
+    setMetric("Task",tasks.filter(itemDone).length,tasks.length);
     setMetric("Water",state.water,waterGoal());
-
-    const viewingToday = currentDate === todayStr();
-    document.getElementById("todayOverviewTitle").firstChild.nodeValue = viewingToday ? "ملخص اليوم " : "ملخص اليوم المحدد ";
-    document.getElementById("todayOverviewDate").textContent = new Date(currentDate+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
-    const focus = document.getElementById("todayFocus");
-    const pendingPriority = priorities.find(p=>!itemDone(p));
-    const nextPrayerIndex = state.prayers.findIndex(v=>!isPrayed(v));
-    const hour=new Date().getHours(), appointment=tasks.find(task=>/^موعد عائلي:/.test(itemText(task))&&task.dueTime), focusTask=tasks.find(task=>taskStatus(task)==="in_progress");
-    if(appointment&&appointment.dueTime>=new Date().toTimeString().slice(0,5)) focus.textContent="👨‍👩‍👧 تجهيز الموعد: "+itemText(appointment)+" عند "+appointment.dueTime;
-    else if(focusTask) focus.textContent="⏱️ الجلسة الحالية: "+itemText(focusTask);
-    else if(hour>=18&&(tasks.some(task=>!itemDone(task))||priorities.some(priority=>!itemDone(priority)))) focus.textContent="🌙 مساءً: رتّب المتبقي أو انقله للغد دون حذف أي مهمة.";
-    else if(hour>=5&&hour<11&&qRead<q.target) focus.textContent="📖 صباحًا: وقت مناسب لورد القرآن — بقي "+ar(q.target-qRead)+" صفحات.";
-    else if(pendingPriority) focus.textContent = "🎯 تركيزك التالي: "+itemText(pendingPriority);
-    else if(nextPrayerIndex>=0) focus.textContent = "🕌 التالي: تسجيل صلاة "+PRAYERS[nextPrayerIndex];
-    else if(qRead<q.target) focus.textContent = "📖 بقي "+ar(q.target-qRead)+" صفحات لإتمام ورد القرآن";
-    else if(state.water<waterGoal()) focus.textContent = "💧 بقي "+ar(waterGoal()-state.water)+" أكواب لإتمام هدف الماء";
-    else focus.textContent = "✨ أنجزت أساسيات يومك — أحسنت وبارك الله في وقتك";
-    const priorityHost=document.getElementById("todayPriorityItems"); priorityHost.innerHTML="";
-    const pendingPriorityItems=priorities.filter(p=>!itemDone(p)).slice(0,3);
-    const fallbackTasks=tasks.filter(t=>!itemDone(t)).slice(0,Math.max(0,3-pendingPriorityItems.length));
-    const highlights=pendingPriorityItems.map(p=>itemText(p)).concat(fallbackTasks.map(t=>itemText(t)));
-    if(highlights.length) highlights.forEach(text=>{ const chip=document.createElement("span"); chip.className="today-priority-chip"; chip.textContent=text; priorityHost.appendChild(chip); });
-    else{ const chip=document.createElement("span"); chip.className="today-priority-chip"; chip.textContent="لا توجد أولويات معلّقة"; priorityHost.appendChild(chip); }
-    const remaining=state.prayers.filter(v=>!isPrayed(v)).length+tasks.filter(t=>!itemDone(t)).length+priorities.filter(p=>!itemDone(p)).length+(qRead<q.target?1:0)+(state.water<waterGoal()?1:0);
-    document.getElementById("todayRemaining").textContent="المتبقي اليوم: "+ar(remaining)+" عناصر";
-    renderWeeklyGoalBanner();
-    renderNowPanel();
-    dailyRouteRender();
-    renderDecisionCenter();
+    setMetric("Quran",today?qRead:0,q.target);
+    if(!today)document.getElementById("todayQuranValue").textContent="—";
+    document.getElementById("overviewQuranHint").textContent=today?(qRead<q.target?"باقي "+ar(q.target-qRead)+" صفحات · فتح القرآن":"اكتمل ورد اليوم"):"الصفحات متاحة لليوم الحالي فقط";
+    document.getElementById("todayOverviewTitle").firstChild.nodeValue=today?"ملخص اليوم ":currentDate<todayStr()?"سجل اليوم ":"خطة اليوم ";
+    document.getElementById("todayOverviewDate").textContent=new Date(currentDate+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"long"});
+    document.querySelectorAll("[data-overview-view]").forEach(link=>link.onclick=e=>{e.preventDefault();overviewNavigate(link.dataset.overviewView,link.hash.slice(1));});
+    renderWeeklyGoalBanner();renderNowPanel();dailyRouteRender();renderDecisionCenter();
   }
 
   function renderProgress(updatePageSummaries=true){
@@ -9706,7 +9877,7 @@
     if(action.kind==="quickTask"){smartOpenQuickTask();return;}
     if(action.kind==="task"){smartAddTasks([action.task],action.name);return;}
     if(action.kind==="expense"){expOpenExpenseForm(null);return;}
-    if(action.kind==="water"){state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();smartActionNotice("تمت إضافة كوب ماء.");return;}
+    if(action.kind==="water"){overviewAddWater();return;}
     if(action.kind==="share"){smartShareWeek();return;}
     if(action.kind==="iman"){appViewSet("iman");return;}
     if(action.kind==="dhikr"){appViewSet("iman");setTimeout(()=>document.querySelector(".dhikr-counter")?.scrollIntoView({behavior:"smooth",block:"center"}),120);return;}
@@ -9802,8 +9973,8 @@
     const host=document.getElementById("tomorrowItems"), hint=document.getElementById("tomorrowHint"); if(!host||!hint||!state) return;
     const tomorrow=smartTomorrowDate(), next=smartReadDay(tomorrow), dateLabel=new Date(tomorrow+"T12:00:00").toLocaleDateString("ar-SA",{weekday:"long",day:"numeric",month:"short"});
     const items=[];
-    const fajr=getTime("Fajr"); if(fajr) items.push("🕌 فجر الغد "+fmt12(fajr));
-    const scheduled=(next.tasks||[]).filter(taskActive).filter(t=>t.dueTime||t.dueDate===tomorrow).slice(0,2);
+    // Prayer times loaded for the selected day must not be presented as tomorrow’s times.
+    const scheduled=(next.tasks||[]).filter(taskActive).filter(t=>!itemDone(t,next.tasks)&&taskStatus(t)!=="deferred").filter(t=>t.dueTime||t.dueDate===tomorrow).slice(0,2);
     if(scheduled.length) items.push("✅ "+scheduled.map(t=>t.text).join(" · "));
     const habits=(typeof wAllItems==="function"?wAllItems():[]).filter(w=>!w.custom||typeof habitScheduledOn!=="function"||habitScheduledOn(w,tomorrow)).slice(0,2).map(w=>w.label);
     if(habits.length) items.push("🌱 "+habits.join(" · "));
@@ -9846,9 +10017,12 @@
   async function smartShareWeek(){const text=smartWeekSummary();try{if(navigator.share){await navigator.share({title:"ملخص أسبوعي",text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);smartActionNotice("تم نسخ الملخص للمشاركة.");}else prompt("انسخ الملخص:",text);}catch(e){if(e&&e.name!=="AbortError")prompt("انسخ الملخص:",text);}}
   function smartInit(){
     const byId=id=>document.getElementById(id);
+    setInterval(()=>{
+      if(!document.hidden&&!document.querySelector(".task-sheet-overlay")&&!document.querySelector(".today-overview details[open]")&&!document.querySelector(".today-overview")?.contains(document.activeElement))dailyRouteRender();
+    },60000);
     byId("quickTaskBtn").onclick=smartOpenQuickTask;
     byId("quickExpenseBtn").onclick=()=>expOpenExpenseForm(null);
-    byId("quickWaterBtn").onclick=()=>{state.water=Math.min(waterGoal(),(state.water||0)+1);save();renderWater();renderProgress();};
+    byId("quickWaterBtn").onclick=overviewAddWater;
     byId("quickActionsCatalogBtn").onclick=smartOpenActionCatalog;
     byId("quickCustomActionBtn").onclick=()=>smartOpenCustomAction();
     byId("quickManageActionsBtn").onclick=smartManageCustomActions;
@@ -10921,6 +11095,7 @@
   const picker = document.getElementById("datePicker");
 
   function goto(dateStr){
+    if(dateStr!==currentDate){document.getElementById("dailyRouteOptions").open=false;document.getElementById("overviewRemainingMore").open=false;}
     currentDate = dateStr;
     /* المزامنة لا تعتمد على نجاح الرسم: كل خطوة معزولة، والسحب يعمل دائمًا حتى لو فشل الرسم */
     safeRun("goto:picker", ()=>{ picker.value = dateStr; });
