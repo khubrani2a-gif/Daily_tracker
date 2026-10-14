@@ -10001,18 +10001,34 @@
     const delta=now.getTime()-target.getTime();
     return delta>=0&&delta<5*60000;
   }
-  function notifyWasSent(tag){
+  const notifyInFlight=new Set();
+  function notifySentState(){
     let sent={}; try{ sent=JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)||"{}")||{}; }catch(e){}
-    const cutoff=Date.now()-3*86400000; Object.keys(sent).forEach(k=>{ if(sent[k]<cutoff) delete sent[k]; });
-    if(sent[tag]) return true;
-    sent[tag]=Date.now(); localStorage.setItem(NOTIFY_SENT_KEY,JSON.stringify(sent)); return false;
+    if(typeof sent!=="object"||Array.isArray(sent)) sent={};
+    const cutoff=Date.now()-3*86400000;
+    Object.keys(sent).forEach(k=>{ if(!Number.isFinite(sent[k])||sent[k]<cutoff) delete sent[k]; });
+    return sent;
   }
-  function notifyShow(title,body,tag,date){
-    if(notifyPermission()!=="granted"||notifyWasSent(tag)) return;
+  function notifyWasSent(tag){ return Object.prototype.hasOwnProperty.call(notifySentState(),tag); }
+  async function notifyShow(title,body,tag,date){
+    if(accountChanging||notifyPermission()!=="granted"||notifyWasSent(tag)||notifyInFlight.has(tag)) return false;
+    notifyInFlight.add(tag);
     const options={body,tag,renotify:false,icon:"icons/icon-192.png",badge:"icons/icon-192.png",dir:"rtl",lang:"ar",data:{date:date||todayStr()}};
-    if("serviceWorker" in navigator){
-      navigator.serviceWorker.getRegistration().then(reg=>{ if(reg) return reg.showNotification(title,options); new Notification(title,options); }).catch(()=>{ try{ new Notification(title,options); }catch(e){} });
-    }else try{ new Notification(title,options); }catch(e){}
+    try{
+      let shown=false;
+      if("serviceWorker" in navigator){
+        try{
+          const reg=await navigator.serviceWorker.getRegistration();
+          if(accountChanging) return false;
+          if(reg){ await reg.showNotification(title,options); shown=true; }
+        }catch(e){}
+      }
+      if(!shown){ if(accountChanging) return false; new Notification(title,options); }
+      const sent=notifySentState(); sent[tag]=Date.now();
+      try{ localStorage.setItem(NOTIFY_SENT_KEY,JSON.stringify(sent)); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+    finally{ notifyInFlight.delete(tag); }
   }
   function notifyTaskRowsForToday(){
     const today=todayStr(), rows=[], seen=new Set(), days=allDays();
