@@ -35,3 +35,6 @@ for(const width of [768,1024,1366]){await p.setViewportSize({width,height:800});
 test('progress shortcuts open cards in their customized section even when hidden by preferences',()=>scenario(async({p})=>{
 for(const width of [390,820,1366]){await p.setViewportSize({width,height:1000});await p.locator('a[data-app-view="today"]').click();await p.locator('a.today-metric[href="#quranCard"]').click();assert.ok(await p.locator('#quranCard').isVisible());assert.equal(await p.locator('a[data-app-view="learning"]').getAttribute('aria-current'),'page');assert.equal(await p.locator('#todayOverview').isVisible(),false);}
 },{'h2do-card-layout-v1':{views:{quranCard:'learning'},hidden:['quranCard']}}));
+test('back returns to the initially restored section when opening the app without a hash',()=>scenario(async({p})=>{
+assert.equal(await p.locator('#sectionTitle').innerText(),'المزيد');await p.locator('a[data-app-view="learning"]').click();await p.goBack();assert.equal(await p.locator('#sectionTitle').innerText(),'المزيد');assert.ok(await p.locator('#notesCard').isVisible());
+},{'h2do-mobile-view':'more'}));

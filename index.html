@@ -15019,6 +15019,7 @@
     window.addEventListener("popstate",()=>{if(!location.hash){appViewSet("today",{history:"none"});}else appViewOpenHash();});
     window.addEventListener("hashchange",()=>appViewOpenHash());
     navApply();appViewApply();appViewOpenHash(false);
+    if(!location.hash)history.replaceState(history.state,"","#view-"+appView);
   }
 
   /* ---------- إعداد البداية والأهداف اليومية ---------- */
