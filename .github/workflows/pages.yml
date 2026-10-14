@@ -32,7 +32,7 @@ jobs:
       - name: Prepare site artifact
         run: |
           mkdir _site
-          cp index.html sw.js sync-core.js data-core.js planner-core.js manifest.webmanifest _site/
+          cp index.html sw.js sync-core.js data-core.js planner-core.js calendar-core.js manifest.webmanifest _site/
           cp -R icons fonts _site/
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
