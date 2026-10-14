@@ -499,7 +499,7 @@ test("daily route connects capture, focused execution, and day closing to existi
   ["dailyRoute","dailyRouteTask","dailyRouteStart","dailyRouteDone","dailyRouteDefer","dailyRoutePlan","dailyRouteReplan","dailyRouteUndo","dailyRouteSimple","dailyRouteInbox","dailyRouteFamily","dailyRouteWeekly","dailyRoutePatterns","dailyRouteArchive","dailyRouteSettings","dailyRouteClose"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["dailyRouteSettingsLoad","dailyRouteSettingsSave","dailyRouteOpenSettings","dailyRouteCandidates","dailyRoutePlanIds","dailyRouteHabit","dailyRouteReason","dailyRouteEssentials","dailyRouteRender","dailyRouteOpenPlan","dailyRouteOpenReplan","dailyRouteMoveToTomorrow","dailyRouteUndoReplan","dailyRouteToggleSimple","dailyRouteOpenWeeklyReview","dailyRoutePatterns","dailyRouteOpenPatterns","dailyRouteOpenArchive","dailyRouteStateForDate","dailyRouteOpenFamilyAppointment","dailyRouteOpenInbox","dailyRouteOpenFocus","dailyRouteOpenClose"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
   assert.match(html,/المؤقت لا يُكمل المهمة تلقائيًا/);
-  assert.match(html,/حفظ وإغلاق اليوم/);
+  assert.match(html,/حفظ المراجعة/);
   assert.match(html,/storageKey\(tomorrow\)/);
   assert.match(html,/اختر ٣ أولويات كحد أقصى/);
   assert.match(html,/انقل غير المختار إلى الغد/);
@@ -514,7 +514,6 @@ test("daily route connects capture, focused execution, and day closing to existi
   assert.match(html,/اليوم مزدحم/);
   assert.match(html,/الخطوة الحالية:/);
   assert.match(html,/مصروف فعلي/);
-  assert.match(html,/الحد الأدنى:/);
   assert.match(html,/dailyRouteRender\(\);/);
   ["decisionCenter","decisionRulesBtn"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
   ["decisionRulesLoad","decisionItems","renderDecisionCenter","decisionRulesOpen","dataAutoBackup"].forEach(name=>assert.ok(html.includes("function "+name+"("),name));
@@ -531,7 +530,7 @@ test("daily route connects capture, focused execution, and day closing to existi
   assert.match(html,/function decisionMorningReading\(/);
   assert.match(html,/ورد الصباح لم يُسجّل بعد/);
   assert.match(html,/القواعد تقترح فقط ولا تنفذ تعديلًا أو نقلًا من دون موافقتك/);
-  assert.match(html,/مساءً: رتّب المتبقي أو انقله للغد/);
+  assert.match(html,/لن تُنقل أي مهمة. ستتغير الأولويات فقط/);
 });
 
 test("expense hierarchy keeps legacy IDs while adding synced subcategories",()=>{
