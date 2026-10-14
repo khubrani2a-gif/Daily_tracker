@@ -16504,7 +16504,7 @@
   /* Calendar uses the signed-in user's consent, an app-owned calendar and memory-only tokens. */
   const GC=window.MufCalendar;
   const calendarSession={token:'',uid:'',calendar:'',expires:0,busy:false,timer:null,errors:new Map(),message:''};
-  function calendarRecords(){return Object.entries(allDays()).flatMap(([day,data])=>(data.tasks||[]).filter(t=>t.calendarBinding?.ownerId===t.id).map(task=>({day,task})));}
+  function calendarRecords(){return Object.entries(allDays()).flatMap(([day,data])=>(data.tasks||[]).filter(t=>t.calendarBinding?.ownerId===t.id).map(task=>({day,task:plannerClone(task)})));}
   function calendarReady(){return !!(user&&calendarSession.uid===user.uid&&calendarSession.token&&calendarSession.expires>Date.now()&&!accountChanging);}
   function calendarDisconnect(){calendarSession.token='';calendarSession.uid='';calendarSession.expires=0;calendarSession.message='الربط متوقف على هذا الجهاز. تبقى المواعيد الموجودة في التقويم وتنبيهاتها.';clearTimeout(calendarSession.timer);calendarRenderStatus();}
   async function calendarRequest(path,options={}){
