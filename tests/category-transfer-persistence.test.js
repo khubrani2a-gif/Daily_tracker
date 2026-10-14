@@ -17,9 +17,8 @@ function loadChromium(){
 
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const path=require("node:path");
+const {serveLocalSite,siteUrl}=require("./local-site.cjs");
 const {chromium}={chromium:loadChromium()};
-const fileUrl="file://"+path.resolve(__dirname,"..","index.html");
 
 const HOME_ID="cat_home", GROCERY_ID="cat_grocery", REST_ID="cat_restaurants";
 
@@ -88,10 +87,14 @@ test("manual expense-category transfer survives close/reopen and full reload",as
     fixture.transactions.forEach(tx=>{ tx.transactionDate=dateKey(0); });
     await page.addInitScript(data=>{
       window.__MFKR_TEST__=true;
-      if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data));
+      // Seed once per browser session, before account storage migrates native keys.
+      if(!sessionStorage.getItem("category-transfer-seeded")){
+        localStorage.setItem("h2do-expenses",JSON.stringify(data));
+        sessionStorage.setItem("category-transfer-seeded","1");
+      }
     },fixture);
-    await page.route("https://www.gstatic.com/firebasejs/**",r=>r.abort());
-    await page.goto(fileUrl); await page.waitForTimeout(700);
+    await serveLocalSite(page);
+    await page.goto(siteUrl); await page.waitForTimeout(700);
 
     let state=await readState(page);
     assert.equal(catOf(state,"tx_tamween_1"),HOME_ID,"يبدأ في احتياجات المنزل");
@@ -172,10 +175,14 @@ test("automatic legacy correction still heals unpinned transactions",async()=>{
     fixture.transactions=[Object.assign({},fixture.transactions[3],{id:"tx_unpinned",categoryId:GROCERY_ID,amountMinor:1000,transactionDate:"2026-07-28",subcategory:"وجبة",description:"وجبة"})];
     await page.addInitScript(data=>{
       window.__MFKR_TEST__=true;
-      if(!localStorage.getItem("h2do-expenses")) localStorage.setItem("h2do-expenses",JSON.stringify(data));
+      // Seed once per browser session, before account storage migrates native keys.
+      if(!sessionStorage.getItem("category-transfer-seeded")){
+        localStorage.setItem("h2do-expenses",JSON.stringify(data));
+        sessionStorage.setItem("category-transfer-seeded","1");
+      }
     },fixture);
-    await page.route("https://www.gstatic.com/firebasejs/**",r=>r.abort());
-    await page.goto(fileUrl); await page.waitForTimeout(700);
+    await serveLocalSite(page);
+    await page.goto(siteUrl); await page.waitForTimeout(700);
     const state=await readState(page);
     assert.equal(catOf(state,"tx_unpinned"),REST_ID,"السجل غير المختوم ما زال يُداوى تلقائيًا");
   } finally { await ctx.close(); await browser.close(); }
