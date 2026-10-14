@@ -80,7 +80,7 @@ async function device(b){
     store[path]=json; writeCount[path]=(writeCount[path]||0)+1;
   });
   await p.exposeBinding("__rDel",(s,path)=>{ if(offline){ pendingWrites.push({path, json:null}); return; } delete store[path]; });
-  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
+  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(Object.assign({id:k.split("/").pop()},JSON.parse(store[k]))); }catch(e){} } }); return out; });
   await p.exposeBinding("__rRead",(s,path,src)=>({ reject:(offline && src==="server"), fromCache:(src==="cache"), delay:0 }));
   await p.addInitScript(()=>{ window.__MFKR_TEST__ = true; });
   await p.addInitScript(FAKE);
@@ -124,7 +124,7 @@ function seedLocalItem(){
     store[path]=json; writeCount[path]=(writeCount[path]||0)+1;
   });
   await p.exposeBinding("__rDel",(s,path)=>{ if(offline){ pendingWrites.push({path, json:null}); return; } delete store[path]; });
-  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
+  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(Object.assign({id:k.split("/").pop()},JSON.parse(store[k]))); }catch(e){} } }); return out; });
   await p.exposeBinding("__rRead",(s,path,src)=>({ reject:(offline && src==="server"), fromCache:(src==="cache"), delay:0 }));
   await p.addInitScript(()=>{ window.__MFKR_TEST__ = true; });
   await p.addInitScript(FAKE);

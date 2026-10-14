@@ -28,7 +28,7 @@ async function device(b){ const ctx=await b.newContext({viewport:{width:1000,hei
   await blockFirebaseCDN(p);   // must run before goto so real Firebase never loads
   await p.exposeBinding("__rGet",(s,path)=> (store[path]!=null?store[path]:null));
   await p.exposeBinding("__rSet",(s,path,json)=>{ store[path]=json; return true; });
-  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(JSON.parse(store[k])); }catch(e){} } }); return out; });
+  await p.exposeBinding("__rColl",(s,path)=>{ const out=[]; Object.keys(store).forEach(k=>{ if(k.indexOf(path+"/")===0){ try{ out.push(Object.assign({id:k.split("/").pop()},JSON.parse(store[k]))); }catch(e){} } }); return out; });
   await p.exposeBinding("__rReject",(s,path)=> (REJECT && path.indexOf(REJECT)>=0));
   await p.addInitScript(FAKE); return p; }
 const dayKey="users/U1/days/"+today();
@@ -92,7 +92,7 @@ const dayKey="users/U1/days/"+today();
   await B4.click("#expOpenBtn"); await B4.waitForTimeout(300);
   await B4.click('.exp-tab[data-view="settings"]'); await B4.waitForTimeout(300);
   ok("global sync button present", !!(await B4.$("#expGlobalSyncBtn")));
-  ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===7);
+  ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===9);
   store[dayKey]=JSON.stringify({date:today(),prayers:[true,true,true,true,false],worship:{},water:0,tasks:[],priorities:[],updatedAt:Date.now()+150000});
   await B4.click("#expGlobalSyncBtn"); await B4.waitForTimeout(1000);
   const gst=await B4.$eval("#expGlobalSyncText",e=>e.textContent).catch(()=>"");

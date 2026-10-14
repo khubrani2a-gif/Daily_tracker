@@ -13,7 +13,8 @@
 function __loadChromium(){const c=[process.env.PW_PATH,"playwright","/opt/node22/lib/node_modules/playwright"].filter(Boolean);for(const x of c){try{return require(x).chromium;}catch(e){}}console.error("Playwright not found. Set PW_PATH=/path/to/playwright");process.exit(2);}
 const { chromium } = { chromium: __loadChromium() };
 const path = require("path");
-const fileUrl = "file://" + path.resolve(__dirname, "..", "index.html");
+const {serveLocalSite,siteUrl}=require("./local-site.cjs");
+const fileUrl = siteUrl;
 const today = ()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 const daysAgo = (n)=>{ const d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 
@@ -23,6 +24,9 @@ const errs = [];
 async function page(b){
   const ctx = await b.newContext({viewport:{width:1000,height:900}});
   const p = await ctx.newPage();
+  await serveLocalSite(p);
+  // These local-storage cases must not depend on live Firebase or prayer APIs.
+  await p.route("https://**/*", route=>route.abort());
   /* نقتصر على أخطاء JS غير المُلتقطة (pageerror) — نفس نهج بقيّة المجموعة (fixed-expenses/expenses-travel/coordinator-containment).
      رسائل console.error عن فشل تحميل سكربتات Firebase من الشبكة (بيئة الاختبار بلا اتصال حقيقي بـ gstatic.com) متوقّعة ولا تدلّ على عطل حقيقي. */
   p.on("pageerror", e=> errs.push(e.message));
@@ -153,6 +157,8 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   ok("session soft-deleted (tombstoned, not hard-removed)", sessAfterDel.length===1 && !!sessAfterDel[0].deletedAt);
   ok("position preserved (unaffected) since currentUnit did not equal the deleted session's endUnit", (await rdItems(p))[0].currentUnit===0);
   await p.reload(); await p.waitForFunction(()=> document.getElementById("datePicker") && document.getElementById("datePicker").value, {timeout:8000}); await p.waitForTimeout(150);
+  const persistedSessions = await rdSessions(p);
+  ok("reload preserves the session tombstone in the source records", persistedSessions.length===1 && persistedSessions[0].id==="S1" && !!persistedSessions[0].deletedAt);
   let c3 = await rdCache(p);
   ok("no resurrection after reload", !c3.byDate[today()] || c3.byDate[today()].sessionCount===0);
   await p.close();

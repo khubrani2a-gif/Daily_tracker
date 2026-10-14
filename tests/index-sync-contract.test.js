@@ -60,7 +60,7 @@ test("global lifecycle events are each registered exactly once",()=>{
 });
 
 test("all nine modules participate in the coordinator",()=>{
-  ["pullRemote(currentDate","qPullRemote(","wCustomPullRemote(","witrPullRemote(","hifzPullRemote(","expPullRemote(","wgPullRemote(","rdPullRemote(","learningPullRemote("].forEach(call=>assert.ok(html.includes(call),call));
+  ["syncDailyHistory(trigger)","qPullRemote(","wCustomPullRemote(","witrPullRemote(","hifzPullRemote(","expPullRemote(","wgPullRemote(","rdPullRemote(","learningPullRemote("].forEach(call=>assert.ok(html.includes(call),call));
   assert.match(core,/Promise\.allSettled/);
 });
 
@@ -119,7 +119,7 @@ test("financial review renders a non-mutating visual risk scan in every period",
   assert.match(html,/expReportVisualScan\(r,"هذا الأسبوع"\)/);
   assert.match(html,/expReportVisualScan\(r,"هذا الشهر"\)/);
   assert.match(html,/expReportVisualScan\(yr,"هذه السنة"\)/);
-  assert.match(sw,/const CACHE = "mufakkirati-v131"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v132"/);
 });
 
 test("financial review compares each period with its matching previous period",()=>{
@@ -129,7 +129,7 @@ test("financial review compares each period with its matching previous period",(
   assert.match(html,/expReportPeriodComparison\(r,"weekly"\)/);
   assert.match(html,/expReportPeriodComparison\(r,"monthly"\)/);
   assert.match(html,/expReportPeriodComparison\(yr,"yearly"\)/);
-  assert.match(sw,/const CACHE = "mufakkirati-v131"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v132"/);
 });
 
 test("daily history is cached and below-fold content is deferred at startup",()=>{
@@ -398,7 +398,7 @@ test("shared shopping uses the same searchable category pattern as expenses",()=
   assert.match(html,/البحث في أقسام التسوق/);
   assert.match(html,/categorySearch\.oninput=.*Array\.from\(categoryInput\.options\)/);
   assert.match(html,/قسم التسوق/);
-  assert.match(sw,/const CACHE = "mufakkirati-v131"/);
+  assert.match(sw,/const CACHE = "mufakkirati-v132"/);
 });
 
 test("advanced tasks include statuses, subtasks, links, phone contacts, reminders, and weekly view",()=>{
