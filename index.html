@@ -2187,12 +2187,56 @@
   .learning-progress{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.45rem 0 .2rem}
   .learning-progress i{display:block;height:100%;background:#256391;border-radius:99px;width:0}
   @media(max-width:420px){.learning-tools,.learning-actions{grid-template-columns:1fr}.learning-tool-btn{min-height:54px}}
-  @media(max-width:620px){
-    .header-top>div:last-child{width:100%;min-width:0}
-    .date-nav{justify-content:center;flex-wrap:wrap}
-    .hijri,.sync-box{text-align:center}
-    .sync-meta{justify-content:center}
+  /* Compact header: keep date controls together and disclose account details. */
+  #appHeader{padding:1rem 1.2rem}
+  #appHeader .header-top{display:grid;grid-template-columns:1fr minmax(260px,340px);grid-template-areas:"brand date" "stats tools" "sync sync";gap:.65rem 1.2rem}
+  #appHeader .brand{grid-area:brand;min-width:0}
+  #appHeader .brand .logo{width:40px;height:40px;flex-shrink:0;font-size:1.3rem;border-radius:12px}
+  #appHeader .brand h1{font-size:1.35rem;line-height:1.4}
+  #appHeader .brand small{font-size:.75rem}
+  .header-date{grid-area:date;min-width:0}
+  #appHeader .date-nav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:.4rem}
+  #appHeader .date-nav button,.header-tools button{width:44px;height:44px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);border-radius:10px;color:#fff;font-size:1.15rem;cursor:pointer}
+  #appHeader .date-nav button:hover,.header-tools button:hover{background:rgba(255,255,255,.28)}
+  #appHeader .date-pill{min-width:0;padding:0 .4rem}
+  #appHeader .date-pill input{width:100%;min-width:0;min-height:42px;box-sizing:border-box;font-size:.9rem;color-scheme:light;direction:ltr;text-align:center}
+  html.dark #appHeader .date-pill input{color-scheme:dark}
+  #appHeader .hijri{text-align:center;font-size:.78rem;margin-top:.3rem}
+  #appHeader .day-stats{grid-area:stats;gap:1rem;flex-wrap:wrap}
+  .day-progress{display:flex;align-items:center;gap:.4rem;font-size:.78rem}
+  #appHeader .ring-wrap,#appHeader .ring{width:42px;height:42px}
+  #appHeader .ring-text{font-size:.72rem}
+  #appHeader .streak{flex-direction:row;gap:.3rem;border:0;background:none;padding:0;min-width:0}
+  #appHeader .streak span:not(.fire){font-size:.95rem}
+  #appHeader .streak small{font-size:.75rem}
+  .header-tools{grid-area:tools;display:flex;justify-content:center;gap:.4rem}
+  #appHeader .header-sync{grid-area:sync;min-width:0;border-top:1px solid rgba(255,255,255,.18);padding-top:.4rem}
+  .header-sync summary{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:44px;cursor:pointer;list-style:none;font-size:.8rem;border-radius:8px}
+  .header-sync summary::-webkit-details-marker{display:none}
+  .header-sync summary::after{content:"⌄";font-size:1.1rem;transition:transform .15s}
+  .header-sync[open] summary::after{transform:rotate(180deg)}
+  #appHeader .sync-box{text-align:start;margin:.2rem 0 .4rem;padding:.7rem;background:rgba(0,0,0,.1);border:1px solid rgba(255,255,255,.2);border-radius:12px}
+  .sync-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+  #appHeader .sync-btn{min-height:44px}
+  #appHeader .sync-meta{justify-content:flex-start}
+  #appHeader .sync-status,#appHeader .sync-last{overflow-wrap:anywhere}
+  #appHeader .motto{margin-top:.35rem;padding-top:.55rem}
+  #appHeader .motto .b1{font-size:1.02rem;line-height:1.65}
+  #appHeader .motto .b2{font-size:.72rem;margin-top:.1rem}
+  @media(min-width:1000px){
+    #appHeader .header-top{grid-template-columns:minmax(0,1fr) minmax(250px,320px) auto;grid-template-areas:"brand date tools" "stats sync sync"}
+    #appHeader .header-sync{border-top:0;padding-top:0}
+    #appHeader .day-stats{align-self:start}
   }
+  @media(max-width:620px){
+    #appHeader{padding:.85rem .9rem}
+    #appHeader .header-top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "date" "stats" "tools" "sync";gap:.55rem}
+    #appHeader .brand{justify-content:center}
+    #appHeader .brand h1{font-size:1.25rem}
+    #appHeader .day-stats{justify-content:center;gap:.8rem}
+    #appHeader .sync-btn{flex:1;padding:.4rem .6rem}
+  }
+
 </style>
 </head>
 <body>
@@ -2208,38 +2252,43 @@
           <h1>مفكرتي اليومية <small>استعن بالله ولا تعجز</small></h1>
         </div>
       </div>
-      <div class="day-stats">
-        <div class="ring-wrap" title="نسبة إنجاز يومك">
-          <svg class="ring" viewBox="0 0 64 64">
-            <circle class="ring-bg" cx="32" cy="32" r="26"/>
-            <circle class="ring-fg" id="ringFg" cx="32" cy="32" r="26"/>
-          </svg>
-          <div class="ring-text" id="ringText">0%</div>
-        </div>
-        <div class="streak" id="streakBadge" title="أيام متتالية أكملت فيها الصلوات الخمس">
-          <span class="fire">🔥</span>
-          <span id="streakCount">0</span>
-          <small>أيام متتالية</small>
-        </div>
-      </div>
-      <div>
-        <div class="date-nav">
-          <button id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
-          <button id="globalSearchBtn" title="البحث الشامل" aria-label="البحث في المهام والملاحظات والذكريات والمصاريف">🔎</button>
-          <button id="notifyBtn" title="الإشعارات والتذكيرات" aria-label="فتح إعدادات الإشعارات">🔔</button>
-          <button id="customizeBtn" title="تخصيص التطبيق" aria-label="تخصيص بطاقات التطبيق والشريط السفلي">⚙️</button>
-          <button id="themeBtn" title="الوضع الليلي/النهاري">🌙</button>
-          <button id="prevDay" title="اليوم السابق">›</button>
-          <span class="date-pill">
-            <span class="date-pill-ico">📅</span>
-            <input type="date" id="datePicker">
-          </span>
-          <button id="nextDay" title="اليوم التالي">‹</button>
+      <div class="header-date">
+        <div class="date-nav" role="group" aria-label="اختيار اليوم">
+          <button type="button" id="prevDay" title="اليوم السابق" aria-label="اليوم السابق">›</button>
+          <span class="date-pill"><input type="date" id="datePicker" aria-label="التاريخ الميلادي"></span>
+          <button type="button" id="nextDay" title="اليوم التالي" aria-label="اليوم التالي">‹</button>
         </div>
         <div class="hijri" id="hijriDate"></div>
+      </div>
+      <div class="day-stats">
+        <div class="day-progress">
+          <div class="ring-wrap" title="نسبة إنجاز يومك">
+            <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+              <circle class="ring-bg" cx="32" cy="32" r="26"/>
+              <circle class="ring-fg" id="ringFg" cx="32" cy="32" r="26"/>
+            </svg>
+            <div class="ring-text" id="ringText">0%</div>
+          </div>
+          <span>إنجاز اليوم</span>
+        </div>
+        <div class="streak" id="streakBadge" title="أيام متتالية أكملت فيها الصلوات الخمس">
+          <span class="fire" aria-hidden="true">🔥</span><span id="streakCount">0</span><small>أيام متتالية</small>
+        </div>
+      </div>
+      <div class="header-tools" role="group" aria-label="أدوات المفكرة">
+        <button type="button" id="statsBtn" title="الإحصائيات والتقويم" aria-label="فتح الإحصائيات والتقويم">📊</button>
+        <button type="button" id="globalSearchBtn" title="البحث الشامل" aria-label="البحث في المهام والملاحظات والذكريات والمصاريف">🔎</button>
+        <button type="button" id="notifyBtn" title="الإشعارات والتذكيرات" aria-label="فتح إعدادات الإشعارات">🔔</button>
+        <button type="button" id="customizeBtn" title="تخصيص التطبيق" aria-label="تخصيص بطاقات التطبيق والشريط السفلي">⚙️</button>
+        <button type="button" id="themeBtn" title="الوضع الليلي/النهاري" aria-label="تبديل الوضع الليلي والنهاري">🌙</button>
+      </div>
+      <details class="header-sync" id="headerSyncDetails">
+        <summary><span id="syncSummaryLabel" role="status" aria-live="polite">📱 الحفظ على هذا الجهاز</span></summary>
         <div class="sync-box">
-          <button class="sync-btn" id="syncBtn" hidden></button>
-          <button class="sync-btn" id="syncAllBtn" hidden>مزامنة جميع البيانات</button>
+          <div class="sync-actions">
+            <button class="sync-btn" id="syncBtn" hidden></button>
+            <button class="sync-btn" id="syncAllBtn" hidden>مزامنة جميع البيانات</button>
+          </div>
           <div class="sync-status" id="syncStatus" aria-live="polite"></div>
           <div class="sync-meta" id="syncMeta">
             <span class="sync-mode" id="syncMode">📱 محلي على هذا الجهاز</span>
@@ -2247,7 +2296,7 @@
             <button type="button" class="sync-retry" id="syncRetry" hidden>إعادة المحاولة</button>
           </div>
         </div>
-      </div>
+      </details>
     </div>
     <div class="motto">
       <div class="b1" id="quoteText">« يا ابنَ آدم، إنما أنت أيامٌ، كلّما ذهبَ يومٌ ذهبَ بعضُك »</div>
@@ -4245,6 +4294,10 @@
     if(!syncMeta) return;
     syncMeta.hidden=false;
     const online=navigator.onLine!==false;
+    const compactStatus=document.getElementById("syncSummaryLabel");
+    if(compactStatus){
+      compactStatus.textContent=!user?"📱 الحفظ محلي · تسجيل الدخول":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
+    }
     syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
     if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
     else if(!online) syncLast.textContent="تغييراتك محفوظة وستُزامن عند عودة الإنترنت";
@@ -14691,7 +14744,7 @@
     if(typeof homeModeRender==="function") homeModeRender();
     const mobile=window.matchMedia("(max-width:700px)").matches, allowed=new Set(navCardsForView(appView).filter(id=>!homeCompact||!compactHiddenForView(appView).has(id)));
     CARD_DEFS.forEach(def=>{ const el=document.getElementById(def.id); if(el) el.classList.toggle("mobile-view-hidden",mobile&&!allowed.has(def.id)); });
-    document.querySelectorAll("[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
+    document.querySelectorAll("a[data-app-view]").forEach(link=>{ const active=link.dataset.appView===appView; link.classList.toggle("active",active); link.setAttribute("aria-current",active?"page":"false"); });
   }
   function appViewSet(view){
     if(!NAV_DEFS.some(def=>def.view===view)) return;
@@ -14705,7 +14758,7 @@
     window.scrollTo({top:first.offsetTop-8,behavior:"smooth"});
   }
   function appViewInit(){
-    document.querySelectorAll("[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
+    document.querySelectorAll("a[data-app-view]").forEach(link=>link.onclick=e=>{ if(window.matchMedia("(max-width:700px)").matches){ e.preventDefault(); appViewSet(link.dataset.appView); } else { appView=link.dataset.appView; appViewApply(); } });
     window.matchMedia("(max-width:700px)").addEventListener("change",appViewApply); navApply(); appViewApply();
   }
 
