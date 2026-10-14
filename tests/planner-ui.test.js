@@ -4,6 +4,37 @@ let b;test.before(async()=>b=await chromium.launch());test.after(async()=>b.clos
 async function run(fn){const d=await device(b);try{await fn(d.p,d);assert.deepEqual(d.errors,[]);}finally{await d.c.close();}}
 async function add(p,text,extra){await p.locator('#plannerAdd').click();await p.locator('#tmText').fill(text);if(extra)await extra();await p.locator('#tmSave').click();assert.equal(await p.locator('#tmErr').count(),0,'save must close successfully');}
 const all=p=>p.evaluate(()=>__mfkrPlanner.rows(null,null,false).map(r=>({task:r.task,day:r.day,date:r.date})));
+test('checking several editor steps on a projected occurrence then saving does not duplicate it',()=>run(async p=>{
+  await add(p,'رياضة يومية',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmSubtasks').fill('إحماء\nمشي');});
+  await p.evaluate(()=>{const date=__mfkrPlanner.core.plus(audit.todayStr(),1);__mfkrPlanner.open(__mfkrPlanner.rows(date,date).find(r=>r.date===date));});
+  await p.locator('#plannerStepList input').nth(0).check();await p.locator('#plannerStepList input').nth(1).check();await p.locator('#tmSave').click();
+  const rows=await p.evaluate(()=>{const date=__mfkrPlanner.core.plus(audit.todayStr(),1);return __mfkrPlanner.rows(date,date).filter(r=>r.date===date);});
+  assert.equal(rows.length,1);assert.equal(rows[0].task.subtasks.filter(s=>s.done).length,2);
+}));
+test('inline steps open by keyboard, retain focus and expansion, persist and undo without opening the editor',()=>run(async p=>{
+  await add(p,'تمارين',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmSubtasks').fill('إحماء\nمشي\nتمدد');});
+  const details=p.locator('.planner-inline-steps'),summary=details.locator('summary');
+  assert.match(await p.locator('.planner-next-step').innerText(),/إحماء/);
+  await summary.focus();await p.keyboard.press('Enter');assert.equal(await details.getAttribute('open'),'');
+  await details.locator('input').nth(0).check();assert.equal(await p.locator('.planner-overlay').count(),0);
+  assert.equal(await details.getAttribute('open'),'');assert.equal(await details.locator('input').nth(0).evaluate(el=>el===document.activeElement),true);
+  await details.locator('input').nth(1).check();assert.equal((await all(p))[0].task.subtasks.filter(s=>s.done).length,2);
+  await p.locator('#plannerUndo').click();assert.equal((await all(p))[0].task.subtasks.filter(s=>s.done).length,1);
+  assert.equal(await details.getAttribute('open'),'');await summary.click();assert.match(await p.locator('.planner-next-step').innerText(),/مشي/);
+  await p.reload();assert.equal((await all(p))[0].task.subtasks[0].done,true);
+  await p.locator('.planner-inline-steps summary').click();await p.locator('.planner-inline-steps input').nth(0).uncheck();assert.equal((await all(p))[0].task.subtasks[0].done,false);
+}));
+test('inline steps update linked preparations and affect only the selected recurring occurrence',()=>run(async p=>{
+  await add(p,'زيارة',async()=>{await p.locator('#tmAllDay').check();await p.locator('#plannerDetails > summary').click();await p.locator('#tmSubtasks').fill('تجهيز الهدية');await p.locator('#tmPrepDate').fill(await p.locator('#tmDate').inputValue());});
+  await p.locator('.planner-inline-steps summary').click();await p.locator('.planner-inline-steps input').check();assert.equal((await all(p)).find(r=>r.task.parentAppointmentId).task.done,true);
+  await p.locator('.planner-inline-steps input').uncheck();assert.equal((await all(p)).find(r=>r.task.parentAppointmentId).task.done,false);
+  await add(p,'رياضة يومية',async()=>{await p.locator('#plannerDetails > summary').click();await p.locator('#tmSubtasks').fill('إحماء');});
+  await p.locator('[data-planner-view="upcoming"]').click();
+  await p.evaluate(()=>{__mfkrPlanner.ui.cursor=__mfkrPlanner.core.plus(audit.todayStr(),1);__mfkrPlanner.render();});
+  const first=p.locator('.planner-row').filter({hasText:'رياضة يومية'}).first();await first.locator('summary').click();await first.locator('[data-planner-step]').check();
+  assert.equal(await first.locator('details').getAttribute('open'),'');
+  const states=await p.evaluate(()=>{const today=audit.todayStr(),next=__mfkrPlanner.core.plus(today,1),later=__mfkrPlanner.core.plus(today,2);return [today,next,later].map(date=>__mfkrPlanner.rows(date,date).find(r=>r.date===date&&r.task.text==='رياضة يومية').task.subtasks[0].done);});assert.deepEqual(states,[false,true,false]);
+}));
 test('quick add parses Arabic, persists an appointment to its date and survives reload',()=>run(async p=>{await add(p,'موعد طبيب بكرة ٥ مساءً لمدة نصف ساعة');let rows=await all(p);assert.equal(rows.length,1);assert.equal(rows[0].task.kind,'appointment');assert.equal(rows[0].task.dueTime,'17:00');assert.equal(rows[0].task.endTime,'17:30');assert.equal(rows[0].day,rows[0].date);await p.reload();rows=await all(p);assert.equal(rows.length,1);await p.locator('[data-planner-view="upcoming"]').click();assert.match(await p.locator('#tasks').innerText(),/موعد طبيب/);}));
 test('manual date/time selections are preserved while typing',()=>run(async p=>{await p.locator('#plannerAdd').click();await p.locator('#tmText').fill('اتصال بكرة');await p.locator('#tmDate').fill('2026-12-20');await p.locator('#tmTime').fill('08:00');await p.locator('#tmText').fill('اتصال بكرة الساعة ٥ مساءً');assert.equal(await p.locator('#tmDate').inputValue(),'2026-12-20');assert.equal(await p.locator('#tmTime').inputValue(),'08:00');}));
 test('ambiguous time requires correction and appointment requires an end',()=>run(async p=>{await p.locator('#plannerAdd').click();await p.locator('#tmText').fill('موعد الساعة ٥');await p.locator('#tmSave').click();assert.match(await p.locator('#tmErr').innerText(),/بدايته ونهايته/);await p.locator('#tmTime').fill('17:00');await p.locator('#tmEnd').fill('18:00');await p.locator('#tmSave').click();assert.equal((await all(p)).length,1);}));
