@@ -138,7 +138,7 @@ function seedLocalItem(){
   await p.waitForTimeout(150);
   ok("navigator.onLine reflects the real offline state", (await p.evaluate(()=> navigator.onLine)) === false);
 
-  await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
+  await p.click('a[data-app-view="more"]'); await p.click("#readingCard #rdQuickBtn"); await p.waitForSelector("#qlSave");
   await p.fill("#qlMins", "18");
   await p.click("#qlSave"); await p.waitForTimeout(300);
   let localSessions = await p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-reading-sessions"))||[]);

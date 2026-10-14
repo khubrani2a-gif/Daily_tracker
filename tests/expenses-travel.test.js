@@ -13,7 +13,7 @@ const openFamily=async(p)=>{
   const open=await p.evaluate(()=>{const e=document.getElementById("expOverlay"); return !!(e&&!e.hidden);});
   if(open) return;
   await showFamilyCard(p);
-  await p.click("#expOpenBtn"); await p.waitForTimeout(350);
+  await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(350);
 };
 /* تبويب المالية: فيه بطاقات الميزانية والالتزامات وزر «＋ إضافة مصروف» */
 const openFinance=async(p)=>{ await openFamily(p); await p.click('.exp-tab[data-view="dash"]'); await p.waitForTimeout(300); };
