@@ -32,3 +32,6 @@ await p.setViewportSize({width:820,height:1180});await p.locator('a[data-app-vie
 test('desktop and tablet navigation remains visible when scrolling and is keyboard accessible',()=>scenario(async({p})=>{
 for(const width of [768,1024,1366]){await p.setViewportSize({width,height:800});const link=p.locator('a[data-app-view="iman"]');await link.focus();await p.keyboard.press('Enter');await p.evaluate(()=>scrollTo(0,800));await p.waitForTimeout(120);const rect=await p.locator('.quick-nav').boundingBox();assert.ok(rect.y>=0&&rect.y<20);assert.ok((await link.boundingBox()).height>=44);assert.deepEqual(await visible(p),views.iman);}
 }));
+test('progress shortcuts open cards in their customized section even when hidden by preferences',()=>scenario(async({p})=>{
+for(const width of [390,820,1366]){await p.setViewportSize({width,height:1000});await p.locator('a[data-app-view="today"]').click();await p.locator('a.today-metric[href="#quranCard"]').click();assert.ok(await p.locator('#quranCard').isVisible());assert.equal(await p.locator('a[data-app-view="learning"]').getAttribute('aria-current'),'page');assert.equal(await p.locator('#todayOverview').isVisible(),false);}
+},{'h2do-card-layout-v1':{views:{quranCard:'learning'},hidden:['quranCard']}}));

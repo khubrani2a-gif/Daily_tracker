@@ -9526,9 +9526,10 @@
   function dailyRouteFocusMinutes(s){return ((s&&s.dailyRoute&&s.dailyRoute.events)||[]).reduce((sum,event)=>sum+((event&&event.type&&event.type.startsWith("focus_")&&Number(event.minutes)>0)?Number(event.minutes):0),0);}
   function dailyRouteSpent(date){try{return expActiveTx().filter(tx=>tx.transactionDate===date&&tx.transactionType!=="transfer").reduce((sum,tx)=>sum+(tx.transactionType==="refund"?-1:1)*expToMinor(tx.amountMinor),0);}catch(e){return 0;}}
   function overviewNavigate(view,id){
-    appViewSet(view);
+    const targetView=CARD_DEFS.some(def=>def.id===id)?cardView(id):view;
+    appViewSet(navIsHidden(targetView)?"more":targetView);
     const target=document.getElementById(id);
-    if(target){target.classList.remove("compact-hidden");target.scrollIntoView({behavior:"smooth",block:"start"});}
+    if(target){target.hidden=false;target.classList.remove("compact-hidden","mobile-view-hidden");document.getElementById("sectionEmpty").hidden=true;target.scrollIntoView({behavior:"smooth",block:"start"});}
   }
   function overviewRefresh(){renderTaskLists();renderWater();renderProgress();}
   function overviewTaskDetail(task){
@@ -10463,7 +10464,8 @@
     }
     goto(row.date);
     const meta=GLOBAL_SEARCH_TYPES[row.type];
-    appViewSet(meta.view);
+    const targetView=CARD_DEFS.some(def=>def.id===meta.target)?cardView(meta.target):meta.view;
+    appViewSet(navIsHidden(targetView)?"more":targetView);
     setTimeout(()=>{
       if(row.type==="task"){
         const task=(state.tasks||[]).find(item=>item.id===row.id);
@@ -10475,7 +10477,7 @@
       }
       if(row.type==="review"){ activityOpen(row.date); return; }
       const target=document.getElementById(meta.target); if(!target) return;
-      target.hidden=false; target.classList.remove("mobile-view-hidden"); target.scrollIntoView({behavior:"smooth",block:"start"});
+      target.hidden=false; target.classList.remove("mobile-view-hidden","compact-hidden"); document.getElementById("sectionEmpty").hidden=true; target.scrollIntoView({behavior:"smooth",block:"start"});
       target.setAttribute("tabindex","-1"); target.focus({preventScroll:true});
     },80);
   }
