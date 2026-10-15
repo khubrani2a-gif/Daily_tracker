@@ -43,5 +43,5 @@ Interfaces: availability(prefs,date)->[{start,end}], availableSlots(rows,date,pr
 
 ### Task 4: integration and delivery
 - [ ] Full npm test and Firebase emulator tests; browser review in Chromium/WebKit across 320–1366 px.
-- [ ] Fresh whole-branch reviewer using executing-plans requirement; fix important findings with failing regression then green suite.
+- [x] Fresh whole-branch reviewer using executing-plans requirement; fix important findings with failing regression then green suite.
 - [ ] Bump cache v146, update docs, open PR, wait CI, merge exact head, wait Pages, verify published hashes and guest workflows.

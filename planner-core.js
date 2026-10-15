@@ -54,20 +54,29 @@
     const day=d.getDate();d.setDate(1);if(t.repeat==='monthly')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return key(d);
   }
   function range(t){const start=minutes(t.dueTime);if(start===null||t.allDay)return null;let end=minutes(t.endTime);if(end===null&&t.durationMinutes)end=start+Number(t.durationMinutes);if(end===null||end<=start)return null;return {start:Math.max(0,start-(+t.bufferMinutes||0)),end};}
+  // Preparation is occupied even when the task itself has no known duration.
+  function occupiedRange(t){const known=range(t);if(known)return known;const at=minutes(t.dueTime),buffer=Math.max(0,+t.bufferMinutes||0);return !t.allDay&&at!==null&&buffer?{start:Math.max(0,at-buffer),end:at}:null;}
   function conflicts(t,rows){
-    const point=x=>!x.allDay?minutes(x.dueTime):null,a=range(t),at=point(t);if(at===null||!t.dueDate)return [];
+    const point=x=>!x.allDay?minutes(x.dueTime):null,knownA=range(t),a=occupiedRange(t),at=point(t);if(at===null||!t.dueDate)return [];
     return rows.filter(r=>r.task.id!==t.id&&r.date===t.dueDate&&active(r.task)).flatMap(r=>{
-      const b=range(r.task),bt=point(r.task);if(bt===null)return [];
-      const overlap=a&&b?Math.min(a.end,b.end)-Math.max(a.start,b.start):null;
-      const hit=overlap!==null?overlap>0:a?bt>=a.start&&bt<a.end:b?at>=b.start&&at<b.end:at===bt;
-      return hit?[{row:r,minutes:overlap||0}]:[];
+      const knownB=range(r.task),b=occupiedRange(r.task),bt=point(r.task);if(bt===null)return [];
+      const overlap=a&&b?Math.max(0,Math.min(a.end,b.end)-Math.max(a.start,b.start)):0;
+      const hit=overlap>0||!knownA&&b&&at>=b.start&&at<b.end||!knownB&&a&&bt>=a.start&&bt<a.end||!knownA&&!knownB&&at===bt;
+      return hit?[{row:r,minutes:overlap}]:[];
     });
   }
   function slots(rows,s,start,end,duration,buffer=0){
     const a=minutes(start),b=minutes(end);duration=Number(duration);buffer=Math.max(0,Number(buffer)||0);
     if(a===null||b===null||b<=a||!Number.isFinite(duration)||duration<=0||duration+buffer>b-a)return [];
-    const busy=rows.filter(r=>r.date===s&&active(r.task)).map(r=>range(r.task)).filter(Boolean).sort((x,y)=>x.start-y.start),out=[];let cursor=a;
-    const add=limit=>{if(limit-cursor>=duration+buffer)out.push({start:time(cursor+buffer),end:time(cursor+buffer+duration)});};
+    const busy=rows.filter(r=>r.date===s&&active(r.task)).map(r=>occupiedRange(r.task)).filter(Boolean).sort((x,y)=>x.start-y.start),out=[];let cursor=a;
+    const add=limit=>{
+      // Search later in this gap if its first candidate hits a start-only task.
+      // Minute precision does not assign a duration to that existing task.
+      for(let candidate=cursor;candidate+duration+buffer<=limit;candidate++){
+        const slot={start:time(candidate+buffer),end:time(candidate+buffer+duration)};
+        if(!conflicts({dueDate:s,dueTime:slot.start,endTime:slot.end,bufferMinutes:buffer},rows).length){out.push(slot);break;}
+      }
+    };
     busy.forEach(r=>{if(r.end<=a||r.start>=b)return;add(Math.min(r.start,b));cursor=Math.max(cursor,r.end);});add(b);return out.slice(0,3);
   }
   function validateAvailability(weekly){
