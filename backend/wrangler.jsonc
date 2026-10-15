@@ -1,0 +1,22 @@
+{
+  "name": "mufakkirati-background",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-15",
+  "account_id": "e49de91a6b712fd9a6524a5c2678f9e7",
+  "workers_dev": true,
+  "vars": {
+    "APP_ORIGIN": "https://khubrani2a-gif.github.io",
+    "PUBLIC_ORIGIN": "https://mufakkirati-background.mufakkirati-background.workers.dev",
+    "FIREBASE_PROJECT": "daily-tracker-85609",
+    "FIREBASE_API_KEY": "AIzaSyAfPrtJmeP8jGTzttk33V_UEqE_9cZOcu8",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mufakkirati-background",
+      "database_id": "577b1312-ec39-495e-9223-739cdbbcace1",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "observability": { "enabled": false },
+}
