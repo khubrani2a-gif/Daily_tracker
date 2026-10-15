@@ -12,3 +12,10 @@ test('yearly leap-day recurrence and completion-based dates',()=>{assert.equal(P
 test('conflicts include preparation buffers but exclude touching boundaries and completed tasks',()=>{const rows=[{date:'2026-10-14',task:{id:'a',dueTime:'10:00',endTime:'11:00',status:'pending'}}];assert.equal(P.conflicts({id:'b',dueDate:'2026-10-14',dueTime:'11:00',endTime:'12:00'},rows).length,0);assert.equal(P.conflicts({id:'b',dueDate:'2026-10-14',dueTime:'11:00',endTime:'12:00',bufferMinutes:15},rows)[0].minutes,15);assert.deepEqual(P.slots(rows,'2026-10-14','09:00','12:00',60),[{start:'09:00',end:'10:00'},{start:'11:00',end:'12:00'}]);});
 test('calendar export escapes content, folds Arabic UTF-8 safely, exports exclusive all-day end',()=>{const ics=P.ics({id:'a',text:'زيارة، '+ 'العائلة'.repeat(30)+'\nBEGIN:VEVENT',dueDate:'2026-12-31',allDay:true,reminders:[15]});assert.ok(ics.includes('DTEND;VALUE=DATE:20270101'));assert.ok(ics.includes('TRIGGER:-PT15M'));assert.equal(ics.split('\r\n').filter(x=>x==='BEGIN:VEVENT').length,1);assert.ok(ics.split('\r\n').every(line=>Buffer.byteLength(line)<=75));});
 test('calendar export keeps a timed appointment duration',()=>{const ics=P.ics({id:'a',text:'موعد',dueDate:'2026-10-14',dueTime:'17:00',endTime:'17:30'});const parse=s=>new Date(s.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,'$1-$2-$3T$4:$5:$6Z'));assert.equal(parse(ics.match(/DTEND:(.*)/)[1])-parse(ics.match(/DTSTART:(.*)/)[1]),30*60000);});
+test('start-only tasks conflict inside a booked interval without inventing duration',()=>{
+ const date='2026-10-15',lecture={id:'lecture',dueTime:'09:00',endTime:'11:00'},point={id:'task',dueDate:date,dueTime:'10:00'};
+ assert.equal(P.conflicts(point,[{date,task:lecture}]).length,1);
+ assert.equal(P.conflicts({...point,dueTime:'11:00'},[{date,task:lecture}]).length,0);
+ assert.equal(P.conflicts({...lecture,dueDate:date},[{date,task:point}]).length,1);
+ assert.equal(P.range(point),null);
+});

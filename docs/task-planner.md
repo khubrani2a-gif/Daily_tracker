@@ -38,3 +38,9 @@ Changes are written through `persistDay`, retaining its journal and three-way cl
 - `tests/planner-ui.test.js`: add/edit/reload, explicit conflicts, recurrence exceptions/deletion/after-completion, linked preparations/priorities, safe undo, multi-select moves, reminders, prayer-date correctness, cloud persistence, global search and responsive widths.
 - Existing overview, navigation, data/sync, finance, learning, reading and offline tests continue to run through `npm test`; Firestore authorization tests use the local emulator via `npm run test:firebase`.
 - Additional manual browser automation covers Chromium and WebKit with real local fonts at phone/tablet/laptop dimensions. This simulates devices; it is not testing on physical iPads.
+
+### Proportional timeline
+
+The Today and Upcoming views have direct List / Timeline buttons. This layout preference is saved locally. The time canvas uses a consistent minute scale, places overlapping cards in separate columns, and displays a live current-time line. The canvas scrolls within its container; the existing full-week option remains available. Untimed and all-day items remain outside the hour grid. Start-only tasks are explicitly labelled as having no duration.
+
+An hour that falls inside an active booking, including a learning schedule entry, is marked occupied rather than offered as a free add slot. Filtering does not remove bookings from availability checks. Conflicts are shown beside the editor's time fields; even a start-only task inside an existing appointment requires an explicit conflict override. Unknown task durations are not inferred or saved. Calendar data and the list view continue to use the same source records.
