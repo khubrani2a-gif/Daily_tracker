@@ -44,3 +44,12 @@ Changes are written through `persistDay`, retaining its journal and three-way cl
 The Today and Upcoming views have direct List / Timeline buttons. This layout preference is saved locally. The time canvas uses a consistent minute scale, places overlapping cards in separate columns, and displays a live current-time line. The canvas scrolls within its container; the existing full-week option remains available. Untimed and all-day items remain outside the hour grid. Start-only tasks are explicitly labelled as having no duration.
 
 An hour that falls inside an active booking, including a learning schedule entry, is marked occupied rather than offered as a free add slot. Filtering does not remove bookings from availability checks. Conflicts are shown beside the editor's time fields; even a start-only task inside an existing appointment requires an explicit conflict override. Unknown task durations are not inferred or saved. Calendar data and the list view continue to use the same source records.
+
+## Compact planning and direct schedule editing
+
+- Task list and timeline cards open the same summary. The explicit Edit action opens the form; optional contact, steps, notes, preparation and metadata sections retain values while collapsed. Native validation opens hidden invalid fields.
+- Secondary filter/select/review/settings controls are under More, whose expanded state survives rerenders. Search and list/timeline switching remain available.
+- Preparation is drawn before a booking and participates in lane layout and conflict checks. Its width follows the parent event. Crowded groups still expose individual records through their summary.
+- In the summary choose **تعديل الوقت على الجدول**. Drag the move or end handle, or choose the numeric-time alternative. Gestures snap to 15-minute increments and always open a preview; Save confirms, conflicts require explicit acceptance, and Undo uses the existing transaction. Escape/pointer cancellation does not change data. Learning records remain editable only in their source.
+- Availability settings accept up to three nonoverlapping periods per weekday, an unavailable day, or inheritance from the legacy general period. Availability guides suggestions and does not forbid manual bookings. Existing preferences keep their old behavior until customized.
+- Closed-app reminders can be handed to the device calendar from the summary; this is distinct from continuous background synchronization. See calendar-connection.md.

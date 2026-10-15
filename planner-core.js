@@ -54,21 +54,42 @@
     const day=d.getDate();d.setDate(1);if(t.repeat==='monthly')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return key(d);
   }
   function range(t){const start=minutes(t.dueTime);if(start===null||t.allDay)return null;let end=minutes(t.endTime);if(end===null&&t.durationMinutes)end=start+Number(t.durationMinutes);if(end===null||end<=start)return null;return {start:Math.max(0,start-(+t.bufferMinutes||0)),end};}
+  // Preparation is occupied even when the task itself has no known duration.
+  function occupiedRange(t){const known=range(t);if(known)return known;const at=minutes(t.dueTime),buffer=Math.max(0,+t.bufferMinutes||0);return !t.allDay&&at!==null&&buffer?{start:Math.max(0,at-buffer),end:at}:null;}
   function conflicts(t,rows){
-    const point=x=>!x.allDay?minutes(x.dueTime):null,a=range(t),at=point(t);if(at===null||!t.dueDate)return [];
+    const point=x=>!x.allDay?minutes(x.dueTime):null,knownA=range(t),a=occupiedRange(t),at=point(t);if(at===null||!t.dueDate)return [];
     return rows.filter(r=>r.task.id!==t.id&&r.date===t.dueDate&&active(r.task)).flatMap(r=>{
-      const b=range(r.task),bt=point(r.task);if(bt===null)return [];
-      const overlap=a&&b?Math.min(a.end,b.end)-Math.max(a.start,b.start):null;
-      const hit=overlap!==null?overlap>0:a?bt>=a.start&&bt<a.end:b?at>=b.start&&at<b.end:at===bt;
-      return hit?[{row:r,minutes:overlap||0}]:[];
+      const knownB=range(r.task),b=occupiedRange(r.task),bt=point(r.task);if(bt===null)return [];
+      const overlap=a&&b?Math.max(0,Math.min(a.end,b.end)-Math.max(a.start,b.start)):0;
+      const hit=overlap>0||!knownA&&b&&at>=b.start&&at<b.end||!knownB&&a&&bt>=a.start&&bt<a.end||!knownA&&!knownB&&at===bt;
+      return hit?[{row:r,minutes:overlap}]:[];
     });
   }
   function slots(rows,s,start,end,duration,buffer=0){
     const a=minutes(start),b=minutes(end);duration=Number(duration);buffer=Math.max(0,Number(buffer)||0);
     if(a===null||b===null||b<=a||!Number.isFinite(duration)||duration<=0||duration+buffer>b-a)return [];
-    const busy=rows.filter(r=>r.date===s&&active(r.task)).map(r=>range(r.task)).filter(Boolean).sort((x,y)=>x.start-y.start),out=[];let cursor=a;
-    const add=limit=>{if(limit-cursor>=duration+buffer)out.push({start:time(cursor+buffer),end:time(cursor+buffer+duration)});};
+    const busy=rows.filter(r=>r.date===s&&active(r.task)).map(r=>occupiedRange(r.task)).filter(Boolean).sort((x,y)=>x.start-y.start),out=[];let cursor=a;
+    const add=limit=>{
+      // Search later in this gap if its first candidate hits a start-only task.
+      // Minute precision does not assign a duration to that existing task.
+      for(let candidate=cursor;candidate+duration+buffer<=limit;candidate++){
+        const slot={start:time(candidate+buffer),end:time(candidate+buffer+duration)};
+        if(!conflicts({dueDate:s,dueTime:slot.start,endTime:slot.end,bufferMinutes:buffer},rows).length){out.push(slot);break;}
+      }
+    };
     busy.forEach(r=>{if(r.end<=a||r.start>=b)return;add(Math.min(r.start,b));cursor=Math.max(cursor,r.end);});add(b);return out.slice(0,3);
+  }
+  function validateAvailability(weekly){
+    if(!weekly||typeof weekly!=='object'||Array.isArray(weekly))return false;
+    return Object.entries(weekly).every(([day,periods])=>{if(!/^[0-6]$/.test(day)||!Array.isArray(periods)||periods.length>3)return false;let end=-1;return [...periods].sort((a,b)=>String(a?.start).localeCompare(String(b?.start))).every(p=>{const a=minutes(p?.start),b=minutes(p?.end);if(a===null||b===null||b<=a||a<end)return false;end=b;return true;});});
+  }
+  function availability(prefs,s){
+    const d=date(s);if(!d)return [];const weekly=prefs.weeklyAvailability;
+    if(validateAvailability(weekly)&&Object.prototype.hasOwnProperty.call(weekly,d.getDay()))return weekly[d.getDay()].map(p=>({...p})).sort((a,b)=>a.start.localeCompare(b.start));
+    return minutes(prefs.start)!==null&&minutes(prefs.end)!==null&&prefs.end>prefs.start?[{start:prefs.start,end:prefs.end}]:[{start:'08:00',end:'21:00'}];
+  }
+  function availableSlots(rows,s,prefs,duration,buffer=0,notBefore='00:00'){
+    return availability(prefs,s).flatMap(p=>slots(rows,s,p.start>notBefore?p.start:notBefore,p.end,duration,buffer)).filter(slot=>!conflicts({id:'availability-proposal',dueDate:s,dueTime:slot.start,endTime:slot.end,bufferMinutes:buffer},rows).length).slice(0,3);
   }
   function review(rows){
     const included=rows.filter(r=>!r.external&&!r.task.deletedAt&&!['cancelled','skipped'].includes(r.task.status));
@@ -105,5 +126,5 @@
     (t.reminders||[]).forEach(n=>{if(Number.isFinite(n)&&n>=0)lines.push('BEGIN:VALARM','TRIGGER:-PT'+n+'M','ACTION:DISPLAY','DESCRIPTION:'+escape(t.text),'END:VALARM');});lines.push('END:VEVENT','END:VCALENDAR');
     return lines.map(line=>{let out='',bytes=0;for(const c of line){const n=new TextEncoder().encode(c).length;if(bytes+n>73){out+='\r\n ';bytes=1;}out+=c;bytes+=n;}return out;}).join('\r\n')+'\r\n';
   }
-  return {date,key,plus,days,minutes,time,active,occurs,next,afterCompletion,range,conflicts,slots,review,parse,ics};
+  return {date,key,plus,days,minutes,time,active,occurs,next,afterCompletion,range,conflicts,slots,availability,availableSlots,validateAvailability,review,parse,ics};
 });

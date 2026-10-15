@@ -42,3 +42,9 @@ The integration is tested with a simulated API and Firebase provider. Live OAuth
 - https://developers.google.com/workspace/calendar/api/auth
 - https://developers.google.com/workspace/calendar/api/guides/version-resources
 - https://firebase.google.com/docs/auth/web/google-signin
+
+## Direct reminder handoff
+
+A saved dated task or appointment summary now has **التذكير عبر التقويم**. It offers the existing selected-occurrence Google link, ICS export, and direct access to reminder editing. The sheet explicitly distinguishes calendar delivery after closing the planner from foreground-only synchronization. An item without reminders is labeled rather than silently receiving a default alarm.
+
+Continuous closed-app synchronization and planner-origin push remain unavailable on this static GitHub Pages / Firebase Spark architecture: no always-running scheduler or secure refresh-token backend is configured. This release introduces no paid infrastructure, service-account keys or browser-stored refresh tokens. Actual device calendar delivery and OAuth consent must be verified on the owner's device.
