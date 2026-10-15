@@ -54,7 +54,15 @@
     const day=d.getDate();d.setDate(1);if(t.repeat==='monthly')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return key(d);
   }
   function range(t){const start=minutes(t.dueTime);if(start===null||t.allDay)return null;let end=minutes(t.endTime);if(end===null&&t.durationMinutes)end=start+Number(t.durationMinutes);if(end===null||end<=start)return null;return {start:Math.max(0,start-(+t.bufferMinutes||0)),end};}
-  function conflicts(t,rows){const a=range(t);if(!a||!t.dueDate)return [];return rows.filter(r=>r.task.id!==t.id&&r.date===t.dueDate&&active(r.task)).flatMap(r=>{const b=range(r.task);if(!b)return [];const overlap=Math.min(a.end,b.end)-Math.max(a.start,b.start);return overlap>0?[{row:r,minutes:overlap}]:[];});}
+  function conflicts(t,rows){
+    const point=x=>!x.allDay?minutes(x.dueTime):null,a=range(t),at=point(t);if(at===null||!t.dueDate)return [];
+    return rows.filter(r=>r.task.id!==t.id&&r.date===t.dueDate&&active(r.task)).flatMap(r=>{
+      const b=range(r.task),bt=point(r.task);if(bt===null)return [];
+      const overlap=a&&b?Math.min(a.end,b.end)-Math.max(a.start,b.start):null;
+      const hit=overlap!==null?overlap>0:a?bt>=a.start&&bt<a.end:b?at>=b.start&&at<b.end:at===bt;
+      return hit?[{row:r,minutes:overlap||0}]:[];
+    });
+  }
   function slots(rows,s,start,end,duration,buffer=0){
     const a=minutes(start),b=minutes(end);duration=Number(duration);buffer=Math.max(0,Number(buffer)||0);
     if(a===null||b===null||b<=a||!Number.isFinite(duration)||duration<=0||duration+buffer>b-a)return [];
