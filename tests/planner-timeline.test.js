@@ -35,3 +35,6 @@ test('timeline preference survives reload and current-time action returns from a
 test('filtering the timeline cannot make an occupied hour available',()=>run(async p=>{
  await seed(p);await p.locator('[data-planner-mode="week"]').click();await p.locator('#plannerSearch').fill('اتصال');assert.equal(await p.locator('.planner-time-event').filter({hasText:'PHS111'}).count(),0);assert.equal(await p.locator('[data-planner-add-time="10:00"]').isDisabled(),true);
 }));
+test('switching month back to list keeps rendering and add controls functional',()=>run(async p=>{
+ await seed(p);await p.locator('[data-planner-view="upcoming"]').click();await p.locator('#plannerLayout').selectOption('month');await p.locator('[data-planner-mode="list"]').click();await p.locator('#plannerAdd').click();assert.equal(await p.locator('#tmText').isVisible(),true);await p.locator('.task-sheet-close').click();
+}));

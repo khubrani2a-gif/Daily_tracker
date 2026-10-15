@@ -16410,7 +16410,7 @@
     }
     if(!rows.length)html+='<div class="planner-empty">'+(plannerUI.filter==='unscheduled'?'احفظ فكرة كمهمة بدون تاريخ، وجدولها عندما تكون جاهزًا.':'لا توجد عناصر في هذا العرض.')+'</div>';
     html+='<div class="planner-footer"><button type="button" id="plannerBatch">إضافة عدة مهام</button><button type="button" id="plannerTemplate">قالب زيارة أو سفر</button></div>';host.innerHTML=html;
-    const newCanvas=host.querySelector('.planner-calendar-main');if(scroll&&newCanvas?.querySelector('.planner-timeline')?.dataset.timelineDate===scroll.date){newCanvas.scrollTop=scroll.top;newCanvas.scrollLeft=scroll.left;}
+    const newCanvas=host.querySelector('.planner-calendar-main');if(scroll?.date&&newCanvas&&newCanvas.querySelector('.planner-timeline')?.dataset.timelineDate===scroll.date){newCanvas.scrollTop=scroll.top;newCanvas.scrollLeft=scroll.left;}
     plannerUpdateNow();
     host.querySelectorAll('[data-planner-mode]').forEach(b=>b.onclick=()=>{plannerUI.layout=b.dataset.plannerMode;try{localStorage.setItem('h2do-planner-layout',plannerUI.layout);}catch(e){}plannerRender();});
     const on=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
