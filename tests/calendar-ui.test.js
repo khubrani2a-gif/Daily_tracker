@@ -66,3 +66,30 @@ test('a lost insert response is recovered using the saved identity without creat
 test('editing locally during a Google read prevents uploading an obsolete snapshot',()=>run(async(p,api)=>{
  await seed(p);await connect(p);await link(p);await edit(p,{text:'التعديل الأول'});let release;api.hold=new Promise(r=>release=r);const before=api.requests.length,patches=api.requests.filter(r=>r.method==='PATCH').length;const running=p.evaluate(()=>__mfkrPlanner.calendar.sync());while(api.requests.length===before)await new Promise(r=>setTimeout(r,10));await edit(p,{text:'التعديل الأحدث'});release();await running;assert.equal(api.requests.filter(r=>r.method==='PATCH').length,patches);assert.equal(remote(api).summary,'زيارة');assert.equal((await current(p)).text,'التعديل الأحدث');await p.evaluate(()=>__mfkrPlanner.calendar.sync());assert.equal(remote(api).summary,'التعديل الأحدث');
 }));
+test('linked status distinguishes pending, checked, disconnected and review with safe event links',()=>run(async(p,api)=>{
+ await seed(p);await connect(p);await link(p);
+ remote(api).htmlLink='https://www.google.com/calendar/event?eid=example';await p.evaluate(()=>__mfkrPlanner.calendar.sync());
+ assert.match(await p.locator('[data-calendar-status]').first().innerText(),/تمت المزامنة/);
+ assert.equal(await p.locator('[data-calendar-event-link]').first().getAttribute('href'),'https://www.google.com/calendar/event?eid=example');
+ await p.locator('.task-sheet-close').click();await edit(p,{text:'موعد محدث'});await p.evaluate(()=>__mfkrPlanner.calendar.settings());assert.match(await p.locator('[data-calendar-status]').first().innerText(),/ينتظر المزامنة/);
+ await p.locator('#plannerCalendarSync').click();await p.waitForFunction(()=>!document.querySelector('#plannerCalendarSync').disabled);assert.equal(remote(api).summary,'موعد محدث');
+ await p.locator('#plannerCalendarDisconnect').click();assert.match(await p.locator('[data-calendar-status]').first().innerText(),/أعد الاتصال/);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/لا يسحب/);
+ assert.equal(await p.locator('#plannerCalendarPermissions').getAttribute('href'),'https://myaccount.google.com/connections');
+ await p.locator('.task-sheet-close').click();await connect(p);api.fail=503;await p.evaluate(()=>__mfkrPlanner.calendar.sync());assert.match(await p.locator('[data-calendar-status]').first().innerText(),/تحتاج مراجعة/);
+}));
+test('unsafe Google event links are not rendered and summary includes connection status',()=>run(async(p,api)=>{
+ await seed(p);await connect(p);await link(p);remote(api).htmlLink='javascript:alert(1)';await p.evaluate(()=>__mfkrPlanner.calendar.sync());assert.equal(await p.locator('[data-calendar-event-link]').count(),0);
+ await p.locator('.task-sheet-close').click();await p.locator('.planner-row-main').first().click();assert.equal(await p.locator('#plannerSummary [data-calendar-status]').count(),1);
+}));
+
+test('successful unchanged check refreshes displayed time without rewriting task data',()=>run(async(p,api)=>{
+ await seed(p);await connect(p);await link(p);const before=await current(p);
+ await p.clock.install({time:Date.now()+120000});await p.evaluate(()=>__mfkrPlanner.calendar.sync());
+ assert.equal((await current(p)).calendarBinding.syncedAt,before.calendarBinding.syncedAt);
+ const expected=await p.evaluate(()=>new Date().toLocaleString('ar'));assert.ok((await p.locator('[data-calendar-task]').first().innerText()).includes(expected));
+}));
+test('disconnect during sync retains reconnect guidance and disconnect explanation',()=>run(async(p,api)=>{
+ await seed(p);await connect(p);await link(p);let release;api.hold=new Promise(r=>release=r);const before=api.requests.length;const running=p.evaluate(()=>__mfkrPlanner.calendar.sync());while(api.requests.length===before)await new Promise(r=>setTimeout(r,10));
+ await p.evaluate(()=>__mfkrPlanner.calendar.disconnect());release();await running;
+ assert.match(await p.locator('[data-calendar-status]').first().innerText(),/أعد الاتصال/);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/لا يسحب/);
+}));
