@@ -107,3 +107,9 @@ test('closing the pending appointment sheet before consent returns does not link
 test('disconnect during consent prevents reconnecting or linking the pending appointment',()=>run(async(p,api)=>{
  await seed(p);await p.evaluate(()=>{const auth=firebase.auth,base=auth();function replacement(){return {...base,currentUser:{...base.currentUser,reauthenticateWithPopup:()=>new Promise(r=>window.finishConsent=()=>r({user:{uid:'test'},credential:{accessToken:'TEST_MEMORY_ONLY_TOKEN'}}))}};}replacement.GoogleAuthProvider=auth.GoogleAuthProvider;firebase.auth=replacement;});await link(p);await p.locator('#plannerCalendarConnect').click();await p.locator('#plannerCalendarDisconnect').click();await p.evaluate(()=>finishConsent());await p.waitForTimeout(100);assert.match(await p.locator('#plannerCalendarQuick').innerText(),/تفعيل/);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/الربط متوقف/);assert.equal((await current(p)).calendarBinding,undefined);assert.equal(api.events.size,0);
 }));
+test('empty sync explicitly says no appointments were sent',()=>run(async(p,api)=>{
+ await seed(p);await connect(p);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/لا توجد مواعيد مرتبطة/);assert.doesNotMatch(await p.locator('#plannerCalendarStatus').innerText(),/تمت مزامنة/);assert.equal(api.events.size,0);
+}));
+test('missing appointment end shows persistent actionable error instead of silent success',()=>run(async(p,api)=>{
+ await seed(p,{endTime:'',durationMinutes:0});await link(p);assert.match(await p.locator('#plannerCalendarLinkProblem').innerText(),/حدد بداية ونهاية/);assert.equal(api.events.size,0);assert.equal((await current(p)).calendarBinding,undefined);await p.locator('#plannerCalendarLinkProblem button').click();assert.equal(await p.locator('#tmEnd').count(),1);
+}));
