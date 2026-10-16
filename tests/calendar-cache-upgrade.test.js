@@ -1,0 +1,15 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('playwright');
+test('an old service-worker cache cannot supply an incompatible calendar core to the new page',async()=>{
+ const root=path.resolve(__dirname,'..');let upgraded=false;
+ const oldCore='window.MufCalendar={legacy:true};';
+ // Reproduce the existing cache-first subresource strategy, keeping the old worker active.
+ const worker=`self.addEventListener('install',e=>e.waitUntil(caches.open('old-calendar').then(c=>c.put('./calendar-core.js',new Response(${JSON.stringify(oldCore)},{headers:{'Content-Type':'application/javascript'}}))).then(()=>self.skipWaiting())));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{if(e.request.mode==='navigate')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;
+ const server=http.createServer((req,res)=>{const u=new URL(req.url,'http://localhost');if(u.pathname==='/sw.js'){res.setHeader('Content-Type','application/javascript');return res.end(worker);}if(!upgraded&&u.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<script>navigator.serviceWorker.register("/sw.js")</script>');}const file=path.resolve(root,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.statusCode=404;return res.end();}res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'application/javascript':'application/octet-stream');res.end(fs.readFileSync(file));});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({args:['--no-sandbox']});
+ try{const p=await browser.newPage();await p.route('https://**',r=>r.fulfill({body:''}));await p.goto(origin);await p.waitForFunction(()=>navigator.serviceWorker.controller);upgraded=true;await p.goto(origin+'/?upgrade=1');await p.waitForFunction(()=>window.__mfkrPlanner&&window.__mfkrLearning);assert.equal(await p.evaluate(()=>typeof MufCalendar.learningTask),'function');assert.match(await p.evaluate(async()=>await(await caches.match('/calendar-core.js')).text()),/legacy/);
+ await p.evaluate(()=>{const data=__mfkrLearning.load();data.schedule=[{id:'upgrade-test',courseName:'محاضرة',day:new Date().getDay(),startTime:'09:00',endTime:'11:00',recurrence:'weekly'}];__mfkrLearning.save(data);__mfkrPlanner.calendar.learning('schedule','upgrade-test');});assert.match(await p.locator('#learningCalendarPreview').innerText(),/1 مواعيد/);
+ const script=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/src="(calendar-core\.js[^\"]*)"/)[1];assert.notEqual(script,'calendar-core.js');assert.ok(fs.readFileSync(path.join(root,'sw.js'),'utf8').includes('"./'+script+'"'));
+ }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+});

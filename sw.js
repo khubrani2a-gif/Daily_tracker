@@ -6,7 +6,7 @@ const ASSETS = [
   "./index.html",
   "./sync-core.js",
   "./data-core.js",
-  "./planner-core.js", "./calendar-core.js",
+  "./planner-core.js", "./calendar-core.js?v=150",
   "./manifest.webmanifest",
   "./fonts/ThmanyahSans-Regular.woff2",
   "./fonts/ThmanyahSans-Medium.woff2",
