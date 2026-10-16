@@ -54,3 +54,7 @@ Continuous closed-app synchronization and planner-origin push remain unavailable
 Linked appointment summaries and calendar settings show pending local changes, the last successful check, reconnect requests, or sync errors. The saved check is not a claim of continuous monitoring. After Google returns its event URL, a validated HTTPS link opens the linked event. Only Google Calendar host/path combinations are accepted.
 
 Disconnect clears this device session only. The privacy section links to Google account connections for removing the app grant; this is a separate user action and leaves existing calendar events intact. Independently created Google events are not automatically imported.
+
+## Quick connection
+
+The planner shows **تفعيل اتصال Google** beside its primary controls. It starts the Google consent popup directly; after connection the same button opens sync management. Linking an appointment while disconnected presents **تفعيل Google وربط هذا الموعد** and continues that selected occurrence after successful consent. Closing the sheet cancels the pending link; it does not silently select other appointments.

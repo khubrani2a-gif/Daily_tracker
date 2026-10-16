@@ -93,3 +93,17 @@ test('disconnect during sync retains reconnect guidance and disconnect explanati
  await p.evaluate(()=>__mfkrPlanner.calendar.disconnect());release();await running;
  assert.match(await p.locator('[data-calendar-status]').first().innerText(),/أعد الاتصال/);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/لا يسحب/);
 }));
+test('visible Google shortcut connects directly and becomes connection management',()=>run(async(p,api)=>{
+ await seed(p);assert.equal(await p.locator('#plannerCalendarQuick').isVisible(),true);await p.locator('#plannerCalendarQuick').click();await p.waitForFunction(()=>document.querySelector('#plannerCalendarSync')?.disabled===false);assert.match(await p.locator('#plannerCalendarQuick').innerText(),/متصل/);assert.equal(api.events.size,0);
+ await p.locator('#plannerCalendarDisconnect').click();assert.match(await p.locator('#plannerCalendarQuick').innerText(),/تفعيل/);
+}));
+test('connecting from an appointment continues its requested link without reopening it',()=>run(async(p,api)=>{
+ await seed(p);await link(p);assert.match(await p.locator('#plannerCalendarConnect').innerText(),/وربط هذا الموعد/);await p.locator('#plannerCalendarConnect').click();await p.waitForFunction(()=>!!__mfkrPlanner.rows(null,null,false).find(r=>r.task.id==='calendar-task')?.task.calendarBinding?.base);assert.equal(api.events.size,1);assert.equal(remote(api).summary,'زيارة');
+}));
+test('closing the pending appointment sheet before consent returns does not link it',()=>run(async(p,api)=>{
+ await seed(p);await p.evaluate(()=>{const auth=firebase.auth,base=auth();function replacement(){return {...base,currentUser:{...base.currentUser,reauthenticateWithPopup:()=>new Promise(r=>window.finishConsent=()=>r({user:{uid:'test'},credential:{accessToken:'TEST_MEMORY_ONLY_TOKEN'}}))}};}replacement.GoogleAuthProvider=auth.GoogleAuthProvider;firebase.auth=replacement;});await link(p);await p.locator('#plannerCalendarConnect').click();await p.locator('.task-sheet-close').click();await p.evaluate(()=>finishConsent());await p.waitForFunction(()=>document.querySelector('#plannerCalendarQuick').textContent.includes('متصل'));assert.equal((await current(p)).calendarBinding,undefined);assert.equal(api.events.size,0);
+}));
+
+test('disconnect during consent prevents reconnecting or linking the pending appointment',()=>run(async(p,api)=>{
+ await seed(p);await p.evaluate(()=>{const auth=firebase.auth,base=auth();function replacement(){return {...base,currentUser:{...base.currentUser,reauthenticateWithPopup:()=>new Promise(r=>window.finishConsent=()=>r({user:{uid:'test'},credential:{accessToken:'TEST_MEMORY_ONLY_TOKEN'}}))}};}replacement.GoogleAuthProvider=auth.GoogleAuthProvider;firebase.auth=replacement;});await link(p);await p.locator('#plannerCalendarConnect').click();await p.locator('#plannerCalendarDisconnect').click();await p.evaluate(()=>finishConsent());await p.waitForTimeout(100);assert.match(await p.locator('#plannerCalendarQuick').innerText(),/تفعيل/);assert.match(await p.locator('#plannerCalendarStatus').innerText(),/الربط متوقف/);assert.equal((await current(p)).calendarBinding,undefined);assert.equal(api.events.size,0);
+}));
