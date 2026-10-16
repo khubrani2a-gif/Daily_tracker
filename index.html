@@ -16611,7 +16611,7 @@
   }
   /* Calendar uses the signed-in user's consent, an app-owned calendar and memory-only tokens. */
   const GC=window.MufCalendar;
-  const calendarSession={token:'',uid:'',calendar:'',expires:0,busy:false,timer:null,errors:new Map(),checked:new Map(),message:''};
+  const calendarSession={generation:0,token:'',uid:'',calendar:'',expires:0,busy:false,timer:null,errors:new Map(),checked:new Map(),message:''};
   function calendarSafeEventLink(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['calendar.google.com','www.google.com'].includes(u.hostname)&&u.pathname.startsWith('/calendar/')?u.href:'';}catch{return '';}}
   function calendarUpdateQuick(){const b=document.getElementById('plannerCalendarQuick');if(b)b.textContent=calendarReady()?'Google متصل · إدارة المزامنة':'تفعيل اتصال Google';}
   function calendarItemStatus(t){
@@ -16625,7 +16625,7 @@
   function calendarUpdateItemStatus(){const tasks=new Map(calendarRecords().map(r=>[r.task.id,r.task]));document.querySelectorAll('[data-calendar-task]').forEach(el=>{const t=tasks.get(el.dataset.calendarTask)||{id:el.dataset.calendarTask};el.outerHTML=calendarItemHTML(t);});}
   function calendarRecords(){return Object.entries(allDays()).flatMap(([day,data])=>(data.tasks||[]).filter(t=>t.calendarBinding?.ownerId===t.id).map(task=>({day,task:plannerClone(task)})));}
   function calendarReady(){return !!(user&&calendarSession.uid===user.uid&&calendarSession.token&&calendarSession.expires>Date.now()&&!accountChanging);}
-  function calendarDisconnect(){calendarSession.token='';calendarSession.uid='';calendarSession.expires=0;calendarSession.errors.clear();calendarSession.checked.clear();calendarSession.message='الربط متوقف على هذا الجهاز. هذا لا يسحب إذن Google، ولا يحذف المواعيد الموجودة في التقويم أو تنبيهاتها.';clearTimeout(calendarSession.timer);calendarRenderStatus();}
+  function calendarDisconnect(){calendarSession.generation++;calendarSession.token='';calendarSession.uid='';calendarSession.expires=0;calendarSession.errors.clear();calendarSession.checked.clear();calendarSession.message='الربط متوقف على هذا الجهاز. هذا لا يسحب إذن Google، ولا يحذف المواعيد الموجودة في التقويم أو تنبيهاتها.';clearTimeout(calendarSession.timer);calendarRenderStatus();}
   async function calendarRequest(path,options={}){
     if(!calendarReady())throw Error('أعد الاتصال بـ Google لتجديد الإذن.');
     const uid=calendarSession.uid,token=calendarSession.token,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
@@ -16637,16 +16637,16 @@
   }
   async function calendarConnect(){
     if(!user){hifzShowToast('سجّل الدخول للمفكرة أولًا، ثم اربط التقويم.');return;}
-    const uid=user.uid;calendarSession.message='جاري طلب إذن التقويم…';calendarRenderStatus();
+    const uid=user.uid,generation=++calendarSession.generation;calendarSession.message='جاري طلب إذن التقويم…';calendarRenderStatus();
     try{const provider=new firebase.auth.GoogleAuthProvider();provider.addScope('https://www.googleapis.com/auth/calendar.app.created');provider.addScope('https://www.googleapis.com/auth/calendar.calendarlist.readonly');
       const result=await firebase.auth().currentUser.reauthenticateWithPopup(provider);
-      if(!user||user.uid!==uid||result.user.uid!==uid||accountChanging)return;
+      if(generation!==calendarSession.generation||!user||user.uid!==uid||result.user.uid!==uid||accountChanging)return;
       const token=result.credential?.accessToken;if(!token)throw Error('لم يصل إذن التقويم؛ حاول الاتصال مجددًا.');
       calendarSession.token=token;calendarSession.uid=uid;calendarSession.expires=Date.now()+50*60000;
       let found=null,page='';do{const list=await calendarRequest('users/me/calendarList?maxResults=250'+(page?'&pageToken='+encodeURIComponent(page):''));found=(list.items||[]).find(c=>c.description==='Mufakkirati app calendar v1'&&['owner','writer'].includes(c.accessRole));page=list.nextPageToken||'';}while(!found&&page);
       if(!found)found=await calendarRequest('calendars',{method:'POST',body:JSON.stringify({summary:'مفكرتي اليومية',description:'Mufakkirati app calendar v1',timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone})});
       calendarSession.calendar=found.id;calendarSession.message='متصل. اختر «ربط هذه المرة» من تفاصيل المهمة أو الموعد.';calendarRenderStatus();await calendarSync();return calendarReady();
-    }catch(e){calendarSession.token='';calendarSession.calendar='';calendarSession.message=e.code==='auth/popup-closed-by-user'?'أُغلقت نافذة الاتصال؛ لم يتغير شيء.':e.message||'تعذر الاتصال بالتقويم.';calendarRenderStatus();}
+    }catch(e){if(generation!==calendarSession.generation)return;calendarSession.token='';calendarSession.calendar='';calendarSession.message=e.code==='auth/popup-closed-by-user'?'أُغلقت نافذة الاتصال؛ لم يتغير شيء.':e.message||'تعذر الاتصال بالتقويم.';calendarRenderStatus();}
   }
   function calendarApply(id,expected,value,binding){
     if(!calendarReady())return false;const row=calendarRecords().find(r=>r.task.id===id);if(!row||!GC.equal(GC.snapshot(row.task),expected)||!GC.equal(row.task.calendarBinding?.base,binding.previousBase))return false;
