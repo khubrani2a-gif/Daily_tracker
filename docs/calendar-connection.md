@@ -48,3 +48,9 @@ The integration is tested with a simulated API and Firebase provider. Live OAuth
 A saved dated task or appointment summary now has **التذكير عبر التقويم**. It offers the existing selected-occurrence Google link, ICS export, and direct access to reminder editing. The sheet explicitly distinguishes calendar delivery after closing the planner from foreground-only synchronization. An item without reminders is labeled rather than silently receiving a default alarm.
 
 Continuous closed-app synchronization and planner-origin push remain unavailable on this static GitHub Pages / Firebase Spark architecture: no always-running scheduler or secure refresh-token backend is configured. This release introduces no paid infrastructure, service-account keys or browser-stored refresh tokens. Actual device calendar delivery and OAuth consent must be verified on the owner's device.
+
+## Connection clarity
+
+Linked appointment summaries and calendar settings show pending local changes, the last successful check, reconnect requests, or sync errors. The saved check is not a claim of continuous monitoring. After Google returns its event URL, a validated HTTPS link opens the linked event. Only Google Calendar host/path combinations are accepted.
+
+Disconnect clears this device session only. The privacy section links to Google account connections for removing the app grant; this is a separate user action and leaves existing calendar events intact. Independently created Google events are not automatically imported.
