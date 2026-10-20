@@ -6,11 +6,12 @@ const root=path.resolve(__dirname,'../..');
 // Use the same compat SDK version as production, with real Firestore transport.
 // Emulator-only tokens bypass Google login without exposing production credentials.
 const sdkRoot=path.dirname(require.resolve('firebase-app-sdk/package.json'));
-const expose=`window.integration={blankState,persistDay,pullRemote,syncPendingDays,syncPullAllModules,dailyPending,ready:()=>!!user&&!accountChanging};`;
+const expose=`window.integration={blankState,persistDay,pullRemote,syncPendingDays,syncPullAllModules,dailyPending,learningLoad,learningSave,learningPullRemote,ready:()=>!!user&&!accountChanging};`;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8')
  .replace('firebase.initializeApp(FIREBASE_CONFIG);','firebase.initializeApp({projectId:"demo-daily-tracker",apiKey:"demo-only",appId:"demo-only"});')
  .replace('db = firebase.firestore();','db = firebase.firestore(); db.useEmulator("127.0.0.1",8080,{mockUserToken:{sub:"browser-owner"}});')
  .replace('firebase.auth().onAuthStateChanged(u=>{','(cb=>cb({uid:"browser-owner"}))(u=>{')
+ .replace('const snap=await transaction.get(ref);','const snap=await transaction.get(ref);if(window.holdLearningRead)await window.txnBarrier();')
  .replace('function storageKey(date){',expose+'\nfunction storageKey(date){');
 async function openDevice(browser,origin){
  const context=await browser.newContext(),page=await context.newPage();
@@ -67,5 +68,16 @@ test('app sync across independent browsers preserves offline edits alongside rem
      assert.deepEqual(await d.page.evaluate(()=>integration.dailyPending()),{});
      assert.deepEqual(d.errors,[]);
    }
+   await a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses=[{id:'offline-course',name:'Original',notes:'Initial',updatedAt:1}];integration.learningSave(d);await integration.learningPullRemote('seed');});
+   await b.page.evaluate(()=>integration.learningPullRemote('seed'));
+   await b.page.evaluate(async()=>{await firebase.firestore().disableNetwork();const d=integration.learningLoad();d.courses[0].name='B offline';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('offline');});
+   await a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].notes='A online';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('online');});
+   await b.page.evaluate(async()=>{await firebase.firestore().enableNetwork();await integration.learningPullRemote('reconnect');});
+   await a.page.evaluate(()=>integration.learningPullRemote('verify'));
+   for(const d of [a,b]){const row=await d.page.evaluate(()=>integration.learningLoad().courses[0]);assert.equal(row.name,'B offline');assert.equal(row.notes,'A online');assert.deepEqual(d.errors,[]);}
+   let arrivals=0,release;const barrier=new Promise(resolve=>release=resolve);
+   for(const d of [a,b]){await d.page.exposeBinding('txnBarrier',async()=>{if(++arrivals>=2)release();await barrier;});await d.page.evaluate(()=>window.holdLearningRead=true);}
+   await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].name='Concurrent A';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].notes='Concurrent B';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');})]);
+   for(const d of [a,b]){await d.page.evaluate(()=>window.holdLearningRead=false);await d.page.evaluate(()=>integration.learningPullRemote('converge'));const row=await d.page.evaluate(()=>integration.learningLoad().courses[0]);assert.equal(row.name,'Concurrent A');assert.equal(row.notes,'Concurrent B');assert.deepEqual(d.errors,[]);}
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 });

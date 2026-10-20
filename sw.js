@@ -1,11 +1,11 @@
 /* عامل الخدمة — يخزّن ملفات التطبيق ليعمل بدون إنترنت.
    عند أي تحديث جوهري للتطبيق نرفع رقم النسخة أدناه. */
-const CACHE = "mufakkirati-v152";
+const CACHE = "mufakkirati-v153";
 const ASSETS = [
   "./",
   "./index.html",
   "./sync-core.js",
-  "./data-core.js",
+  "./data-core.js?v=153",
   "./planner-core.js", "./calendar-core.js?v=150",
   "./manifest.webmanifest",
   "./fonts/ThmanyahSans-Regular.woff2",
