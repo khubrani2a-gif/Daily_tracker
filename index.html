@@ -956,6 +956,10 @@
   .task-sheet-head h3{margin:0;font-size:1.05rem}
   .task-sheet-close{border:0;background:var(--chip-bg);color:var(--ink);border-radius:9px;width:34px;height:34px;cursor:pointer}
   .task-fields{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+  #learningFormFields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #learningFormFields label{min-width:0}
+  #learningFormFields input,#learningFormFields select,#learningFormFields textarea{min-width:0;width:100%;max-width:100%;box-sizing:border-box}
+  @media(max-width:520px){#learningFormFields{grid-template-columns:minmax(0,1fr)}}
   .task-fields label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem}
   .task-fields .appearance-choice,.task-history-list .appearance-choice{display:flex;flex-direction:row;align-items:center;gap:.6rem;border:1px solid var(--line);border-radius:10px;padding:.6rem;color:var(--ink);font-weight:600;cursor:pointer;margin-bottom:.45rem}
   .task-fields .appearance-choice input,.task-history-list .appearance-choice input{width:20px;height:20px;padding:0;accent-color:var(--accent);flex:0 0 auto}
