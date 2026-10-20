@@ -9,7 +9,7 @@ const html = fs.readFileSync(path.join(root,'index.html'),'utf8').replace('funct
 (async()=>{
  const browser=await chromium.launch(process.env.PW_EXECUTABLE_PATH?{executablePath:process.env.PW_EXECUTABLE_PATH}:{});
  const page=await browser.newPage();
- await page.route('**/*',route=>route.fulfill({contentType:route.request().url().endsWith('index.html')?'text/html':'application/javascript',body:route.request().url().endsWith('index.html')?html:/\/(sync-core|data-core|planner-core)\.js$/.test(route.request().url())?fs.readFileSync(path.join(root,new URL(route.request().url()).pathname),'utf8'):''}));
+ await page.route('**/*',route=>route.fulfill({contentType:route.request().url().endsWith('index.html')?'text/html':'application/javascript',body:route.request().url().endsWith('index.html')?html:/\/(sync-core|data-core|planner-core)\.js$/.test(new URL(route.request().url()).pathname)?fs.readFileSync(path.join(root,new URL(route.request().url()).pathname),'utf8'):''}));
  let failures=0;
  async function check(name,fn){try{await fn();console.log('PASS '+name);}catch(e){failures++;console.error('FAIL '+name+'\n'+e.stack);}}
  try{

@@ -61,5 +61,39 @@
     }
     return copy(local);
   }
-  return {openAccountStorage,mergeChanges};
+  // Three-way learning reconciliation. Conflicts are returned, never silently committed.
+  function reconcileLearning(base,local,remote){
+    const merged=copy(remote||{}), conflicts=[], equal=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+    const fields=row=>Object.keys(row||{}).filter(k=>!['id','createdAt','updatedAt'].includes(k));
+    const same=(a,b)=>[...new Set([...fields(a),...fields(b)])].every(k=>equal(a?.[k],b?.[k]));
+    for(const key of ['schedule','preparations','courses','professionalReading','calendarOccurrences']){
+      const maps=[base,local,remote].map(d=>new Map((d?.[key]||[]).map(r=>[r.id,r]))), ids=[...new Set([...maps[1].keys(),...maps[2].keys()])].sort();
+      merged[key]=ids.map(id=>{
+        const [b,l,r]=maps.map(m=>m.get(id));
+        if(!l||!r)return copy(l||r);
+        if(key==='calendarOccurrences')return copy((l.updatedAt||0)>(r.updatedAt||0)?l:r);
+        const out=copy(r), conflict=[];
+        if(same(l,r))return copy({...r,updatedAt:Math.max(l.updatedAt||0,r.updatedAt||0)});
+        if(!b||((!!l.deletedAt!==!!r.deletedAt)&&!same(b,l)&&!same(b,r)))conflict.push('*');
+        else if(same(b,l))return copy(r);
+        else if(same(b,r))return copy(l);
+        else {
+          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date']]:[];
+          const grouped=new Set(groups.flat());
+          [...new Set([...fields(l),...fields(r)])].filter(k=>!grouped.has(k)).forEach(k=>groups.push([k]));
+          for(const group of groups){
+            const lc=group.some(k=>!equal(l[k],b[k])),rc=group.some(k=>!equal(r[k],b[k]));
+            if(lc&&rc&&group.some(k=>!equal(l[k],r[k])))conflict.push(...group);
+            else if(lc)for(const k of group){if(l[k]===undefined)delete out[k];else out[k]=copy(l[k]);}
+          }
+        }
+        out.updatedAt=Math.max(l.updatedAt||0,r.updatedAt||0);
+        if(conflict.length)conflicts.push({key,id,fields:conflict,local:copy(l),remote:copy(r)});
+        return out;
+      });
+    }
+    merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
+    return {merged,conflicts};
+  }
+  return {openAccountStorage,mergeChanges,reconcileLearning};
 });

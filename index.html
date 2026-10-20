@@ -3759,7 +3759,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js"></script>
+<script src="data-core.js?v=153"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=150"></script>
 <script>
@@ -11113,17 +11113,64 @@
     return out;
   }
   function learningDocRef(){return db.collection("users").doc(user.uid).collection("meta").doc("learning");}
-  function learningPushRemote(data){
-    if(accountChanging||restorePending())return Promise.resolve({ok:false,reason:"accountOrRestore"});if(!db||!user)return Promise.resolve({ok:false,reason:"noauth"});return learningDocRef().set(JSON.parse(JSON.stringify(data))).then(()=>({ok:true})).catch(error=>({ok:false,error:(error&&error.message)||String(error)}));}
-  function learningPullRemote(trigger){if(!db||!user)return Promise.resolve({module:"learning",status:"skipped",reason:"noauth"});return joinOrRun("learning",()=>_learningPullWork(trigger));}
-  function _learningPullWork(trigger){
-    syncBegin("learning",trigger);
-    return getDocServerFirst(learningDocRef()).then(snap=>{
-      const cache=_fromCache(snap), local=learningLoad(); let reconcile=Promise.resolve({ok:true}), changed=false;
-      if(!snap.exists){if(!cache&&local.updatedAt)reconcile=learningPushRemote(local);}
-      else{const remote=learningNormalize(snap.data());if(!cache)dataDetectCollectionConflicts("learning","records",local.schedule.concat(local.preparations,local.courses,local.professionalReading),remote.schedule.concat(remote.preparations,remote.courses,remote.professionalReading),"دمج سجلات التعلّم حسب آخر تحديث");const merged=learningMerge(local,remote);changed=JSON.stringify(local)!==JSON.stringify(merged);const remoteNeedsUpdate=JSON.stringify(remote)!==JSON.stringify(merged);if(changed){localStorage.setItem(LEARNING_KEY,JSON.stringify(merged));safeRun("learning:render",learningRenderHome);}if(!cache&&remoteNeedsUpdate)reconcile=learningPushRemote(merged);}
-      return Promise.resolve(reconcile).then(write=>{const ok=!(write&&write.ok===false);syncEnd("learning",ok,snap,ok?null:new Error("reconWriteFailed"));return {module:"learning",status:ok?(cache?"cacheFallback":"success"):"failed",source:cache?"cache":"server",changed,reconWriteOk:ok};});
-    }).catch(error=>{diagErr("learningPullRemote",error);syncEnd("learning",false,null,error);return {module:"learning",status:"failed",error:(error&&error.message)||String(error)};});
+  function learningSyncState(){try{return JSON.parse(localStorage.getItem('h2do-learning-sync-v1')||'null')||{};}catch(e){return {};}}
+  function learningSetSyncState(value){localStorage.setItem('h2do-learning-sync-v1',JSON.stringify(value));}
+  function learningReviewConflicts(){
+    const owner=user?.uid||'guest',pending=learningSyncState().pending;if(!pending?.conflicts?.length)return;
+    const conflict=pending.conflicts[0],labels={name:'الاسم',title:'العنوان',notes:'الملاحظات',day:'اليوم',startTime:'البداية',endTime:'النهاية',recurrence:'التكرار',date:'التاريخ',targetDate:'التاريخ المستهدف',progress:'التقدم',deletedAt:'الحذف','*':'السجل كاملًا'};
+    const sheet=taskSheet('مراجعة تعارض التعلّم','<div id="learningConflictChoices"></div><p id="learningConflictError" role="alert"></p><button class="task-sheet-save" id="learningConflictKeepLocal">اعتماد تعديل هذا الجهاز</button><button class="task-sheet-save" id="learningConflictKeepRemote">اعتماد تعديل الجهاز الآخر</button>');
+    const host=sheet.over.querySelector('#learningConflictChoices');host.style.overflowWrap='anywhere';
+    learningSetText(host,'',conflict.local.name||conflict.local.title||conflict.local.courseName||'سجل تعلّم');
+    learningSetText(host,'','لم يُرفع هذا التعارض للسحابة. اختر النسخة المطلوبة؛ تبقى تغييرات الحقول الأخرى محفوظة.');
+    for(const [side,label] of [['local','هذا الجهاز'],['remote','الجهاز الآخر']]){
+      const row=conflict[side];learningSetText(host,'learning-item-title',label+(row.deletedAt?' — محذوف':''));
+      const keys=conflict.fields.includes('*')?Object.keys(row).filter(k=>!['id','createdAt','updatedAt'].includes(k)):conflict.fields;
+      for(const key of keys)learningSetText(host,'learning-item-meta',(labels[key]||key)+': '+String(row[key]??'—'));
+    }
+    const resolve=side=>{
+      if((user?.uid||'guest')!==owner||accountChanging){sheet.close();return;}
+      const fresh=learningSyncState().pending;
+      if(JSON.stringify(fresh)!==JSON.stringify(pending)||JSON.stringify(learningLoad())!==JSON.stringify(pending.local)){sheet.over.querySelector('#learningConflictError').textContent='تغيّرت البيانات أثناء المراجعة. أغلق النافذة ثم أعد المزامنة والمراجعة.';learningPullRemote('conflictChanged');return;}
+      const selected=conflict[side],list=pending.merged[conflict.key],index=list.findIndex(r=>r.id===conflict.id);
+      if(conflict.fields.includes('*'))list[index]=JSON.parse(JSON.stringify(selected));
+      else for(const field of conflict.fields){if(selected[field]===undefined)delete list[index][field];else list[index][field]=selected[field];}
+      list[index].updatedAt=Math.max(Date.now(),list[index].updatedAt||0);
+      pending.conflicts.shift();sheet.close();
+      if(pending.conflicts.length){learningSetSyncState({...learningSyncState(),pending});learningReviewConflicts();}
+      else {learningSetSyncState({base:pending.remote});learningSave(pending.merged);}
+      learningRenderHome();
+    };
+    sheet.over.querySelector('#learningConflictKeepLocal').onclick=()=>resolve('local');sheet.over.querySelector('#learningConflictKeepRemote').onclick=()=>resolve('remote');
+  }
+  function learningPullRemote(trigger){if(!db||!user)return Promise.resolve({module:'learning',status:'skipped',reason:'noauth'});return joinOrRun('learning',()=>_learningPullWork(trigger));}
+  async function _learningPullWork(trigger){
+    syncBegin('learning',trigger);const uid=user.uid,ref=learningDocRef(),sameAccount=()=>user?.uid===uid&&!accountChanging;
+    try{
+      if(accountChanging||restorePending())throw Error('accountOrRestore');
+      const result=await db.runTransaction(async transaction=>{
+        const snap=await transaction.get(ref);if(!sameAccount()||restorePending())throw Error('accountOrRestore');
+        const local=learningLoad(),remote=learningNormalize(snap.exists?snap.data():null),base=learningSyncState().base||null;
+        const outcome=MufDataCore.reconcileLearning(base,local,remote),merged=learningNormalize(outcome.merged);
+        if(!outcome.conflicts.length&&JSON.stringify(merged)!==JSON.stringify(remote))transaction.set(ref,merged);
+        return {...outcome,merged,local,remote,base};
+      });
+      if(!sameAccount())return {module:'learning',status:'skipped',reason:'accountChanged'};
+      if(result.conflicts.length){learningSetSyncState({...learningSyncState(),pending:result});learningRenderHome();syncEnd('learning',false,null,new Error('تعارض تعلّم يحتاج مراجعة'));return {module:'learning',status:'conflict',count:result.conflicts.length};}
+      // An edit made while the transaction was awaiting its commit must remain pending.
+      const latest=learningLoad(),after=MufDataCore.reconcileLearning(result.local,latest,result.merged);
+      if(after.conflicts.length){learningSetSyncState({base:result.merged,pending:{...after,local:latest,remote:result.merged,base:result.local}});learningRenderHome();syncEnd('learning',false,null,new Error('تعارض تعلّم يحتاج مراجعة'));return {module:'learning',status:'conflict'};}
+      const value=learningNormalize(after.merged),changed=JSON.stringify(value)!==JSON.stringify(latest);
+      // Save the local value before acknowledging a baseline, so quota failure cannot drop a pending edit.
+      localStorage.setItem(LEARNING_KEY,JSON.stringify(value));learningSetSyncState({base:result.merged});learningRenderHome();
+      syncEnd('learning',true,null,null);
+      if(JSON.stringify(value)!==JSON.stringify(result.merged))setTimeout(()=>{if(sameAccount())learningPullRemote('editDuringSync');},0);
+      return {module:'learning',status:'success',source:'server',changed,reconWriteOk:true};
+    }catch(error){
+      if(error.code==='unavailable'&&sameAccount()){
+        try{const cached=await ref.get({source:'cache'});if(!sameAccount())return {module:'learning',status:'skipped'};syncEnd('learning',true,cached,null);return {module:'learning',status:'cacheFallback',source:'cache',changed:false,reconWriteOk:false};}catch(cacheError){}
+      }
+      diagErr('learningPullRemote',error);syncEnd('learning',false,null,error);return {module:'learning',status:'failed',error:error.message||String(error)};
+    }
   }
   function learningLectureOccurs(item,dateStr){const d=new Date(dateStr+"T12:00:00");return item.recurrence==="weekly"?item.day===d.getDay():item.date===dateStr;}
   function learningLectureDate(item,baseDate){
@@ -11144,6 +11191,7 @@
   function learningRenderHome(){
     const summary=document.getElementById("learningSummary"), actions=document.getElementById("learningSummaryActions"); if(!summary||!actions)return;
     const data=learningLoad(), today=todayStr(), next=learningNextLecture(today), urgent=learningUrgentPrep(today); summary.textContent=""; actions.textContent="";
+    const pending=learningSyncState().pending;if(pending?.conflicts?.length){const review=learningButton("مراجعة تعارضات التعلّم ("+pending.conflicts.length+")",learningReviewConflicts);review.id="learningConflictReview";actions.appendChild(review);}
     document.getElementById("learningScheduleHint").textContent=learningActive("schedule").length.toLocaleString("ar-EG")+" محاضرات";
     document.getElementById("learningPrepHint").textContent=learningActive("preparations").filter(p=>p.status!=="تم تقديمها").length.toLocaleString("ar-EG")+" قيد المتابعة";
     document.getElementById("learningCoursesHint").textContent=learningActive("courses").filter(c=>c.status!=="مكتملة").length.toLocaleString("ar-EG")+" نشطة";
@@ -11394,7 +11442,7 @@
       Object.entries(pending||{}).forEach(([date,entry])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&entry&&entry.value)entries[storageKey(date)]=JSON.stringify(entry.value);});
     }
     Object.keys(entries).forEach(key=>{
-      if(!dataOwnedKey(key)||[DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY].includes(key))return;
+      if(!dataOwnedKey(key)||[DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY,"h2do-learning-sync-v1"].includes(key))return;
       const raw=String(entries[key]);
       if(key.startsWith(PREFIX)||["h2do-expenses","h2do-hifz","h2do-quran","h2do-learning-v1","h2do-weekly-goals-v1","h2do-witr-meta","h2do-reading-settings"].includes(key)){
         const value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid record: "+key);
@@ -11414,7 +11462,7 @@
     try{
       Object.keys(before).forEach(key=>{if((!dailyOnly||key.startsWith(PREFIX))&&!Object.prototype.hasOwnProperty.call(entries,key))localStorage.removeItem(key);});
       Object.keys(entries).forEach(key=>localStorage.setItem(key,entries[key]));
-      localStorage.removeItem(DAILY_PENDING_KEY);localStorage.removeItem(DATA_BASELINE_KEY);localStorage.removeItem("h2do-reading-stats-cache");
+      localStorage.removeItem(DAILY_PENDING_KEY);localStorage.removeItem(DATA_BASELINE_KEY);localStorage.removeItem("h2do-learning-sync-v1");localStorage.removeItem("h2do-reading-stats-cache");
       localStorage.setItem(RESTORE_PENDING_KEY,JSON.stringify({id:"restore_"+Date.now(),scope:dailyOnly?"daily":"all",createdAt:Date.now()}));
     }catch(error){
       // Roll back after quota/storage failure instead of leaving a half-restored application.
@@ -16720,6 +16768,7 @@
   }
   function calendarApply(id,expected,value,binding){
     if(!calendarReady())return false;const row=calendarRecords().find(r=>r.task.id===id);if(!row||!GC.equal(GC.snapshot(row.task),expected)||!GC.equal(row.task.calendarBinding?.base,binding.previousBase)||row.task.calendarBinding.eventId!==binding.eventId||row.task.calendarBinding.calendarId!==binding.calendarId)return false;
+    if(row.external&&learningSyncState().pending?.conflicts?.length)return false;
     const adoptOnce=row.external&&row.learningKind==='schedule'&&row.external.recurrence==='once'&&row.sourceDate===row.external.date&&!value.cancelled&&learningLoad().calendarOccurrences.find(r=>r.id===id)?.sourceRecurrence!=='once';
     if(!adoptOnce&&GC.equal(expected,value)&&GC.equal(row.task.calendarBinding.base,value)&&row.task.calendarBinding.etag===binding.etag&&row.task.calendarBinding.webLink===binding.webLink)return true;
     if(row.external){const data=learningLoad(),record=data.calendarOccurrences.find(r=>r.id===id);if(!record)return false;const clean={...binding};delete clean.previousBase;if(record.kind==='schedule'&&row.external.recurrence==='once'&&record.date===row.external.date&&!value.cancelled)record.sourceRecurrence='once';record.sourceBase=GC.learningSource(record.kind,row.external,record.date,record.sourceRecurrence);record.value=GC.snapshot(value);record.binding=clean;learningCalendarStore(data,record);return true;}
@@ -16738,6 +16787,7 @@
     box.replaceChildren();const text=document.createElement('p');text.textContent='لم يتم ربط «'+row.task.text+'»: '+message;const edit=document.createElement('button');edit.type='button';edit.textContent='تعديل الموعد لإكمال الربط';edit.onclick=()=>{const fresh=calendarFreshRow(row);if(!fresh){text.textContent='تغيّر الموعد؛ افتحه مجددًا من القائمة.';return;}box.closest('.task-sheet-overlay').querySelector('.task-sheet-close').click();plannerOpen(fresh);};box.append(text,edit);box.scrollIntoView({block:'nearest'});
   }
   async function calendarLink(row){
+    if(row.external&&learningSyncState().pending?.conflicts?.length){learningReviewConflicts();return;}
     if(row.task.calendarBinding?.ownerId===row.task.id){plannerCalendarSettings();return;}
     try{GC.toEvent(GC.snapshot(row.task),'validate');}catch(e){calendarLinkProblem(row,e.message);return;}
     if(!calendarReady()){plannerCalendarSettings(row);return;}
@@ -16749,7 +16799,7 @@
     if(row.external){const data=learningLoad(),record=learningCalendarRecord(row.learningKind,row.external,row.sourceDate),old=data.calendarOccurrences.find(r=>r.id===record.id);if(old?.binding){await calendarSync();return;}record.binding={ownerId:record.id,calendarId:calendarSession.calendar,eventId,base:null};if(old)Object.assign(record,{value:old.value,sourceBase:old.sourceBase});learningCalendarStore(data,record);}else plannerTransaction('ربط هذه المرة بالتقويم',get=>{const item=plannerEditableOccurrence(row,get);item.calendarBinding={ownerId:item.id,calendarId:calendarSession.calendar,eventId,base:null};});
     await calendarSync();
   }
-  function calendarRecordUnchanged(task){const now=calendarRecords().find(r=>r.task.id===task.id)?.task;return !!now&&GC.equal(GC.snapshot(now),GC.snapshot(task))&&GC.equal(now.calendarBinding,task.calendarBinding);}
+  function calendarRecordUnchanged(task){const row=calendarRecords().find(r=>r.task.id===task.id);if(row?.external&&learningSyncState().pending?.conflicts?.length)return false;const now=row?.task;return !!now&&GC.equal(GC.snapshot(now),GC.snapshot(task))&&GC.equal(now.calendarBinding,task.calendarBinding);}
   async function calendarSync(){
     if(calendarSession.busy||!calendarReady()||document.visibilityState==='hidden')return;
     if(!calendarRecords().length){calendarSession.message='Google متصل، لكن لا توجد مواعيد مرتبطة لإرسالها. افتح الموعد واختر «ربط هذه المرة مع Google».';calendarRenderStatus();return;}
@@ -16757,6 +16807,7 @@
     try{for(const row of calendarRecords()){
       if(!calendarReady())break;const t=row.task,b=t.calendarBinding,local=GC.snapshot(t),path='calendars/'+encodeURIComponent(b.calendarId)+'/events/'+encodeURIComponent(b.eventId);let remote,event;
       try{
+        if(row.external&&learningSyncState().pending?.conflicts?.length)throw Error('راجع تعارضات التعلّم أولًا قبل إرسالها إلى Google.');
         try{event=await calendarRequest(path);}catch(e){if(e.status!==404&&e.status!==410)throw e;if(b.base)event={status:'cancelled'};}
         if(!event){if(local.cancelled)continue;if(!calendarRecordUnchanged(t))throw Error('تغير العنصر قبل الإرسال؛ أعد المزامنة.');const body=GC.toEvent(local,t.id);body.id=b.eventId;
           try{event=await calendarRequest('calendars/'+encodeURIComponent(b.calendarId)+'/events',{method:'POST',body:JSON.stringify(body)});}catch(e){if(e.status!==409)throw e;event=await calendarRequest(path);}
