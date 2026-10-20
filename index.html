@@ -11094,7 +11094,7 @@
     const cleanTime=v=>/^\d{2}:\d{2}$/.test(String(v||""))?String(v):"";
     out.schedule=(Array.isArray(src.schedule)?src.schedule:[]).filter(Boolean).map(item=>{
       const recurrence=item.recurrence==="once"?"once":"weekly", day=Number.isInteger(+item.day)?Math.max(0,Math.min(6,+item.day)):0;
-      return {id:learningText(item.id,80)||learningId("lec"),courseName:learningText(item.courseName,120),courseCode:learningText(item.courseCode,40),section:learningText(item.section,60),day,startTime:cleanTime(item.startTime),endTime:cleanTime(item.endTime),room:learningText(item.room,100),recurrence,date:recurrence==="once"?cleanDate(item.date):"",notes:learningText(item.notes,1000),prepId:learningText(item.prepId,80),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null};
+      return {id:learningText(item.id,80)||learningId("lec"),courseName:learningText(item.courseName,120),courseCode:learningText(item.courseCode,40),section:learningText(item.section,60),day,startTime:cleanTime(item.startTime),endTime:cleanTime(item.endTime),room:learningText(item.room,100),url:learningUrl(item.url),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],termStart:cleanDate(item.termStart),termEnd:cleanDate(item.termEnd),excludedDates:Array.isArray(item.excludedDates)?item.excludedDates.filter(d=>cleanDate(d)).slice(0,366):[],recurrence,date:recurrence==="once"?cleanDate(item.date):"",notes:learningText(item.notes,1000),prepId:learningText(item.prepId,80),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null};
     }).filter(item=>item.courseName&&item.startTime&&(item.recurrence==="weekly"||item.date));
     out.preparations=(Array.isArray(src.preparations)?src.preparations:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("prep"),title:learningText(item.title,140),course:learningText(item.course,120),lectureId:learningText(item.lectureId,80),targetDate:cleanDate(item.targetDate),status:LEARNING_PREP_STATUS.includes(item.status)?item.status:"لم يبدأ",objectives:learningText(item.objectives,1200),materials:learningText(item.materials,1000),activity:learningText(item.activity,500),links:learningText(item.links,1000),notes:learningText(item.notes,1500),reflection:learningText(item.reflection,1500),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.title);
     out.courses=(Array.isArray(src.courses)?src.courses:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("course"),name:learningText(item.name,140),provider:learningText(item.provider,100),category:learningText(item.category,80),startDate:cleanDate(item.startDate),targetDate:cleanDate(item.targetDate),progress:Math.max(0,Math.min(100,Math.round(+item.progress||0))),nextStep:learningText(item.nextStep,220),url:learningUrl(item.url),notes:learningText(item.notes,1200),status:LEARNING_COURSE_STATUS.includes(item.status)?item.status:"مخطط لها",createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.name);
@@ -11172,7 +11172,7 @@
       diagErr('learningPullRemote',error);syncEnd('learning',false,null,error);return {module:'learning',status:'failed',error:error.message||String(error)};
     }
   }
-  function learningLectureOccurs(item,dateStr){const d=new Date(dateStr+"T12:00:00");return item.recurrence==="weekly"?item.day===d.getDay():item.date===dateStr;}
+  function learningLectureOccurs(item,dateStr){return GC.learningOccurs(item,dateStr);}
   function learningLectureDate(item,baseDate){
     if(item.recurrence==="once")return item.date||"9999-12-31";
     const base=new Date(baseDate+"T12:00:00"), d=new Date(base);d.setDate(base.getDate()+((item.day-base.getDay()+7)%7));return fmtDate(d);
@@ -11244,6 +11244,14 @@
         Object.assign(item,merged);
       }
       if(kind==="schedule"&&item.endTime&&item.endTime<=item.startTime){err.textContent="وقت النهاية يجب أن يكون بعد وقت البداية في اليوم نفسه.";err.setAttribute("role","alert");get("lfEnd").focus();return;}
+      if(kind==='schedule'){
+        const start=item.recurrence==='once'?item.date:(item.termStart&&item.termStart>todayStr()?item.termStart:todayStr()),end=item.recurrence==='once'?start:(item.termEnd||PC.plus(start,365)),hits=[];
+        for(let day=start;day<=end&&day<=PC.plus(start,730);day=PC.plus(day,1))if(learningLectureOccurs(item,day)){
+          const task=GC.learningTask(item,{id:'check-'+item.id,kind:'schedule',date:day});
+          hits.push(...PC.conflicts(task,plannerRows(day,day).filter(r=>!(r.external&&r.learningKind==='schedule'&&r.external.id===item.id))));
+        }
+        if(hits.length&&!get('lfAllowConflict')?.checked){err.textContent='يتعارض مع '+[...new Set(hits.map(h=>h.row.task.text+' · '+h.row.date+' '+h.row.task.dueTime))].slice(0,5).join('، ');const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.id='lfAllowConflict';label.append(check,' حفظ رغم التعارض');err.appendChild(label);return;}
+      }
       if(index>=0)list[index]=item; else list.push(item); learningSave(freshData); sheet.close(); if(typeof afterSave==="function")afterSave(); else if(kind==="schedule")learningOpenSchedule(false); else learningOpenList(kind);
     };
   }
@@ -16692,6 +16700,9 @@
       if(seen.has(record.id)||item.recurrence==='once'&&data.calendarOccurrences.some(r=>r.kind==='schedule'&&r.sourceId===item.id&&(r.sourceRecurrence==='once'||r.date===date)))continue;
       rows.push(learningCalendarRow(item,record));
     }
+    for(const [kind,key] of [['prep','preparations'],['course','courses'],['read','professionalReading']])for(const item of data[key].filter(x=>!x.deletedAt&&x.targetDate)){
+      const record=learningCalendarRecord(kind,item,item.targetDate);if(!seen.has(record.id)&&item.targetDate>=start&&item.targetDate<=end)rows.push(learningCalendarRow(item,record));
+    }
     return rows;
   }
   function calendarFreshRow(row){
@@ -16768,7 +16779,7 @@
   }
   function calendarApply(id,expected,value,binding){
     if(!calendarReady())return false;const row=calendarRecords().find(r=>r.task.id===id);if(!row||!GC.equal(GC.snapshot(row.task),expected)||!GC.equal(row.task.calendarBinding?.base,binding.previousBase)||row.task.calendarBinding.eventId!==binding.eventId||row.task.calendarBinding.calendarId!==binding.calendarId)return false;
-    if(row.external&&learningSyncState().pending?.conflicts?.length)return false;
+    if(row.external&&GC.learningConflictAffects(learningSyncState().pending?.conflicts,row))return false;
     const adoptOnce=row.external&&row.learningKind==='schedule'&&row.external.recurrence==='once'&&row.sourceDate===row.external.date&&!value.cancelled&&learningLoad().calendarOccurrences.find(r=>r.id===id)?.sourceRecurrence!=='once';
     if(!adoptOnce&&GC.equal(expected,value)&&GC.equal(row.task.calendarBinding.base,value)&&row.task.calendarBinding.etag===binding.etag&&row.task.calendarBinding.webLink===binding.webLink)return true;
     if(row.external){const data=learningLoad(),record=data.calendarOccurrences.find(r=>r.id===id);if(!record)return false;const clean={...binding};delete clean.previousBase;if(record.kind==='schedule'&&row.external.recurrence==='once'&&record.date===row.external.date&&!value.cancelled)record.sourceRecurrence='once';record.sourceBase=GC.learningSource(record.kind,row.external,record.date,record.sourceRecurrence);record.value=GC.snapshot(value);record.binding=clean;learningCalendarStore(data,record);return true;}
@@ -16787,7 +16798,7 @@
     box.replaceChildren();const text=document.createElement('p');text.textContent='لم يتم ربط «'+row.task.text+'»: '+message;const edit=document.createElement('button');edit.type='button';edit.textContent='تعديل الموعد لإكمال الربط';edit.onclick=()=>{const fresh=calendarFreshRow(row);if(!fresh){text.textContent='تغيّر الموعد؛ افتحه مجددًا من القائمة.';return;}box.closest('.task-sheet-overlay').querySelector('.task-sheet-close').click();plannerOpen(fresh);};box.append(text,edit);box.scrollIntoView({block:'nearest'});
   }
   async function calendarLink(row){
-    if(row.external&&learningSyncState().pending?.conflicts?.length){learningReviewConflicts();return;}
+    if(row.external&&GC.learningConflictAffects(learningSyncState().pending?.conflicts,row)){learningReviewConflicts();return;}
     if(row.task.calendarBinding?.ownerId===row.task.id){plannerCalendarSettings();return;}
     try{GC.toEvent(GC.snapshot(row.task),'validate');}catch(e){calendarLinkProblem(row,e.message);return;}
     if(!calendarReady()){plannerCalendarSettings(row);return;}
@@ -16799,7 +16810,7 @@
     if(row.external){const data=learningLoad(),record=learningCalendarRecord(row.learningKind,row.external,row.sourceDate),old=data.calendarOccurrences.find(r=>r.id===record.id);if(old?.binding){await calendarSync();return;}record.binding={ownerId:record.id,calendarId:calendarSession.calendar,eventId,base:null};if(old)Object.assign(record,{value:old.value,sourceBase:old.sourceBase});learningCalendarStore(data,record);}else plannerTransaction('ربط هذه المرة بالتقويم',get=>{const item=plannerEditableOccurrence(row,get);item.calendarBinding={ownerId:item.id,calendarId:calendarSession.calendar,eventId,base:null};});
     await calendarSync();
   }
-  function calendarRecordUnchanged(task){const row=calendarRecords().find(r=>r.task.id===task.id);if(row?.external&&learningSyncState().pending?.conflicts?.length)return false;const now=row?.task;return !!now&&GC.equal(GC.snapshot(now),GC.snapshot(task))&&GC.equal(now.calendarBinding,task.calendarBinding);}
+  function calendarRecordUnchanged(task){const row=calendarRecords().find(r=>r.task.id===task.id);if(row?.external&&GC.learningConflictAffects(learningSyncState().pending?.conflicts,row))return false;const now=row?.task;return !!now&&GC.equal(GC.snapshot(now),GC.snapshot(task))&&GC.equal(now.calendarBinding,task.calendarBinding);}
   async function calendarSync(){
     if(calendarSession.busy||!calendarReady()||document.visibilityState==='hidden')return;
     if(!calendarRecords().length){calendarSession.message='Google متصل، لكن لا توجد مواعيد مرتبطة لإرسالها. افتح الموعد واختر «ربط هذه المرة مع Google».';calendarRenderStatus();return;}
@@ -16807,7 +16818,7 @@
     try{for(const row of calendarRecords()){
       if(!calendarReady())break;const t=row.task,b=t.calendarBinding,local=GC.snapshot(t),path='calendars/'+encodeURIComponent(b.calendarId)+'/events/'+encodeURIComponent(b.eventId);let remote,event;
       try{
-        if(row.external&&learningSyncState().pending?.conflicts?.length)throw Error('راجع تعارضات التعلّم أولًا قبل إرسالها إلى Google.');
+        if(row.external&&GC.learningConflictAffects(learningSyncState().pending?.conflicts,row))throw Error('راجع تعارضات التعلّم أولًا قبل إرسالها إلى Google.');
         try{event=await calendarRequest(path);}catch(e){if(e.status!==404&&e.status!==410)throw e;if(b.base)event={status:'cancelled'};}
         if(!event){if(local.cancelled)continue;if(!calendarRecordUnchanged(t))throw Error('تغير العنصر قبل الإرسال؛ أعد المزامنة.');const body=GC.toEvent(local,t.id);body.id=b.eventId;
           try{event=await calendarRequest('calendars/'+encodeURIComponent(b.calendarId)+'/events',{method:'POST',body:JSON.stringify(body)});}catch(e){if(e.status!==409)throw e;event=await calendarRequest(path);}
