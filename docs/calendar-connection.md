@@ -58,3 +58,9 @@ Disconnect clears this device session only. The privacy section links to Google 
 ## Quick connection
 
 The planner shows **تفعيل اتصال Google** beside its primary controls. It starts the Google consent popup directly; after connection the same button opens sync management. Linking an appointment while disconnected presents **تفعيل Google وربط هذا الموعد** and continues that selected occurrence after successful consent. Closing the sheet cancels the pending link; it does not silently select other appointments.
+
+## Learning workspace
+
+Dated learning goals now appear locally without a Google connection. Linking sends the existing occurrence, not a copied daily task. Learning source forms support optional reminders and links; attendance/completion do not delete Google history. Scope-specific lecture editing, semester dates, and holiday exceptions control which occurrences exist. Future date changes do not automatically bind newly projected dates: use the existing bounded period selection while connected.
+
+Google conflict review shows differing field groups; date/time stays atomic. The app preserves independent edits when a competing field is explicitly selected. Time collisions caused by a remote move are shown locally without silently changing the Google event.

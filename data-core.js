@@ -66,19 +66,31 @@
     const merged=copy(remote||{}), conflicts=[], equal=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
     const fields=row=>Object.keys(row||{}).filter(k=>!['id','createdAt','updatedAt'].includes(k));
     const same=(a,b)=>[...new Set([...fields(a),...fields(b)])].every(k=>equal(a?.[k],b?.[k]));
-    for(const key of ['schedule','preparations','courses','professionalReading','calendarOccurrences']){
+    for(const key of ['schedule','preparations','courses','professionalReading','calendarOccurrences','subjects','activity']){
       const maps=[base,local,remote].map(d=>new Map((d?.[key]||[]).map(r=>[r.id,r]))), ids=[...new Set([...maps[1].keys(),...maps[2].keys()])].sort();
       merged[key]=ids.map(id=>{
         const [b,l,r]=maps.map(m=>m.get(id));
         if(!l||!r)return copy(l||r);
-        if(key==='calendarOccurrences')return copy((l.updatedAt||0)>(r.updatedAt||0)?l:r);
+        if(key==='calendarOccurrences'){
+          if(same(l,r))return copy({...r,updatedAt:Math.max(l.updatedAt||0,r.updatedAt||0)});
+          if(b&&same(b,l))return copy(r);if(b&&same(b,r))return copy(l);
+          let clash=!b;
+          if(b){
+            if(!!l.binding!==!!r.binding)clash=true;
+            for(const k of ['binding','sourceBase','outcome'])if(!equal(l[k],b[k])&&!equal(r[k],b[k])&&!equal(l[k],r[k]))clash=true;
+            const groups=[['dueDate','dueTime','endTime','allDay'],['text'],['location'],['notes'],['link'],['reminders'],['cancelled']];
+            for(const g of groups)if(g.some(k=>!equal(l.value?.[k],b.value?.[k]))&&g.some(k=>!equal(r.value?.[k],b.value?.[k]))&&g.some(k=>!equal(l.value?.[k],r.value?.[k])))clash=true;
+          }
+          if(clash){conflicts.push({key,id,fields:['*'],local:copy(l),remote:copy(r)});return copy(l);}
+          const result=mergeChanges(b,l,r);result.updatedAt=Math.max(l.updatedAt||0,r.updatedAt||0);return result;
+        }
         const out=copy(r), conflict=[];
         if(same(l,r))return copy({...r,updatedAt:Math.max(l.updatedAt||0,r.updatedAt||0)});
         if(!b||((!!l.deletedAt!==!!r.deletedAt)&&!same(b,l)&&!same(b,r)))conflict.push('*');
         else if(same(b,l))return copy(r);
         else if(same(b,r))return copy(l);
         else {
-          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date']]:[];
+          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date','termStart','termEnd','excludedDates','futureChanges']]:[];
           const grouped=new Set(groups.flat());
           [...new Set([...fields(l),...fields(r)])].filter(k=>!grouped.has(k)).forEach(k=>groups.push([k]));
           for(const group of groups){

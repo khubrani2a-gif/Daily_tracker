@@ -22,6 +22,7 @@ for(const [kind,key,name,field] of [['course','courses','name','lfName'],['prep'
 }));
 test('lecture rejects backwards/equal intervals and treats concurrent time edits atomically',()=>run(async p=>{
  await p.evaluate(()=>{const d=audit.learningLoad();d.schedule=[{id:'s',courseName:'محاضرة',day:new Date().getDay(),startTime:'09:00',endTime:'11:00',recurrence:'weekly',updatedAt:1}];audit.learningSave(d);__mfkrPlanner.open(__mfkrPlanner.rows(audit.todayStr(),audit.todayStr()).find(r=>r.external));});
+ await p.locator('#learningScopeAll').click();
  for(const end of ['08:00','09:00']){await p.locator('#lfEnd').fill(end);await p.locator('#learningFormSave').click();assert.match(await p.locator('#learningFormErr').innerText(),/بعد وقت البداية/);assert.equal(await p.evaluate(()=>audit.learningLoad().schedule[0].endTime),'11:00');}
  await p.locator('#lfEnd').fill('12:00');await p.evaluate(()=>{const d=audit.learningLoad();d.schedule[0].startTime='10:00';audit.learningSave(d);});await p.locator('#learningFormSave').click();assert.match(await p.locator('#learningFormErr').innerText(),/نفس الحقل/);
 }));
