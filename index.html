@@ -11173,7 +11173,26 @@
       else if(kind==="prep"){Object.assign(item,{title:learningText(get("lfTitle").value,140),course:learningText(get("lfCourse").value,120),lectureId:get("lfLecture").value,targetDate:get("lfDate").value,status:get("lfStatus").value,objectives:learningText(get("lfObjectives").value,1200),materials:learningText(get("lfMaterials").value,1000),activity:learningText(get("lfActivity").value,500),links:learningText(get("lfLinks").value,1000),notes:learningText(get("lfNotes").value,1500),reflection:learningText(get("lfReflection").value,1500)}); if(!item.title){err.textContent="اكتب عنوان التحضير.";return;}}
       else if(kind==="course"){const progress=Math.round(+get("lfProgress").value||0); if(progress<0||progress>100){err.textContent="نسبة التقدم يجب أن تكون بين 0 و100.";return;} const url=learningUrl(get("lfUrl").value); if(get("lfUrl").value&&!url){err.textContent="أدخل رابطًا يبدأ بـ http أو https.";return;} Object.assign(item,{name:learningText(get("lfName").value,140),provider:learningText(get("lfProvider").value,100),category:learningText(get("lfCategory").value,80),startDate:get("lfStartDate").value,targetDate:get("lfTarget").value,progress,url,nextStep:learningText(get("lfNext").value,220),status:get("lfStatus").value,notes:learningText(get("lfNotes").value,1200)}); if(!item.name){err.textContent="اكتب اسم الدورة أو الشهادة.";return;}}
       else{const url=learningUrl(get("lfUrl").value); if(get("lfUrl").value&&!url){err.textContent="أدخل رابطًا يبدأ بـ http أو https.";return;} Object.assign(item,{title:learningText(get("lfTitle").value,160),author:learningText(get("lfAuthor").value,120),type:get("lfType").value,related:learningText(get("lfRelated").value,140),current:learningText(get("lfCurrent").value,80),totalPages:Math.max(0,Math.min(20000,Math.round(+get("lfTotal").value||0))),targetDate:get("lfTarget").value,url,status:get("lfStatus").value,notes:learningText(get("lfNotes").value,1200)}); if(!item.title){err.textContent="اكتب عنوان مادة القراءة.";return;}}
-      const freshData=learningLoad(), list=freshData[key], index=list.findIndex(row=>row.id===item.id); if(index>=0)list[index]=item; else list.push(item); learningSave(freshData); sheet.close(); if(typeof afterSave==="function")afterSave(); else if(kind==="schedule")learningOpenSchedule(false); else learningOpenList(kind);
+      const freshData=learningLoad(), list=freshData[key], index=list.findIndex(row=>row.id===item.id);
+      if(existing){
+        const current=list[index];
+        const fail=message=>{err.textContent=message;err.setAttribute("role","alert");const reload=learningButton("فتح أحدث نسخة (إلغاء تعديلاتي الحالية)",()=>{sheet.close();if(current&&!current.deletedAt)learningOpenForm(kind,id,afterSave);else if(typeof afterSave==="function")afterSave();});err.appendChild(reload);};
+        if(!current||current.deletedAt){fail("حُذف هذا السجل أثناء تعديله. لم تُحفظ التعديلات حتى لا يعود السجل المحذوف.");return;}
+        const groups=kind==="schedule"?[["day","startTime","endTime","recurrence","date"]]:[];
+        const grouped=new Set(groups.flat());
+        Object.keys(item).filter(k=>!["id","createdAt","updatedAt","deletedAt"].includes(k)&&!grouped.has(k)).forEach(k=>groups.push([k]));
+        const eq=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+        const merged={...current,updatedAt:Math.max(now,(current.updatedAt||0)+1)};
+        for(const group of groups){
+          const localChanged=group.some(k=>!eq(item[k],existing[k]));
+          if(!localChanged)continue;
+          if(group.some(k=>!eq(current[k],existing[k]))&&group.some(k=>!eq(current[k],item[k]))){fail("تغيّر نفس الحقل من تعديل آخر. لم تُحفظ تعديلاتك؛ افتح أحدث نسخة وراجعها قبل إعادة الحفظ.");return;}
+          group.forEach(k=>merged[k]=item[k]);
+        }
+        Object.assign(item,merged);
+      }
+      if(kind==="schedule"&&item.endTime&&item.endTime<=item.startTime){err.textContent="وقت النهاية يجب أن يكون بعد وقت البداية في اليوم نفسه.";err.setAttribute("role","alert");get("lfEnd").focus();return;}
+      if(index>=0)list[index]=item; else list.push(item); learningSave(freshData); sheet.close(); if(typeof afterSave==="function")afterSave(); else if(kind==="schedule")learningOpenSchedule(false); else learningOpenList(kind);
     };
   }
   function learningDelete(kind,id,rerender){const data=learningLoad(), key={schedule:"schedule",prep:"preparations",course:"courses",read:"professionalReading"}[kind], item=data[key].find(row=>row.id===id);if(!item||!confirm("حذف هذا السجل؟"))return;item.deletedAt=Date.now();item.updatedAt=Date.now();learningSave(data);rerender();}
@@ -16477,7 +16496,7 @@
     document.getElementById('tasksSummary').hidden=true;
   }
   function plannerOpen(row,defaults={},skipDraft=false){
-    if(row?.external){learningOpenForm('schedule',row.external.id,plannerRefresh);return;}
+    if(row?.external){learningOpenForm(row.learningKind||'schedule',row.external.id,plannerRefresh);return;}
     const existing=!!row,t=plannerClone(row?.task||{id:newId(),text:'',kind:'task',dueDate:currentDate,repeat:'none',status:'pending',subtasks:[],reminders:[],...defaults}),prefs=plannerPrefs();
     if(row&&!t.unscheduled&&!t.dueDate)t.dueDate=row.date;
     const input=(id,label,type,value,wide=false)=>'<label'+(wide?' class="task-field-wide"':'')+'>'+label+'<input id="'+id+'" type="'+type+'" value="'+expEsc(value??'')+'"'+(type==='number'?' min="0" max="1440"':'')+'></label>';
