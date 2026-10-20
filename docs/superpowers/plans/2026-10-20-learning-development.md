@@ -43,5 +43,5 @@ Interfaces: learning subjects have immutable id; source rows carry subjectId. Ex
 
 ## Task 4 — release
 - [x] Fresh review of branch; fix material findings with regression tests.
-- [ ] Run npm test and npm run test:firebase; version all changed core assets and cache.
+- [x] Run npm test and npm run test:firebase; version all changed core assets and cache.
 - [ ] Merge/publish under existing authorization; verify deployed assets and synthetic public UI, report actual limitations.
