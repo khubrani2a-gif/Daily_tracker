@@ -45,7 +45,7 @@ const FAKE = `
 window.firebase = (function(){
   const wait=(ms)=> ms? new Promise(r=>setTimeout(r,ms)) : Promise.resolve();
   const doc=(p,src)=> window.__rRead(p,src).then(ctl=> wait(ctl.delay).then(()=>{
-    if(ctl.reject) throw new Error("sim "+src+" read fail "+p);
+    if(ctl.reject){const e=new Error("sim "+src+" read fail "+p);e.code="unavailable";throw e;}
     return window.__rGet(p).then(j=>({ exists:j!=null, data:()=> j!=null?JSON.parse(j):null, metadata:{fromCache:ctl.fromCache} }));
   }));
   const coll=(p,src)=> window.__rRead(p,src).then(ctl=> wait(ctl.delay).then(()=>{
@@ -59,7 +59,7 @@ window.firebase = (function(){
   const mkColl=(p)=>({ doc:(d)=>mkRef(p+"/"+d),
     get:(opts)=> coll(p,(opts&&opts.source)||"default"),
     where:function(){ return { get:(opts)=> coll(p,(opts&&opts.source)||"default"), where:function(){return this;} }; } });
-  const fs=function(){ return { settings:undefined, enablePersistence:()=>({catch:()=>{}}), collection:(c)=>mkColl(c) }; };
+  const fs=function(){ return { settings:undefined, enablePersistence:()=>({catch:()=>{}}), collection:(c)=>mkColl(c),runTransaction:async fn=>{const writes=[];const result=await fn({get:ref=>ref.get({source:"server"}),set:(ref,value)=>writes.push(()=>ref.set(value))});for(const write of writes)await write();return result;} }; };
   const auth=function(){ return { onAuthStateChanged:(cb)=>{ setTimeout(()=>cb({uid:"U1",displayName:"T",email:"t@t"}),10); }, signOut:()=>Promise.resolve(), signInWithPopup:()=>Promise.resolve() }; };
   auth.GoogleAuthProvider=function(){};
   return { initializeApp:()=>({}), firestore:fs, auth:auth };

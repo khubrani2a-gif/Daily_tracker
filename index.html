@@ -11165,7 +11165,12 @@
       syncEnd('learning',true,null,null);
       if(JSON.stringify(value)!==JSON.stringify(result.merged))setTimeout(()=>{if(sameAccount())learningPullRemote('editDuringSync');},0);
       return {module:'learning',status:'success',source:'server',changed,reconWriteOk:true};
-    }catch(error){diagErr('learningPullRemote',error);syncEnd('learning',false,null,error);return {module:'learning',status:'failed',error:error.message||String(error)};}
+    }catch(error){
+      if(error.code==='unavailable'&&sameAccount()){
+        try{const cached=await ref.get({source:'cache'});if(!sameAccount())return {module:'learning',status:'skipped'};syncEnd('learning',true,cached,null);return {module:'learning',status:'cacheFallback',source:'cache',changed:false,reconWriteOk:false};}catch(cacheError){}
+      }
+      diagErr('learningPullRemote',error);syncEnd('learning',false,null,error);return {module:'learning',status:'failed',error:error.message||String(error)};
+    }
   }
   function learningLectureOccurs(item,dateStr){const d=new Date(dateStr+"T12:00:00");return item.recurrence==="weekly"?item.day===d.getDay():item.date===dateStr;}
   function learningLectureDate(item,baseDate){
