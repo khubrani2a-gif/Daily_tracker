@@ -90,7 +90,7 @@
         else if(same(b,l))return copy(r);
         else if(same(b,r))return copy(l);
         else {
-          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date']]:[];
+          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date','termStart','termEnd','excludedDates','futureChanges']]:[];
           const grouped=new Set(groups.flat());
           [...new Set([...fields(l),...fields(r)])].filter(k=>!grouped.has(k)).forEach(k=>groups.push([k]));
           for(const group of groups){

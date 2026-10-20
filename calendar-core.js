@@ -56,7 +56,7 @@
     if(source.cancelled)value.cancelled=true;
     const done=record.kind==='schedule'?['attended','delivered'].includes(record.outcome):['مكتملة','مكتمل','تم تقديمها'].includes(item.status);
     if(record.outcome==='cancelled')value.cancelled=true;
-    return {...snapshot(value),id:record.id,kind:record.kind==='schedule'?'appointment':'task',category:'تعلم',done,status:value.cancelled?'cancelled':done?'done':'pending',learningOutcome:record.outcome||'',calendarBinding:record.binding||undefined};
+    return {...snapshot(value),id:record.id,kind:record.kind==='schedule'?'appointment':'task',category:'تعلم',done:done&&!value.cancelled,status:value.cancelled?'cancelled':done?'done':'pending',learningOutcome:record.outcome||'',calendarBinding:record.binding||undefined};
   }
   function learningNormalizeRecords(records){
     // Corrupt optional sync metadata must never make the entire learning document unreadable.
