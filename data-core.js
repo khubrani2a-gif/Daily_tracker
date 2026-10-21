@@ -56,6 +56,13 @@
       const out=copy(remote)||{};
       new Set(Object.keys(base||{}).concat(Object.keys(local))).forEach(key=>{
         if(!Object.prototype.hasOwnProperty.call(local,key)){if(base&&Object.prototype.hasOwnProperty.call(base,key))delete out[key];return;}
+        if(key==='prayers'){
+          const values=[(base||{})[key],local[key],(remote||{})[key]];
+          if(values.every(v=>Array.isArray(v)&&[5,6].includes(v.length)&&v.every(x=>[true,false,'','ontime','late','missed'].includes(x)))){
+            const normalized=values.map(v=>(v.length===5?[v[0],false,...v.slice(1)]:v).map(x=>x===true?'ontime':x||false));
+            out[key]=mergeChanges(...normalized);return;
+          }
+        }
         if(!equal((base||{})[key],local[key]))out[key]=mergeChanges((base||{})[key],local[key],(remote||{})[key]);
       });return out;
     }
