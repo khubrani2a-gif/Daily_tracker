@@ -1558,7 +1558,12 @@
     padding:1rem 1.1rem;margin-bottom:.8rem;cursor:pointer;user-select:none;
     transition:border-color .2s, background .2s;
   }
-  .dhikr:active{transform:scale(.995)}
+  .dhikr-count-btn,[data-adhkar-count],.adhkar-tools button,li.tally-row,.read-chip,.tally{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  .dhikr-counter-text,.dhikr-counter-progress{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .adhkar-tools{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.adhkar-tools label{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.85rem}.adhkar-tools button,.adhkar-tools select{min-height:44px;padding:.45rem .8rem;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}.adhkar-tools input{max-width:130px}.adhkar-tools button:focus-visible,[data-adhkar-count]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .dhikr{cursor:default}.dhikr .dtext{font-size:calc(1.02rem * var(--adhkar-font,1))}.adhkar-tools button:disabled{opacity:.5}.dhikr-count-btn:disabled{opacity:.85}.adhkar-tools[hidden],.adhkar-tools [hidden]{display:none}#adhkarOverlay{z-index:10010}
+  .dhikr:active{transform:none}
+  button.read-chip,button.tally{font:inherit;color:var(--accent);min-height:44px;border:1px solid var(--line);cursor:pointer}button.chk{font:inherit;cursor:pointer}
   .dhikr .dtext{font-size:1.02rem;line-height:2;color:var(--ink)}
   .dhikr .dfoot{
     display:flex;align-items:center;justify-content:space-between;gap:.6rem;
@@ -2705,7 +2710,7 @@
           </div>
         </div>
 
-        <section class="dhikr-counter" id="dhikrCounterBox" aria-labelledby="dhikrCounterTitle" role="button" tabindex="0" aria-label="اضغط في أي مكان للعد">
+        <section class="dhikr-counter" id="dhikrCounterBox" aria-labelledby="dhikrCounterTitle">
           <div class="dhikr-counter-head">
             <span class="dhikr-counter-title" id="dhikrCounterTitle">📿 عداد الذكر</span>
             <span class="dhikr-counter-actions"><button type="button" class="dhikr-counter-settings" id="dhikrStatsBtn">📊 إحصاءات</button><button type="button" class="dhikr-counter-settings" id="dhikrCounterSettings">⚙ ضبط الذكر</button></span>
@@ -2713,7 +2718,7 @@
           <div class="dhikr-counter-text" id="dhikrCounterText">استغفر الله</div>
           <div class="dhikr-counter-progress" id="dhikrCounterProgress">٠ / ١٠٠</div>
           <div class="dhikr-counter-bar" aria-hidden="true"><i id="dhikrCounterFill"></i></div>
-          <button type="button" class="dhikr-count-btn" id="dhikrCountBtn" aria-label="عدّ الذكر">📿 اضغط للعد</button>
+          <button type="button" class="dhikr-count-btn" id="dhikrCountBtn" aria-label="عدّ الذكر">📿 اضغط للعد</button><div class="adhkar-tools"><button type="button" id="dhikrUndo">تراجع</button><button type="button" id="dhikrNewRound" hidden>جولة جديدة</button></div>
         </section>
 
         <div class="ib-group">
@@ -3161,7 +3166,7 @@
   </div>
 
   <!-- ===== شاشة الأذكار ===== -->
-  <div class="adhkar-overlay" id="adhkarOverlay" hidden>
+  <div class="adhkar-overlay" id="adhkarOverlay" role="dialog" aria-modal="true" aria-labelledby="adhkarTitle" hidden>
     <div class="adhkar-sheet">
       <div class="adhkar-top">
         <div class="adhkar-head">
@@ -3172,8 +3177,9 @@
         <div class="adhkar-progress"><div id="adhkarFill"></div></div>
         <div class="adhkar-count" id="adhkarCount"></div>
       </div>
-      <div class="adhkar-list" id="adhkarList"></div>
-      <button class="adhkar-done-btn" id="adhkarDone">تم ✓ — العودة للمفكرة</button>
+      <div class="adhkar-tools"><label>العرض<select id="adhkarViewMode"><option value="list">قائمة</option><option value="single">ذكر واحد</option></select></label><label>حجم الخط<input id="adhkarFont" type="range" min="100" max="180" step="10" value="100"></label><label id="adhkarPrayerLabel" hidden>الصلاة<select id="adhkarPrayer"><option value="legacy">جلسة عامة / سابقة</option><option value="Fajr">الفجر</option><option value="Dhuhr">الظهر</option><option value="Asr">العصر</option><option value="Maghrib">المغرب</option><option value="Isha">العشاء</option></select></label></div><p id="adhkarSessionDate" class="adhkar-count"></p>
+      <div class="adhkar-list" id="adhkarList"></div><div class="adhkar-tools" id="adhkarNavigation" hidden><button id="adhkarPrevious" type="button">السابق</button><span id="adhkarPosition"></span><button id="adhkarNext" type="button">التالي</button></div>
+      <button class="adhkar-done-btn" id="adhkarDone">حفظ والعودة</button>
     </div>
   </div>
 
@@ -3769,10 +3775,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=156"></script>
+<script src="data-core.js?v=157"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=156"></script>
-<script src="learning-core.js?v=156"></script>
+<script src="calendar-core.js?v=157"></script>
+<script src="learning-core.js?v=157"></script>
 <script>
 (function(){
   "use strict";
@@ -3874,7 +3880,7 @@
     date = date || currentDate;
     const hidden = wHidden();
     const showLegacyReading = date < READING_LAUNCH_DATE;
-    return WORSHIP.filter(w=> hidden.indexOf(w.id) === -1 && (w.id !== "reading" || showLegacyReading)).concat(wCustom());
+    return WORSHIP.filter(w=> hidden.indexOf(w.id) === -1 && (w.id !== "reading" || showLegacyReading)).concat(wCustom().filter(w=>!w.hidden));
   }
   const HABIT_DAY_NAMES=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   function habitScheduledOn(item,dateStr){
@@ -4109,89 +4115,87 @@
   const ADHKAR_TITLES = {am:"أذكار الصباح ☀️", pm:"أذكار المساء 🌙", sleep:"أذكار النوم 😴", wake:"أذكار الاستيقاظ 🌅", salah:"أذكار بعد الصلاة 🕌"};
   const ADHKAR_WKEY = {am:"athkar_am", pm:"athkar_pm", sleep:"athkar_sleep", wake:"athkar_wake", salah:"athkar_salah"};
 
-  let adhkarMode = null;
-
-  function adhkarData(){ return ADHKAR_SETS[adhkarMode]; }
-  function adhkarCounts(){
-    if(!state.adhkar) state.adhkar = {am:[], pm:[]};
-    if(!state.adhkar[adhkarMode]) state.adhkar[adhkarMode] = [];
-    return state.adhkar[adhkarMode];
+  let adhkarMode=null,adhkarDate='',adhkarIndex=0,adhkarPrayer='legacy',adhkarOpener=null;
+  const dhikrDevice='dc_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+  function dhikrTotal(row){return Math.max(0,(+row.base||0)+Object.values(row.deltas||{}).reduce((a,b)=>a+(+b||0),0));}
+  function dhikrDelta(row,n){row.deltas=row.deltas||{};row.deltas[dhikrDevice]=(+row.deltas[dhikrDevice]||0)+n;}
+  function adhkarSet(mode,prayer){const data=ADHKAR_SETS[mode];if(mode!=='salah'||prayer==='legacy')return data;const special=['Fajr','Maghrib'].includes(prayer);return data.map((d,i)=>i===8?{...d,n:special?3:1}:d).filter((d,i)=>i!==9||special);}
+  function adhkarData(){return adhkarSet(adhkarMode,adhkarPrayer);}
+  function adhkarPrefs(){try{return JSON.parse(localStorage.getItem('h2do-adhkar-reader-v1')||'{}')||{};}catch(e){return {};}}
+  function adhkarRemember(){const p=adhkarPrefs();p.view=document.getElementById('adhkarViewMode').value;p.font=document.getElementById('adhkarFont').value;p.positions=p.positions||{};p.positions[adhkarDate+':'+adhkarMode+':'+adhkarPrayer]=adhkarIndex;const keys=Object.keys(p.positions).sort();keys.slice(0,Math.max(0,keys.length-100)).forEach(k=>delete p.positions[k]);localStorage.setItem('h2do-adhkar-reader-v1',JSON.stringify(p));}
+  function adhkarRestorePosition(){adhkarIndex=Math.max(0,Math.min(adhkarData().length-1,+adhkarPrefs().positions?.[adhkarDate+':'+adhkarMode+':'+adhkarPrayer]||0));}
+  function adhkarKey(d,mode=adhkarMode,prayer=adhkarPrayer){let h=2166136261;for(const ch of d.t){h=Math.imul(h^ch.charCodeAt(0),16777619);}return mode+':'+(mode==='salah'?prayer:'daily')+':'+(h>>>0).toString(36);}
+  function adhkarRecord(i){const d=adhkarData()[i],key=adhkarKey(d);state.adhkarRecords=state.adhkarRecords||{};if(!state.adhkarRecords[key])state.adhkarRecords[key]={mode:adhkarMode,index:i,base:adhkarMode==='salah'&&adhkarPrayer!=='legacy'?0:(+state.adhkar?.[adhkarMode]?.[i]||0),deltas:{}};return state.adhkarRecords[key];}
+  function adhkarCounts(){return adhkarData().map((d,i)=>Math.min(d.n,dhikrTotal(adhkarRecord(i))));}
+  function adhkarValid(){if(adhkarDate===currentDate&&!accountChanging)return true;hifzShowToast('تغيّر اليوم؛ أعد فتح جلسة الأذكار.');return false;}
+  function adhkarReconcile(day=state){
+    if(!day?.adhkarRecords)return;day.worship=day.worship||{};
+    day.adhkarCompleted=day.adhkarCompleted||{};
+    for(const mode of Object.keys(ADHKAR_SETS)){
+      const groups=mode==='salah'?['legacy','Fajr','Dhuhr','Asr','Maghrib','Isha']:['daily'];let touched=false;
+      for(const group of groups){const data=adhkarSet(mode,group);if(!data.some(d=>day.adhkarRecords[adhkarKey(d,mode,group)]))continue;touched=true;
+        const counts=data.map(d=>{const r=day.adhkarRecords[adhkarKey(d,mode,group)];return r?Math.min(d.n,dhikrTotal(r)):0;});
+        day.adhkarCompleted[mode+':'+group]=data.every((d,i)=>counts[i]>=d.n);
+        if(group==='legacy'||group==='daily'){day.adhkar=day.adhkar||{};day.adhkar[mode]=counts;}
+      }
+      if(touched)day.worship[ADHKAR_WKEY[mode]]=!!day.adhkarManual?.[ADHKAR_WKEY[mode]]||Object.entries(day.adhkarCompleted).some(([k,v])=>k.startsWith(mode+':')&&v);
+    }
   }
-
+  function adhkarCommit(){
+    const counts=adhkarCounts(),key=ADHKAR_WKEY[adhkarMode];state.adhkar=state.adhkar||{};
+    if(adhkarMode!=='salah'||adhkarPrayer==='legacy')state.adhkar[adhkarMode]=counts;
+    state.adhkarManual=state.adhkarManual||{};state.adhkarCompleted=state.adhkarCompleted||{};
+    state.adhkarCompleted[adhkarMode+':'+(adhkarMode==='salah'?adhkarPrayer:'daily')]=adhkarData().every((d,i)=>counts[i]>=d.n);
+    state.worship[key]=!!state.adhkarManual[key]||Object.entries(state.adhkarCompleted).some(([k,v])=>k.startsWith(adhkarMode+':')&&v);
+    save();adhkarProgressUpdate();
+  }
   function openAdhkar(mode){
-    adhkarMode = mode;
-    document.getElementById("adhkarTitle").textContent = ADHKAR_TITLES[mode];
-    const ov = document.getElementById("adhkarOverlay");
-    ov.hidden = false;
-    ov.scrollTop = 0;
-    document.body.style.overflow = "hidden";
-    renderAdhkarList();
-    /* زر الرجوع في الجوال يغلق صفحة الأذكار */
-    try{ history.pushState({adhkar:true}, ""); }catch(e){}
+    adhkarOpener=document.activeElement;adhkarMode=mode;adhkarDate=currentDate;adhkarPrayer='legacy';adhkarRestorePosition();const prefs=adhkarPrefs();document.getElementById('adhkarViewMode').value=prefs.view==='single'?'single':'list';document.getElementById('adhkarFont').value=Math.max(100,Math.min(180,+prefs.font||100));document.getElementById('adhkarList').style.setProperty('--adhkar-font',+document.getElementById('adhkarFont').value/100);
+    state.adhkarManual=state.adhkarManual||{};
+    if(state.worship[ADHKAR_WKEY[mode]]&&state.adhkarManual[ADHKAR_WKEY[mode]]===undefined&&!Object.keys(state.adhkarCompleted||{}).some(k=>k.startsWith(mode+':')))state.adhkarManual[ADHKAR_WKEY[mode]]=true;
+    document.getElementById('adhkarTitle').textContent=ADHKAR_TITLES[mode];
+    document.getElementById('adhkarPrayerLabel').hidden=mode!=='salah';document.getElementById('adhkarPrayer').value='legacy';
+    document.getElementById('adhkarSessionDate').textContent='جلسة يوم '+adhkarDate;
+    const ov=document.getElementById('adhkarOverlay');ov.hidden=false;ov.scrollTop=0;document.body.style.overflow='hidden';renderAdhkarList();document.getElementById('adhkarClose').focus();
+    try{history.pushState({adhkar:true},'');}catch(e){}
   }
-  function closeAdhkarUI(){
-    document.getElementById("adhkarOverlay").hidden = true;
-    document.body.style.overflow = "";
-    renderWorship(); renderProgress();
-  }
-  function closeAdhkar(){
-    if(history.state && history.state.adhkar){ history.back(); }
-    else closeAdhkarUI();
-  }
-  window.addEventListener("popstate", ()=>{
-    if(!document.getElementById("adhkarOverlay").hidden) closeAdhkarUI();
-  });
-  document.getElementById("adhkarClose").onclick = closeAdhkar;
-  document.getElementById("adhkarDone").onclick = closeAdhkar;
-  document.getElementById("adhkarReset").onclick = ()=>{
-    if(!confirm("تصفير عدادات هذه الأذكار لهذا اليوم؟")) return;
-    state.adhkar[adhkarMode] = [];
-    state.worship[ADHKAR_WKEY[adhkarMode]] = false;
-    save(); renderAdhkarList();
-  };
-
+  function closeAdhkarUI(){document.getElementById('adhkarOverlay').hidden=true;document.body.style.overflow='';renderWorship();renderProgress();const opener=adhkarOpener?.isConnected?adhkarOpener:document.querySelector('#ibList-adhkar .read-chip');opener?.focus({preventScroll:true});}
+  function closeAdhkar(){if(history.state&&history.state.adhkar)history.back();else closeAdhkarUI();}
+  window.addEventListener('popstate',()=>{if(!document.getElementById('adhkarOverlay').hidden)closeAdhkarUI();});
+  document.getElementById('adhkarClose').onclick=closeAdhkar;document.getElementById('adhkarDone').onclick=closeAdhkar;
+  document.getElementById('adhkarReset').onclick=()=>{if(!adhkarValid()||!confirm('تصفير جلسة الأذكار المعروضة؟ تبقى الجلسات الأخرى محفوظة.'))return;adhkarData().forEach((d,i)=>dhikrDelta(adhkarRecord(i),-dhikrTotal(adhkarRecord(i))));state.adhkarManual=state.adhkarManual||{};state.adhkarManual[ADHKAR_WKEY[adhkarMode]]=false;adhkarCommit();};
   function adhkarProgressUpdate(){
-    const data = adhkarData(), counts = adhkarCounts();
-    const arn = n => n.toLocaleString("ar-EG");
-    let done = 0;
-    data.forEach((d,i)=>{ if((counts[i]||0) >= d.n) done++; });
-    document.getElementById("adhkarFill").style.width = Math.round(done/data.length*100)+"%";
-    document.getElementById("adhkarCount").textContent =
-      done === data.length ? "اكتملت أذكارك — تقبّل الله منك ✨" : arn(done)+" من "+arn(data.length)+" — اضغط على الذكر للعدّ";
-    /* عند اكتمال الكل: علّم بند العبادات تلقائيًا */
-    const key = ADHKAR_WKEY[adhkarMode];
-    const was = !!state.worship[key];
-    state.worship[key] = (done === data.length);
-    if(!was && state.worship[key] && navigator.vibrate) navigator.vibrate([30,60,30]);
+    const data=adhkarData(),counts=adhkarCounts(),done=data.filter((d,i)=>counts[i]>=d.n).length,arn=n=>n.toLocaleString('ar-EG');
+    document.getElementById('adhkarFill').style.width=Math.round(done/data.length*100)+'%';document.getElementById('adhkarCount').textContent=done===data.length?'اكتملت هذه الجلسة — تقبّل الله منك':arn(done)+' من '+arn(data.length)+' أذكار مكتملة';
+    document.querySelectorAll('[data-adhkar-count]').forEach(b=>{const i=+b.dataset.adhkarCount,c=counts[i],d=data[i];b.textContent=c>=d.n?'✓ اكتمل الذكر':arn(c)+' من '+arn(d.n)+' — اضغط للعد';b.disabled=c>=d.n;b.closest('.dhikr').classList.toggle('done',c>=d.n);});
+    document.querySelectorAll('[data-adhkar-undo]').forEach(b=>b.disabled=!counts[+b.dataset.adhkarUndo]);
   }
-
+  function adhkarAdjust(i){
+    const date=adhkarDate,mode=adhkarMode,prayer=adhkarPrayer,d=adhkarData()[i];
+    const sheet=taskSheet('ضبط عدد الذكر','<label class="task-field-wide">العدد المسجل<input id="adhkarAdjustedCount" type="text" inputmode="numeric" value="'+Math.min(d.n,dhikrTotal(adhkarRecord(i)))+'"></label><p>العدد المستهدف: '+d.n.toLocaleString('ar-EG')+'</p><div class="exp-err" id="adhkarAdjustError" role="alert"></div><button type="button" class="task-sheet-save" id="adhkarAdjustSave">حفظ العدد</button>');
+    sheet.over.querySelector('#adhkarAdjustSave').onclick=()=>{const err=sheet.over.querySelector('#adhkarAdjustError');if(!adhkarValid()||date!==adhkarDate||mode!==adhkarMode||prayer!==adhkarPrayer){err.textContent='تغيّرت الجلسة؛ أعد فتح ضبط العدد.';return;}const raw=sheet.over.querySelector('#adhkarAdjustedCount').value.trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x));const n=Number(raw);if(!/^\d+$/.test(raw)||!Number.isInteger(n)||n<0||n>d.n){err.textContent='اكتب عددًا من ٠ إلى '+d.n.toLocaleString('ar-EG');return;}const r=adhkarRecord(i);dhikrDelta(r,n-dhikrTotal(r));adhkarCommit();sheet.close();document.querySelector('[data-adhkar-count="'+i+'"]')?.focus();};
+  }
   function renderAdhkarList(){
-    const list = document.getElementById("adhkarList");
-    const data = adhkarData(), counts = adhkarCounts();
-    const arn = n => n.toLocaleString("ar-EG");
-    list.innerHTML = "";
+    const list=document.getElementById('adhkarList'),ov=document.getElementById('adhkarOverlay'),top=ov.scrollTop,focus=document.activeElement?.dataset?.adhkarCount;
+    const data=adhkarData();if(!data)return;list.textContent='';
+    const single=document.getElementById('adhkarViewMode').value==='single';
     data.forEach((d,i)=>{
-      const card = document.createElement("div");
-      const cnt = counts[i]||0, isDone = cnt >= d.n;
-      card.className = "dhikr"+(isDone?" done":"");
-      card.innerHTML = '<div class="dtext">'+d.t+'</div>'
-        + '<div class="dfoot"><span class="dsrc">'+d.s+'</span>'
-        + '<span class="dchip">'+(isDone ? "تم ✓" : arn(cnt)+" / "+arn(d.n))+'</span></div>';
-      card.onclick = ()=>{
-        let c = counts[i]||0;
-        if(c >= d.n) return;
-        counts[i] = ++c;
-        if(navigator.vibrate) navigator.vibrate(8);
-        const chip = card.querySelector(".dchip");
-        if(c >= d.n){ card.classList.add("done"); chip.textContent = "تم ✓"; }
-        else chip.textContent = arn(c)+" / "+arn(d.n);
-        adhkarProgressUpdate();
-        save();
-      };
-      list.appendChild(card);
+      const card=document.createElement('article');card.className='dhikr';card.hidden=single&&i!==adhkarIndex;
+      const body=document.createElement('div');body.className='dtext';body.textContent=d.t;
+      const source=document.createElement('div');source.className='dsrc';source.textContent=d.s;
+      const btn=document.createElement('button');btn.type='button';btn.className='dhikr-count-btn';btn.dataset.adhkarCount=i;btn.setAttribute('aria-label','عدّ الذكر '+(i+1));
+      btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;dhikrDelta(r,1);adhkarCommit();if(navigator.vibrate)navigator.vibrate(8);};
+      const tools=document.createElement('div');tools.className='adhkar-tools';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>0)dhikrDelta(r,-1);adhkarCommit();};
+      const copy=document.createElement('button');copy.type='button';copy.textContent='نسخ';copy.onclick=async()=>{try{await navigator.clipboard.writeText(d.t);hifzShowToast('نُسخ الذكر');}catch(e){hifzShowToast('تعذّر النسخ؛ يمكنك تحديد النص ونسخه.');}};const adjust=document.createElement('button');adjust.type='button';adjust.textContent='ضبط العدد';adjust.dataset.adhkarAdjust=i;adjust.onclick=()=>adhkarAdjust(i);tools.append(undo,copy,adjust);card.append(body,source,btn,tools);list.appendChild(card);
     });
-    adhkarProgressUpdate();
+    document.getElementById('adhkarNavigation').hidden=!single;document.getElementById('adhkarPosition').textContent='الذكر '+(adhkarIndex+1).toLocaleString('ar-EG')+' من '+data.length.toLocaleString('ar-EG');document.getElementById('adhkarPrevious').disabled=adhkarIndex===0;document.getElementById('adhkarNext').disabled=adhkarIndex>=data.length-1;adhkarProgressUpdate();ov.scrollTop=top;if(focus!==undefined)list.querySelector('[data-adhkar-count="'+focus+'"]')?.focus({preventScroll:true});
   }
+  document.getElementById('adhkarViewMode').onchange=()=>{adhkarRemember();renderAdhkarList();};
+  document.getElementById('adhkarFont').oninput=e=>{document.getElementById('adhkarList').style.setProperty('--adhkar-font',+e.target.value/100);adhkarRemember();};
+  document.getElementById('adhkarPrayer').onchange=e=>{adhkarPrayer=e.target.value;adhkarRestorePosition();renderAdhkarList();};
+  document.getElementById('adhkarPrevious').onclick=()=>{adhkarIndex=Math.max(0,adhkarIndex-1);adhkarRemember();renderAdhkarList();};
+  document.getElementById('adhkarNext').onclick=()=>{adhkarIndex=Math.min(adhkarData().length-1,adhkarIndex+1);adhkarRemember();renderAdhkarList();};
+  document.getElementById('adhkarOverlay').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeAdhkar();return;}if(e.key==='Tab'){const items=[...e.currentTarget.querySelectorAll('button:not(:disabled),select,input,[tabindex="0"]')].filter(x=>x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
 
   function renderQuote(dateStr){
     const days = Math.floor(new Date(dateStr+"T12:00:00").getTime()/86400000);
@@ -4263,6 +4267,8 @@
       rating: 0,
       istighfar: 0,
       dhikrCounter: {text:"استغفر الله", target:100, count:0},
+      dhikrSessions: [],
+      adhkarRecords: {},
       wCounts: {},
       sport: {types:[], mins:0, km:0},
       mood: "ok",
@@ -4335,10 +4341,11 @@
     ["tasks","priorities"].forEach(key=>out[key]=(out[key]||[]).filter(item=>item&&itemFilled(item)));
     delete out.updatedAt;return out;
   }
+  function dhikrProjectDay(day){adhkarReconcile(day);dhikrUpdateLinkedWird(day);const session=(day.dhikrSessions||[]).find(x=>x.id===day.dhikrCounter?.sessionId);if(session)day.dhikrCounter.count=dhikrTotal(session);return day;}
   function persistDay(date,data,options){
     queueMicrotask(calendarSchedule);
     if(accountChanging)return false;
-    options=options||{};
+    options=options||{};dhikrProjectDay(data);
     const pending=dailyPending(), before=dailyRead(date), existing=pending[date];
     const entry=existing||{base:dailyMergeShape(before),replace:false};
     if(options.replace)entry.replace=true;
@@ -4735,7 +4742,7 @@
         if(!cache){
           const expected=pending.value.updatedAt;
           let merged=(pending.replace||!remote)?JSON.parse(JSON.stringify(pending.value)):MufDataCore.mergeChanges(pending.base,dailyMergeShape(pending.value),dailyMergeShape(remote));
-          merged.updatedAt=Math.max(Date.now(),expected,+(remote&&remote.updatedAt||0)+1);
+          dhikrProjectDay(merged);merged.updatedAt=Math.max(Date.now(),expected,+(remote&&remote.updatedAt||0)+1);
           reconcile=await pushRemote(date,merged);
           if(reconcile.ok){
             const latest=dailyPending()[date];
@@ -4744,7 +4751,7 @@
             }else if(latest){
               // Edits made while the server write was pending must survive its completion.
               const combined=MufDataCore.mergeChanges(dailyMergeShape(pending.value),dailyMergeShape(latest.value),dailyMergeShape(merged));
-              combined.updatedAt=latest.value.updatedAt;latest.base=dailyMergeShape(merged);latest.value=combined;
+              dhikrProjectDay(combined);combined.updatedAt=latest.value.updatedAt;latest.base=dailyMergeShape(merged);latest.value=combined;
               const journal=dailyPending();journal[date]=latest;localStorage.setItem(DAILY_PENDING_KEY,JSON.stringify(journal));localStorage.setItem(storageKey(date),JSON.stringify(combined));local=combined;
               setTimeout(()=>{if(db&&user&&!accountChanging)pullRemote(date,"pending-edit");},0);
             }
@@ -4752,7 +4759,7 @@
         }
       }else if(remote&&(remote.updatedAt||0)>(local.updatedAt||0)){
         if(!cache)dataDetectConflict("daily",date,local,remote,"اعتماد نسخة اليوم الأحدث مع حفظ نسخة أمان");
-        local=Object.assign(blankState(),remote);localStorage.setItem(storageKey(date),JSON.stringify(local));
+        local=dhikrProjectDay(Object.assign(blankState(),remote));localStorage.setItem(storageKey(date),JSON.stringify(local));
       }else if(!cache&&(local.updatedAt||0)>(remote&&remote.updatedAt||0))reconcile=await pushRemote(date,local);
       if(date===currentDate){state=Object.assign(blankState(),local);safeRun("pullRemote:renderAll",renderAll);}
       invalidateAllDaysCache();
@@ -8110,7 +8117,7 @@
     if(w.id === "witr"){
       const done = !!(state.witrSessions && state.witrSessions.length > 0);
       state.worship.witr = done;
-      const chk = document.createElement("span");
+      const chk = document.createElement("button");chk.type="button";chk.setAttribute("aria-label",w.label);
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
       /* الضغط على "تمت" بعد إنجازها لا يُلغيها أبدًا؛ يفتح شاشة ملخص الإنجاز بدلًا من ذلك */
@@ -8119,7 +8126,7 @@
       lbl.className = "lbl"+(done?" done-line":"");
       lbl.textContent = w.label;
       lbl.onclick = openWitr;
-      const chip = document.createElement("span");
+      const chip = document.createElement("button");chip.type="button";
       chip.className = "read-chip";
       chip.textContent = done ? "✅ تمت" : "🌙 قيام";
       chip.onclick = openWitr;
@@ -8134,13 +8141,13 @@
       const count = state.istighfar || 0;
       const done = count >= 100;
       state.worship.istighfar = done;
-      const chk = document.createElement("span");
+      const chk = document.createElement("button");chk.type="button";chk.setAttribute("aria-label",w.label);
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
       const lbl = document.createElement("span");
       lbl.className = "lbl"+(done?" done-line":"");
       lbl.textContent = w.label;
-      const tally = document.createElement("span");
+      const tally = document.createElement("button");tally.type="button";tally.setAttribute("aria-label","عدّ "+w.label);tally.onclick=e=>{e.stopPropagation();li.click();};
       tally.className = "tally"+(done?" done":"");
       tally.textContent = done ? "تم ✓ ١٠٠" : count.toLocaleString("ar-EG")+" / ١٠٠";
       const rst = document.createElement("button");
@@ -8156,11 +8163,13 @@
       rst.onclick = (ev)=>{
         ev.stopPropagation();
         state.istighfar = 0; state.worship.istighfar = false;
+        if(state.dhikrWirdBase!==undefined)state.dhikrWirdBase=-(state.dhikrSessions||[]).filter(x=>x.linkWird&&x.text==='استغفر الله').reduce((n,x)=>n+dhikrTotal(x),0);
         paint(); save(); ibRefreshAfterChange();
       };
       li.onclick = ()=>{
         if((state.istighfar||0) >= 100) return;
         state.istighfar = (state.istighfar||0) + 1;
+        if(state.dhikrWirdBase!==undefined)state.dhikrWirdBase++;
         if(navigator.vibrate) navigator.vibrate(8);
         if(state.istighfar === 100){
           state.worship.istighfar = true;
@@ -8186,13 +8195,13 @@
       const done = count >= w.target;
       state.worship[w.id] = done;
       const arn = n => n.toLocaleString("ar-EG");
-      const chk = document.createElement("span");
+      const chk = document.createElement("button");chk.type="button";chk.setAttribute("aria-label",w.label);
       chk.className = "chk"+(done?" on":"");
       chk.textContent = "✔";
       const lbl = document.createElement("span");
       lbl.className = "lbl"+(done?" done-line":"");
       lbl.textContent = w.label;
-      const tally = document.createElement("span");
+      const tally = document.createElement("button");tally.type="button";tally.setAttribute("aria-label","عدّ "+w.label);tally.onclick=e=>{e.stopPropagation();li.click();};
       tally.className = "tally"+(done?" done":"");
       tally.textContent = done ? "تم ✓ "+arn(w.target) : arn(count)+" / "+arn(w.target);
       const rst = document.createElement("button");
@@ -8229,12 +8238,12 @@
       return;
     }
 
-    const chk = document.createElement("span");
+    const chk = document.createElement("button");chk.type="button";chk.setAttribute("aria-label",w.label);
     const on = !!state.worship[w.id];
     chk.className = "chk"+(on?" on":"");
     chk.textContent = "✔";
     chk.onclick = ()=>{
-      state.worship[w.id]=!state.worship[w.id];
+      state.worship[w.id]=!state.worship[w.id];if(ADHKAR_MODE_OF[w.id]){state.adhkarManual=state.adhkarManual||{};state.adhkarManual[w.id]=state.worship[w.id];}
       const completed=!!state.worship[w.id];
       chk.classList.toggle("on",completed); lbl.classList.toggle("done-line",completed);
       save(); ibRefreshAfterChange();
@@ -8247,7 +8256,7 @@
     if(ADHKAR_MODE_OF[w.id]){
       const mode = ADHKAR_MODE_OF[w.id];
       lbl.onclick = ()=> openAdhkar(mode);
-      const read = document.createElement("span");
+      const read = document.createElement("button");read.type="button";read.setAttribute("aria-label","قراءة "+w.label);
       read.className = "read-chip";
       read.textContent = "📖 اقرأ";
       read.onclick = ()=> openAdhkar(mode);
@@ -8283,28 +8292,31 @@
   function dhikrCounterOptions(){return [...new Set([...DHIKR_COUNTER_PRESETS,...dhikrCounterCustomPresets().filter(row=>!row.hidden).map(row=>row.text)])];}
   function dhikrMigrateLegacyCounterItems(){const all=wCustom(), legacy=all.filter(item=>item&&item.id&&item.id.indexOf("dhikr_")===0&&item.group==="adhkar");if(!legacy.length)return;const presets=dhikrCounterCustomPresets();legacy.forEach(item=>{if(!presets.some(row=>row.text===item.label))presets.push({id:item.id,text:item.label,hidden:false});});dhikrCounterCustomPresetsSave(presets);wCustomSave(all.filter(item=>!legacy.includes(item)));}
   function dhikrCounterState(){
-    if(!state.dhikrCounter || typeof state.dhikrCounter!=="object") state.dhikrCounter={text:"استغفر الله",target:100,count:0};
-    const counter=state.dhikrCounter;
-    counter.text=typeof counter.text==="string"&&counter.text.trim()?counter.text.trim().slice(0,120):"استغفر الله";
-    counter.target=Math.max(1,Math.min(10000,Math.round(+counter.target||100)));
-    counter.count=Math.max(0,Math.min(counter.target,Math.round(+counter.count||0)));
-    return counter;
+    if(!state.dhikrCounter||typeof state.dhikrCounter!=='object')state.dhikrCounter={text:'استغفر الله',target:100,count:0};
+    const c=state.dhikrCounter;c.text=typeof c.text==='string'&&c.text.trim()?c.text.trim().slice(0,120):'استغفر الله';c.target=Math.max(1,Math.min(10000,Math.round(+c.target||100)));
+    state.dhikrSessions=Array.isArray(state.dhikrSessions)?state.dhikrSessions:[];
+    let session=state.dhikrSessions.find(x=>x.id===c.sessionId);
+    if(!session){c.sessionId='dhikr-legacy:'+currentDate;session=state.dhikrSessions.find(x=>x.id===c.sessionId);if(!session){session={id:c.sessionId,text:c.text,target:c.target,base:Math.max(0,+c.count||0),deltas:{},linkWird:false};state.dhikrSessions.push(session);}}
+    c.count=dhikrTotal(session);return c;
   }
+  function dhikrSession(){const c=dhikrCounterState();return state.dhikrSessions.find(x=>x.id===c.sessionId);}
+  function dhikrStartSession(text,target,link){const id=newId();state.dhikrSessions=state.dhikrSessions||[];state.dhikrSessions.push({id,text,target,base:0,deltas:{},linkWird:!!link});state.dhikrCounter={sessionId:id,text,target,count:0};}
+  function dhikrUpdateLinkedWird(day=state){const linked=(day.dhikrSessions||[]).filter(x=>x.linkWird&&x.text==='استغفر الله').reduce((n,x)=>n+dhikrTotal(x),0);if(!linked&&!day.dhikrWirdBase&&!(day.dhikrSessions||[]).some(x=>x.linkWird))return;if(day.dhikrWirdBase===undefined)day.dhikrWirdBase=+day.istighfar||0;day.istighfar=Math.max(0,day.dhikrWirdBase+linked);day.worship.istighfar=day.istighfar>=100;}
   function renderDhikrCounter(){
     const counter=dhikrCounterState(), done=counter.count>=counter.target;
     const text=document.getElementById("dhikrCounterText"), progress=document.getElementById("dhikrCounterProgress"), fill=document.getElementById("dhikrCounterFill"), button=document.getElementById("dhikrCountBtn");
     if(!text||!progress||!fill||!button)return;
-    text.textContent=counter.text; progress.textContent=counter.count.toLocaleString("ar-EG")+" / "+counter.target.toLocaleString("ar-EG");
-    fill.style.width=Math.round(counter.count/counter.target*100)+"%"; button.textContent=done?"✓ اكتمل الذكر":"📿 اضغط للعد";button.classList.toggle("done",done);button.setAttribute("aria-label",done?"اكتمل الذكر":"عدّ: "+counter.text);
+    text.textContent=counter.text; progress.textContent=counter.count.toLocaleString("ar-EG")+" من "+counter.target.toLocaleString("ar-EG");
+    fill.style.width=Math.min(100,Math.round(counter.count/counter.target*100))+"%"; button.textContent=done?"✓ اكتمل الذكر":"📿 اضغط للعد";button.disabled=done;document.getElementById("dhikrNewRound").hidden=!done;document.getElementById("dhikrUndo").disabled=!counter.count;button.classList.toggle("done",done);button.setAttribute("aria-label",done?"اكتمل الذكر":"عدّ: "+counter.text);
   }
   function dhikrCount(){
     const counter=dhikrCounterState(); if(counter.count>=counter.target)return;
-    counter.count++; if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
+    dhikrDelta(dhikrSession(),1);counter.count=dhikrTotal(dhikrSession());dhikrUpdateLinkedWird(); if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
     save();renderDhikrCounter();
   }
   function dhikrStatsRows(){
     const rows=new Map(), days=allDays(), weekStart=new Date(currentDate+"T12:00:00");weekStart.setDate(weekStart.getDate()-6);
-    Object.entries(days).forEach(([date,day])=>{const counter=day&&day.dhikrCounter;if(!counter||typeof counter.text!=="string"||!(+counter.count>0))return;const text=counter.text.trim(), count=Math.max(0,Math.round(+counter.count||0));if(!text||!count)return;const row=rows.get(text)||{text,total:0,days:0,week:0,month:0,byDate:{}};row.total+=count;row.days++;row.byDate[date]=count;if(date>=fmtDate(weekStart)&&date<=currentDate)row.week+=count;if(date.slice(0,7)===currentDate.slice(0,7))row.month+=count;rows.set(text,row);});
+    Object.entries(days).forEach(([date,day])=>{const sessions=day.dhikrSessions?.length?day.dhikrSessions:[day.dhikrCounter];const grouped=new Map();for(const c of sessions){if(!c||!c.text)continue;const count=c.deltas?dhikrTotal(c):Math.max(0,+c.count||0);grouped.set(c.text,(grouped.get(c.text)||0)+count);}for(const [text,count] of grouped){if(!count)continue;const row=rows.get(text)||{text,total:0,days:0,week:0,month:0,byDate:{}};row.total+=count;row.days++;row.byDate[date]=count;if(date>=fmtDate(weekStart)&&date<=currentDate)row.week+=count;if(date.slice(0,7)===currentDate.slice(0,7))row.month+=count;rows.set(text,row);}});
     return [...rows.values()].map(row=>{const dates=Object.keys(row.byDate).sort(), cursor=new Date(dates[0]+"T12:00:00");let best=0,run=0,previous="";dates.forEach(date=>{if(previous){const prev=new Date(previous+"T12:00:00"), now=new Date(date+"T12:00:00");run=(now-prev===86400000)?run+1:1;}else run=1;best=Math.max(best,run);previous=date;});return Object.assign(row,{best});}).sort((a,b)=>b.total-a.total);
   }
   function openDhikrStats(){
@@ -8313,15 +8325,16 @@
     taskSheet("📊 إحصاءات الذكر",body);
   }
   function openDhikrCounterSettings(){
-    const current=dhikrCounterState(), available=dhikrCounterOptions(), options=available.map(text=>'<option value="'+expEsc(text)+'"'+(text===current.text?" selected":"")+'>'+expEsc(text)+'</option>').join("");
-    const sheet=taskSheet("ضبط عداد الذكر",'<div class="task-fields"><label class="task-field-wide">ذكر جاهز<select id="dhikrPreset"><option value="">اختر ذكرًا</option>'+options+'</select></label><label class="task-field-wide">أو اكتب ذكرًا خاصًا<input id="dhikrCustomText" type="text" maxlength="120" placeholder="مثال: سبحان الله وبحمده" value="'+(available.includes(current.text)?"":expEsc(current.text))+'"></label><label class="task-field-wide">العدد المستهدف<input id="dhikrTarget" type="number" min="1" max="10000" inputmode="numeric" value="'+current.target+'"></label></div><div class="exp-err" id="dhikrCounterErr"></div><button type="button" class="task-sheet-save" id="dhikrCounterSave">حفظ وبدء عداد جديد</button><button type="button" class="task-sheet-save" id="dhikrCounterReset" style="background:var(--paper);color:var(--accent);border:1px solid var(--accent)">تصفير العداد الحالي</button>');
+    const counterDate=currentDate,current=dhikrCounterState(),expectedSession=current.sessionId, available=dhikrCounterOptions(), options=available.map(text=>'<option value="'+expEsc(text)+'"'+(text===current.text?" selected":"")+'>'+expEsc(text)+'</option>').join("");
+    const sheet=taskSheet("ضبط عداد الذكر",'<div class="task-fields"><label class="task-field-wide">ذكر جاهز<select id="dhikrPreset"><option value="">اختر ذكرًا</option>'+options+'</select></label><label class="task-field-wide">أو اكتب ذكرًا خاصًا<input id="dhikrCustomText" type="text" maxlength="120" placeholder="مثال: سبحان الله وبحمده" value="'+(available.includes(current.text)?"":expEsc(current.text))+'"></label><label class="task-field-wide">العدد المستهدف<input id="dhikrTarget" type="number" min="1" max="10000" inputmode="numeric" value="'+current.target+'"></label></div><label class="adhkar-link"><input id="dhikrLinkWird" type="checkbox"> احتساب الاستغفار ضمن الورد اليومي</label><div class="exp-err" id="dhikrCounterErr"></div><button type="button" class="task-sheet-save" id="dhikrCounterSave">حفظ الإعدادات</button><button type="button" class="task-sheet-save" id="dhikrCounterReset" style="background:var(--paper);color:var(--accent);border:1px solid var(--accent)">بدء جولة جديدة مع حفظ السابقة</button>');
     const preset=sheet.over.querySelector("#dhikrPreset"), custom=sheet.over.querySelector("#dhikrCustomText"), target=sheet.over.querySelector("#dhikrTarget"), err=sheet.over.querySelector("#dhikrCounterErr");
+    const link=sheet.over.querySelector('#dhikrLinkWird');link.checked=!!dhikrSession().linkWird;
     preset.onchange=()=>{if(preset.value)custom.value="";};
-    const read=()=>{const text=(custom.value.trim()||preset.value||"").trim(), goal=Math.round(+target.value);if(!text){err.textContent="اختر ذكرًا أو اكتب ذكرًا خاصًا.";return null;}if(!(goal>=1&&goal<=10000)){err.textContent="أدخل عددًا بين ١ و١٠٬٠٠٠.";return null;}return {text,goal};};
-    sheet.over.querySelector("#dhikrCounterSave").onclick=()=>{const next=read();if(!next)return;state.dhikrCounter={text:next.text,target:next.goal,count:0};save();renderDhikrCounter();sheet.close();};
+    const read=()=>{if(currentDate!==counterDate||dhikrCounterState().sessionId!==expectedSession){err.textContent='تغيّرت الجلسة؛ أعد فتح إعداداتها.';return null;}const text=(custom.value.trim()||preset.value||"").trim(), goal=Math.round(+target.value);if(!text){err.textContent="اختر ذكرًا أو اكتب ذكرًا خاصًا.";return null;}if(!(goal>=1&&goal<=10000)){err.textContent="أدخل عددًا بين ١ و١٠٬٠٠٠.";return null;}return {text,goal};};
+    sheet.over.querySelector("#dhikrCounterSave").onclick=()=>{const next=read();if(!next)return;if(next.text!==current.text)dhikrStartSession(next.text,next.goal,link.checked&&next.text==='استغفر الله');else{dhikrCounterState().target=next.goal;const session=dhikrSession();session.target=next.goal;session.linkWird=link.checked&&next.text==='استغفر الله';}dhikrUpdateLinkedWird();save();renderWorship();sheet.close();};
     const add=document.createElement("button");add.type="button";add.className="task-sheet-save";add.textContent="＋ إضافة الذكر إلى الخيارات";sheet.over.querySelector("#dhikrCounterSave").before(add);
     add.onclick=()=>{const next=read();if(!next)return;if(dhikrAddPermanent(next.text)){const option=document.createElement("option");option.value=next.text;option.textContent=next.text;preset.appendChild(option);preset.value=next.text;custom.value="";err.textContent="تمت إضافته إلى خيارات العداد.";}else err.textContent="هذا الذكر موجود مسبقًا ضمن خيارات العداد.";};
-    sheet.over.querySelector("#dhikrCounterReset").onclick=()=>{dhikrCounterState().count=0;save();renderDhikrCounter();sheet.close();};
+    sheet.over.querySelector("#dhikrCounterReset").onclick=()=>{if(!confirm('بدء جولة جديدة؟ تبقى الجولة السابقة في الإحصاءات.'))return;if(!read())return;const c=dhikrCounterState(),linked=dhikrSession().linkWird;dhikrStartSession(c.text,c.target,linked);save();renderDhikrCounter();sheet.close();};
     custom.focus();
   }
   const DHIKR_LABELS_KEY="h2do-dhikr-labels-v1";
@@ -8349,6 +8362,7 @@
     sheet.over.querySelectorAll("[data-dhikr-delete]").forEach(button=>button.onclick=()=>{const ref=parse(button.dataset.dhikrDelete), item=get(ref);if(!item)return;smartAskInTemplateManager(sheet,"حذف «"+item.label+"»؟",ref.kind==="builtin"?"سيُخفى الذكر الأساسي ويمكن إظهاره لاحقًا.":"سيُحذف الذكر نهائيًا من "+item.where+".",()=>{if(ref.kind==="custom")wCustomSave(wCustom().filter(entry=>entry.id!==ref.id));else if(ref.kind==="counter")dhikrCounterCustomPresetsSave(dhikrCounterCustomPresets().filter(entry=>entry.id!==ref.id));else dhikrSetHidden(ref.kind,ref.id,true);renderWorship();renderProgress();sheet.close();});});
   }
   function renderWorship(rebuildLists=true, updateRemaining=true){
+    adhkarReconcile();dhikrUpdateLinkedWird();
     dhikrMigrateLegacyCounterItems();
     if(rebuildLists){
       const worshipItems = wAllItemsForDate(currentDate);
@@ -8416,13 +8430,9 @@
   };
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
   const dhikrCounterBox=document.getElementById("dhikrCounterBox");
-  let dhikrLastTouchAt=0;
-  dhikrCountButton.addEventListener("touchend",event=>{event.preventDefault();event.stopPropagation();dhikrLastTouchAt=Date.now();dhikrCount();dhikrCountButton.blur();},{passive:false});
-  dhikrCountButton.onpointerdown=event=>{if(event.pointerType==="touch"){event.preventDefault();event.stopPropagation();}};
-  dhikrCountButton.onclick=event=>{event.preventDefault();event.stopPropagation();if(Date.now()-dhikrLastTouchAt>700)dhikrCount();dhikrCountButton.blur();};
-  dhikrCountButton.ondblclick=event=>event.preventDefault();
-  dhikrCounterBox.onclick=event=>{if(event.target.closest(".dhikr-counter-settings,#dhikrCountBtn"))return;event.preventDefault();event.stopPropagation();dhikrCount();};
-  dhikrCounterBox.onkeydown=event=>{if((event.key==="Enter"||event.key===" ")&&event.target===dhikrCounterBox){event.preventDefault();dhikrCount();}};
+  dhikrCountButton.onclick=()=>dhikrCount();
+  document.getElementById('dhikrUndo').onclick=()=>{const session=dhikrSession();if(dhikrTotal(session)>0)dhikrDelta(session,-1);dhikrCounterState();dhikrUpdateLinkedWird();save();renderWorship();};
+  document.getElementById('dhikrNewRound').onclick=()=>{const c=dhikrCounterState(),linked=dhikrSession().linkWird;dhikrStartSession(c.text,c.target,linked);save();renderDhikrCounter();};
   document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
   document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
   document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
@@ -11447,6 +11457,7 @@
     safeRun("renderHijri", ()=> renderHijri(currentDate));
     safeRun("renderPrayers", renderPrayers);
     safeRun("renderWorship", renderWorship);
+    if(!document.getElementById("adhkarOverlay").hidden&&adhkarDate===currentDate)safeRun("adhkar:refresh",renderAdhkarList);
     safeRun("renderWater", renderWater);
     safeRun("renderSport", renderSport);
     safeRun("renderHealth", renderHealth);
