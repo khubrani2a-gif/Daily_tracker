@@ -11,11 +11,12 @@
   function actionsForRole(role){const study=['session','assignment','exam'],teaching=['prep','lecture','outcome'],primary=role==='teaching'?teaching:role==='both'?[...study,...teaching]:study;return {primary,secondary:[...study,...teaching,'course','read','template','bulk','archive'].filter(x=>!primary.includes(x))};}
   function suggestOccurrenceSlots(task,allRows,prefs,date,nowTime='00:00'){const range=PC.range(task),duration=task.durationMinutes||(range?range.end-range.start:0);if(!duration||task.allDay)return [];return PC.availableSlots(allRows.filter(r=>r.task.id!==task.id),date,prefs,duration,task.bufferMinutes||0,nowTime).slice(0,3);}
   function calendarCoverage(expectedRows,records,context={}){
-    const result={required:0,linked:0,confirmed:0,pending:0,review:0,unlinked:0,firstMissingDate:'',confirmedThrough:'',lastVerifiedAt:0,exceptionRows:[]},byId=new Map(records.map(r=>[r.task.id,r])),seen=new Set(),get=(map,id)=>map instanceof Map?map.get(id):map?.[id];let continuous=true;
+    const result={required:0,linked:0,confirmed:0,pending:0,review:0,unlinked:0,firstMissingDate:'',confirmedThrough:'',lastVerifiedAt:0,exceptionRows:[],reviewRows:[]},byId=new Map(records.map(r=>[r.task.id,r])),seen=new Set(),get=(map,id)=>map instanceof Map?map.get(id):map?.[id];let continuous=true;
+    const exceptions=new Set();for(const row of records){const b=row.task.calendarBinding;if(GC.snapshot(row.task).cancelled&&b?.ownerId===row.task.id&&b.calendarId&&b.eventId&&!exceptions.has(row.task.id)){exceptions.add(row.task.id);result.exceptionRows.push(row);}}
     for(const row of [...expectedRows].sort((a,b)=>(a.sourceDate||a.date||'').localeCompare(b.sourceDate||b.date||''))){const id=row.task.id,date=row.sourceDate||row.date;if(seen.has(id)||date<context.from||date>context.to)continue;seen.add(id);const binding=byId.get(id)?.task.calendarBinding||row.task.calendarBinding,linked=binding?.ownerId===id&&binding.calendarId&&binding.eventId;
-      if(row.task.cancelled){if(linked)result.exceptionRows.push(row);continue;}result.required++;if(!linked){result.unlinked++;if(!result.firstMissingDate)result.firstMissingDate=date;continuous=false;continue;}result.linked++;
+      if(GC.snapshot(row.task).cancelled){if(linked&&!exceptions.has(id)){exceptions.add(id);result.exceptionRows.push(row);}continue;}result.required++;if(!linked){try{GC.toEvent(GC.snapshot(row.task),'validate');}catch(e){result.review++;result.reviewRows.push({...row,reviewMessage:e.message});continuous=false;continue;}result.unlinked++;if(!result.firstMissingDate)result.firstMissingDate=date;continuous=false;continue;}result.linked++;
       const stamp=Number(get(context.checkedById,id)||binding.syncedAt)||0;
-      if(get(context.errorsById,id)||context.calendarId&&context.calendarId!==binding.calendarId){result.review++;continuous=false;}
+      if(get(context.errorsById,id)||context.calendarId&&context.calendarId!==binding.calendarId){result.review++;result.reviewRows.push({...row,reviewMessage:get(context.errorsById,id)?.message||'راجع تقويم الربط.'});continuous=false;}
       else if(stamp&&binding.base&&GC.equal(GC.snapshot(row.task),binding.base)){result.confirmed++;result.lastVerifiedAt=Math.max(result.lastVerifiedAt,stamp);if(continuous)result.confirmedThrough=date;}
       else{result.pending++;continuous=false;}
     }return result;
@@ -28,7 +29,7 @@
       if(within(t.deadline||row.external?.targetDate))result.deadlines.push(row);
       if(!within(row.date||t.dueDate))continue;
       if(row.learningKind==='schedule'){result.lectures.push(row);const outcome=(data.calendarOccurrences||[]).find(r=>r.id===id)?.outcome,key=t.cancelled?'cancelled':Object.hasOwn(result.attendance,outcome)?outcome:'unrecorded';result.attendance[key]++;}
-      if(t.learningRef?.type==='session'&&!t.cancelled&&t.status!=='cancelled'){result.sessions.push(row);const planned=Math.max(0,+t.durationMinutes||0),recorded=Math.max(0,+t.actualMinutes||0);result.time.plannedMinutes+=planned;result.time.recordedMinutes+=recorded;if(recorded){result.time.measuredCount++;if(planned){result.time.pairedPlannedMinutes+=planned;result.time.pairedRecordedMinutes+=recorded;}}else result.time.unknownCount++;}
+      if(t.learningRef?.type==='session'&&!t.cancelled&&t.status!=='cancelled'){result.sessions.push(row);const planned=Math.max(0,+t.durationMinutes||0),recorded=row.projected?0:Math.max(0,+t.actualMinutes||0);result.time.plannedMinutes+=planned;result.time.recordedMinutes+=recorded;if(recorded){result.time.measuredCount++;if(planned){result.time.pairedPlannedMinutes+=planned;result.time.pairedRecordedMinutes+=recorded;}}else result.time.unknownCount++;}
     }return result;
   }
   return {weekRange,weekSummary,calendarCoverage,nextCoverageWindow,suggestOccurrenceSlots,actionsForRole,previewTermAssignment,previewTermBounds,copyTermStructure,normalizeAcademic,validateAcademic,selectTerm,subjectTerm};

@@ -14,8 +14,19 @@ Focus uses the existing actualMinutes field; wrong-day, account change, deleted 
 - Additional batch acceptance: 3 passed (lost insert response/retry, bound exception, copy stale collision).
 - Academic/core/UI/coverage suite: 25 passed before final copy/focus additions.
 - Firebase SDK suite with independent concurrent academic additions: 8 passed at Batch A.
-- Full stable-tree suite, final Firebase run, cross-browser/layout checks, branch review and deployment: pending below; no completion claim yet.
+- Final independent whole-branch review found four issues; each reproduced RED and passed GREEN after repair: repeated-session recorded time, Google keep-exception cancellation guard, out-of-range cancellations, and term-end extension limit.
+- Additional scenario tests cover flexible unready tasks alongside linkable lectures and daily/completion recurrence identity/time isolation.
+- Chromium layout checks passed at widths 320, 390, 820 and 1366, plus short viewport and keyboard filter traversal.
+- WebKit academic scenarios: 11 passed before final review fixes; final expanded suite is part of release validation.
+- Firebase SDK final run: 8 passed.
+- Full stable-tree regression results and publishing checks are recorded by the pull request and Pages GitHub Actions runs. Release is gated on both; simulated Google tests are not real-account acceptance.
 
 ## Acceptance boundary
 
 Automated Google tests use a simulated API. Real personal OAuth consent, a real event round trip and device notification delivery have not been verified in this release. No new paid service, always-on synchronization or PWA push was added. Archived terms remain accessible; templates are structural copies rather than a new linked series across terms.
+
+## Review dispositions
+
+All four important review findings were fixed, with focused regressions. The minor combined-role grouping finding was also fixed with labeled study and teaching sections. Cross-viewport testing independently exposed a flexible task blocking a valid Calendar batch; unready tasks now appear for review and do not block eligible lectures. Follow-up recurrence checks found missing learningRef in daily seeding and copied actual time in completion recurrence; both were corrected without creating a second timer.
+
+Coverage inspection may include dates outside a term, but new links are bounded by the current associated term. Relevant bound cancellations remain visible separately even outside the inspection range. Individual exceptions may still be linked using existing explicit occurrence controls. The release makes no claim of real Google/device verification.

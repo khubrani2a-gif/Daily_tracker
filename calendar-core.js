@@ -46,6 +46,10 @@
     const lecture=kind==='schedule';if(lecture)item=learningEffective(item,date);
     return snapshot({text:item.courseName||item.title||item.name,dueDate:lecture?(item.recurrence==='once'&&sourceRecurrence!=='weekly'?item.date:date):item.targetDate,dueTime:lecture?item.startTime:'',endTime:lecture?item.endTime:'',allDay:!lecture,notes:item.notes,location:lecture?item.room:'',link:item.url,reminders:item.reminders||[],cancelled:!!item.deletedAt||(lecture&&sourceRecurrence==='weekly'&&item.recurrence==='once'&&date!==item.date)||(lecture&&!learningOccurs(item,item.recurrence==='once'&&sourceRecurrence!=='weekly'?item.date:date))});
   }
+  function learningSourceCancelled(item,record){
+    const effective=learningEffective(item,record.date),termException=record.kind==='schedule'&&record.keepOutsideTerm&&!item.deletedAt&&learningOccurs({...effective,termStart:'',termEnd:'',excludedDates:[],futureChanges:[]},record.date);
+    return learningSource(record.kind,item,record.date,record.sourceRecurrence).cancelled&&!termException;
+  }
   function learningTask(item,record){
     const source=learningSource(record.kind,item,record.date,record.sourceRecurrence),value={...source},base=record.sourceBase;
     // A later source edit deliberately replaces the acknowledged occurrence override
@@ -53,8 +57,7 @@
     if(base&&record.value)for(const group of [['dueDate','dueTime','endTime','allDay'],['text'],['notes'],['location'],['link'],['reminders'],['cancelled']]){
       if(group.every(k=>equal(source[k],base[k])))group.forEach(k=>value[k]=record.value[k]);
     }
-    const effective=learningEffective(item,record.date),termException=record.kind==='schedule'&&record.keepOutsideTerm&&!item.deletedAt&&learningOccurs({...effective,termStart:'',termEnd:'',excludedDates:[],futureChanges:[]},record.date);
-    if(source.cancelled&&!termException)value.cancelled=true;
+    if(learningSourceCancelled(item,record))value.cancelled=true;
     const done=record.kind==='schedule'?['attended','delivered'].includes(record.outcome):['مكتملة','مكتمل','تم تقديمها'].includes(item.status);
     if(record.outcome==='cancelled')value.cancelled=true;
     return {...snapshot(value),id:record.id,kind:record.kind==='schedule'?'appointment':'task',category:'تعلم',done:done&&!value.cancelled,status:value.cancelled?'cancelled':done?'done':'pending',learningOutcome:record.outcome||'',calendarBinding:record.binding||undefined};
@@ -64,5 +67,5 @@
     const safeSnapshot=value=>{if(!value||typeof value!=='object')return null;const clean={};for(const key of fields)if(!['allDay','cancelled','reminders'].includes(key))clean[key]=typeof value[key]==='string'?value[key]:'';clean.allDay=!!value.allDay;clean.cancelled=!!value.cancelled;clean.reminders=Array.isArray(value.reminders)?value.reminders.filter(Number.isInteger):[];return snapshot(clean);};
     return (Array.isArray(records)?records:[]).filter(r=>r&&['schedule','prep','course','read'].includes(r.kind)&&typeof r.sourceId==='string'&&typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&r.id==='learning|'+r.kind+'|'+r.sourceId+'|'+(r.kind==='schedule'?r.date:'target')).map(r=>({id:r.id,kind:r.kind,sourceId:r.sourceId,date:r.date,sourceRecurrence:r.sourceRecurrence==='once'?'once':'weekly',keepOutsideTerm:!!r.keepOutsideTerm,outcome:['attended','delivered','absent','cancelled'].includes(r.outcome)?r.outcome:'',sourceBase:safeSnapshot(r.sourceBase),value:safeSnapshot(r.value),binding:r.binding?.ownerId===r.id&&typeof r.binding.calendarId==='string'&&typeof r.binding.eventId==='string'?{ownerId:r.id,calendarId:r.binding.calendarId,eventId:r.binding.eventId,base:safeSnapshot(r.binding.base),etag:String(r.binding.etag||''),webLink:String(r.binding.webLink||''),syncedAt:+r.binding.syncedAt||0}:null,updatedAt:+r.updatedAt||0}));
   }
-  return {fields,snapshot,merge,toEvent,fromEvent,equal,learningEffective,learningOccurs,learningConflictAffects,learningSource,learningTask,learningNormalizeRecords};
+  return {fields,snapshot,merge,toEvent,fromEvent,equal,learningEffective,learningOccurs,learningConflictAffects,learningSource,learningSourceCancelled,learningTask,learningNormalizeRecords};
 });
