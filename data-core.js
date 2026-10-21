@@ -66,7 +66,7 @@
     const merged=copy(remote||{}), conflicts=[], equal=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
     const fields=row=>Object.keys(row||{}).filter(k=>!['id','createdAt','updatedAt'].includes(k));
     const same=(a,b)=>[...new Set([...fields(a),...fields(b)])].every(k=>equal(a?.[k],b?.[k]));
-    for(const key of ['schedule','preparations','courses','professionalReading','calendarOccurrences','subjects','activity']){
+    for(const key of ['schedule','preparations','courses','professionalReading','calendarOccurrences','subjects','activity','academicYears','terms']){
       const maps=[base,local,remote].map(d=>new Map((d?.[key]||[]).map(r=>[r.id,r]))), ids=[...new Set([...maps[1].keys(),...maps[2].keys()])].sort();
       merged[key]=ids.map(id=>{
         const [b,l,r]=maps.map(m=>m.get(id));
@@ -90,7 +90,7 @@
         else if(same(b,l))return copy(r);
         else if(same(b,r))return copy(l);
         else {
-          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date','termStart','termEnd','excludedDates','futureChanges']]:[];
+          const groups=key==='schedule'?[['day','startTime','endTime','recurrence','date','termStart','termEnd','excludedDates','futureChanges']]:key==='academicYears'?[['startDate','endDate']]:key==='terms'?[['yearId','startDate','endDate','excludedDates']]:[];
           const grouped=new Set(groups.flat());
           [...new Set([...fields(l),...fields(r)])].filter(k=>!grouped.has(k)).forEach(k=>groups.push([k]));
           for(const group of groups){
@@ -103,6 +103,13 @@
         if(conflict.length)conflicts.push({key,id,fields:conflict,local:copy(l),remote:copy(r)});
         return out;
       });
+    }
+    const academic=typeof module==='object'&&module.exports?require('./learning-core'):globalThis.MufLearningCore;
+    if(academic&&!academic.validateAcademic(merged).valid&&academic.validateAcademic(local||{}).valid&&academic.validateAcademic(remote||{}).valid){
+      const keys=['academicYears','terms','subjects'],bundle=d=>Object.fromEntries(keys.map(k=>[k,copy(d?.[k]||[])]));
+      for(let i=conflicts.length-1;i>=0;i--)if(keys.includes(conflicts[i].key))conflicts.splice(i,1);
+      conflicts.push({key:'academicYears',id:'academic-structure',academicGroup:true,fields:['academicYears','terms','subjects'],local:{name:'الهيكل الدراسي',...bundle(local)},remote:{name:'الهيكل الدراسي',...bundle(remote)}});
+      Object.assign(merged,bundle(local));
     }
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};

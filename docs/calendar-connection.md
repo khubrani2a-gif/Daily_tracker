@@ -64,3 +64,11 @@ The planner shows **تفعيل اتصال Google** beside its primary controls. 
 Dated learning goals now appear locally without a Google connection. Linking sends the existing occurrence, not a copied daily task. Learning source forms support optional reminders and links; attendance/completion do not delete Google history. Scope-specific lecture editing, semester dates, and holiday exceptions control which occurrences exist. Future date changes do not automatically bind newly projected dates: use the existing bounded period selection while connected.
 
 Google conflict review shows differing field groups; date/time stays atomic. The app preserves independent edits when a competing field is explicitly selected. Time collisions caused by a remote move are shown locally without silently changing the Google event.
+
+## Academic terms and coverage (v155)
+
+Learning → **إدارة السنوات والفصول** defines institution dates explicitly; no term dates are inferred from the civil year. Assigning a subject or archiving a term changes organization only. Applying term bounds is a separate preview of selected weekly sources, from today or a future date. Linked occurrences excluded by new limits require keep-as-exception/cancel choices. Structural copies contain new subjects and weekly lecture sources, with no progress, attendance, task instances or Google bindings.
+
+Each subject and term offers **تغطية Google Calendar**. Choose a date range to see required, unlinked, last-confirmed, pending and review counts. A later confirmed event does not hide an earlier gap. Moved linked occurrences retain their original identity in coverage. Cancellations are shown separately. **استكمال المواعيد غير المرتبطة** previews at most 90 inclusive days starting with the first gap; only confirmation links that batch. Remaining months require another preview. Retry and sync use the existing saved event IDs. No new OAuth scopes or background service are introduced.
+
+Study sessions expose the existing planned/recorded duration and focus timer. Weekly review uses the configured week boundary, explicit attendance outcomes and scheduled task dates for aggregate study time. Missing time is unknown, and elapsed lecture time does not imply absence. This is not a timestamped study-session ledger.

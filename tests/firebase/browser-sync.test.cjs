@@ -35,7 +35,7 @@ test('app sync across independent browsers preserves offline edits alongside rem
  const server=http.createServer((req,res)=>{
    const name=req.url.split('?')[0].slice(1);
    if(name==='index.html'){res.setHeader('Content-Type','text/html');res.end(html);}
-   else if(['sync-core.js','data-core.js','planner-core.js','calendar-core.js'].includes(name)){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(root,name)));}
+   else if(['sync-core.js','data-core.js','planner-core.js','calendar-core.js','learning-core.js'].includes(name)){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(root,name)));}
    else {res.end('');}
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -75,6 +75,10 @@ test('app sync across independent browsers preserves offline edits alongside rem
    await b.page.evaluate(async()=>{await firebase.firestore().enableNetwork();await integration.learningPullRemote('reconnect');});
    await a.page.evaluate(()=>integration.learningPullRemote('verify'));
    for(const d of [a,b]){const row=await d.page.evaluate(()=>integration.learningLoad().courses[0]);assert.equal(row.name,'B offline');assert.equal(row.notes,'A online');assert.deepEqual(d.errors,[]);}
+   await a.page.evaluate(async()=>{const d=integration.learningLoad();d.academicYears=[{id:'year',name:'Year',startDate:'2026-01-01',endDate:'2027-12-31'}];integration.learningSave(d);await integration.learningPullRemote('academic-seed');});
+   await b.page.evaluate(()=>integration.learningPullRemote('academic-seed'));
+   await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.terms=[{id:'term-a',yearId:'year',name:'A',startDate:'2026-01-01',endDate:'2026-06-30'}];integration.learningSave(d);await integration.learningPullRemote('academic-a');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.terms=[{id:'term-b',yearId:'year',name:'B',startDate:'2026-07-01',endDate:'2026-12-31'}];integration.learningSave(d);await integration.learningPullRemote('academic-b');})]);
+   for(const device of [a,b]){await device.page.evaluate(()=>integration.learningPullRemote('academic-verify'));assert.deepEqual(await device.page.evaluate(()=>integration.learningLoad().terms.map(t=>t.id).sort()),['term-a','term-b']);}
    let arrivals=0,release;const barrier=new Promise(resolve=>release=resolve);
    for(const d of [a,b]){await d.page.exposeBinding('txnBarrier',async()=>{if(++arrivals>=2)release();await barrier;});await d.page.evaluate(()=>window.holdLearningRead=true);}
    await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].name='Concurrent A';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].notes='Concurrent B';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');})]);

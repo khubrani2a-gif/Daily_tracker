@@ -117,14 +117,14 @@ test("backup export and import restore learning data without duplicates",()=>{
 });
 
 test("malformed learning data normalizes safely",()=>{
-  const learningNormalize=new Function(
+  const learningNormalize=new Function("window",
     sourceFunction("learningBlank")+
     sourceFunction("learningText")+
     sourceFunction("learningUrl")+
     sourceFunction("learningId")+
     'const LEARNING_SCHEMA=1, LEARNING_PREP_STATUS=["لم يبدأ","قيد التحضير","جاهزة","تم تقديمها"], LEARNING_COURSE_STATUS=["مخطط لها","قيد التعلّم","متوقفة مؤقتًا","مكتملة"], LEARNING_READ_STATUS=["للقراءة","أقرأ الآن","مكتمل"], LEARNING_READ_TYPES=["كتاب","بحث","مرجع","مادة تعليمية"];'+
     sourceFunction("learningNormalize")+"; return learningNormalize;"
-  )();
+  )({MufLearningCore:require("../learning-core"),MufCalendar:require("../calendar-core")});
   const out=learningNormalize({schedule:[{id:"x",courseName:"<script>alert(1)</script>",day:99,startTime:"25:99",recurrence:"once"}],courses:[{name:"دورة",progress:500,url:"javascript:alert(1)",status:"غريب"}],professionalReading:[{title:"مرجع",url:"https://example.com/a?q=1",type:"بحث"}]});
   assert.equal(out.schedule.length,0);
   assert.equal(out.courses[0].progress,100);
