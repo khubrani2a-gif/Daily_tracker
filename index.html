@@ -418,6 +418,12 @@
   .hint{font-size:.73rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.7rem;line-height:1.5}
 
   /* ===== Prayers ===== */
+  #prayerDetails{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}#prayerDetails summary{cursor:pointer;color:var(--muted);padding:10px;min-height:44px;box-sizing:border-box}
+  #locRow input,#locRow select{min-height:44px}
+  .prayer-tile{min-width:0}.prayer-actions{display:flex;align-items:center;gap:4px;margin-top:4px}.prayer-actions button{min-height:44px;border:0;background:transparent;color:var(--accent);border-radius:10px;cursor:pointer;font-size:.72rem}.prayer-actions [data-prayer-edit]{min-width:44px;margin-inline-start:auto;font-size:1.1rem}.prayer-actions [data-prayer-adhkar]{flex:1}.prayer-actions button:hover{background:var(--accent-soft)}
+  .prayer{touch-action:manipulation;-webkit-user-select:none}.prayer:disabled{cursor:default;opacity:.65}
+  .prayer-clock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.prayer-clock-grid>div{padding:8px 2px}.prayer-clock-grid strong{display:block;font-size:clamp(1.2rem,5vw,1.8rem);font-variant-numeric:tabular-nums;direction:ltr;line-height:1.6}.prayer-clock-grid small{display:block;font-weight:400}.prayer-clock-now{font-size:.68rem;font-weight:400;opacity:.85}.prayer-clock-active{border-radius:10px;background:var(--paper);color:var(--accent)}
+
   #locRow{flex-wrap:wrap;gap:12px}#locRow label{display:grid;gap:6px;flex:1 1 220px;min-width:0}#locRow input,#locRow select{width:100%;min-width:0;box-sizing:border-box}#locRow p{flex-basis:100%}#prayerFeedback{padding:10px;border:1px solid var(--accent);border-radius:12px}#prayerUndo{margin-inline-start:8px}.prayer .pstatus{display:block;font-size:.75rem;margin-top:4px}.prayer[aria-pressed="true"]{outline-offset:2px}
   #prayerSummary{font-size:.86rem}#prayerTimesInfo{font-size:.78rem;line-height:1.6;overflow-wrap:anywhere}.task-sheet-save[data-prayer-status],#prayerAdhkar{background:var(--paper);color:var(--ink);border:1px solid var(--line)}.task-sheet-save[data-prayer-status][aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}.task-sheet-save[data-prayer-status="missed"]{color:var(--danger)}
   .prayers{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
@@ -2681,11 +2687,11 @@
       <div class="card" id="prayerCard">
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
-        <p id="prayerSummary" class="pstate-legend"></p><p id="prayerTimesInfo" class="pstate-legend"></p>
+        <p id="prayerSummary" class="pstate-legend"></p>
         <div class="prayers" id="prayers"></div>
         <p id="prayerFeedback" role="status" hidden><span id="prayerFeedbackText"></span> <button type="button" id="prayerUndo">تراجع</button></p>
-        <div class="pstate-legend">اضغط الصلاة لاختيار حالتها أو تصحيحها. الضحى نافلة؛ لا تدخل في إنجاز الفرائض الخمس.</div>
-        <div class="verse">﴿ حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ ﴾</div>
+        <div class="pstate-legend">اضغط «صليت» للتسجيل · ⋯ لتصحيح الحالة</div>
+        <details id="prayerDetails"><summary>المواقيت والإعدادات</summary><p id="prayerTimesInfo" class="pstate-legend"></p><p class="pstate-legend">الإقامة بعد الأذان: الفجر ٢٥ د · الظهر والعصر والعشاء ٢٠ د · المغرب ١٠ د.</p>
         <div class="loc-row" id="locRow" hidden>
           <label>المدينة والدولة<input type="text" id="cityInput" maxlength="180" placeholder="مثال: جدة، السعودية"></label>
           <label>طريقة الحساب<select id="prayerMethod"><option value="">تلقائية حسب الموقع</option><option value="1">جامعة كراتشي</option><option value="2">أمريكا الشمالية ISNA</option><option value="3">رابطة العالم الإسلامي</option><option value="4">أم القرى — مكة</option><option value="5">الهيئة المصرية للمساحة</option><option value="8">الخليج</option><option value="9">الكويت</option><option value="10">قطر</option><option value="11">سنغافورة</option><option value="12">فرنسا</option><option value="13">تركيا</option><option value="15">لجنة رؤية الهلال</option><option value="16">دبي</option></select></label>
@@ -2694,7 +2700,7 @@
           <button id="cityGo">حفظ</button>
         </div>
         <button type="button" class="loc-btn" id="prayerRefresh">تحديث المواقيت</button><button type="button" class="loc-btn" id="prayerNotifications">إعدادات التنبيهات</button><p class="pstate-legend">التنبيهات أثناء تشغيل المفكرة؛ وصولها عند الإغلاق غير مضمون. دخول الوقت لا يسجّل أداء الصلاة.</p>
-        <button class="loc-btn" id="locBtn">📍 اكتب مدينتك لعرض المواقيت</button>
+        <button class="loc-btn" id="locBtn">📍 اكتب مدينتك لعرض المواقيت</button></details>
       </div>
 
       <div class="card" id="ibadahCard">
@@ -3807,10 +3813,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=161"></script>
+<script src="data-core.js?v=162"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=161"></script>
-<script src="learning-core.js?v=161"></script>
+<script src="calendar-core.js?v=162"></script>
+<script src="learning-core.js?v=162"></script>
 <script>
 (function(){
   "use strict";
@@ -7988,6 +7994,21 @@
     const local=prayerClock('',new Date(epoch));return local.date===date?local.time:'';
   }
   function locLabel(){const loc=prayerLocation(),btn=document.getElementById('locBtn');btn.textContent=loc?'📍 إعدادات المواقيت ('+(loc.address||loc.city||'الموقع المحفوظ')+')':'📍 اختر المدينة وطريقة الحساب';}
+  async function prayerLoadDay(dateStr,loc){
+    const context=prayerCacheKey(dateStr,loc);
+      const ds=dateStr.split('-').reverse().join('-');let url;
+      if(loc.address)url='https://api.aladhan.com/v1/timingsByAddress/'+ds+'?address='+encodeURIComponent(loc.address);
+      else if(loc.lat!==undefined)url='https://api.aladhan.com/v1/timings/'+ds+'?latitude='+loc.lat+'&longitude='+loc.lng;
+      else url='https://api.aladhan.com/v1/timingsByCity/'+ds+'?city='+encodeURIComponent(loc.city)+'&country='+encodeURIComponent(loc.country);
+      url+='&school='+loc.school+(loc.method?'&method='+loc.method:'');
+      const r=await fetch(url,{signal:AbortSignal.timeout(15000)}),j=await r.json();
+      if(r.ok===false||j.code!==200||!j.data?.timings)throw Error('invalid');
+      const t=Object.fromEntries(['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'].map(k=>[k,String(j.data.timings[k]||'').split(' ')[0]])),zone=prayerZone(j.data.meta?.timezone);
+      if(!prayerValidTimes(t)||!zone||(j.data.date?.gregorian?.date&&j.data.date.gregorian.date!==ds))throw Error('invalid');
+      t._meta={date:dateStr,zone,context,method:String(j.data.meta?.method?.name||loc.method||'تلقائية'),fetchedAt:Date.now()};
+      if(context!==prayerCacheKey(dateStr))throw Error("location changed");
+      try{localStorage.setItem(context,JSON.stringify(t));}catch(e){}return t;
+  }
   let prayerTimesRequest=0;
   async function fetchTimes(dateStr,force=false){
     const request=++prayerTimesRequest,loc=prayerLocation(),context=prayerCacheKey(dateStr,loc);
@@ -7997,34 +8018,59 @@
     const apply=t=>{prayerTimes=t;prayerTimesDate=dateStr;info.textContent='مواقيت '+dateStr+' · '+(loc.address||loc.city||'الموقع المحفوظ')+' · '+t._meta.method+' · '+t._meta.zone+' · '+(loc.school?'العصر: حنفي':'العصر: الجمهور')+' · مصدر الحساب: Aladhan';updateNext();renderPrayers();plannerSyncPrayerTimes();};
     const cached=prayerCached(dateStr,loc);if(cached&&!force){apply(cached);return;}
     try{
-      const ds=dateStr.split('-').reverse().join('-');let url;
-      if(loc.address)url='https://api.aladhan.com/v1/timingsByAddress/'+ds+'?address='+encodeURIComponent(loc.address);
-      else if(loc.lat!==undefined)url='https://api.aladhan.com/v1/timings/'+ds+'?latitude='+loc.lat+'&longitude='+loc.lng;
-      else url='https://api.aladhan.com/v1/timingsByCity/'+ds+'?city='+encodeURIComponent(loc.city)+'&country='+encodeURIComponent(loc.country);
-      url+='&school='+loc.school+(loc.method?'&method='+loc.method:'');
-      const r=await fetch(url,{signal:AbortSignal.timeout(15000)}),j=await r.json();
+      const t=await prayerLoadDay(dateStr,loc);
       if(request!==prayerTimesRequest||dateStr!==currentDate||context!==prayerCacheKey(dateStr))return;
-      if(r.ok===false||j.code!==200||!j.data?.timings)throw Error('invalid');
-      const t=Object.fromEntries(['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'].map(k=>[k,String(j.data.timings[k]||'').split(' ')[0]])),zone=prayerZone(j.data.meta?.timezone);
-      if(!prayerValidTimes(t)||!zone||(j.data.date?.gregorian?.date&&j.data.date.gregorian.date!==ds))throw Error('invalid');
-      t._meta={date:dateStr,zone,context,method:String(j.data.meta?.method?.name||loc.method||'تلقائية'),fetchedAt:Date.now()};
-      try{localStorage.setItem(context,JSON.stringify(t));}catch(e){}apply(t);
+      apply(t);
     }catch(e){if(request===prayerTimesRequest&&dateStr===currentDate&&context===prayerCacheKey(dateStr)){
       if(cached){apply(cached);info.textContent+=' · تعذّر التحديث؛ تعرض النسخة المحفوظة لهذا التاريخ';}
       else{info.textContent='لم تتوفر مواقيت موثوقة لهذا التاريخ والموقع.';timesError('تعذّر جلب مواقيت صالحة — تحقق من الاتصال والمدينة وطريقة الحساب');plannerSyncPrayerTimes();}
     }}
   }
   function timesError(msg){const strip=document.getElementById('nextStrip');strip.textContent='⚠️ '+msg;strip.hidden=false;strip.classList.remove('iqamah');}
+  const PRAYER_IQAMAH={Fajr:25,Dhuhr:20,Asr:20,Maghrib:10,Isha:20};
+  const prayerLiveRequests=new Map();
+  let prayerLiveDay=null;
+  function prayerEpoch(date,hm,zone){
+    const desired=Date.parse(date+'T'+hm+':00Z');let epoch=desired;
+    for(let i=0;i<3;i++){const c=prayerClock(zone,new Date(epoch)),delta=desired-Date.parse(c.date+'T'+c.time+':00Z');epoch+=delta;if(!delta)break;}
+    return epoch;
+  }
+  function prayerLiveTimes(date){
+    const context=prayerCacheKey(date),cached=prayerCached(date);
+    if(prayerTimesDate===date&&prayerTimes?._meta?.context===context)return prayerTimes;
+    if(prayerLiveDay?._meta?.date===date&&prayerLiveDay._meta.context===context)return prayerLiveDay;
+    if(cached){prayerLiveDay=cached;return cached;}
+    const last=prayerLiveRequests.get(context);
+    if(context&&(!last||(!last.pending&&Date.now()-last.at>60000))){
+      prayerLiveRequests.set(context,{pending:true,at:Date.now()});
+      prayerLoadDay(date,prayerLocation()).then(t=>{prayerLiveDay=t;updateNext();renderPrayers();}).catch(()=>{}).finally(()=>prayerLiveRequests.set(context,{pending:false,at:Date.now()}));
+    }
+    return null;
+  }
   function updateNext(){
     const strip=document.getElementById('nextStrip');nextKey=null;strip.classList.remove('iqamah');
-    if(!prayerTimes||prayerTimesDate!==currentDate||prayerTimes._meta?.context!==prayerCacheKey(currentDate)){strip.hidden=true;return;}
-    const clock=prayerClock(prayerTimes._meta?.zone);
-    if(currentDate!==clock.date){strip.textContent='مواقيت التاريخ المعروض بتوقيت المدينة — التسجيل مستقل عن دخول الوقت';strip.hidden=false;return;}
-    const fard=[['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']];let previous=null,next=null;
-    for(const [key,name] of fard){const hm=getTime(key);if(!prayerValidTime(hm))continue;const minutes=+hm.slice(0,2)*60+(+hm.slice(3));if(minutes<=clock.minutes)previous={key,name};else if(!next)next={key,name,minutes};}
-    if(next){nextKey=next.key;const diff=next.minutes-clock.minutes;strip.textContent=(previous?'دخل وقت '+previous.name+' · ':'')+'القادمة: '+next.name+' '+fmt12(getTime(next.key))+' — بعد '+Math.floor(diff/60)+' س و'+diff%60+' د (بتوقيت المدينة)';}
-    else strip.textContent='دخل وقت العشاء — مواقيت الغد تُعرض عند اختيار تاريخ الغد؛ أداء الصلاة يُسجّل يدويًا.';
-    strip.hidden=false;
+    const source=prayerTimes?._meta?.context===prayerCacheKey(prayerTimesDate)?prayerTimes:null;
+    if(!source){strip.hidden=false;strip.textContent=prayerLocation()?'جارٍ تحميل المواقيت…':'اختر المدينة من المواقيت والإعدادات لعرض العدّاد';return;}
+    const clock=prayerClock(source._meta.zone),today=prayerLiveTimes(clock.date),now=Date.now();strip.hidden=false;
+    if(!today){strip.textContent='جارٍ تحميل مواقيت اليوم للعدّاد — تحقق من الاتصال إذا تأخر';return;}
+    const fard=[['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']];
+    let next=null,active=null;
+    for(const [key,name] of fard){const at=prayerEpoch(clock.date,today[key],today._meta.zone),iq=at+PRAYER_IQAMAH[key]*60000;
+      if(at>now&&!next)next={key,name,at,iq,hm:today[key]};
+      if(at<=now&&iq>now)active={key,name,at,iq,hm:today[key]};
+    }
+    if(!next){const tomorrow=new Date(Date.parse(clock.date+'T12:00:00Z')+86400000).toISOString().slice(0,10),t=prayerLiveTimes(tomorrow);
+      if(t){const at=prayerEpoch(tomorrow,t.Fajr,t._meta.zone);next={key:'Fajr',name:'الفجر غدًا',at,iq:at+PRAYER_IQAMAH.Fajr*60000,hm:t.Fajr};}
+    }
+    if(currentDate===clock.date)nextKey=active?.key||(next&&!next.name.includes('غدًا')?next.key:null);
+    const count=at=>{const n=Math.max(0,Math.ceil((at-now)/1000));return [Math.floor(n/3600),Math.floor(n/60)%60,n%60].map(v=>String(v).padStart(2,'0')).join(':');},iq=active||next;
+    const signature=[next?.name,iq?.name,!!active,clock.date,currentDate].join('|');
+    if(strip.dataset.clockSignature!==signature||!strip.querySelector('#adhanCountdown')){
+      strip.dataset.clockSignature=signature;
+      strip.innerHTML='<div class="prayer-clock-now">الآن · بتوقيت المدينة'+(currentDate!==clock.date?' · '+expEsc(clock.date):'')+'</div><div class="prayer-clock-grid"><div><span id="adhanLabel"></span><strong id="adhanCountdown"></strong><small id="adhanTime"></small></div><div class="'+(active?'prayer-clock-active':'')+'"><span id="iqamahLabel"></span><strong id="iqamahCountdown"></strong><small id="iqamahTime"></small></div></div>';
+    }
+    strip.querySelector('#adhanLabel').textContent=next?'أذان '+next.name:'أذان الفجر غدًا';strip.querySelector('#adhanCountdown').textContent=next?count(next.at):'—';strip.querySelector('#adhanTime').textContent=next?fmt12(next.hm):'بانتظار مواقيت الغد';
+    strip.querySelector('#iqamahLabel').textContent=iq?'إقامة '+iq.name:'الإقامة';strip.querySelector('#iqamahCountdown').textContent=iq?count(iq.iq):'—';strip.querySelector('#iqamahTime').textContent=active?'دخل وقت الصلاة':iq?'بعد الأذان بـ '+PRAYER_IQAMAH[iq.key]+' د':'';
   }
   const locRow=document.getElementById('locRow'),cityInput=document.getElementById('cityInput');
   document.getElementById('locBtn').onclick=()=>{locRow.hidden=!locRow.hidden;if(!locRow.hidden){const loc=prayerLocation();cityInput.value=loc?.address||[loc?.city,loc?.country].filter(Boolean).join(', ');document.getElementById('prayerMethod').value=loc?.method||'';document.getElementById('prayerSchool').value=String(loc?.school||0);cityInput.focus();}};
@@ -8034,7 +8080,7 @@
   window.addEventListener('storage',e=>{if(e.key==='mfkr-account-v1:'+encodeURIComponent(accountStorage.owner)+':'+LOC_KEY)fetchTimes(currentDate);});
   document.getElementById('prayerRefresh').onclick=()=>fetchTimes(currentDate,true);
   document.getElementById('prayerNotifications').onclick=()=>notifyOpen();
-  setInterval(()=>{if(prayerTimes){const previous=nextKey;updateNext();if(previous!==nextKey)renderPrayers();}},15000);
+  setInterval(()=>{if(prayerTimes){const previous=nextKey;updateNext();if(previous!==nextKey)renderPrayers();}},1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateNext();renderPrayers();}});
 
   /* حالات الصلاة: "" لم تُسجل | ontime في وقتها | late متأخرة | missed فاتت
@@ -8067,11 +8113,22 @@
     });
     const adhkar=sheet.over.querySelector('#prayerAdhkar');if(adhkar)adhkar.onclick=()=>{if(currentDate!==date){sheet.close();return;}sheet.close();openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));};
   }
+  function prayerOpenAdhkar(index){if(index===1)return;openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));}
+  function prayerQuickRecord(index,date){
+    if(date!==currentDate||date>todayStr()||prayerVal(state.prayers,index))return;
+    state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';
+    if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
+    prayerUndoTicket={date,index,before:'',after:'ontime',text:'سُجّلت '+PRAYERS[index]+' في وقتها'};document.getElementById('prayerUndo').hidden=false;
+    save();prayerRefreshViews();
+  }
   function renderPrayers(){
     const box=document.getElementById('prayers'),focused=box.contains(document.activeElement)?document.activeElement.dataset.prayerIndex:null;box.innerHTML='';
-    document.getElementById('prayerSummary').textContent='الفرائض: '+prayerFardCount(state.prayers).toLocaleString('ar-EG')+' من ٥ · تاريخ التسجيل: '+currentDate;
+    document.getElementById('prayerSummary').textContent='الفرائض: '+prayerFardCount(state.prayers).toLocaleString('ar-EG')+' من ٥'+(currentDate!==todayStr()?' · سجل '+currentDate:'');
     PRAYERS.forEach((name,i)=>{const v=prayerVal(state.prayers,i),div=document.createElement('button');div.type='button';div.dataset.prayerIndex=i;div.className='prayer'+PSTATE[v].cls;if(nextKey&&PRAYER_KEYS[i]===nextKey)div.classList.add('next');const t=getTime(PRAYER_KEYS[i]);
-      const label=v==='ontime'?'في وقتها':v==='late'?'متأخرة':v==='missed'?(i===1?'لم أؤدّها':'فاتت'):'لم تُسجّل';div.innerHTML='<span class="pmark">'+PSTATE[v].mark+'</span>'+name+(i===1?' (نافلة)':'')+(t?'<span class="ptime">'+fmt12(t)+(i===1?' · تقريبي':'')+'</span>':'')+'<span class="pstatus">'+label+'</span>';div.title=label;div.setAttribute('aria-label',name+': '+label);div.setAttribute('aria-pressed',String(isPrayed(v)));div.onclick=()=>openPrayerStatus(i);box.appendChild(div);
+      const label=v==='ontime'?'في وقتها':v==='late'?'متأخرة':v==='missed'?(i===1?'لم أؤدّها':'فاتت'):'صليت';div.innerHTML='<span class="pmark">'+PSTATE[v].mark+'</span>'+name+(i===1?' (نافلة)':'')+(t?'<span class="ptime">'+fmt12(t)+(i===1?' · تقريبي':'')+'</span>':'')+'<span class="pstatus">'+label+'</span>';div.title=label;div.setAttribute('aria-label',name+': '+label);div.setAttribute('aria-pressed',String(isPrayed(v)));const date=currentDate;div.disabled=date>todayStr();div.onclick=()=>prayerQuickRecord(i,date);
+      const tile=document.createElement('div');tile.className='prayer-tile';tile.appendChild(div);const actions=document.createElement('div');actions.className='prayer-actions';
+      if(i!==1){const adhkar=document.createElement('button');adhkar.type='button';adhkar.dataset.prayerAdhkar=i;adhkar.textContent='الأذكار';adhkar.setAttribute('aria-label','أذكار بعد صلاة '+name);adhkar.onclick=()=>prayerOpenAdhkar(i);actions.appendChild(adhkar);}
+      const edit=document.createElement('button');edit.type='button';edit.dataset.prayerEdit=i;edit.textContent='⋯';edit.setAttribute('aria-label','تصحيح تسجيل '+name);edit.onclick=()=>openPrayerStatus(i);actions.appendChild(edit);tile.appendChild(actions);box.appendChild(tile);
     });prayerFeedback();if(focused!==null)box.querySelector('[data-prayer-index="'+focused+'"]')?.focus({preventScroll:true});
   }
 
