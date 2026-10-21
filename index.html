@@ -2729,6 +2729,7 @@
                 <button type="button" id="dhikrUndo">تراجع عن ضغطة</button>
                 <button type="button" id="dhikrNewRound" hidden>جولة جديدة</button>
                 <button type="button" id="dhikrCounterSettings">ضبط الذكر والهدف</button>
+                <button type="button" id="dhikrResume">جولات هذا اليوم</button>
                 <button type="button" id="dhikrStatsBtn">إحصاءات الذكر</button>
               </div></details>
             </div>
@@ -2740,6 +2741,7 @@
             <span class="dhikr-counter-progress" id="dhikrCounterProgress">من ١٠٠</span>
             <span class="dhikr-circle-hint" id="dhikrCounterHint">اضغط للعد</span>
           </button>
+          <p class="dhikr-counter-status" id="dhikrDailySummary"></p>
           <p class="dhikr-counter-status" id="dhikrCounterStatus" role="status"></p>
         </section>
 
@@ -3797,10 +3799,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=159"></script>
+<script src="data-core.js?v=160"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=159"></script>
-<script src="learning-core.js?v=159"></script>
+<script src="calendar-core.js?v=160"></script>
+<script src="learning-core.js?v=160"></script>
 <script>
 (function(){
   "use strict";
@@ -4045,17 +4047,17 @@
   const D_NAS = {t:"قُلْ أَعُوذُ بِرَبِّ النَّاسِ ٭ مَلِكِ النَّاسِ ٭ إِلَٰهِ النَّاسِ ٭ مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ٭ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ٭ مِنَ الْجِنَّةِ وَالنَّاسِ", s:"سورة الناس — من قال المعوّذات ثلاثًا حين يصبح وحين يمسي كفته من كل شيء", n:3};
   const D_SAYYID = {t:"اللهم أنت ربي لا إله إلا أنت، خلقتني وأنا عبدك، وأنا على عهدك ووعدك ما استطعت، أعوذ بك من شر ما صنعت، أبوء لك بنعمتك عليّ وأبوء بذنبي، فاغفر لي فإنه لا يغفر الذنوب إلا أنت", s:"سيد الاستغفار — من قاله موقنًا به فمات من يومه أو ليلته دخل الجنة (البخاري)", n:1};
   const D_AFINI = {t:"اللهم عافني في بدني، اللهم عافني في سمعي، اللهم عافني في بصري، لا إله إلا أنت. اللهم إني أعوذ بك من الكفر والفقر، وأعوذ بك من عذاب القبر، لا إله إلا أنت", s:"أبو داود", n:3};
-  const D_HAMM = {t:"اللهم إني أعوذ بك من الهمِّ والحزن، وأعوذ بك من العجز والكسل، وأعوذ بك من الجبن والبخل، وأعوذ بك من غلبة الدَّين وقهر الرجال", s:"أبو داود", n:1};
-  const D_HASBI = {t:"حسبي الله لا إله إلا هو، عليه توكلت وهو رب العرش العظيم", s:"من قالها سبعًا كفاه الله ما أهمّه", n:7};
+  const D_HAMM = {t:"اللهم إني أعوذ بك من الهمِّ والحزن، وأعوذ بك من العجز والكسل، وأعوذ بك من الجبن والبخل، وأعوذ بك من غلبة الدَّين وقهر الرجال", s:"أبو داود ١٥٥٥ — ضعّف الألباني رواية تخصيصه بالصباح والمساء؛ العدد هنا لتنظيم القراءة", sourceUrl:"https://sunnah.com/abudawud:1555", n:1};
+  const D_HASBI = {t:"حسبي الله لا إله إلا هو، عليه توكلت وهو رب العرش العظيم", s:"أبو داود ٥٠٨١ — ورد عن أبي الدرداء؛ في ثبوت الرواية خلاف، فلا يُجزم بالفضل المذكور للعدد سبعًا", sourceUrl:"https://sunnah.com/abudawud:5081", n:7};
   const D_AFW = {t:"اللهم إني أسألك العفو والعافية في الدنيا والآخرة، اللهم إني أسألك العفو والعافية في ديني ودنياي وأهلي ومالي، اللهم استر عوراتي وآمن روعاتي، اللهم احفظني من بين يديّ ومن خلفي وعن يميني وعن شمالي ومن فوقي، وأعوذ بعظمتك أن أُغتال من تحتي", s:"أبو داود وابن ماجه", n:1};
   const D_GHAYB = {t:"اللهم عالم الغيب والشهادة، فاطر السماوات والأرض، ربَّ كل شيء ومليكه، أشهد أن لا إله إلا أنت، أعوذ بك من شر نفسي ومن شر الشيطان وشِركه، وأن أقترف على نفسي سوءًا أو أجرّه إلى مسلم", s:"الترمذي وأبو داود", n:1};
   const D_LAYADUR = {t:"بسم الله الذي لا يضر مع اسمه شيء في الأرض ولا في السماء وهو السميع العليم", s:"من قالها ثلاثًا لم يضره شيء (أبو داود والترمذي)", n:3};
   const D_RADIT = {t:"رضيتُ بالله ربًا، وبالإسلام دينًا، وبمحمدٍ صلى الله عليه وسلم نبيًا", s:"من قالها ثلاثًا كان حقًا على الله أن يرضيه يوم القيامة", n:3};
   const D_YAHAYY = {t:"يا حي يا قيوم برحمتك أستغيث، أصلح لي شأني كله، ولا تكلني إلى نفسي طرفة عين", s:"الحاكم", n:1};
-  const D_TAHLIL100 = {t:"لا إله إلا الله وحده لا شريك له، له الملك وله الحمد، وهو على كل شيء قدير", s:"من قالها مئة مرة كانت له عدل عشر رقاب، وكُتبت له مئة حسنة، ومُحيت عنه مئة سيئة، وكانت له حرزًا من الشيطان (متفق عليه)", n:100};
+  const D_TAHLIL100 = {t:"لا إله إلا الله وحده لا شريك له، له الملك وله الحمد، وهو على كل شيء قدير", s:"صحيح مسلم ٢٦٩١ — مئة مرة في اليوم كله، وليس المطلوب مئة إضافية لكل فترة", sourceUrl:"https://sunnah.com/muslim:2691", n:100};
   const D_SUBHAN100 = {t:"سبحان الله وبحمده", s:"من قالها مئة مرة حُطَّت خطاياه وإن كانت مثل زبد البحر (متفق عليه)", n:100};
-  const D_SALAT_NABI = {t:"اللهم صلِّ وسلِّم على نبينا محمد", s:"من صلى عليّ حين يصبح وحين يمسي عشرًا أدركته شفاعتي يوم القيامة", n:10};
-  const D_ISTIGHFAR = {t:"أستغفر الله وأتوب إليه", s:"متفق عليه — مئة مرة في اليوم", n:100};
+  const D_SALAT_NABI = {t:"اللهم صلِّ وسلِّم على نبينا محمد", s:"ورد التكرار عشرًا عند الطبراني؛ ضعّف الألباني رواية الشفاعة بعد تحسينها سابقًا. العدد هنا للتنظيم", sourceUrl:"https://islamqa.info/ar/answers/130213", n:10};
+  const D_ISTIGHFAR = {t:"أستغفر الله وأتوب إليه", s:"صحيح مسلم ٢٧٠٢ — التوبة مئة مرة في اليوم؛ العدد لليوم كله", sourceUrl:"https://sunnah.com/muslim:2702b", n:100};
 
   const ADHKAR_AM = [
     D_KURSI, D_IKHLAS, D_FALAQ, D_NAS,
@@ -4204,7 +4206,7 @@
     data.forEach((d,i)=>{
       const card=document.createElement('article');card.className='dhikr';card.hidden=single&&i!==adhkarIndex;
       const body=document.createElement('div');body.className='dtext';body.textContent=d.t;
-      const source=document.createElement('div');source.className='dsrc';source.textContent=d.s;
+      const source=document.createElement('div');source.className='dsrc';source.textContent=d.s;if(d.sourceUrl){const link=document.createElement('a');link.href=d.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent=' فتح المصدر';source.append(link);}
       const btn=document.createElement('button');btn.type='button';btn.className='dhikr-count-btn';btn.dataset.adhkarCount=i;btn.setAttribute('aria-label','عدّ الذكر '+(i+1));
       btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;dhikrDelta(r,1);adhkarCommit();dhikrFeedbackPulse(8);};
       const tools=document.createElement('div');tools.className='dhikr-menu-panel';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>0)dhikrDelta(r,-1);adhkarCommit();};
@@ -8323,6 +8325,17 @@
   }
   function dhikrSession(){const c=dhikrCounterState();return state.dhikrSessions.find(x=>x.id===c.sessionId);}
   function dhikrStartSession(text,target,link){const id=newId();state.dhikrSessions=state.dhikrSessions||[];state.dhikrSessions.push({id,text,target,base:0,deltas:{},linkWird:!!link});state.dhikrCounter={sessionId:id,text,target,count:0};}
+  function dhikrDailyTotal(text){return (state.dhikrSessions||[]).filter(row=>row.text===text).reduce((sum,row)=>sum+dhikrTotal(row),0);}
+  function openDhikrSessions(){
+    const date=currentDate,current=dhikrCounterState();
+    const body='<p>جولات تاريخ '+expEsc(date)+' — استكمل جولة دون حذف بقية الجولات.</p><div class="task-history-list">'+[...state.dhikrSessions].reverse().map(row=>'<button type="button" class="template-manager-row" data-dhikr-resume="'+expEsc(row.id)+'"'+(row.id===current.sessionId?' disabled':'')+'>'+expEsc(row.text)+' · '+dhikrTotal(row).toLocaleString('ar-EG')+' من '+row.target.toLocaleString('ar-EG')+(row.id===current.sessionId?' · الحالية':dhikrTotal(row)>=row.target?' · مكتملة':' · استكمال')+'</button>').join('')+'</div>';
+    const sheet=taskSheet('جولات الذكر',body);
+    sheet.over.querySelectorAll('[data-dhikr-resume]').forEach(button=>button.onclick=()=>{
+      if(currentDate!==date){sheet.close();return;}
+      const row=state.dhikrSessions.find(row=>row.id===button.dataset.dhikrResume);if(!row){sheet.close();return;}
+      state.dhikrCounter={sessionId:row.id,text:row.text,target:row.target,count:dhikrTotal(row)};save();renderDhikrCounter();sheet.close();
+    });
+  }
   function dhikrUpdateLinkedWird(day=state){const linked=(day.dhikrSessions||[]).filter(x=>x.linkWird&&x.text==='استغفر الله').reduce((n,x)=>n+dhikrTotal(x),0);if(!linked&&!day.dhikrWirdBase&&!(day.dhikrSessions||[]).some(x=>x.linkWird))return;if(day.dhikrWirdBase===undefined)day.dhikrWirdBase=+day.istighfar||0;day.istighfar=Math.max(0,day.dhikrWirdBase+linked);day.worship.istighfar=day.istighfar>=100;}
   function dhikrFeedbackEnabled(){try{return localStorage.getItem('h2do-dhikr-feedback')!=='off';}catch(e){return true;}}
   function dhikrFeedbackPulse(pattern){if(dhikrFeedbackEnabled()&&typeof navigator.vibrate==='function')try{navigator.vibrate(pattern);}catch(e){} }
@@ -8343,6 +8356,7 @@
     const text=document.getElementById("dhikrCounterText"), progress=document.getElementById("dhikrCounterProgress"), fill=document.getElementById("dhikrCounterFill"), button=document.getElementById("dhikrCountBtn");
     if(!text||!progress||!fill||!button)return;
     const feedback=document.getElementById('dhikrFeedback');feedback.hidden=typeof navigator.vibrate!=='function';feedback.setAttribute('aria-pressed',String(dhikrFeedbackEnabled()));feedback.textContent='الاهتزاز: '+(dhikrFeedbackEnabled()?'تشغيل':'إيقاف');
+    document.getElementById('dhikrDailySummary').textContent='مجموع هذا الذكر: '+dhikrDailyTotal(counter.text).toLocaleString('ar-EG')+' · تاريخ التسجيل: '+currentDate;
     text.textContent=counter.text; progress.textContent=counter.count.toLocaleString("ar-EG")+" من "+counter.target.toLocaleString("ar-EG");
     fill.style.strokeDashoffset=100-Math.min(100,counter.count/counter.target*100);document.getElementById('dhikrCounterNumber').textContent=counter.count.toLocaleString('ar-EG');progress.textContent='من '+counter.target.toLocaleString('ar-EG');document.getElementById('dhikrCounterHint').textContent=done?'✓ اكتمل الذكر':'اضغط للعد';document.getElementById('dhikrCounterStatus').textContent=done?'تم حفظ الجولة — يمكنك بدء جولة جديدة من «المزيد»':'يُحفظ العدد تلقائيًا';button.disabled=done;document.getElementById("dhikrNewRound").hidden=!done;document.getElementById("dhikrUndo").disabled=!counter.count;button.classList.toggle("done",done);button.setAttribute("aria-label",(done?"اكتمل الذكر: ":"عدّ: ")+counter.text+"، "+counter.count+" من "+counter.target);
   }
@@ -8357,13 +8371,13 @@
     return [...rows.values()].map(row=>{const dates=Object.keys(row.byDate).sort(), cursor=new Date(dates[0]+"T12:00:00");let best=0,run=0,previous="";dates.forEach(date=>{if(previous){const prev=new Date(previous+"T12:00:00"), now=new Date(date+"T12:00:00");run=(now-prev===86400000)?run+1:1;}else run=1;best=Math.max(best,run);previous=date;});return Object.assign(row,{best});}).sort((a,b)=>b.total-a.total);
   }
   function openDhikrStats(){
-    const rows=dhikrStatsRows(), current=dhikrCounterState(), currentRow=rows.find(row=>row.text===current.text), summary=currentRow?'اليوم: '+current.count.toLocaleString("ar-EG")+' / '+current.target.toLocaleString("ar-EG")+' · الإجمالي: '+currentRow.total.toLocaleString("ar-EG"):'ابدأ بالضغط على العداد لتظهر إحصاءات هذا الذكر.';
+    const rows=dhikrStatsRows(), current=dhikrCounterState(), currentRow=rows.find(row=>row.text===current.text), summary=currentRow?'الجولة الحالية: '+current.count.toLocaleString("ar-EG")+' / '+current.target.toLocaleString("ar-EG")+' · مجموع التاريخ المحدد: '+dhikrDailyTotal(current.text).toLocaleString('ar-EG')+' · الإجمالي: '+currentRow.total.toLocaleString("ar-EG"):'ابدأ بالضغط على العداد لتظهر إحصاءات هذا الذكر.';
     const body='<p class="task-history-empty">'+summary+'</p>'+(rows.length?'<div class="task-history-list">'+rows.map(row=>'<div class="template-manager-row"><span class="template-manager-copy">📿 '+expEsc(row.text)+'<small>الإجمالي '+row.total.toLocaleString("ar-EG")+' · '+row.days.toLocaleString("ar-EG")+' أيام · آخر ٧ أيام '+row.week.toLocaleString("ar-EG")+' · هذا الشهر '+row.month.toLocaleString("ar-EG")+' · أفضل سلسلة '+row.best.toLocaleString("ar-EG")+' أيام</small></span></div>').join("")+'</div>':'')+'<p class="task-history-empty">تُحسب البيانات من الأيام التي استخدمت فيها عداد الذكر داخل التطبيق.</p>';
     taskSheet("📊 إحصاءات الذكر",body);
   }
   function openDhikrCounterSettings(){
     const counterDate=currentDate,current=dhikrCounterState(),expectedSession=current.sessionId, available=dhikrCounterOptions(), options=available.map(text=>'<option value="'+expEsc(text)+'"'+(text===current.text?" selected":"")+'>'+expEsc(text)+'</option>').join("");
-    const sheet=taskSheet("ضبط عداد الذكر",'<div class="task-fields"><label class="task-field-wide">ذكر جاهز<select id="dhikrPreset"><option value="">اختر ذكرًا</option>'+options+'</select></label><label class="task-field-wide">أو اكتب ذكرًا خاصًا<input id="dhikrCustomText" type="text" maxlength="120" placeholder="مثال: سبحان الله وبحمده" value="'+(available.includes(current.text)?"":expEsc(current.text))+'"></label><label class="task-field-wide">العدد المستهدف<input id="dhikrTarget" type="number" min="1" max="10000" inputmode="numeric" value="'+current.target+'"></label></div><label class="adhkar-link"><input id="dhikrLinkWird" type="checkbox"> احتساب الاستغفار ضمن الورد اليومي</label><div class="exp-err" id="dhikrCounterErr"></div><button type="button" class="task-sheet-save" id="dhikrCounterSave">حفظ الإعدادات</button><button type="button" class="task-sheet-save" id="dhikrCounterReset" style="background:var(--paper);color:var(--accent);border:1px solid var(--accent)">بدء جولة جديدة مع حفظ السابقة</button>');
+    const sheet=taskSheet("ضبط عداد الذكر",'<div class="task-fields"><label class="task-field-wide">ذكر جاهز<select id="dhikrPreset"><option value="">اختر ذكرًا</option>'+options+'</select></label><label class="task-field-wide">أو اكتب ذكرًا خاصًا<input id="dhikrCustomText" type="text" maxlength="120" placeholder="مثال: سبحان الله وبحمده" value="'+(available.includes(current.text)?"":expEsc(current.text))+'"></label><label class="task-field-wide">هدفك الشخصي للجولة<input id="dhikrTarget" type="number" min="1" max="10000" inputmode="numeric" value="'+current.target+'"></label></div><p class="task-history-empty">هدف العداد اختيار شخصي، ولا يعني أن لهذا الذكر عددًا مأثورًا بهذا المقدار.</p><label class="adhkar-link"><input id="dhikrLinkWird" type="checkbox"> احتساب الاستغفار ضمن الورد اليومي</label><div class="exp-err" id="dhikrCounterErr"></div><button type="button" class="task-sheet-save" id="dhikrCounterSave">حفظ الإعدادات</button><button type="button" class="task-sheet-save" id="dhikrCounterReset" style="background:var(--paper);color:var(--accent);border:1px solid var(--accent)">بدء جولة جديدة مع حفظ السابقة</button>');
     const preset=sheet.over.querySelector("#dhikrPreset"), custom=sheet.over.querySelector("#dhikrCustomText"), target=sheet.over.querySelector("#dhikrTarget"), err=sheet.over.querySelector("#dhikrCounterErr");
     const link=sheet.over.querySelector('#dhikrLinkWird');link.checked=!!dhikrSession().linkWird;
     preset.onchange=()=>{if(preset.value)custom.value="";};
@@ -8475,6 +8489,7 @@
   document.getElementById('dhikrUndo').onclick=dhikrMenuAction(()=>{const session=dhikrSession();if(dhikrTotal(session)>0)dhikrDelta(session,-1);dhikrCounterState();dhikrUpdateLinkedWird();save();renderWorship();});
   document.getElementById('dhikrNewRound').onclick=dhikrMenuAction(()=>{const c=dhikrCounterState();if(c.count<c.target)return;const linked=dhikrSession().linkWird;dhikrStartSession(c.text,c.target,linked);save();renderDhikrCounter();});
   document.getElementById('dhikrCounterSettings').onclick=dhikrMenuAction(openDhikrCounterSettings);
+  document.getElementById('dhikrResume').onclick=dhikrMenuAction(openDhikrSessions);
   document.getElementById('dhikrStatsBtn').onclick=dhikrMenuAction(openDhikrStats);
   const dhikrFocusOverlay=document.createElement('div');dhikrFocusOverlay.id='dhikrFocusOverlay';dhikrFocusOverlay.hidden=true;dhikrFocusOverlay.setAttribute('role','dialog');dhikrFocusOverlay.setAttribute('aria-modal','true');dhikrFocusOverlay.setAttribute('aria-labelledby','dhikrCounterTitle');document.body.appendChild(dhikrFocusOverlay);
   let dhikrFocusAnchor=null,dhikrFocusOverflow='',dhikrFocusInert=[];
