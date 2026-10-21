@@ -697,7 +697,7 @@
   .ib-sunnah-actions #ibSunnahDone.done{
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;
   }
-  .dhikr-counter{margin:.85rem 0;padding:.85rem;border:1px solid var(--accent);border-radius:15px;background:linear-gradient(135deg,var(--accent-soft),var(--paper));cursor:pointer;touch-action:manipulation}
+  .dhikr-counter{margin:.85rem 0;padding:.85rem;border:1px solid var(--accent);border-radius:15px;background:linear-gradient(135deg,var(--accent-soft),var(--paper));cursor:default}
   .dhikr-counter-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}.dhikr-counter-title{font-size:.86rem;font-weight:800;color:var(--accent)}.dhikr-counter-actions{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}.dhikr-counter-settings{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:9px;padding:.35rem .55rem;font-family:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
   .dhikr-counter-text{text-align:center;font-size:1.05rem;font-weight:800;color:var(--ink);margin:.7rem 0 .2rem}.dhikr-counter-progress{text-align:center;color:var(--muted);font-size:.74rem}.dhikr-counter-bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:.65rem 0}.dhikr-counter-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .2s}
   .dhikr-count-btn{display:block;width:min(220px,100%);margin:.1rem auto 0;border:0;border-radius:99px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-family:inherit;font-size:1.1rem;font-weight:800;padding:.75rem;cursor:pointer;box-shadow:var(--shadow-sm);touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}.dhikr-count-btn:active{filter:brightness(.96)}.dhikr-count-btn.done{background:var(--paper);border:1px solid var(--accent);color:var(--accent)}
@@ -1559,6 +1559,13 @@
     transition:border-color .2s, background .2s;
   }
   .dhikr-count-btn,[data-adhkar-count],.adhkar-tools button,li.tally-row,.read-chip,.tally{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  .dhikr-menu{position:relative;text-align:start;font-weight:400;z-index:2}.dhikr-menu summary{list-style:none;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:.4rem .7rem;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:.85rem;touch-action:manipulation;user-select:none}.dhikr-menu summary::-webkit-details-marker{display:none}.dhikr-menu summary:focus-visible,.dhikr-circle:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+  .dhikr-menu-panel{position:absolute;inset-inline-end:0;top:calc(100% + 8px);width:230px;max-width:calc(100vw - 64px);padding:.5rem;border:1px solid var(--line);border-radius:14px;background:var(--paper);box-shadow:var(--shadow-sm);display:grid;gap:.35rem}.dhikr-menu:not([open])>.dhikr-menu-panel{display:none}.dhikr-menu-panel button{width:100%;min-height:44px;padding:.55rem .7rem;text-align:start;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:9px;font:inherit;font-size:.88rem;cursor:pointer;touch-action:manipulation}.dhikr-menu-panel button:disabled{opacity:.5}.dhikr-menu-panel [hidden],#dhikrFocusClose[hidden]{display:none}
+  #dhikrCountBtn.dhikr-circle{position:relative;width:min(280px,100%);aspect-ratio:1;height:auto;border-radius:50%;padding:30px;margin:1.3rem auto .5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;background:var(--paper);color:var(--accent);border:0;box-shadow:none;flex-shrink:0;overflow:hidden}
+  .dhikr-circle svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}.dhikr-circle circle{fill:none;stroke-width:3}.dhikr-ring-track{stroke:var(--line)}#dhikrCounterFill{stroke:var(--accent);stroke-dasharray:100;stroke-dashoffset:100;stroke-linecap:round;transition:stroke-dashoffset .15s linear}.dhikr-circle-count{font-size:clamp(2.6rem,8vw,3.8rem);font-weight:800;line-height:1.2;direction:ltr}.dhikr-circle .dhikr-counter-progress{font-size:1rem}.dhikr-circle-hint{font-size:.9rem;margin-top:.35rem}.dhikr-counter-status{text-align:center;color:var(--muted);font-size:.8rem;min-height:1.5em;margin:.65rem 0 0}.dhikr-counter .dhikr-counter-text{font-size:clamp(1.2rem,3vw,1.65rem);margin:1rem auto 0;max-width:600px;overflow-wrap:anywhere}.dhikr-counter-settings{min-height:44px}
+  .dhikr-reader-head{display:flex;justify-content:flex-end;margin-bottom:1rem}.dhikr-reader-head .dhikr-menu-panel{font-size:.9rem}.dhikr>.dhikr-count-btn{margin-top:1.2rem;min-height:64px}#adhkarNavigation{padding-top:1rem;margin-top:1.25rem;border-top:1px solid var(--line);gap:1rem}
+  #dhikrFocusOverlay{position:fixed;inset:0;z-index:10010;background:var(--paper);overflow-y:auto;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}#dhikrFocusOverlay[hidden]{display:none}#dhikrFocusOverlay .dhikr-counter{width:min(100%,640px);margin:auto;border:0;background:none;padding:.75rem}#dhikrFocusOverlay .dhikr-counter-head{margin-bottom:2rem}#dhikrFocusOverlay #dhikrCountBtn{width:min(350px,100%)}#dhikrFocusOverlay .dhikr-counter-title{font-size:1rem}
+  @media(prefers-reduced-motion:reduce){#dhikrCounterFill{transition:none}}
   .dhikr-counter-text,.dhikr-counter-progress{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .adhkar-tools{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.adhkar-tools label{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.85rem}.adhkar-tools button,.adhkar-tools select{min-height:44px;padding:.45rem .8rem;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}.adhkar-tools input{max-width:130px}.adhkar-tools button:focus-visible,[data-adhkar-count]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
   .dhikr{cursor:default}.dhikr .dtext{font-size:calc(1.02rem * var(--adhkar-font,1))}.adhkar-tools button:disabled{opacity:.5}.dhikr-count-btn:disabled{opacity:.85}.adhkar-tools[hidden],.adhkar-tools [hidden]{display:none}#adhkarOverlay{z-index:10010}
@@ -2713,12 +2720,27 @@
         <section class="dhikr-counter" id="dhikrCounterBox" aria-labelledby="dhikrCounterTitle">
           <div class="dhikr-counter-head">
             <span class="dhikr-counter-title" id="dhikrCounterTitle">📿 عداد الذكر</span>
-            <span class="dhikr-counter-actions"><button type="button" class="dhikr-counter-settings" id="dhikrStatsBtn">📊 إحصاءات</button><button type="button" class="dhikr-counter-settings" id="dhikrCounterSettings">⚙ ضبط الذكر</button></span>
+            <div class="dhikr-counter-actions">
+              <button type="button" class="dhikr-counter-settings" id="dhikrFocusClose" hidden>إغلاق التركيز</button>
+              <details class="dhikr-menu" id="dhikrMenu"><summary id="dhikrMore">⋯ المزيد</summary><div class="dhikr-menu-panel">
+                <button type="button" id="dhikrFocusOpen">وضع التركيز</button>
+                <button type="button" id="dhikrAdjust">ضبط العدد</button>
+                <button type="button" id="dhikrFeedback" aria-pressed="true">الاهتزاز: تشغيل</button>
+                <button type="button" id="dhikrUndo">تراجع عن ضغطة</button>
+                <button type="button" id="dhikrNewRound" hidden>جولة جديدة</button>
+                <button type="button" id="dhikrCounterSettings">ضبط الذكر والهدف</button>
+                <button type="button" id="dhikrStatsBtn">إحصاءات الذكر</button>
+              </div></details>
+            </div>
           </div>
           <div class="dhikr-counter-text" id="dhikrCounterText">استغفر الله</div>
-          <div class="dhikr-counter-progress" id="dhikrCounterProgress">٠ / ١٠٠</div>
-          <div class="dhikr-counter-bar" aria-hidden="true"><i id="dhikrCounterFill"></i></div>
-          <button type="button" class="dhikr-count-btn" id="dhikrCountBtn" aria-label="عدّ الذكر">📿 اضغط للعد</button><div class="adhkar-tools"><button type="button" id="dhikrUndo">تراجع</button><button type="button" id="dhikrNewRound" hidden>جولة جديدة</button></div>
+          <button type="button" class="dhikr-count-btn dhikr-circle" id="dhikrCountBtn" aria-label="عدّ الذكر">
+            <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false"><circle class="dhikr-ring-track" cx="60" cy="60" r="55"/><circle id="dhikrCounterFill" cx="60" cy="60" r="55" pathLength="100"/></svg>
+            <span class="dhikr-circle-count" id="dhikrCounterNumber">٠</span>
+            <span class="dhikr-counter-progress" id="dhikrCounterProgress">من ١٠٠</span>
+            <span class="dhikr-circle-hint" id="dhikrCounterHint">اضغط للعد</span>
+          </button>
+          <p class="dhikr-counter-status" id="dhikrCounterStatus" role="status"></p>
         </section>
 
         <div class="ib-group">
@@ -3775,10 +3797,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=157"></script>
+<script src="data-core.js?v=158"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=157"></script>
-<script src="learning-core.js?v=157"></script>
+<script src="calendar-core.js?v=158"></script>
+<script src="learning-core.js?v=158"></script>
 <script>
 (function(){
   "use strict";
@@ -4184,9 +4206,9 @@
       const body=document.createElement('div');body.className='dtext';body.textContent=d.t;
       const source=document.createElement('div');source.className='dsrc';source.textContent=d.s;
       const btn=document.createElement('button');btn.type='button';btn.className='dhikr-count-btn';btn.dataset.adhkarCount=i;btn.setAttribute('aria-label','عدّ الذكر '+(i+1));
-      btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;dhikrDelta(r,1);adhkarCommit();if(navigator.vibrate)navigator.vibrate(8);};
-      const tools=document.createElement('div');tools.className='adhkar-tools';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>0)dhikrDelta(r,-1);adhkarCommit();};
-      const copy=document.createElement('button');copy.type='button';copy.textContent='نسخ';copy.onclick=async()=>{try{await navigator.clipboard.writeText(d.t);hifzShowToast('نُسخ الذكر');}catch(e){hifzShowToast('تعذّر النسخ؛ يمكنك تحديد النص ونسخه.');}};const adjust=document.createElement('button');adjust.type='button';adjust.textContent='ضبط العدد';adjust.dataset.adhkarAdjust=i;adjust.onclick=()=>adhkarAdjust(i);tools.append(undo,copy,adjust);card.append(body,source,btn,tools);list.appendChild(card);
+      btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;dhikrDelta(r,1);adhkarCommit();dhikrFeedbackPulse(8);};
+      const tools=document.createElement('div');tools.className='dhikr-menu-panel';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>0)dhikrDelta(r,-1);adhkarCommit();};
+      const copy=document.createElement('button');copy.type='button';copy.textContent='نسخ';copy.onclick=async()=>{try{await navigator.clipboard.writeText(d.t);hifzShowToast('نُسخ الذكر');}catch(e){hifzShowToast('تعذّر النسخ؛ يمكنك تحديد النص ونسخه.');}};const adjust=document.createElement('button');adjust.type='button';adjust.textContent='ضبط العدد';adjust.dataset.adhkarAdjust=i;adjust.onclick=()=>adhkarAdjust(i);tools.append(undo,copy,adjust);const menu=document.createElement('details');menu.className='dhikr-menu';const more=document.createElement('summary');more.textContent='⋯ المزيد';more.dataset.adhkarMore=i;more.setAttribute('aria-label','خيارات الذكر '+(i+1));menu.append(more,tools);const head=document.createElement('div');head.className='dhikr-reader-head';head.append(menu);tools.addEventListener('click',e=>{if(e.target.closest('button')){menu.open=false;more.focus({preventScroll:true});}});card.append(head,body,source,btn);list.appendChild(card);
     });
     document.getElementById('adhkarNavigation').hidden=!single;document.getElementById('adhkarPosition').textContent='الذكر '+(adhkarIndex+1).toLocaleString('ar-EG')+' من '+data.length.toLocaleString('ar-EG');document.getElementById('adhkarPrevious').disabled=adhkarIndex===0;document.getElementById('adhkarNext').disabled=adhkarIndex>=data.length-1;adhkarProgressUpdate();ov.scrollTop=top;if(focus!==undefined)list.querySelector('[data-adhkar-count="'+focus+'"]')?.focus({preventScroll:true});
   }
@@ -4195,7 +4217,7 @@
   document.getElementById('adhkarPrayer').onchange=e=>{adhkarPrayer=e.target.value;adhkarRestorePosition();renderAdhkarList();};
   document.getElementById('adhkarPrevious').onclick=()=>{adhkarIndex=Math.max(0,adhkarIndex-1);adhkarRemember();renderAdhkarList();};
   document.getElementById('adhkarNext').onclick=()=>{adhkarIndex=Math.min(adhkarData().length-1,adhkarIndex+1);adhkarRemember();renderAdhkarList();};
-  document.getElementById('adhkarOverlay').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeAdhkar();return;}if(e.key==='Tab'){const items=[...e.currentTarget.querySelectorAll('button:not(:disabled),select,input,[tabindex="0"]')].filter(x=>x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
+  document.getElementById('adhkarOverlay').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeAdhkar();return;}if(e.key==='Tab'){const items=[...e.currentTarget.querySelectorAll('button:not(:disabled),summary,select,input,[tabindex="0"]')].filter(x=>x.getClientRects().length);const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
 
   function renderQuote(dateStr){
     const days = Math.floor(new Date(dateStr+"T12:00:00").getTime()/86400000);
@@ -8302,16 +8324,31 @@
   function dhikrSession(){const c=dhikrCounterState();return state.dhikrSessions.find(x=>x.id===c.sessionId);}
   function dhikrStartSession(text,target,link){const id=newId();state.dhikrSessions=state.dhikrSessions||[];state.dhikrSessions.push({id,text,target,base:0,deltas:{},linkWird:!!link});state.dhikrCounter={sessionId:id,text,target,count:0};}
   function dhikrUpdateLinkedWird(day=state){const linked=(day.dhikrSessions||[]).filter(x=>x.linkWird&&x.text==='استغفر الله').reduce((n,x)=>n+dhikrTotal(x),0);if(!linked&&!day.dhikrWirdBase&&!(day.dhikrSessions||[]).some(x=>x.linkWird))return;if(day.dhikrWirdBase===undefined)day.dhikrWirdBase=+day.istighfar||0;day.istighfar=Math.max(0,day.dhikrWirdBase+linked);day.worship.istighfar=day.istighfar>=100;}
+  function dhikrFeedbackEnabled(){try{return localStorage.getItem('h2do-dhikr-feedback')!=='off';}catch(e){return true;}}
+  function dhikrFeedbackPulse(pattern){if(dhikrFeedbackEnabled()&&typeof navigator.vibrate==='function')try{navigator.vibrate(pattern);}catch(e){} }
+  function dhikrAdjustCount(){
+    const date=currentDate,counter=dhikrCounterState(),sessionId=counter.sessionId,target=counter.target;
+    const sheet=taskSheet('ضبط عدد الذكر','<label class="task-field-wide">العدد المسجل<input id="dhikrAdjustedCount" type="text" inputmode="numeric" value="'+counter.count+'"></label><p>العدد المستهدف: '+target.toLocaleString('ar-EG')+'</p><div class="exp-err" id="dhikrAdjustError" role="alert"></div><button type="button" class="task-sheet-save" id="dhikrAdjustSave">حفظ العدد</button>');
+    sheet.over.querySelector('#dhikrAdjustSave').onclick=()=>{
+      const error=sheet.over.querySelector('#dhikrAdjustError');
+      if(currentDate!==date||dhikrCounterState().sessionId!==sessionId||dhikrCounterState().target!==target){error.textContent='تغيّرت الجلسة؛ أعد فتح ضبط العدد.';return;}
+      const raw=sheet.over.querySelector('#dhikrAdjustedCount').value.trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x)),count=Number(raw);
+      if(!/^\d+$/.test(raw)||!Number.isSafeInteger(count)||count<0||count>target){error.textContent='اكتب عددًا من ٠ إلى '+target.toLocaleString('ar-EG');return;}
+      const session=dhikrSession();dhikrDelta(session,count-dhikrTotal(session));dhikrCounterState();dhikrUpdateLinkedWird();save();renderWorship();sheet.close();document.getElementById('dhikrMore').focus({preventScroll:true});
+    };
+    sheet.over.querySelector('#dhikrAdjustedCount').focus();
+  }
   function renderDhikrCounter(){
     const counter=dhikrCounterState(), done=counter.count>=counter.target;
     const text=document.getElementById("dhikrCounterText"), progress=document.getElementById("dhikrCounterProgress"), fill=document.getElementById("dhikrCounterFill"), button=document.getElementById("dhikrCountBtn");
     if(!text||!progress||!fill||!button)return;
+    const feedback=document.getElementById('dhikrFeedback');feedback.hidden=typeof navigator.vibrate!=='function';feedback.setAttribute('aria-pressed',String(dhikrFeedbackEnabled()));feedback.textContent='الاهتزاز: '+(dhikrFeedbackEnabled()?'تشغيل':'إيقاف');
     text.textContent=counter.text; progress.textContent=counter.count.toLocaleString("ar-EG")+" من "+counter.target.toLocaleString("ar-EG");
-    fill.style.width=Math.min(100,Math.round(counter.count/counter.target*100))+"%"; button.textContent=done?"✓ اكتمل الذكر":"📿 اضغط للعد";button.disabled=done;document.getElementById("dhikrNewRound").hidden=!done;document.getElementById("dhikrUndo").disabled=!counter.count;button.classList.toggle("done",done);button.setAttribute("aria-label",done?"اكتمل الذكر":"عدّ: "+counter.text);
+    fill.style.strokeDashoffset=100-Math.min(100,counter.count/counter.target*100);document.getElementById('dhikrCounterNumber').textContent=counter.count.toLocaleString('ar-EG');progress.textContent='من '+counter.target.toLocaleString('ar-EG');document.getElementById('dhikrCounterHint').textContent=done?'✓ اكتمل الذكر':'اضغط للعد';document.getElementById('dhikrCounterStatus').textContent=done?'تم حفظ الجولة — يمكنك بدء جولة جديدة من «المزيد»':'يُحفظ العدد تلقائيًا';button.disabled=done;document.getElementById("dhikrNewRound").hidden=!done;document.getElementById("dhikrUndo").disabled=!counter.count;button.classList.toggle("done",done);button.setAttribute("aria-label",(done?"اكتمل الذكر: ":"عدّ: ")+counter.text+"، "+counter.count+" من "+counter.target);
   }
   function dhikrCount(){
     const counter=dhikrCounterState(); if(counter.count>=counter.target)return;
-    dhikrDelta(dhikrSession(),1);counter.count=dhikrTotal(dhikrSession());dhikrUpdateLinkedWird(); if(navigator.vibrate)navigator.vibrate(counter.count===counter.target?[30,60,30]:8);
+    dhikrDelta(dhikrSession(),1);counter.count=dhikrTotal(dhikrSession());dhikrUpdateLinkedWird(); dhikrFeedbackPulse(counter.count===counter.target?[30,60,30]:8);
     save();renderDhikrCounter();
   }
   function dhikrStatsRows(){
@@ -8431,10 +8468,23 @@
   const dhikrCountButton=document.getElementById("dhikrCountBtn");
   const dhikrCounterBox=document.getElementById("dhikrCounterBox");
   dhikrCountButton.onclick=()=>dhikrCount();
-  document.getElementById('dhikrUndo').onclick=()=>{const session=dhikrSession();if(dhikrTotal(session)>0)dhikrDelta(session,-1);dhikrCounterState();dhikrUpdateLinkedWird();save();renderWorship();};
-  document.getElementById('dhikrNewRound').onclick=()=>{const c=dhikrCounterState(),linked=dhikrSession().linkWird;dhikrStartSession(c.text,c.target,linked);save();renderDhikrCounter();};
-  document.getElementById("dhikrCounterSettings").onclick=openDhikrCounterSettings;
-  document.getElementById("dhikrStatsBtn").onclick=openDhikrStats;
+  const dhikrMenu=document.getElementById('dhikrMenu');
+  function dhikrMenuAction(fn){return ()=>{dhikrMenu.open=false;document.getElementById('dhikrMore').focus({preventScroll:true});fn();};}
+  document.getElementById('dhikrAdjust').onclick=dhikrMenuAction(dhikrAdjustCount);
+  document.getElementById('dhikrFeedback').onclick=dhikrMenuAction(()=>{try{localStorage.setItem('h2do-dhikr-feedback',dhikrFeedbackEnabled()?'off':'on');}catch(e){}renderDhikrCounter();});
+  document.getElementById('dhikrUndo').onclick=dhikrMenuAction(()=>{const session=dhikrSession();if(dhikrTotal(session)>0)dhikrDelta(session,-1);dhikrCounterState();dhikrUpdateLinkedWird();save();renderWorship();});
+  document.getElementById('dhikrNewRound').onclick=dhikrMenuAction(()=>{const c=dhikrCounterState();if(c.count<c.target)return;const linked=dhikrSession().linkWird;dhikrStartSession(c.text,c.target,linked);save();renderDhikrCounter();});
+  document.getElementById('dhikrCounterSettings').onclick=dhikrMenuAction(openDhikrCounterSettings);
+  document.getElementById('dhikrStatsBtn').onclick=dhikrMenuAction(openDhikrStats);
+  const dhikrFocusOverlay=document.createElement('div');dhikrFocusOverlay.id='dhikrFocusOverlay';dhikrFocusOverlay.hidden=true;dhikrFocusOverlay.setAttribute('role','dialog');dhikrFocusOverlay.setAttribute('aria-modal','true');dhikrFocusOverlay.setAttribute('aria-labelledby','dhikrCounterTitle');document.body.appendChild(dhikrFocusOverlay);
+  let dhikrFocusAnchor=null,dhikrFocusOverflow='',dhikrFocusInert=[];
+  function closeDhikrFocusUI(){if(dhikrFocusOverlay.hidden)return;dhikrMenu.open=false;dhikrFocusAnchor.replaceWith(dhikrCounterBox);dhikrFocusAnchor=null;dhikrFocusOverlay.hidden=true;document.getElementById('dhikrFocusClose').hidden=true;document.getElementById('dhikrFocusOpen').hidden=false;dhikrFocusInert.forEach(([el,value])=>el.inert=value);dhikrFocusInert=[];document.body.style.overflow=dhikrFocusOverflow;document.getElementById('dhikrMore').focus({preventScroll:true});}
+  function closeDhikrFocus(){if(history.state?.dhikrFocus)history.back();else closeDhikrFocusUI();}
+  document.getElementById('dhikrFocusOpen').onclick=dhikrMenuAction(()=>{if(!dhikrFocusOverlay.hidden)return;dhikrFocusAnchor=document.createComment('dhikr-counter');dhikrCounterBox.before(dhikrFocusAnchor);dhikrFocusOverlay.appendChild(dhikrCounterBox);dhikrFocusInert=[...document.body.children].filter(el=>el!==dhikrFocusOverlay).map(el=>[el,el.inert]);dhikrFocusInert.forEach(([el])=>el.inert=true);dhikrFocusOverflow=document.body.style.overflow;document.body.style.overflow='hidden';dhikrFocusOverlay.hidden=false;document.getElementById('dhikrFocusClose').hidden=false;document.getElementById('dhikrFocusOpen').hidden=true;document.getElementById('dhikrFocusClose').focus();try{history.pushState({dhikrFocus:true},'');}catch(e){} });
+  document.getElementById('dhikrFocusClose').onclick=closeDhikrFocus;
+  window.addEventListener('popstate',closeDhikrFocusUI);
+  document.addEventListener('click',e=>{const open=[...document.querySelectorAll('.dhikr-menu[open]')];if(open.length&&!open.some(menu=>menu.contains(e.target))){open.forEach(menu=>menu.open=false);if(!e.target.closest('.dhikr-menu summary')){e.preventDefault();e.stopImmediatePropagation();}}},true);
+  document.addEventListener('keydown',e=>{if(document.querySelector('.task-sheet-overlay'))return;if(e.key==='Escape'){const open=document.querySelector('.dhikr-menu[open]');if(open){open.open=false;open.querySelector('summary').focus();e.preventDefault();e.stopImmediatePropagation();return;}if(!dhikrFocusOverlay.hidden){e.preventDefault();e.stopImmediatePropagation();closeDhikrFocus();}}if(e.key==='Tab'&&!dhikrFocusOverlay.hidden){const items=[...dhikrFocusOverlay.querySelectorAll('button:not(:disabled),summary')].filter(x=>x.getClientRects().length),first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}},true);
   document.getElementById("dhikrManageBtn").onclick=openDhikrManager;
   let habitEditingId=null;
   const habitOverlay=document.getElementById("habitOverlay");
