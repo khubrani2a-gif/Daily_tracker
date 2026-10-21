@@ -35,7 +35,7 @@ test('app sync across independent browsers preserves offline edits alongside rem
  const server=http.createServer((req,res)=>{
    const name=req.url.split('?')[0].slice(1);
    if(name==='index.html'){res.setHeader('Content-Type','text/html');res.end(html);}
-   else if(['sync-core.js','data-core.js','planner-core.js','calendar-core.js'].includes(name)){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(root,name)));}
+   else if(['sync-core.js','data-core.js','planner-core.js','calendar-core.js','learning-core.js'].includes(name)){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(root,name)));}
    else {res.end('');}
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));

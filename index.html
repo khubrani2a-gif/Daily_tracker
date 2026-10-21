@@ -3765,9 +3765,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=154"></script>
+<script src="data-core.js?v=155"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=154"></script>
+<script src="calendar-core.js?v=155"></script>
+<script src="learning-core.js?v=155"></script>
 <script>
 (function(){
   "use strict";
@@ -11136,7 +11137,7 @@
   }
 
   function learningWeekReview(){const start=todayStr(),end=PC.plus(start,6),rows=plannerRows(start,end).filter(r=>r.date>=start&&r.date<=end&&(r.external||r.task.learningRef)),lectures=rows.filter(r=>r.learningKind==='schedule'&&!r.task.cancelled),sessions=rows.filter(r=>r.task.learningRef?.type==='session'),minutes=lectures.reduce((n,r)=>n+(PC.range(r.task)?PC.range(r.task).end-PC.range(r.task).start:0),0),sheet=taskSheet('أسبوع التعلّم — الأيام السبعة القادمة','<div id="learningWeekReview"></div>'),host=sheet.over.querySelector('#learningWeekReview');for(const line of ['محاضرات مخططة: '+lectures.length,'وقت المحاضرات المخطط: '+minutes+' دقيقة','جلسات دراسة مخططة: '+sessions.length,'جلسات مكتملة مسجلة: '+sessions.filter(r=>itemDone(r.task)).length,'مواعيد نهائية وأهداف: '+rows.filter(r=>r.task.allDay||r.task.deadline).length,'تعارضات وقت: '+learningTimeConflicts(start,end).length])learningSetText(host,'learning-item',line);learningSetText(host,'planner-hint','الأرقام المخططة ليست حضورًا أو وقت دراسة فعليًا. الإنجاز يعتمد على تسجيلك.');}
-  function learningBlank(){return {schema:LEARNING_SCHEMA,schedule:[],preparations:[],courses:[],professionalReading:[],calendarOccurrences:[],subjects:[],activity:[],updatedAt:0};}
+  function learningBlank(){return {schema:LEARNING_SCHEMA,schedule:[],preparations:[],courses:[],professionalReading:[],calendarOccurrences:[],subjects:[],activity:[],academicYears:[],terms:[],updatedAt:0};}
   function learningText(value,max){return String(value==null?"":value).trim().slice(0,max||500);}
   function learningUrl(value){const v=learningText(value,500);if(!v)return "";try{const u=new URL(v);return /^https?:$/.test(u.protocol)?u.href:"";}catch(e){return "";}}
   function learningId(prefix){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7);}
@@ -11146,12 +11147,13 @@
     const cleanTime=v=>/^\d{2}:\d{2}$/.test(String(v||""))?String(v):"";
     out.schedule=(Array.isArray(src.schedule)?src.schedule:[]).filter(Boolean).map(item=>{
       const recurrence=item.recurrence==="once"?"once":"weekly", day=Number.isInteger(+item.day)?Math.max(0,Math.min(6,+item.day)):0;
-      return {id:learningText(item.id,80)||learningId("lec"),courseName:learningText(item.courseName,120),courseCode:learningText(item.courseCode,40),section:learningText(item.section,60),day,startTime:cleanTime(item.startTime),endTime:cleanTime(item.endTime),room:learningText(item.room,100),url:learningUrl(item.url),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],termStart:cleanDate(item.termStart),termEnd:cleanDate(item.termEnd),futureChanges:Array.isArray(item.futureChanges)?item.futureChanges.filter(c=>cleanDate(c.from)&&c.values&&typeof c.values==='object').map(c=>({from:c.from,values:{...c.values}})).slice(0,100):[],excludedDates:Array.isArray(item.excludedDates)?item.excludedDates.filter(d=>cleanDate(d)).slice(0,366):[],recurrence,date:recurrence==="once"?cleanDate(item.date):"",notes:learningText(item.notes,1000),prepId:learningText(item.prepId,80),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null};
+      return {id:learningText(item.id,80)||learningId("lec"),courseName:learningText(item.courseName,120),courseCode:learningText(item.courseCode,40),section:learningText(item.section,60),day,startTime:cleanTime(item.startTime),endTime:cleanTime(item.endTime),room:learningText(item.room,100),url:learningUrl(item.url),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],termPolicy:['inherit','custom'].includes(item.termPolicy)?item.termPolicy:'legacy',termStart:cleanDate(item.termStart),termEnd:cleanDate(item.termEnd),futureChanges:Array.isArray(item.futureChanges)?item.futureChanges.filter(c=>cleanDate(c.from)&&c.values&&typeof c.values==='object').map(c=>({from:c.from,values:{...c.values}})).slice(0,100):[],excludedDates:Array.isArray(item.excludedDates)?item.excludedDates.filter(d=>cleanDate(d)).slice(0,366):[],recurrence,date:recurrence==="once"?cleanDate(item.date):"",notes:learningText(item.notes,1000),prepId:learningText(item.prepId,80),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null};
     }).filter(item=>item.courseName&&item.startTime&&(item.recurrence==="weekly"||item.date));
     out.preparations=(Array.isArray(src.preparations)?src.preparations:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("prep"),title:learningText(item.title,140),course:learningText(item.course,120),lectureId:learningText(item.lectureId,80),lectureDate:cleanDate(item.lectureDate),targetDate:cleanDate(item.targetDate),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],status:LEARNING_PREP_STATUS.includes(item.status)?item.status:"لم يبدأ",objectives:learningText(item.objectives,1200),materials:learningText(item.materials,1000),activity:learningText(item.activity,500),links:learningText(item.links,1000),notes:learningText(item.notes,1500),reflection:learningText(item.reflection,1500),createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.title);
     out.courses=(Array.isArray(src.courses)?src.courses:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("course"),name:learningText(item.name,140),provider:learningText(item.provider,100),category:learningText(item.category,80),startDate:cleanDate(item.startDate),targetDate:cleanDate(item.targetDate),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],progress:Math.max(0,Math.min(100,Math.round(+item.progress||0))),nextStep:learningText(item.nextStep,220),url:learningUrl(item.url),notes:learningText(item.notes,1200),status:LEARNING_COURSE_STATUS.includes(item.status)?item.status:"مخطط لها",createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.name);
     out.professionalReading=(Array.isArray(src.professionalReading)?src.professionalReading:[]).filter(Boolean).map(item=>({id:learningText(item.id,80)||learningId("read"),title:learningText(item.title,160),author:learningText(item.author,120),type:LEARNING_READ_TYPES.includes(item.type)?item.type:"كتاب",related:learningText(item.related,140),current:learningText(item.current,80),totalPages:Math.max(0,Math.min(20000,Math.round(+item.totalPages||0))),targetDate:cleanDate(item.targetDate),reminders:Array.isArray(item.reminders)?item.reminders.filter(n=>Number.isInteger(n)&&n>=0&&n<=40320).slice(0,5):[],url:learningUrl(item.url),notes:learningText(item.notes,1200),status:LEARNING_READ_STATUS.includes(item.status)?item.status:"للقراءة",createdAt:+item.createdAt||Date.now(),updatedAt:+item.updatedAt||0,deletedAt:+item.deletedAt||null})).filter(item=>item.title);
-    out.subjects=(Array.isArray(src.subjects)?src.subjects:[]).filter(x=>x&&x.id&&x.name).map(x=>({id:learningText(x.id,80),name:learningText(x.name,140),code:learningText(x.code,40),role:x.role==='teaching'?'teaching':'study',archived:!!x.archived,createdAt:+x.createdAt||1,updatedAt:+x.updatedAt||0,deletedAt:+x.deletedAt||null}));
+    out.subjects=(Array.isArray(src.subjects)?src.subjects:[]).filter(x=>x&&x.id&&x.name).map(x=>({id:learningText(x.id,80),name:learningText(x.name,140),code:learningText(x.code,40),termId:learningText(x.termId,80),role:['teaching','both'].includes(x.role)?x.role:'study',archived:!!x.archived,createdAt:+x.createdAt||1,updatedAt:+x.updatedAt||0,deletedAt:+x.deletedAt||null}));
+    Object.assign(out,window.MufLearningCore.normalizeAcademic(src));
     out.activity=(Array.isArray(src.activity)?src.activity:[]).filter(x=>x&&x.id).map(x=>({id:learningText(x.id,100),text:learningText(x.text,1000),source:learningText(x.source,40),updatedAt:+x.updatedAt||0})).sort((a,b)=>b.updatedAt-a.updatedAt||a.id.localeCompare(b.id)).slice(0,150);
     for(const key of ['schedule','preparations','courses','professionalReading'])out[key]=out[key].map(row=>{const raw=(src[key]||[]).find(x=>x?.id===row.id)||{};return {...row,subjectId:learningText(raw.subjectId,80),archived:!!raw.archived,...(key==='courses'?{progressMode:raw.progressMode==='units'?'units':'manual',unitsTotal:Math.max(0,Math.min(10000,+raw.unitsTotal||0)),unitsDone:Math.max(0,Math.min(+raw.unitsTotal||0,+raw.unitsDone||0))}:{})};});
     out.courses.forEach(row=>{if(row.progressMode==='units'&&row.unitsTotal>0)row.progress=Math.round(100*row.unitsDone/row.unitsTotal);});
@@ -11159,12 +11161,12 @@
   }
   function learningLoad(){try{return learningNormalize(JSON.parse(localStorage.getItem(LEARNING_KEY)||"null"));}catch(e){return learningBlank();}}
   function learningSave(data){const before=learningLoad(),normalized=learningNormalize(data);normalized.updatedAt=Date.now();
-    for(const key of ['schedule','preparations','courses','professionalReading','subjects'])for(const row of normalized[key]){const old=before[key].find(x=>x.id===row.id),fields=Object.keys(row).filter(k=>!['updatedAt','createdAt'].includes(k)&&JSON.stringify(row[k])!==JSON.stringify(old?.[k]));if(fields.length){const changes=old?fields.slice(0,6).map(k=>(LEARNING_LABELS[k]||k)+': '+learningText(JSON.stringify(old[k]??''),70)+' ← '+learningText(JSON.stringify(row[k]??''),70)).join('، '):'إضافة';normalized.activity.unshift({id:learningId('change'),text:(row.courseName||row.title||row.name)+' — '+changes,source:'المفكرة',updatedAt:Date.now()});}}
+    for(const key of ['schedule','preparations','courses','professionalReading','subjects','academicYears','terms'])for(const row of normalized[key]){const old=before[key].find(x=>x.id===row.id),fields=Object.keys(row).filter(k=>!['updatedAt','createdAt'].includes(k)&&JSON.stringify(row[k])!==JSON.stringify(old?.[k]));if(fields.length){const changes=old?fields.slice(0,6).map(k=>(LEARNING_LABELS[k]||k)+': '+learningText(JSON.stringify(old[k]??''),70)+' ← '+learningText(JSON.stringify(row[k]??''),70)).join('، '):'إضافة';normalized.activity.unshift({id:learningId('change'),text:(row.courseName||row.title||row.name)+' — '+changes,source:'المفكرة',updatedAt:Date.now()});}}
     normalized.activity=normalized.activity.slice(0,150);localStorage.setItem(LEARNING_KEY,JSON.stringify(normalized));if(db&&user)learningPullRemote("localSave");learningRenderHome();calendarSchedule();return normalized;}
   function learningActive(key){return learningLoad()[key].filter(item=>!item.deletedAt&&!item.archived);}
   function learningMerge(local,remote){
     const a=learningNormalize(local), b=learningNormalize(remote), out=learningBlank(); out.updatedAt=Math.max(a.updatedAt,b.updatedAt);
-    ["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity"].forEach(key=>{
+    ["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity","academicYears","terms"].forEach(key=>{
       const rows=new Map(); a[key].concat(b[key]).forEach(item=>{const prev=rows.get(item.id); if(!prev||(+item.updatedAt||0)>=(+prev.updatedAt||0)) rows.set(item.id,item);});
       out[key]=Array.from(rows.values());
     });
@@ -11189,10 +11191,14 @@
       if((user?.uid||'guest')!==owner||accountChanging){sheet.close();return;}
       const fresh=learningSyncState().pending;
       if(JSON.stringify(fresh)!==JSON.stringify(pending)||JSON.stringify(learningLoad())!==JSON.stringify(pending.local)){sheet.over.querySelector('#learningConflictError').textContent='تغيّرت البيانات أثناء المراجعة. أغلق النافذة ثم أعد المزامنة والمراجعة.';learningPullRemote('conflictChanged');return;}
-      const selected=conflict[side],list=pending.merged[conflict.key],index=list.findIndex(r=>r.id===conflict.id);
+      const selected=conflict[side];
+      if(conflict.academicGroup){for(const key of ['academicYears','terms','subjects'])pending.merged[key]=JSON.parse(JSON.stringify(selected[key]));}
+      const list=pending.merged[conflict.key],index=list.findIndex(r=>r.id===conflict.id);
+      if(!conflict.academicGroup){
       if(conflict.fields.includes('*'))list[index]=JSON.parse(JSON.stringify(selected));
       else for(const field of conflict.fields){if(selected[field]===undefined)delete list[index][field];else list[index][field]=selected[field];}
       list[index].updatedAt=Math.max(Date.now(),list[index].updatedAt||0);
+      }
       pending.conflicts.shift();sheet.close();
       if(pending.conflicts.length){learningSetSyncState({...learningSyncState(),pending});learningReviewConflicts();}
       else {learningSetSyncState({base:pending.remote});learningSave(pending.merged);}
@@ -11552,7 +11558,7 @@
       const raw=String(entries[key]);
       if(key.startsWith(PREFIX)||["h2do-expenses","h2do-hifz","h2do-quran","h2do-learning-v1","h2do-weekly-goals-v1","h2do-witr-meta","h2do-reading-settings"].includes(key)){
         const value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid record: "+key);
-        const arrays={"h2do-expenses":["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"],"h2do-learning-v1":["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity"],"h2do-hifz":["segments"]}[key]||[];
+        const arrays={"h2do-expenses":["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"],"h2do-learning-v1":["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity","academicYears","terms"],"h2do-hifz":["segments"]}[key]||[];
         if(arrays.some(field=>value[field]!==undefined&&!Array.isArray(value[field])))throw new Error("invalid record list: "+key);
         if(key==="h2do-weekly-goals-v1"&&value.items!==undefined&&(!value.items||typeof value.items!=="object"||Array.isArray(value.items)))throw new Error("invalid weekly goals");
         if(key.startsWith(PREFIX)&&(!/^h2do-tracker:\d{4}-\d{2}-\d{2}$/.test(key)||["tasks","priorities","prayers"].some(field=>value[field]!==undefined&&!Array.isArray(value[field]))))throw new Error("invalid day");
@@ -11606,7 +11612,7 @@
         const keys={quran:"h2do-quran",witr:WITR_META_KEY,weeklyGoals:WEEKLY_GOALS_KEY,expenses:EXP_KEY,learning:LEARNING_KEY,reading:RD_SETTINGS_KEY};
         const removedRows=(desired,old)=>{const ids=new Set(desired.map(row=>row.id));return desired.concat((old||[]).filter(row=>row&&row.id&&!ids.has(row.id)).map(row=>Object.assign({},row,{deletedAt:stamp,updatedAt:stamp,isActive:false,archivedAt:stamp})));};
         ["categories","fixedTemplates","instances","transactions","trips","savingsGoals","recurringTransactions","familyShopping","familyEvents","activityLog"].forEach(key=>{values.expenses[key]=removedRows(values.expenses[key]||[],docs.expenses[key]||[]);});
-        ["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity"].forEach(key=>{values.learning[key]=removedRows(values.learning[key]||[],docs.learning[key]||[]);});
+        ["schedule","preparations","courses","professionalReading","calendarOccurrences","subjects","activity","academicYears","terms"].forEach(key=>{values.learning[key]=removedRows(values.learning[key]||[],docs.learning[key]||[]);});
         values.weeklyGoals.items=values.weeklyGoals.items||{};
         Object.keys(docs.weeklyGoals.items||{}).forEach(week=>{if(!values.weeklyGoals.items[week])values.weeklyGoals.items[week]={goal:"",steps:[],done:false,updatedAt:stamp};});
         Object.entries(values).forEach(([name,raw])=>{const value=touch(raw);value.updatedAt=stamp;if(name==="expenses"){value.settings=value.settings||{};value.settings.updatedAt=stamp;value.settings.pristineSeed=false;value.settings.restoredAt=stamp;}enqueue("meta",name,value);if(keys[name])localWrites[keys[name]]=value;else{localWrites[CUSTOM_WORSHIP_KEY]=value.items;localWrites[CUSTOM_WORSHIP_META_KEY]={updatedAt:stamp};}});
