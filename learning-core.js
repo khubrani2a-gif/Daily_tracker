@@ -10,5 +10,26 @@
   function copyTermStructure(data,sourceTermId,targetTerm,subjectIds,idFactory){const subjects=[],schedule=[];for(const s of live(data.subjects).filter(s=>s.termId===sourceTermId&&subjectIds.includes(s.id))){const subject={...clone(s),id:idFactory(),termId:targetTerm.id,archived:false,createdAt:Date.now(),updatedAt:Date.now()};subjects.push(subject);for(const row of live(data.schedule).filter(r=>r.subjectId===s.id&&r.recurrence==='weekly'))schedule.push({...clone(row),id:idFactory(),subjectId:subject.id,archived:false,prepId:'',futureChanges:[],termPolicy:'inherit',termStart:targetTerm.startDate,termEnd:targetTerm.endDate,excludedDates:[...(targetTerm.excludedDates||[])],createdAt:Date.now(),updatedAt:Date.now()});}return {subjects,schedule};}
   function actionsForRole(role){const study=['session','assignment','exam'],teaching=['prep','lecture','outcome'],primary=role==='teaching'?teaching:role==='both'?[...study,...teaching]:study;return {primary,secondary:[...study,...teaching,'course','read','template','bulk','archive'].filter(x=>!primary.includes(x))};}
   function suggestOccurrenceSlots(task,allRows,prefs,date,nowTime='00:00'){const range=PC.range(task),duration=task.durationMinutes||(range?range.end-range.start:0);if(!duration||task.allDay)return [];return PC.availableSlots(allRows.filter(r=>r.task.id!==task.id),date,prefs,duration,task.bufferMinutes||0,nowTime).slice(0,3);}
-  return {suggestOccurrenceSlots,actionsForRole,previewTermAssignment,previewTermBounds,copyTermStructure,normalizeAcademic,validateAcademic,selectTerm,subjectTerm};
+  function calendarCoverage(expectedRows,records,context={}){
+    const result={required:0,linked:0,confirmed:0,pending:0,review:0,unlinked:0,firstMissingDate:'',confirmedThrough:'',lastVerifiedAt:0,exceptionRows:[]},byId=new Map(records.map(r=>[r.task.id,r])),seen=new Set(),get=(map,id)=>map instanceof Map?map.get(id):map?.[id];let continuous=true;
+    for(const row of [...expectedRows].sort((a,b)=>(a.sourceDate||a.date||'').localeCompare(b.sourceDate||b.date||''))){const id=row.task.id,date=row.sourceDate||row.date;if(seen.has(id)||date<context.from||date>context.to)continue;seen.add(id);const binding=byId.get(id)?.task.calendarBinding||row.task.calendarBinding,linked=binding?.ownerId===id&&binding.calendarId&&binding.eventId;
+      if(row.task.cancelled){if(linked)result.exceptionRows.push(row);continue;}result.required++;if(!linked){result.unlinked++;if(!result.firstMissingDate)result.firstMissingDate=date;continuous=false;continue;}result.linked++;
+      const stamp=Number(get(context.checkedById,id)||binding.syncedAt)||0;
+      if(get(context.errorsById,id)||context.calendarId&&context.calendarId!==binding.calendarId){result.review++;continuous=false;}
+      else if(stamp&&binding.base&&GC.equal(GC.snapshot(row.task),binding.base)){result.confirmed++;result.lastVerifiedAt=Math.max(result.lastVerifiedAt,stamp);if(continuous)result.confirmedThrough=date;}
+      else{result.pending++;continuous=false;}
+    }return result;
+  }
+  function nextCoverageWindow(coverage,termEnd){const from=coverage.firstMissingDate;if(!PC.date(from)||termEnd&&termEnd<from)return null;return {from,to:termEnd&&termEnd<PC.plus(from,89)?termEnd:PC.plus(from,89)};}
+  function weekRange(date,weekStart=0){if(!PC.date(date))throw Error('تاريخ غير صحيح.');const day=new Date(date+'T12:00:00').getDay(),from=PC.plus(date,-((day-weekStart+7)%7));return {from,to:PC.plus(from,6)};}
+  function weekSummary({rows,data,from,to,termId='',subjectId=''}){
+    const result={lectures:[],sessions:[],deadlines:[],attendance:{attended:0,delivered:0,absent:0,cancelled:0,unrecorded:0},time:{plannedMinutes:0,recordedMinutes:0,measuredCount:0,pairedPlannedMinutes:0,pairedRecordedMinutes:0,unknownCount:0}},seen=new Set(),within=date=>!!date&&date>=from&&date<=to;
+    for(const row of rows){const t=row.task,id=t.id;if(seen.has(id))continue;seen.add(id);const sid=row.external?.subjectId||t.learningRef?.subjectId,term=subjectTerm(data,sid);if(subjectId&&sid!==subjectId||termId==='independent'&&term||termId&&termId!=='independent'&&term?.id!==termId)continue;if(!row.external&&!t.learningRef)continue;
+      if(within(t.deadline||row.external?.targetDate))result.deadlines.push(row);
+      if(!within(row.date||t.dueDate))continue;
+      if(row.learningKind==='schedule'){result.lectures.push(row);const outcome=(data.calendarOccurrences||[]).find(r=>r.id===id)?.outcome,key=t.cancelled?'cancelled':Object.hasOwn(result.attendance,outcome)?outcome:'unrecorded';result.attendance[key]++;}
+      if(t.learningRef?.type==='session'&&!t.cancelled&&t.status!=='cancelled'){result.sessions.push(row);const planned=Math.max(0,+t.durationMinutes||0),recorded=Math.max(0,+t.actualMinutes||0);result.time.plannedMinutes+=planned;result.time.recordedMinutes+=recorded;if(recorded){result.time.measuredCount++;if(planned){result.time.pairedPlannedMinutes+=planned;result.time.pairedRecordedMinutes+=recorded;}}else result.time.unknownCount++;}
+    }return result;
+  }
+  return {weekRange,weekSummary,calendarCoverage,nextCoverageWindow,suggestOccurrenceSlots,actionsForRole,previewTermAssignment,previewTermBounds,copyTermStructure,normalizeAcademic,validateAcademic,selectTerm,subjectTerm};
 });
