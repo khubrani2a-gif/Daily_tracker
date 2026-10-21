@@ -7994,7 +7994,7 @@
     const local=prayerClock('',new Date(epoch));return local.date===date?local.time:'';
   }
   function locLabel(){const loc=prayerLocation(),btn=document.getElementById('locBtn');btn.textContent=loc?'📍 إعدادات المواقيت ('+(loc.address||loc.city||'الموقع المحفوظ')+')':'📍 اختر المدينة وطريقة الحساب';}
-  async function prayerLoadDay(dateStr,loc){
+  async function prayerLoadDay(dateStr,loc,isCurrent=()=>true){
     const context=prayerCacheKey(dateStr,loc);
       const ds=dateStr.split('-').reverse().join('-');let url;
       if(loc.address)url='https://api.aladhan.com/v1/timingsByAddress/'+ds+'?address='+encodeURIComponent(loc.address);
@@ -8006,7 +8006,7 @@
       const t=Object.fromEntries(['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'].map(k=>[k,String(j.data.timings[k]||'').split(' ')[0]])),zone=prayerZone(j.data.meta?.timezone);
       if(!prayerValidTimes(t)||!zone||(j.data.date?.gregorian?.date&&j.data.date.gregorian.date!==ds))throw Error('invalid');
       t._meta={date:dateStr,zone,context,method:String(j.data.meta?.method?.name||loc.method||'تلقائية'),fetchedAt:Date.now()};
-      if(context!==prayerCacheKey(dateStr))throw Error("location changed");
+      if(context!==prayerCacheKey(dateStr)||!isCurrent())throw Error("stale timings request");
       try{localStorage.setItem(context,JSON.stringify(t));}catch(e){}return t;
   }
   let prayerTimesRequest=0;
@@ -8018,7 +8018,7 @@
     const apply=t=>{prayerTimes=t;prayerTimesDate=dateStr;info.textContent='مواقيت '+dateStr+' · '+(loc.address||loc.city||'الموقع المحفوظ')+' · '+t._meta.method+' · '+t._meta.zone+' · '+(loc.school?'العصر: حنفي':'العصر: الجمهور')+' · مصدر الحساب: Aladhan';updateNext();renderPrayers();plannerSyncPrayerTimes();};
     const cached=prayerCached(dateStr,loc);if(cached&&!force){apply(cached);return;}
     try{
-      const t=await prayerLoadDay(dateStr,loc);
+      const t=await prayerLoadDay(dateStr,loc,()=>request===prayerTimesRequest&&dateStr===currentDate);
       if(request!==prayerTimesRequest||dateStr!==currentDate||context!==prayerCacheKey(dateStr))return;
       apply(t);
     }catch(e){if(request===prayerTimesRequest&&dateStr===currentDate&&context===prayerCacheKey(dateStr)){

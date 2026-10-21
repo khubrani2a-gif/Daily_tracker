@@ -8,4 +8,4 @@ The prayer card prioritizes the live adhan/iqamah countdowns and recording. Calc
 - Five direct adhkar actions open their matching prayer context without recording performance; Duha has none and remains outside the five-fard total.
 - Clock text updates every second without replacing the recording buttons. Date/location validation, legacy five-entry records, planner conversion, and independent offline edits retain their protections.
 
-Validation: 26 prayer regression tests (including six quick-record/countdown tests), responsive checks at 320/390/820/1366 pixels in both themes. Full regression and deployment checks are tracked with the PR.
+Validation: 27 prayer regression tests (including seven quick-record/countdown tests), responsive checks at 320/390/820/1366 pixels in both themes. Full regression and deployment checks are tracked with the PR.
