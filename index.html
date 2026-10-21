@@ -1564,7 +1564,7 @@
   #dhikrCountBtn.dhikr-circle{position:relative;width:min(280px,100%);aspect-ratio:1;height:auto;border-radius:50%;padding:30px;margin:1.3rem auto .5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;background:var(--paper);color:var(--accent);border:0;box-shadow:none;flex-shrink:0;overflow:hidden}
   .dhikr-circle svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}.dhikr-circle circle{fill:none;stroke-width:3}.dhikr-ring-track{stroke:var(--line)}#dhikrCounterFill{stroke:var(--accent);stroke-dasharray:100;stroke-dashoffset:100;stroke-linecap:round;transition:stroke-dashoffset .15s linear}.dhikr-circle-count{font-size:clamp(2.6rem,8vw,3.8rem);font-weight:800;line-height:1.2;direction:ltr}.dhikr-circle .dhikr-counter-progress{font-size:1rem}.dhikr-circle-hint{font-size:.9rem;margin-top:.35rem}.dhikr-counter-status{text-align:center;color:var(--muted);font-size:.8rem;min-height:1.5em;margin:.65rem 0 0}.dhikr-counter .dhikr-counter-text{font-size:clamp(1.2rem,3vw,1.65rem);margin:1rem auto 0;max-width:600px;overflow-wrap:anywhere}.dhikr-counter-settings{min-height:44px}
   .dhikr-reader-head{display:flex;justify-content:flex-end;margin-bottom:1rem}.dhikr-reader-head .dhikr-menu-panel{font-size:.9rem}.dhikr>.dhikr-count-btn{margin-top:1.2rem;min-height:64px}#adhkarNavigation{padding-top:1rem;margin-top:1.25rem;border-top:1px solid var(--line);gap:1rem}
-  #dhikrFocusOverlay{position:fixed;inset:0;z-index:10010;background:var(--paper);overflow-y:auto;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}#dhikrFocusOverlay[hidden]{display:none}#dhikrFocusOverlay .dhikr-counter{width:min(100%,640px);margin:auto;border:0;background:none;padding:.75rem}#dhikrFocusOverlay .dhikr-counter-head{margin-bottom:2rem}#dhikrFocusOverlay #dhikrCountBtn{width:min(350px,100%)}#dhikrFocusOverlay .dhikr-counter-title{font-size:1rem}
+  #dhikrFocusOverlay{position:fixed;inset:0;z-index:10010;background:linear-gradient(145deg,var(--accent-soft),var(--bg) 80%);overflow-y:auto;padding:max(20px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}#dhikrFocusOverlay[hidden]{display:none}#dhikrFocusOverlay .dhikr-counter{width:min(100%,560px);margin:auto;padding:clamp(16px,4vw,28px);border-radius:24px;box-shadow:var(--shadow-sm)}#dhikrFocusOverlay .dhikr-counter-head{margin-bottom:.75rem;flex-wrap:wrap}#dhikrFocusOverlay #dhikrCountBtn{width:min(280px,100%)}#dhikrFocusOverlay .dhikr-counter-title{font-size:1rem}
   @media(prefers-reduced-motion:reduce){#dhikrCounterFill{transition:none}}
   .dhikr-counter-text,.dhikr-counter-progress{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .adhkar-tools{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.adhkar-tools label{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.85rem}.adhkar-tools button,.adhkar-tools select{min-height:44px;padding:.45rem .8rem;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}.adhkar-tools input{max-width:130px}.adhkar-tools button:focus-visible,[data-adhkar-count]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
@@ -3797,10 +3797,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=158"></script>
+<script src="data-core.js?v=159"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=158"></script>
-<script src="learning-core.js?v=158"></script>
+<script src="calendar-core.js?v=159"></script>
+<script src="learning-core.js?v=159"></script>
 <script>
 (function(){
   "use strict";
