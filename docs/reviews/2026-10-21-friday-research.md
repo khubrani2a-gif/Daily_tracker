@@ -48,4 +48,4 @@ Status: implemented for v163; release validation in progress. User confirmed the
 - Responsive light/dark checks at 320, 390, 820, and 1366 pixels pass with no horizontal overflow.
 - All testing uses isolated guest/fake-cloud data, never the user's account records.
 - All ten Friday tests also pass on WebKit.
-- The existing Quran page host refused a connection from the test environment. A visible independent Quran.com/18 fallback was added and its HTTP 200 response verified; the internal reader still uses the app's existing page provider.
+- The existing Quran page host refused a connection from the test environment. A visible independent Quran.com/18 fallback was added and its HTTP 200 response verified; a follow-up HTTP check confirmed that provider returns 404. The Friday reader now uses King Saud University Quran page images (quran.ksu.edu.sa/png_big/293.png), verified HTTP 200 and visually inspected to confirm the start of Al-Kahf. Load failure displays a clear alternative-reading message.
