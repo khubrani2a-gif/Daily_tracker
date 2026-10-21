@@ -418,6 +418,8 @@
   .hint{font-size:.73rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.7rem;line-height:1.5}
 
   /* ===== Prayers ===== */
+  #fridayPanel{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--accent-soft)}#fridayPanel[hidden]{display:none}#fridayPanel>strong{font-size:.85rem;color:var(--accent)}.friday-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.friday-actions button{flex:1 1 80px;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--paper);color:var(--ink);font:inherit;font-size:.8rem;cursor:pointer;touch-action:manipulation}.friday-form label{display:flex;align-items:center;gap:10px;padding:10px 0;min-height:44px}.friday-form input,.friday-form select{min-height:44px;max-width:100%;font:inherit;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:8px}.friday-form select,.friday-form input[type=number]{width:100%;box-sizing:border-box;padding:8px}.friday-reader{width:100%;height:48vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:white}.friday-source{display:block;font-size:.78rem;color:var(--accent);margin-top:12px}.friday-form input[type=checkbox]{width:22px;flex-shrink:0}
+
   #prayerDetails{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}#prayerDetails summary{cursor:pointer;color:var(--muted);padding:10px;min-height:44px;box-sizing:border-box}
   #locRow input,#locRow select{min-height:44px}
   .prayer-tile{min-width:0}.prayer-actions{display:flex;align-items:center;gap:4px;margin-top:4px}.prayer-actions button{min-height:44px;border:0;background:transparent;color:var(--accent);border-radius:10px;cursor:pointer;font-size:.72rem}.prayer-actions [data-prayer-edit]{min-width:44px;margin-inline-start:auto;font-size:1.1rem}.prayer-actions [data-prayer-adhkar]{flex:1}.prayer-actions button:hover{background:var(--accent-soft)}
@@ -2688,7 +2690,7 @@
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
         <p id="prayerSummary" class="pstate-legend"></p>
-        <div class="prayers" id="prayers"></div>
+        <div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
         <p id="prayerFeedback" role="status" hidden><span id="prayerFeedbackText"></span> <button type="button" id="prayerUndo">تراجع</button></p>
         <div class="pstate-legend">اضغط «صليت» للتسجيل · ⋯ لتصحيح الحالة</div>
         <details id="prayerDetails"><summary>المواقيت والإعدادات</summary><p id="prayerTimesInfo" class="pstate-legend"></p><p class="pstate-legend">الإقامة بعد الأذان: الفجر ٢٥ د · الظهر والعصر والعشاء ٢٠ د · المغرب ١٠ د.</p>
@@ -2699,7 +2701,7 @@
           <p class="pstate-legend">اختر الطريقة المعتمدة محليًا وقارن المواقيت بتقويم مدينتك. إعدادات المواقيت لهذا الجهاز؛ سجل الصلاة يزامن مع حسابك.</p>
           <button id="cityGo">حفظ</button>
         </div>
-        <button type="button" class="loc-btn" id="prayerRefresh">تحديث المواقيت</button><button type="button" class="loc-btn" id="prayerNotifications">إعدادات التنبيهات</button><p class="pstate-legend">التنبيهات أثناء تشغيل المفكرة؛ وصولها عند الإغلاق غير مضمون. دخول الوقت لا يسجّل أداء الصلاة.</p>
+        <button type="button" class="loc-btn" id="fridaySettings">إعدادات الجمعة</button><button type="button" class="loc-btn" id="prayerRefresh">تحديث المواقيت</button><button type="button" class="loc-btn" id="prayerNotifications">إعدادات التنبيهات</button><p class="pstate-legend">التنبيهات أثناء تشغيل المفكرة؛ وصولها عند الإغلاق غير مضمون. دخول الوقت لا يسجّل أداء الصلاة.</p>
         <button class="loc-btn" id="locBtn">📍 اكتب مدينتك لعرض المواقيت</button></details>
       </div>
 
@@ -3813,10 +3815,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=162"></script>
+<script src="data-core.js?v=163"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=162"></script>
-<script src="learning-core.js?v=162"></script>
+<script src="calendar-core.js?v=163"></script>
+<script src="learning-core.js?v=163"></script>
 <script>
 (function(){
   "use strict";
@@ -4188,7 +4190,7 @@
     save();adhkarProgressUpdate();
   }
   function openAdhkar(mode){
-    adhkarOpener=document.activeElement;adhkarMode=mode;adhkarDate=currentDate;adhkarPrayer='legacy';adhkarRestorePosition();const prefs=adhkarPrefs();document.getElementById('adhkarViewMode').value=prefs.view==='single'?'single':'list';document.getElementById('adhkarFont').value=Math.max(100,Math.min(180,+prefs.font||100));document.getElementById('adhkarList').style.setProperty('--adhkar-font',+document.getElementById('adhkarFont').value/100);
+    document.querySelector('#adhkarPrayer option[value="Dhuhr"]').textContent=prayerDisplayName(2);adhkarOpener=document.activeElement;adhkarMode=mode;adhkarDate=currentDate;adhkarPrayer='legacy';adhkarRestorePosition();const prefs=adhkarPrefs();document.getElementById('adhkarViewMode').value=prefs.view==='single'?'single':'list';document.getElementById('adhkarFont').value=Math.max(100,Math.min(180,+prefs.font||100));document.getElementById('adhkarList').style.setProperty('--adhkar-font',+document.getElementById('adhkarFont').value/100);
     state.adhkarManual=state.adhkarManual||{};
     if(state.worship[ADHKAR_WKEY[mode]]&&state.adhkarManual[ADHKAR_WKEY[mode]]===undefined&&!Object.keys(state.adhkarCompleted||{}).some(k=>k.startsWith(mode+':')))state.adhkarManual[ADHKAR_WKEY[mode]]=true;
     document.getElementById('adhkarTitle').textContent=ADHKAR_TITLES[mode];
@@ -4295,6 +4297,7 @@
   function blankState(){
     return {
       prayers: PRAYERS.map(()=>false),
+      friday: {},
       worship: Object.fromEntries(WORSHIP.map(w=>[w.id,false])),
       water: 0,
       intention: "",
@@ -8055,7 +8058,7 @@
     if(!today){strip.textContent='جارٍ تحميل مواقيت اليوم للعدّاد — تحقق من الاتصال إذا تأخر';return;}
     const fard=[['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']];
     let next=null,active=null;
-    for(const [key,name] of fard){const at=prayerEpoch(clock.date,today[key],today._meta.zone),iq=at+PRAYER_IQAMAH[key]*60000;
+    for(const [key,name] of fard){const at=prayerEpoch(clock.date,today[key],today._meta.zone),iq=at+(key==='Dhuhr'&&isFriday(clock.date)?fridayPrefs().iqamah:PRAYER_IQAMAH[key])*60000;
       if(at>now&&!next)next={key,name,at,iq,hm:today[key]};
       if(at<=now&&iq>now)active={key,name,at,iq,hm:today[key]};
     }
@@ -8063,6 +8066,7 @@
       if(t){const at=prayerEpoch(tomorrow,t.Fajr,t._meta.zone);next={key:'Fajr',name:'الفجر غدًا',at,iq:at+PRAYER_IQAMAH.Fajr*60000,hm:t.Fajr};}
     }
     if(currentDate===clock.date)nextKey=active?.key||(next&&!next.name.includes('غدًا')?next.key:null);
+    let fridayStage=null;if(isFriday(clock.date)&&(active?.key==='Dhuhr'||(!active&&next?.key==='Dhuhr'))){const prefs=fridayPrefs(),at=prayerEpoch(clock.date,today.Dhuhr,today._meta.zone);fridayStage={first:at-prefs.firstLead*60000,second:at,iq:at+prefs.iqamah*60000};}
     const count=at=>{const n=Math.max(0,Math.ceil((at-now)/1000));return [Math.floor(n/3600),Math.floor(n/60)%60,n%60].map(v=>String(v).padStart(2,'0')).join(':');},iq=active||next;
     const signature=[next?.name,iq?.name,!!active,clock.date,currentDate].join('|');
     if(strip.dataset.clockSignature!==signature||!strip.querySelector('#adhanCountdown')){
@@ -8071,6 +8075,8 @@
     }
     strip.querySelector('#adhanLabel').textContent=next?'أذان '+next.name:'أذان الفجر غدًا';strip.querySelector('#adhanCountdown').textContent=next?count(next.at):'—';strip.querySelector('#adhanTime').textContent=next?fmt12(next.hm):'بانتظار مواقيت الغد';
     strip.querySelector('#iqamahLabel').textContent=iq?'إقامة '+iq.name:'الإقامة';strip.querySelector('#iqamahCountdown').textContent=iq?count(iq.iq):'—';strip.querySelector('#iqamahTime').textContent=active?'دخل وقت الصلاة':iq?'بعد الأذان بـ '+PRAYER_IQAMAH[iq.key]+' د':'';
+    if(fridayStage){const f=fridayStage,first=now<f.first,before=now<f.second;strip.querySelector('#adhanLabel').textContent=first?'أذان الجمعة الأول':before?'أذان الجمعة الثاني':'وقت الخطبة';strip.querySelector('#adhanCountdown').textContent=first?count(f.first):before?count(f.second):'الإنصات للخطبة';strip.querySelector('#adhanTime').textContent=first?'تنبيه مبكر · تقديري':before?'عند صعود الإمام':'وفق وقت الأذان الثاني';strip.querySelector('#iqamahLabel').textContent='إقامة الجمعة · تقديرية';strip.querySelector('#iqamahCountdown').textContent=count(f.iq);strip.querySelector('#iqamahTime').textContent='نحو '+fridayPrefs().iqamah+' د بعد الأذان الثاني';}
+
   }
   const locRow=document.getElementById('locRow'),cityInput=document.getElementById('cityInput');
   document.getElementById('locBtn').onclick=()=>{locRow.hidden=!locRow.hidden;if(!locRow.hidden){const loc=prayerLocation();cityInput.value=loc?.address||[loc?.city,loc?.country].filter(Boolean).join(', ');document.getElementById('prayerMethod').value=loc?.method||'';document.getElementById('prayerSchool').value=String(loc?.school||0);cityInput.focus();}};
@@ -8095,20 +8101,54 @@
   };
   const PCYCLE = ["", "ontime", "late", "missed"];
 
+  function isFriday(date){return /^\d{4}-\d{2}-\d{2}$/.test(date||'')&&new Date(date+'T12:00:00Z').getUTCDay()===5;}
+  function prayerDisplayName(index,date=currentDate,day=date===currentDate?state:null){
+    if(index!==2||!isFriday(date))return PRAYERS[index];
+    if(day?.friday?.mode==='dhuhr')return 'الظهر';
+    if(day&&prayerVal(day.prayers,2)&&!day.friday?.mode)return 'الجمعة / الظهر';
+    return 'الجمعة';
+  }
+  function fridayPrefs(){let x;try{x=JSON.parse(localStorage.getItem('h2do-friday-settings')||'{}');}catch(e){}return {firstLead:[40,60].includes(+x?.firstLead)?+x.firstLead:60,iqamah:Math.max(1,Math.min(90,Math.round(+x?.iqamah||20)))};}
+  function fridayDay(){if(!state.friday||typeof state.friday!=='object'||Array.isArray(state.friday))state.friday={};return state.friday;}
+  function fridayCanEdit(date,owner){if(date!==currentDate||owner!==accountStorage.owner||accountChanging||date>todayStr()){hifzShowToast('تغيّر اليوم أو الحساب، أو أن اليوم مستقبلي؛ أعد فتح السجل.');return false;}return true;}
+  function fridayRender(){const host=document.getElementById('fridayPanel');host.hidden=!isFriday(currentDate);if(host.hidden)return;document.getElementById('fridayKahf').textContent=state.friday?.kahf?.complete?'الكهف ✓':'سورة الكهف';}
+  document.getElementById('fridaySettings').onclick=()=>{
+    const p=fridayPrefs(),owner=accountStorage.owner,sheet=taskSheet('توقيت الجمعة في مسجدك','<div class="friday-form"><p>الأذان الثاني عند وقت الظهر وصعود الإمام. الأذان الأول والإقامة توقيتان تقريبيان حسب مسجدك.</p><label for="fridayFirstLead">الأذان الأول قبل الثاني</label><select id="fridayFirstLead"><option value="60">٦٠ دقيقة تقريبًا</option><option value="40">٤٠ دقيقة تقريبًا</option></select><label for="fridayIqamahDelay">الإقامة بعد الأذان الثاني بالدقائق — تقديري</label><input type="number" id="fridayIqamahDelay" min="1" max="90" value="'+p.iqamah+'"><p class="pstate-legend">إعدادات توقيت هذا الجهاز. انتهاء الخطبة هو المرجع الفعلي للإقامة.</p><p id="fridaySettingsError" role="alert"></p><button type="button" class="task-sheet-save" id="fridaySettingsSave">حفظ</button></div>');sheet.over.querySelector('#fridayFirstLead').value=String(p.firstLead);
+    sheet.over.querySelector('#fridaySettingsSave').onclick=()=>{const iq=Number(sheet.over.querySelector('#fridayIqamahDelay').value);if(accountChanging||owner!==accountStorage.owner)return;if(!Number.isInteger(iq)||iq<1||iq>90){sheet.over.querySelector('#fridaySettingsError').textContent='أدخل عددًا صحيحًا من ١ إلى ٩٠ دقيقة.';return;}localStorage.setItem('h2do-friday-settings',JSON.stringify({firstLead:+sheet.over.querySelector('#fridayFirstLead').value,iqamah:iq}));sheet.close();updateNext();};
+  };
+  document.getElementById('fridayPrepare').onclick=()=>{
+    const date=currentDate,owner=accountStorage.owner,prep=state.friday?.prep||{},items=[['wash','الاغتسال والطهارة'],['ready','التهيؤ والتطيّب'],['early','التبكير إلى المسجد']];
+    const sheet=taskSheet('تحضيرات الجمعة','<div class="friday-form"><p>'+expEsc(date)+' · متابعة اختيارية، منفصلة عن تسجيل الصلاة.</p>'+items.map(([id,label])=>'<label><input type="checkbox" data-friday-prep="'+id+'"'+(prep[id]?' checked':'')+'>'+label+'</label>').join('')+'<p>عند بدء الخطبة: الإنصات وترك الانشغال بالهاتف.</p><a class="friday-source" href="https://sunnah.com/bukhari:883" target="_blank" rel="noopener noreferrer">المصدر: صحيح البخاري ٨٨٣</a></div>');
+    sheet.over.querySelectorAll('[data-friday-prep]').forEach(input=>input.onchange=()=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}const f=fridayDay();f.prep=f.prep||{};f.prep[input.dataset.fridayPrep]=input.checked;save();});
+  };
+  document.getElementById('fridayKahf').onclick=()=>{
+    const date=currentDate,owner=accountStorage.owner;let page=Math.max(293,Math.min(304,+state.friday?.kahf?.page||293));
+    const sheet=taskSheet('سورة الكهف — الجمعة','<p>'+expEsc(date)+' · موضع قراءة مستقل عن الورد اليومي. فتح الصفحة لا يسجّل الإكمال.</p><div class="friday-actions"><button type="button" id="fridayKahfPrev">السابقة</button><span id="fridayKahfPage"></span><button type="button" id="fridayKahfNext">التالية</button></div><div class="friday-reader" tabindex="0" aria-label="صفحة المصحف — مرّر للقراءة"><img id="fridayKahfFrame" alt="صفحة من سورة الكهف" referrerpolicy="no-referrer" style="width:100%;height:auto;display:block"></div><p id="fridayKahfLoad" role="status" hidden></p><a id="fridayKahfExternal" target="_blank" rel="noopener noreferrer">لم تظهر الصفحة؟ اقرأ الكهف على Quran.com</a><button type="button" id="fridayKahfDone" class="task-sheet-save"></button><p id="fridayKahfStatus" role="status"></p><a class="friday-source" href="https://binbaz.org.sa/fatwas/5172" target="_blank" rel="noopener noreferrer">عن قراءة الكهف يوم الجمعة</a>');
+    const render=()=>{const img=sheet.over.querySelector('#fridayKahfFrame'),notice=sheet.over.querySelector('#fridayKahfLoad');img.onerror=()=>{notice.hidden=false;notice.textContent='تعذّر تحميل صفحة المصحف؛ استخدم رابط القراءة البديل أدناه.';};img.onload=()=>{notice.hidden=true;};img.alt='صفحة المصحف '+page+' — سورة الكهف';img.src='https://quran.ksu.edu.sa/png_big/'+page+'.png';sheet.over.querySelector('#fridayKahfExternal').href='https://quran.com/18';sheet.over.querySelector('#fridayKahfPage').textContent='صفحة '+page.toLocaleString('ar-EG');sheet.over.querySelector('#fridayKahfPrev').disabled=page===293;sheet.over.querySelector('#fridayKahfNext').disabled=page===304;sheet.over.querySelector('#fridayKahfDone').textContent=state.friday?.kahf?.complete?'تراجع عن إكمال الكهف':'أتممت قراءة سورة الكهف';};
+    const move=delta=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}page=Math.max(293,Math.min(304,page+delta));const f=fridayDay();f.kahf={...(f.kahf||{}),page};save();render();};
+    sheet.over.querySelector('#fridayKahfPrev').onclick=()=>move(-1);sheet.over.querySelector('#fridayKahfNext').onclick=()=>move(1);
+    sheet.over.querySelector('#fridayKahfDone').onclick=()=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}const f=fridayDay();f.kahf={...(f.kahf||{}),page,complete:!f.kahf?.complete};save();fridayRender();render();sheet.over.querySelector('#fridayKahfStatus').textContent=f.kahf.complete?'سُجّلت قراءة الكهف لهذه الجمعة':'تم التراجع عن الإكمال';};render();
+  };
+  document.getElementById('fridaySalawat').onclick=()=>{
+    if(!fridayCanEdit(currentDate,accountStorage.owner))return;
+    const text='اللهم صل وسلم على نبينا محمد';state.dhikrSessions=state.dhikrSessions||[];let row=state.dhikrSessions.find(x=>x.fridaySalawat&&x.text===text);
+    if(!row){dhikrStartSession(text,100,false);row=dhikrSession();row.fridaySalawat=true;}else state.dhikrCounter={sessionId:row.id,text:row.text,target:row.target,count:dhikrTotal(row)};
+    save();renderDhikrCounter();document.getElementById('dhikrFocusOpen').click();hifzShowToast('الهدف العددي شخصي ويمكن تغييره من ضبط الذكر، وليس عددًا مقررًا للجمعة.');
+  };
   function prayerFardCount(values){return FARD_IDX.filter(i=>isPrayed(prayerVal(values,i))).length;}
   let prayerUndoTicket=null;
   function prayerFeedback(){const host=document.getElementById('prayerFeedback');host.hidden=!prayerUndoTicket||prayerUndoTicket.date!==currentDate;if(!host.hidden)document.getElementById('prayerFeedbackText').textContent=prayerUndoTicket.text;}
   function prayerRefreshViews(){renderPrayers();renderProgress();}
-  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;prayerUndoTicket=null;save();prayerRefreshViews();};
+  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after||(t.friday&&state.friday?.mode!==t.afterMode)){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;if(t.friday){if(t.beforeMode)fridayDay().mode=t.beforeMode;else delete fridayDay().mode;}prayerUndoTicket=null;save();prayerRefreshViews();};
   function openPrayerStatus(index){
-    const date=currentDate,old=prayerVal(state.prayers,index),labels={'ontime':'في وقتها','late':'متأخرة','missed':index===1?'لم أؤدّها':'فاتت','':'إلغاء التسجيل'};
-    const future=date>todayStr(),body='<p>تاريخ التسجيل: '+expEsc(date)+(index===1?' · الضحى نافلة':'')+'</p><p>اختر الحالة بنفسك؛ لا يستنتج التطبيق الأداء من الساعة.</p>'+Object.entries(labels).map(([key,label])=>'<button type="button" class="task-sheet-save" data-prayer-status="'+key+'" aria-pressed="'+String(old===key)+'"'+(future&&key!==''?' disabled':'')+'>'+label+(old===key?' ✓':'')+'</button>').join('')+'<p id="prayerEditError" role="alert">'+(future?'لا يمكن تسجيل أداء صلاة في تاريخ مستقبلي.':'')+'</p>'+(index!==1?'<button type="button" id="prayerAdhkar" class="task-sheet-save">أذكار بعد صلاة '+PRAYERS[index]+'</button>':'');
-    const sheet=taskSheet('تسجيل '+PRAYERS[index],body);
+    const date=currentDate,old=prayerVal(state.prayers,index),oldMode=state.friday?.mode,friday=index===2&&isFriday(date),labels={'ontime':'في وقتها','late':'متأخرة','missed':index===1?'لم أؤدّها':'فاتت','':'إلغاء التسجيل'};
+    const future=date>todayStr(),body=(friday?'<div class="friday-form"><label for="fridayPrayerMode">الصلاة المسجّلة</label><select id="fridayPrayerMode"><option value="jumuah">صلاة الجمعة</option><option value="dhuhr">صلاة الظهر</option></select></div>':'')+'<p>تاريخ التسجيل: '+expEsc(date)+(index===1?' · الضحى نافلة':'')+'</p><p>اختر الحالة بنفسك؛ لا يستنتج التطبيق الأداء من الساعة.</p>'+Object.entries(labels).map(([key,label])=>'<button type="button" class="task-sheet-save" data-prayer-status="'+key+'" aria-pressed="'+String(old===key)+'"'+(future&&key!==''?' disabled':'')+'>'+label+(old===key?' ✓':'')+'</button>').join('')+'<p id="prayerEditError" role="alert">'+(future?'لا يمكن تسجيل أداء صلاة في تاريخ مستقبلي.':'')+'</p>'+(index!==1?'<button type="button" id="prayerAdhkar" class="task-sheet-save">أذكار بعد صلاة '+prayerDisplayName(index)+'</button>':'');
+    const sheet=taskSheet('تسجيل '+prayerDisplayName(index),body);if(friday)sheet.over.querySelector('#fridayPrayerMode').value=oldMode==='dhuhr'?'dhuhr':'jumuah';
     sheet.over.querySelectorAll('[data-prayer-status]').forEach(button=>button.onclick=()=>{
-      if(future&&button.dataset.prayerStatus!=='')return;if(date!==currentDate||prayerVal(state.prayers,index)!==old){sheet.over.querySelector('#prayerEditError').textContent='تغيّر التاريخ أو السجل؛ أعد فتح الصلاة لمراجعته.';return;}
-      const next=button.dataset.prayerStatus;state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;
+      if(future&&button.dataset.prayerStatus!=='')return;if(date!==currentDate||prayerVal(state.prayers,index)!==old||(friday&&state.friday?.mode!==oldMode)){sheet.over.querySelector('#prayerEditError').textContent='تغيّر التاريخ أو السجل؛ أعد فتح الصلاة لمراجعته.';return;}
+      const next=button.dataset.prayerStatus;state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;if(friday){if(next)fridayDay().mode=sheet.over.querySelector('#fridayPrayerMode').value;else delete fridayDay().mode;}
       if(isPrayed(next)&&fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
-      if(next!==old){prayerUndoTicket={date,index,before:old,after:next,text:'حُفظ تسجيل '+PRAYERS[index]};document.getElementById('prayerUndo').hidden=false;}
+      if(next!==old||(friday&&oldMode!==state.friday?.mode)){prayerUndoTicket={date,index,friday,beforeMode:oldMode,afterMode:state.friday?.mode,before:old,after:next,text:'حُفظ تسجيل '+prayerDisplayName(index)};document.getElementById('prayerUndo').hidden=false;}
       save();sheet.close();prayerRefreshViews();document.querySelector('[data-prayer-index="'+index+'"]')?.focus({preventScroll:true});
     });
     const adhkar=sheet.over.querySelector('#prayerAdhkar');if(adhkar)adhkar.onclick=()=>{if(currentDate!==date){sheet.close();return;}sheet.close();openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));};
@@ -8116,20 +8156,20 @@
   function prayerOpenAdhkar(index){if(index===1)return;openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));}
   function prayerQuickRecord(index,date){
     if(date!==currentDate||date>todayStr()||prayerVal(state.prayers,index))return;
-    state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';
+    const friday=index===2&&isFriday(date),beforeMode=state.friday?.mode;if(friday&&!beforeMode)fridayDay().mode='jumuah';state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';
     if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
-    prayerUndoTicket={date,index,before:'',after:'ontime',text:'سُجّلت '+PRAYERS[index]+' في وقتها'};document.getElementById('prayerUndo').hidden=false;
+    prayerUndoTicket={date,index,friday,beforeMode,afterMode:state.friday?.mode,before:'',after:'ontime',text:'سُجّلت '+prayerDisplayName(index)+' في وقتها'};document.getElementById('prayerUndo').hidden=false;
     save();prayerRefreshViews();
   }
   function renderPrayers(){
     const box=document.getElementById('prayers'),focused=box.contains(document.activeElement)?document.activeElement.dataset.prayerIndex:null;box.innerHTML='';
     document.getElementById('prayerSummary').textContent='الفرائض: '+prayerFardCount(state.prayers).toLocaleString('ar-EG')+' من ٥'+(currentDate!==todayStr()?' · سجل '+currentDate:'');
-    PRAYERS.forEach((name,i)=>{const v=prayerVal(state.prayers,i),div=document.createElement('button');div.type='button';div.dataset.prayerIndex=i;div.className='prayer'+PSTATE[v].cls;if(nextKey&&PRAYER_KEYS[i]===nextKey)div.classList.add('next');const t=getTime(PRAYER_KEYS[i]);
+    PRAYERS.forEach((originalName,i)=>{const name=prayerDisplayName(i),v=prayerVal(state.prayers,i),div=document.createElement('button');div.type='button';div.dataset.prayerIndex=i;div.className='prayer'+PSTATE[v].cls;if(nextKey&&PRAYER_KEYS[i]===nextKey)div.classList.add('next');const t=getTime(PRAYER_KEYS[i]);
       const label=v==='ontime'?'في وقتها':v==='late'?'متأخرة':v==='missed'?(i===1?'لم أؤدّها':'فاتت'):'صليت';div.innerHTML='<span class="pmark">'+PSTATE[v].mark+'</span>'+name+(i===1?' (نافلة)':'')+(t?'<span class="ptime">'+fmt12(t)+(i===1?' · تقريبي':'')+'</span>':'')+'<span class="pstatus">'+label+'</span>';div.title=label;div.setAttribute('aria-label',name+': '+label);div.setAttribute('aria-pressed',String(isPrayed(v)));const date=currentDate;div.disabled=date>todayStr();div.onclick=()=>prayerQuickRecord(i,date);
       const tile=document.createElement('div');tile.className='prayer-tile';tile.appendChild(div);const actions=document.createElement('div');actions.className='prayer-actions';
       if(i!==1){const adhkar=document.createElement('button');adhkar.type='button';adhkar.dataset.prayerAdhkar=i;adhkar.textContent='الأذكار';adhkar.setAttribute('aria-label','أذكار بعد صلاة '+name);adhkar.onclick=()=>prayerOpenAdhkar(i);actions.appendChild(adhkar);}
       const edit=document.createElement('button');edit.type='button';edit.dataset.prayerEdit=i;edit.textContent='⋯';edit.setAttribute('aria-label','تصحيح تسجيل '+name);edit.onclick=()=>openPrayerStatus(i);actions.appendChild(edit);tile.appendChild(actions);box.appendChild(tile);
-    });prayerFeedback();if(focused!==null)box.querySelector('[data-prayer-index="'+focused+'"]')?.focus({preventScroll:true});
+    });fridayRender();prayerFeedback();if(focused!==null)box.querySelector('[data-prayer-index="'+focused+'"]')?.focus({preventScroll:true});
   }
 
   const ADHKAR_MODE_OF = {athkar_am:"am", athkar_pm:"pm", athkar_sleep:"sleep", athkar_wake:"wake", athkar_salah:"salah"};
@@ -9631,7 +9671,7 @@
     const tasks=(state.tasks||[]).filter(taskActive).filter(task=>!itemDone(task));
     const priorities=(state.priorities||[]).filter(itemFilled).filter(item=>!itemDone(item));
     const prayerIndex=FARD_IDX.find(i=>!prayerVal(state.prayers,i))??-1;
-    const prayerName=prayerIndex>=0?PRAYERS[prayerIndex]:"سجل الفرائض مكتمل";
+    const prayerName=prayerIndex>=0?prayerDisplayName(prayerIndex):"سجل الفرائض مكتمل";
     const prayerTime=prayerIndex>=0?getTime(PRAYER_KEYS[prayerIndex]):null;
     const q=qLoad(), qRemain=Math.max(0,q.target-Math.max(0,q.page-q.startPage));
     const counter=state.dhikrCounter||null;
@@ -9706,7 +9746,7 @@
   }
   function dailyRouteEssentials(){
     const tasks=dailyRouteCandidates(), med=tasks.find(item=>/دواء|علاج|حبوب/.test(itemText(item))), family=tasks.find(item=>/^موعد عائلي:/.test(itemText(item))), prayer=FARD_IDX.find(i=>!prayerVal(state.prayers,i))??-1;
-    return [prayer>=0?"🕌 "+PRAYERS[prayer]:"",med?"💊 "+itemText(med):"",family?"👨‍👩‍👧 "+itemText(family):"",state.water<waterGoal()?"💧 بقي "+(waterGoal()-state.water).toLocaleString("ar-EG"):""].filter(Boolean);
+    return [prayer>=0?"🕌 "+prayerDisplayName(prayer):"",med?"💊 "+itemText(med):"",family?"👨‍👩‍👧 "+itemText(family):"",state.water<waterGoal()?"💧 بقي "+(waterGoal()-state.water).toLocaleString("ar-EG"):""].filter(Boolean);
   }
   function dailyRouteHabit(){
     const items=typeof wAllItemsForDate==="function"?wAllItemsForDate(currentDate):[];
@@ -10512,9 +10552,10 @@
     const today=todayStr(), todayState=notifyTodayState();
     const todayTimes=notifyTodayPrayerTimes();
     if(settings.prayer&&todayTimes){
+      if(isFriday(today)&&prayerClock(todayTimes._meta?.zone).date===today){const lead=fridayPrefs().firstLead,minutes=PC.minutes(todayTimes.Dhuhr);if(minutes!==null&&minutes>=lead){const m=minutes-lead,hm=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'),times={...todayTimes,Dhuhr:hm};if(notifyDue(prayerLocalTime(times,today,'Dhuhr'),+settings.prayerLead||0))notifyShow('🕌 أذان الجمعة الأول — تقديري','تنبيه مبكر حسب إعداد مسجدك؛ الأذان الثاني '+fmt12(todayTimes.Dhuhr),'prayer|'+today+'|FridayFirst',today);}}
       [["Fajr","الفجر"],["Dhuhr","الظهر"],["Asr","العصر"],["Maghrib","المغرب"],["Isha","العشاء"]].forEach(p=>{
         const hm=todayTimes[p[0]]||null;
-        if(prayerClock(todayTimes._meta?.zone).date===today&&notifyDue(prayerLocalTime(todayTimes,today,p[0]),+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+p[1],"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
+        if(prayerClock(todayTimes._meta?.zone).date===today&&notifyDue(prayerLocalTime(todayTimes,today,p[0]),+settings.prayerLead||0)) notifyShow("🕌 اقتربت صلاة "+(p[0]==='Dhuhr'&&isFriday(today)?'الجمعة':p[1]),"موعد الصلاة "+fmt12(hm)+(settings.prayerLead?" — بقي "+(+settings.prayerLead).toLocaleString("ar-EG")+" دقائق":""),"prayer|"+today+"|"+p[0],today);
       });
     }
     if(settings.tasks) plannerNotificationRows().forEach(({task,date,lead})=>{ const target=new Date(date+"T"+task.dueTime+":00").getTime()-lead*60000,now=Date.now();if(now>=target&&now-target<60000)notifyShow("🔔 "+task.text,lead?"بقي "+lead+" دقيقة":"حان الموعد","task|"+date+"|"+(task.recurrenceRootId||task.id)+"|"+task.dueTime+"|"+lead,date); });
@@ -16609,7 +16650,7 @@
     document.addEventListener('focusin',event=>{if(!pop.contains(event.target)&&!trigger.contains(event.target))close();},options);
     window.addEventListener('resize',position,options);document.addEventListener('scroll',event=>{if(!pop.contains(event.target))position();},{...options,capture:true});pop.querySelector('a')?.focus({preventScroll:true});
   }
-  function plannerPrayerMarks(date){return [['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']].map(([key,name])=>({name,time:plannerPrayerTime(date,key)})).filter(m=>PC.minutes(m.time)!==null);}
+  function plannerPrayerMarks(date){return [['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']].map(([key,name])=>({name:key==='Dhuhr'&&isFriday(date)?'الجمعة':name,time:plannerPrayerTime(date,key)})).filter(m=>PC.minutes(m.time)!==null);}
   function plannerDayStripHTML(cursor,prefs){const first=PC.plus(cursor,-((new Date(cursor+'T12:00:00').getDay()-prefs.weekStart+7)%7));return '<nav class="planner-day-strip" aria-label="أيام الأسبوع">'+Array.from({length:7},(_,i)=>{const date=PC.plus(first,i),d=new Date(date+'T12:00:00');return '<button type="button" data-planner-strip="'+date+'" aria-pressed="'+(date===cursor)+'" aria-label="'+expEsc(d.toLocaleDateString('ar-SA-u-ca-gregory',{weekday:'long',day:'numeric',month:'long'}))+'"><span>'+TASK_WEEKDAY_SHORT[d.getDay()]+'</span><b>'+d.getDate().toLocaleString('ar-EG')+'</b></button>';}).join('')+'</nav>';}
   function plannerTodayPlanIds(){return dailyRoutePlanIds().slice(0,3).map(id=>state.priorities?.find(p=>p.id===id)?.sourceTaskId||id);}
   function plannerLegacyPrioritiesHTML(ids){const items=(state.priorities||[]).filter(p=>!p.sourceTaskId&&ids.includes(p.id)&&itemFilled(p)&&!itemDone(p));return items.length?'<button type="button" id="plannerLegacyPriorities" class="planner-legacy-priorities">'+items.map(p=>expEsc(itemText(p))).join(' · ')+' — فتح الأولويات</button>':'';}
@@ -16796,7 +16837,7 @@
       '<div class="task-field-wide planner-hint" id="plannerParse" aria-live="polite"></div></div><details id="plannerDetails"'+''+'><summary>تفاصيل إضافية</summary><div class="task-fields">'+
       input('tmActual','وقت العمل الفعلي بالدقائق — اختياري','number',t.actualMinutes||'')+input('tmDeadline','آخر موعد للإنجاز','date',t.deadline)+
       select('tmStatus','الحالة',Object.entries(TASK_STATUS_LABELS),taskStatus(t))+select('tmCategory','التصنيف',[['','بدون تصنيف'],...TASK_CATEGORIES.map(c=>[c,c])],t.category)+
-      select('tmPrayerAnchor','وقت مرتبط بالصلاة',[['','بدون'],['Fajr','بعد الفجر'],['Dhuhr','بعد الظهر'],['Asr','بعد العصر'],['Maghrib','بعد المغرب'],['Isha','بعد العشاء']],t.prayerAnchor||'')+input('tmPrayerOffset','بعد الصلاة بدقائق','number',t.prayerOffset||15)+input('tmFollowUp','تاريخ المتابعة عند انتظار رد','date',t.followUpDate)+input('tmBuffer','تجهيز / انتقال قبل الموعد بالدقائق','number',t.bufferMinutes||'')+
+      select('tmPrayerAnchor','وقت مرتبط بالصلاة',[['','بدون'],['Fajr','بعد الفجر'],['Dhuhr',isFriday(t.dueDate||currentDate)?'بعد أذان الجمعة الثاني':'بعد الظهر'],['Asr','بعد العصر'],['Maghrib','بعد المغرب'],['Isha','بعد العشاء']],t.prayerAnchor||'')+input('tmPrayerOffset','بعد الصلاة بدقائق','number',t.prayerOffset||15)+input('tmFollowUp','تاريخ المتابعة عند انتظار رد','date',t.followUpDate)+input('tmBuffer','تجهيز / انتقال قبل الموعد بالدقائق','number',t.bufferMinutes||'')+
       input('tmLocation','الموقع / اسم المكان','text',t.location,true)+input('tmLink','رابط الموقع أو الصفحة','url',t.link,true)+input('tmContactName','جهة الاتصال','text',t.contactName)+input('tmPhone','رقم الجوال','tel',t.phone)+
       '<label class="task-field-wide">ملاحظات<textarea id="tmNotes" maxlength="3000">'+expEsc(t.notes||'')+'</textarea></label>'+
       '<label class="task-field-wide">خطوات وتجهيزات — كل سطر خطوة<textarea id="tmSubtasks">'+expEsc((t.subtasks||[]).map(s=>s.text).join('\n'))+'</textarea></label>'+
