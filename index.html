@@ -15121,7 +15121,7 @@
     const pausedCount=expState.fixedTemplates.filter(tp=>!tp.archivedAt && !tp.isActive).length;
     /* حسب الأسبوع */
     let weekBars=""; let ws=expWeekRange(r.start).start; let maxW=1; const weeks=[];
-    for(let i=0;i<6;i++){ const wr={start:ws, end:expWeekRange(ws).end}; const clip={start:(wr.start<r.start?r.start:wr.start), end:(wr.end>r.end?r.end:wr.end)}; const v=expNetInRange(clip); weeks.push({label:expArDateShort(clip.start), v}); if(v>maxW)maxW=v; const nd=new Date(wr.end+"T12:00:00"); nd.setDate(nd.getDate()+1); ws=fmtDate(nd); if(ws>r.end) break; }
+    for(let i=0;i<32;i++){ const wr={start:ws, end:expWeekRange(ws).end}; const clip={start:(wr.start<r.start?r.start:wr.start), end:(wr.end>r.end?r.end:wr.end)}; const v=expNetInRange(clip); weeks.push({label:expArDateShort(clip.start), v}); if(v>maxW)maxW=v; const nd=new Date(wr.end+"T12:00:00"); nd.setDate(nd.getDate()+1); ws=fmtDate(nd); if(ws>r.end) break; }
     weeks.forEach(w=> weekBars+='<div class="bm" title="'+w.label+': '+expMoney(w.v)+'"><i style="height:'+Math.max(3,Math.round((Math.max(0,w.v)/maxW)*100))+'%"></i></div>');
     const body=document.getElementById("expReportBody");
     body.innerHTML=expNavBar(EXP_MONTHS[m-1]+" "+_arnY(y))+
