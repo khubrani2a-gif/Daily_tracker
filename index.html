@@ -13841,7 +13841,26 @@
     const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId);
     return expToMinor(goal&&goal.currentMinor)+expFinanceRows('saving').filter(r=>r.goalId===goalId&&(!date||r.date<=date)).reduce((s,r)=>s+expToMinor(r.amountMinor),0);
   }
-  function expCyclePlan(start){return expFinanceRows('plan').filter(r=>r.cycleStart===start).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))[0]||{};}
+  function expRawCyclePlan(start){return expFinanceRows('plan').filter(r=>r.cycleStart===start).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))[0]||{};}
+  function expPlanVersion(start){const p=expRawCyclePlan(start);return JSON.stringify([p.id||'',p.updatedAt||0,p.savingMinor||0]);}
+  function expCyclePlan(start){const p=expRawCyclePlan(start),version=expPlanVersion(start),released=expFinanceRows('saving').filter(r=>r.releaseCycle===start&&r.releasePlanVersion===version).reduce((sum,r)=>sum+expToMinor(r.releaseMinor),0);return {...p,savingMinor:Math.max(0,expToMinor(p.savingMinor)-released)};}
+  function expFinanceSnapshot(){return JSON.stringify([expState.settings,expState.financeEntries,expState.savingsGoals,expState.transactions,expState.instances,expState.fixedTemplates,expState.categories,expState.recurringTransactions]);}
+  function expPreviewSavingsWithdrawal(goalId,amountMinor,date,purpose){
+    const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId&&!g.deletedAt);
+    if(!goal||!Number.isSafeInteger(amountMinor)||amountMinor<=0||!expValidFinanceDate(date)||date>todayStr()||!['retain','spend'].includes(purpose))throw Error('تحقق من الهدف والمبلغ والتاريخ.');
+    const dates=expFinanceRows('saving').filter(r=>r.goalId===goalId&&r.date>=date).map(r=>r.date).concat(date);
+    if(dates.some(d=>expSavingBalance(goalId,d)<amountMinor))throw Error('السحب يجعل رصيد الادخار في هذا التاريخ أو تاريخ لاحق سالبًا.');
+    const before=expFinancePeriods(date),target=expToMinor(expCyclePlan(before.cycle.start).savingMinor),net=before.savingsTransferred-amountMinor;
+    const targetMinor=purpose==='spend'?Math.min(target,Math.max(0,net)+before.savingsReserved):target;
+    const reserved=Math.max(0,targetMinor-Math.max(0,net));
+    return {goalId,amountMinor,date,purpose,targetMinor,releaseMinor:target-targetMinor,releaseCycle:before.cycle.start,releasePlanVersion:expPlanVersion(before.cycle.start),snapshot:expFinanceSnapshot(),before,after:{available:before.available+amountMinor+before.savingsReserved-reserved,savingsReserved:reserved,balance:expSavingBalance(goalId,date)-amountMinor}};
+  }
+  function expApplySavingsWithdrawal(v){
+    if(v.snapshot!==expFinanceSnapshot())return false;
+    const fresh=expPreviewSavingsWithdrawal(v.goalId,v.amountMinor,v.date,v.purpose),goal=expState.savingsGoals.find(g=>g.id===v.goalId);
+    expFinancePut({kind:'saving',goalId:v.goalId,name:goal.name,date:v.date,amountMinor:-v.amountMinor,purpose:v.purpose,releaseMinor:fresh.releaseMinor,releaseCycle:fresh.releaseCycle,releasePlanVersion:fresh.releasePlanVersion});return true;
+  }
+
   function expExpectedIncome(date){
     const rows=expFinanceRows('salary-setting').filter(r=>r.date<=date).sort((a,b)=>b.date.localeCompare(a.date)||(b.updatedAt||0)-(a.updatedAt||0));
     return rows.length?expToMinor(rows[0].amountMinor):expToMinor(expState.settings.salaryAmountMinor);
@@ -13892,14 +13911,17 @@
     };
   }
   function expOpenSavingsMovement(goalId){
-    const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId);if(!goal)return;
-    expOpenForm('<div class="exp-form-head"><h3>'+expEsc(goal.name)+' · حركة ادخار</h3><button data-close>✕</button></div><p>المدخر '+expMoney(expSavingBalance(goalId))+'؛ التحويل ليس مصروف شراء. إذا بقي حجز للادخار، يعيد السحب زيادة الحجز المتبقي؛ لزيادة المتاح للصرف خفّض الحجز في خطة راتبي.</p><div class="exp-field"><label for="fmKind">الحركة</label><select id="fmKind"><option value="deposit">تحويل إلى الادخار</option><option value="withdraw">سحب من الادخار</option></select></div>'+expFinanceField('المبلغ','fmAmount','text','')+expFinanceField('تاريخ الحركة','fmDate','date',todayStr())+'<div id="fmErr" class="exp-err"></div><button id="fmSave" class="exp-save">تسجيل الحركة</button>');
-    document.getElementById('fmSave').onclick=()=>{
-      const amount=expParseAmount(document.getElementById('fmAmount').value),date=document.getElementById('fmDate').value,withdraw=document.getElementById('fmKind').value==='withdraw';
-      const balances=expFinanceRows('saving').filter(r=>r.goalId===goalId&&r.date>=date).map(r=>expSavingBalance(goalId,r.date)).concat(expSavingBalance(goalId,date));
-      if(!(amount>0)||!date||date>todayStr()||(withdraw&&Math.min(...balances)<amount)){document.getElementById('fmErr').textContent='تحقق من التاريخ والمبلغ؛ لا يمكن سحب أكثر من المدخر في ذلك التاريخ أو جعل رصيد لاحق سالبًا.';return;}
-      expFinancePut({kind:'saving',goalId,name:goal.name,date,amountMinor:withdraw?-amount:amount});expCloseForm();expRefresh();
-    };
+    const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId&&!g.deletedAt);if(!goal)return;
+    expOpenForm('<div class="exp-form-head"><h3>'+expEsc(goal.name)+' · حركة ادخار</h3><button data-close>✕</button></div><p>المدخر '+expMoney(expSavingBalance(goalId))+'؛ التحويل ليس مصروف شراء.</p><div class="exp-field"><label for="fmKind">الحركة</label><select id="fmKind"><option value="deposit">تحويل إلى الادخار</option><option value="withdraw">سحب من الادخار</option></select></div>'+expFinanceField('المبلغ','fmAmount','text','')+expFinanceField('تاريخ الحركة','fmDate','date',todayStr())+'<div id="fmPurposeWrap" hidden><label for="fmPurpose">الغرض من السحب</label><select id="fmPurpose"><option value="retain">سأعيده للادخار · إبقاء الحجز</option><option value="spend">أحتاجه للصرف · تحرير الحجز اللازم</option></select><p>الحجز يخص دورة الراتب كاملة، وليس هدفًا واحدًا.</p></div><div id="fmPreview" role="status"></div><div id="fmErr" class="exp-err"></div><button id="fmCheck" class="exp-save">معاينة الحركة</button><button id="fmSave" class="exp-save" disabled>تسجيل الحركة</button>');
+    const q=id=>document.getElementById(id);let preview=null,depositSnapshot='';
+    const reset=()=>{preview=null;depositSnapshot='';q('fmSave').disabled=true;q('fmPreview').textContent='';q('fmPurposeWrap').hidden=q('fmKind').value!=='withdraw';};
+    ['fmKind','fmAmount','fmDate','fmPurpose'].forEach(id=>q(id).oninput=reset);
+    q('fmCheck').onclick=()=>{try{const amount=expParseAmount(q('fmAmount').value),date=q('fmDate').value;if(!Number.isSafeInteger(amount)||amount<=0||!expValidFinanceDate(date)||date>todayStr())throw Error('تحقق من المبلغ والتاريخ.');
+      if(q('fmKind').value==='withdraw'){preview=expPreviewSavingsWithdrawal(goalId,amount,date,q('fmPurpose').value);q('fmPreview').textContent='دورة '+expArDate(preview.before.cycle.start)+' — '+expArDate(preview.before.cycle.end)+' · حجز متبقٍ: '+expMoney(preview.before.savingsReserved)+' ← '+expMoney(preview.after.savingsReserved)+' · المتاح: '+expMoney(preview.before.available)+' ← '+expMoney(preview.after.available)+' · رصيد الهدف بعد الحركة: '+expMoney(preview.after.balance);}
+      else{depositSnapshot=expFinanceSnapshot();q('fmPreview').textContent='تحويل '+expMoney(amount)+' إلى الادخار بتاريخ '+expArDate(date)+'. الرصيد بعد الحركة: '+expMoney(expSavingBalance(goalId,date)+amount);}
+      q('fmErr').textContent='';q('fmSave').disabled=false;
+    }catch(e){q('fmErr').textContent=e.message;q('fmSave').disabled=true;}};
+    q('fmSave').onclick=()=>{try{if(q('fmKind').value==='withdraw'){if(!preview||!expApplySavingsWithdrawal(preview))throw Error('تغيرت البيانات. أعد المعاينة.');}else{if(!depositSnapshot||depositSnapshot!==expFinanceSnapshot())throw Error('تغيرت البيانات. أعد المعاينة.');expFinancePut({kind:'saving',goalId,name:goal.name,date:q('fmDate').value,amountMinor:expParseAmount(q('fmAmount').value)});}expCloseForm();expRefresh();}catch(e){q('fmErr').textContent=e.message;q('fmSave').disabled=true;}};
   }
   function expSalaryAllocation(x){
     const recurringPaid=expNetInRange(x.cycle,t=>!!t.recurringRuleId&&expClassify(t)!=='fixed'),fixedPaid=expNetInRange(x.cycle,t=>expClassify(t)==='fixed');
@@ -13922,6 +13944,7 @@
   function expRemoveFinanceMovement(id){
     const row=expFinanceRows().find(r=>r.id===id);if(!row||!['income','saving'].includes(row.kind))return false;
     if(row.kind==='saving'){
+      if(row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle))return false;
       const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);
       if(dates.some(date=>expSavingBalance(row.goalId,date)-expToMinor(row.amountMinor)<0))return false;
     }
@@ -13935,7 +13958,7 @@
       if(!expRemoveFinanceMovement(b.dataset.financeRemove)){hifzShowToast('لا يمكن إلغاء الحركة قبل تصحيح السحوبات المرتبطة.');return;}
       expOpenFinanceLedger(kind,date);expRefresh();const id=b.dataset.financeRemove;
       expFormBox.insertAdjacentHTML('beforeend','<button class="exp-add-line" id="flUndo">تراجع عن إلغاء الحركة</button>');
-      document.getElementById('flUndo').onclick=()=>{const row=(expState.financeEntries||[]).find(r=>r.id===id);if(row){if(row.kind==='saving'&&row.amountMinor<0){const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);if(dates.some(date=>expSavingBalance(row.goalId,date)+expToMinor(row.amountMinor)<0)){hifzShowToast('لا يمكن التراجع لأن حركة لاحقة تجعل المدخر سالبًا.');return;}}row.deletedAt=null;row.updatedAt=Date.now();expSave(expState);}expOpenFinanceLedger(kind,date);expRefresh();};
+      document.getElementById('flUndo').onclick=()=>{const row=(expState.financeEntries||[]).find(r=>r.id===id);if(row){if(row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle)){hifzShowToast('تغيرت خطة الادخار؛ راجعها قبل التراجع.');return;}if(row.kind==='saving'&&row.amountMinor<0){const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);if(dates.some(date=>expSavingBalance(row.goalId,date)+expToMinor(row.amountMinor)<0)){hifzShowToast('لا يمكن التراجع لأن حركة لاحقة تجعل المدخر سالبًا.');return;}}row.deletedAt=null;row.updatedAt=Date.now();expSave(expState);}expOpenFinanceLedger(kind,date);expRefresh();};
     }}));
     if(kind==='saving'){
       const goals=(expState.savingsGoals||[]).filter(g=>!g.deletedAt);
