@@ -17,8 +17,9 @@ test('period boundaries, overdue debt, hidden budgets and historical plans',asyn
  e.fixedTemplates=[{id:'T',name:'إيجار',startMonth:'2026-09',dueDay:1,defaultAmountMinor:10000,isActive:true,overrides:{}}];
  const debt=a.expFinancePeriods('2026-10-22');a.expMonthInstances(2026,11);a.expOpenFixedForm('T');document.getElementById('ffAmt').value='200';document.getElementById('ffSave').click();document.querySelector('[data-scopeval="fromNext"]').click();
  const nov=e.instances.find(i=>i.month===11).plannedAmountMinor,sep=a.expPlannedForMonth(e.fixedTemplates[0],2026,9);
- return{cases,debt,nov,sep};});
- assert.equal(r.cases[0].week.start,'2026-06-27');assert.equal(r.cases[1].week.end,'2026-11-27');assert.equal(r.cases[2].cycle.start,'2026-12-27');assert.equal(r.cases[3].cycle.end,'2028-03-26');assert.equal(r.cases[0].weekBudget,70000);assert.equal(r.debt.outstanding,20000);assert.equal(r.debt.overdue,10000);assert.equal(r.nov,20000);assert.equal(r.sep,10000);
+ const edit=e.activityLog.find(x=>x.type==='fixed-edit');a.expActivityUndo(edit.id);const undoFuture=a.expPlannedForMonth(e.fixedTemplates[0],2026,11);
+ return{cases,debt,nov,sep,undoFuture};});
+ assert.equal(r.cases[0].week.start,'2026-06-27');assert.equal(r.cases[1].week.end,'2026-11-27');assert.equal(r.cases[2].cycle.start,'2026-12-27');assert.equal(r.cases[3].cycle.end,'2028-03-26');assert.equal(r.cases[0].weekBudget,70000);assert.equal(r.debt.outstanding,20000);assert.equal(r.debt.overdue,10000);assert.equal(r.nov,20000);assert.equal(r.sep,10000);assert.equal(r.undoFuture,10000);
  }finally{await b.close();}
 });
 test('old payment reversal preserves later payments and rounding conserves weekly budget',async()=>{

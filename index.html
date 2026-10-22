@@ -13403,7 +13403,7 @@
   function expFixedSnapshot(tplId){ return {template:expClone(expTplById(tplId)),instances:expState.instances.filter(i=>i.templateId===tplId).map(expClone)}; }
   function expRestoreFixedSnapshot(snapshot){
     if(!snapshot||!snapshot.template) return;
-    const tpl=expTplById(snapshot.template.id); if(tpl) Object.assign(tpl,expClone(snapshot.template),{updatedAt:Date.now()});
+    const tpl=expTplById(snapshot.template.id); if(tpl){Object.keys(tpl).forEach(key=>{if(!(key in snapshot.template))delete tpl[key];});Object.assign(tpl,expClone(snapshot.template),{updatedAt:Date.now()});}
     (snapshot.instances||[]).forEach(saved=>{ const inst=expInstById(saved.id); if(inst) Object.assign(inst,expClone(saved),{updatedAt:Date.now()}); });
   }
   function expActivityPush(entry){
