@@ -12646,7 +12646,7 @@
     raw.familyShopping = objArr(raw.familyShopping);
     raw.familyEvents = objArr(raw.familyEvents);
     raw.financeEntries = objArr(raw.financeEntries);
-    raw.activityLog = objArr(raw.activityLog).slice(-80);
+    raw.activityLog = objArr(raw.activityLog).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||String(a.id).localeCompare(String(b.id))).slice(-80);
     /* ترحيل قائمة التسوق المحلية الأولى إلى بيانات العائلة المتزامنة، بلا فقدان للعناصر القديمة. */
     if(!raw.familyShopping.length){
       try{ const legacy=JSON.parse(localStorage.getItem("h2do-family-shopping-v1")||"[]"); if(Array.isArray(legacy)) raw.familyShopping=legacy.filter(x=>x&&typeof x.text==="string").slice(0,200).map(x=>Object.assign({id:newId(),category:"أخرى",quantity:"",done:false,createdAt:Date.now(),updatedAt:Date.now(),deletedAt:null},x)); }catch(e){}
@@ -13481,7 +13481,7 @@
   function expActivityPush(entry){
     if(!Array.isArray(expState.activityLog)) expState.activityLog=[];
     const now=Date.now(), rec=Object.assign({id:newId(),createdAt:now,updatedAt:now,undoneAt:null},entry);
-    expState.activityLog.push(rec); if(expState.activityLog.length>80) expState.activityLog=expState.activityLog.slice(-80);
+    expState.activityLog.push(rec); expState.activityLog.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||String(a.id).localeCompare(String(b.id))); if(expState.activityLog.length>80) expState.activityLog=expState.activityLog.slice(-80);
     expSave(expState); return rec;
   }
   function expActivityCanUndo(rec){
