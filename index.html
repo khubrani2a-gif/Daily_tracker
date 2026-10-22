@@ -12985,7 +12985,8 @@
       // A start correction removes a key; ordinary budget union must not resurrect it.
       c.budgetCorrections=expMergeById(a.budgetCorrections,b.budgetCorrections,r=>r.id);
       const corrections=c.budgetCorrections.slice().sort((p,q)=>Math.max(p.updatedAt||0,p.undoneAt||0)-Math.max(q.updatedAt||0,q.undoneAt||0)||String(p.id).localeCompare(String(q.id)));
-      corrections.forEach(r=>{const removed=(r.undoneAt?r.after:r.before)?.[0],added=(r.undoneAt?r.before:r.after)?.[0];if(removed&&added&&removed.from!==added.from){bm.delete(removed.from);if(!bm.has(added.from))bm.set(added.from,{...added});}});
+      const latest=corrections.at(-1),effective=latest&&(latest.undoneAt?latest.before:latest.after)?.[0];
+      if(effective){const startKeys=new Set(corrections.flatMap(r=>[r.before?.[0]?.from,r.after?.[0]?.from]).filter(Boolean));startKeys.forEach(from=>{if(from!==effective.from)bm.delete(from);});if(!bm.has(effective.from))bm.set(effective.from,{...effective});}
       c.budgets=[...bm.values()].sort((p,q)=> p.from<q.from?-1:1);
       /* الفئات الفرعية تُدمج بالمعرّف وبالاسم المطبّع كي لا يضيع تصنيف مخصص أضافه جهاز آخر. */
       const sm=new Map(); (a.subcategories||[]).concat(b.subcategories||[]).forEach(s=>{if(!s||!s.name)return;const k=s.id||expNormCategoryText(s.name),ex=sm.get(k);if(!ex||(s.updatedAt||0)>(ex.updatedAt||0)||((s.updatedAt||0)===(ex.updatedAt||0)&&expRecordTie(s,ex)===s))sm.set(k,s);});
@@ -14976,12 +14977,12 @@
   function expApplyBudgetStart(v){
     const c=expCatById(v.categoryId);if(!c||JSON.stringify(c)!==v.snapshot)return false;
     const checked=expPreviewBudgetStart(c.id,v.from);if(JSON.stringify(checked.after)!==JSON.stringify(v.after))return false;
-    c.budgets=v.after.map(b=>({...b}));c.updatedAt=Date.now();
+    c.budgets=v.after.map(b=>({...b}));c.updatedAt=Math.max(Date.now(),(c.updatedAt||0)+1);
     c.budgetCorrections=(c.budgetCorrections||[]).concat({id:newId(),date:todayStr(),before:v.before,after:v.after,updatedAt:c.updatedAt});expSave(expState);return true;
   }
   function expUndoBudgetStart(id){
-    const c=expCatById(id),r=c?.budgetCorrections?.filter(r=>!r.undoneAt).at(-1);if(!r||JSON.stringify(c.budgets)!==JSON.stringify(r.after)||c.updatedAt!==r.updatedAt)return false;
-    c.budgets=r.before.map(b=>({...b}));r.undoneAt=Date.now();r.updatedAt=r.undoneAt;c.updatedAt=Date.now();expSave(expState);return true;
+    const c=expCatById(id),r=c?.budgetCorrections?.filter(r=>!r.undoneAt).sort((a,b)=>(a.updatedAt||0)-(b.updatedAt||0)||String(a.id).localeCompare(String(b.id))).at(-1);if(!r||JSON.stringify(c.budgets)!==JSON.stringify(r.after)||c.updatedAt!==r.updatedAt)return false;
+    c.budgets=r.before.map(b=>({...b}));r.undoneAt=Math.max(Date.now(),(c.updatedAt||0)+1);r.updatedAt=r.undoneAt;c.updatedAt=r.undoneAt;expSave(expState);return true;
   }
   function expOpenBudgetHistory(id){
     const c=expCatById(id);if(!c)return;const first=(c.budgets||[]).slice().sort((a,b)=>a.from.localeCompare(b.from))[0];if(!first)return;
