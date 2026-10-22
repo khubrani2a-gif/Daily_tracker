@@ -13427,7 +13427,7 @@
     inst.updatedAt = Date.now();
   }
   function expOutstandingForMonth(y,m){
-    return expMonthInstances(y,m).reduce((a,i)=> a + Math.max(0, expToMinor(i.plannedAmountMinor) - expToMinor(i.paidAmountMinor)), 0);
+    return expMonthInstances(y,m).reduce((a,i)=> a + expObligationRemaining('fixed',i.id), 0);
   }
   /* ---------- طفرات حالة الالتزام (إيقاف/استئناف/أرشفة/استعادة) مع سجلّ التعليق الشهري ---------- */
   function expPauseTemplate(tplId){
@@ -13566,7 +13566,7 @@
     const last=new Date(y,m+1,0).getDate();
     return fmtDate(new Date(y,m,Math.min(day,last),12));
   }
-  function expRecurringRemaining(row,date){return Math.max(0,expToMinor(row.amountMinor)-expNet(expActiveTx().filter(t=>t.recurringDueId===row.id&&(!date||t.transactionDate<=date))));}
+  function expRecurringRemaining(row,date){return expObligationRemaining('recurring',row.id,date);}
   function expOpenRecurringPayment(id){
     const row=expFinanceRows('recurring-due').find(r=>r.id===id);if(!row)return;
     expOpenForm('<div class="exp-form-head"><h3>'+expEsc(row.name)+'</h3><button data-close>✕</button></div><p>المتبقي '+expMoney(expRecurringRemaining(row))+'</p>'+expFinanceField('قيمة الفاتورة (يمكن تعديل المتغيرة)','rpTotal','text',row.amountMinor/100)+expFinanceField('الدفعة الفعلية','rpAmount','text',expRecurringRemaining(row)/100)+expFinanceField('تاريخ الدفع','rpDate','date',todayStr())+'<div class="exp-err" id="rpErr"></div><button class="exp-save" id="rpSave">تسجيل دفعة</button><button class="exp-add-line" id="rpSkip">تخطي هذا الاستحقاق فقط</button>');
@@ -13576,7 +13576,7 @@
       const save=()=>{row.amountMinor=total;row.updatedAt=Date.now();expAddTransaction({amountMinor:amount,transactionDate:date,categoryId:row.categoryId,transactionType:'expense',description:row.name,recurringDueId:row.id,recurringRuleId:row.ruleId,countAgainstWeeklyBudget:true});expCloseForm();expRefresh();};
       if(expActiveTx().some(t=>t.transactionDate===date&&t.amountMinor===amount&&t.categoryId===row.categoryId))hifzShowConfirm({title:'مصروف مشابه موجود',body:'تحقق من أنه ليس نفس الدفع المسجل يدويًا.',okText:'دفعة مستقلة',cancelText:'إلغاء',onOk:save});else save();
     };
-    document.getElementById('rpSkip').onclick=()=>hifzShowConfirm({title:'تخطي هذا الاستحقاق؟',body:'تبقى الدفعات السابقة والسلسلة، ويُلغى المتبقي لهذه المرة فقط.',okText:'تخطي',cancelText:'إلغاء',onOk:()=>{row.skipped=true;row.updatedAt=Date.now();expSave(expState);expCloseForm();expRefresh();}});
+    document.getElementById('rpSkip').onclick=()=>expOpenLiabilityReduction('recurring',id);
   }
 
   function expGenerateRecurringDue(data, upTo){
@@ -14051,7 +14051,7 @@
     const add=(id,planned,due,templateId)=>{
       if(due>cycle.end)return;
       const paid=id?expNet(expActiveTx().filter(tx=>tx.fixedExpenseInstanceId===id&&tx.transactionDate<=cycle.end)):0;
-      const remain=Math.max(0,planned-Math.max(0,paid));
+      const remain=Math.max(0,planned-Math.max(0,paid)-(id?expObligationAdjustments('fixed',id,cycle.end):0));
       if(remain)obligationRows.push({templateId,due,remaining:remain,name:(expTplById(templateId)||{}).name||'التزام'});
       outstanding+=remain;if(due<cycle.start){overdue+=remain;if(remain)overdueRows.push({templateId,due,remaining:remain});}
     };
@@ -14187,7 +14187,7 @@
       insts.forEach(inst=>{
         const tpl = expTplById(inst.templateId)||{name:"التزام"};
         const pillCls = inst.status==="paid"?"paid":inst.status==="partial"?"partial":"unpaid";
-        const pillTxt = inst.status==="paid"?"مدفوع":inst.status==="partial"?"مدفوع جزئيًا":"غير مدفوع";
+        const pillTxt = expObligationRemaining('fixed',inst.id)===0&&expObligationAdjustments('fixed',inst.id)>0?'مسوّى':inst.status==="paid"?"مدفوع":inst.status==="partial"?"مدفوع جزئيًا":"غير مدفوع";
         let sub = "المخطط: "+expMoney(inst.plannedAmountMinor);
         if(inst.status!=="unpaid") sub += " · الفعلي: "+expMoney(inst.paidAmountMinor);
         if(inst.status!=="paid"){
@@ -14209,8 +14209,8 @@
     }
     const totalPlanned = insts.reduce((a,i)=>a+i.plannedAmountMinor,0);
     const totalPaid = insts.reduce((a,i)=>a+i.paidAmountMinor,0);
-    const totalRemain = insts.reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
-    const unpaidCount = insts.filter(i=>i.status!=="paid").length;
+    const totalRemain = insts.reduce((a,i)=>a+expObligationRemaining('fixed',i.id),0);
+    const unpaidCount = insts.filter(i=>expObligationRemaining('fixed',i.id)>0).length;
     box.innerHTML =
       '<h3>🏠 التزامات دورة الراتب</h3><div class="exp-card-hint">من '+expArDateShort(cycle.start)+' إلى '+expArDateShort(cycle.end)+' — لا تُحسب صرفًا فعليًا إلا بعد تسجيل الدفعة</div>'+
       rows +
@@ -14782,7 +14782,7 @@
   function expOpenPaymentForm(instId){
     const inst = expInstById(instId); if(!inst) return;
     const tpl = expTplById(inst.templateId)||{name:"التزام"};
-    const remain = Math.max(0, inst.plannedAmountMinor - inst.paidAmountMinor);
+    const remain = expObligationRemaining('fixed',inst.id);
     expOpenForm(
       '<div class="exp-form-head"><h3>تسجيل دفعة — '+expEsc(tpl.name)+'</h3><button data-close>✕</button></div>'+
       '<div class="exp-foot" style="border:none;margin:0 0 .8rem"><div class="exp-foot-row"><span>الالتزام</span><b>'+expMoney(inst.plannedAmountMinor)+'</b></div>'+
@@ -14792,9 +14792,10 @@
       '<div class="exp-err" id="pfErr"></div>'+
       '<div class="exp-grid2"><div class="exp-field"><label>التاريخ</label><input type="date" id="pfDate" value="'+todayStr()+'"></div>'+
       '<div class="exp-field"><label>طريقة الدفع</label><select id="pfPay">'+expOptions(EXP_PAYMENTS, expState.settings.defaultPaymentMethod)+'</select></div></div>'+
-      '<button class="exp-save" id="pfSave">تسجيل الدفعة</button>'
+      '<button class="exp-save" id="pfSave">تسجيل الدفعة</button><button id="pfReduction">إلغاء أو تخفيض المتبقي لهذه المرة</button>'
     );
     const g=id=>expFormBox.querySelector(id);
+    g('#pfReduction').onclick=()=>expOpenLiabilityReduction('fixed',instId);
     g("#pfSave").onclick=()=>{
       if(expSaving) return;
       const amt=expParseAmount(g("#pfAmt").value);
@@ -15179,25 +15180,59 @@
       expCloseForm(); expRefresh();
     };
   }
+  function expObligationAdjustments(kind,id,date){
+    date=date||todayStr();
+    const rows=expFinanceRows('liability-reduction').concat(expActiveTx().filter(t=>t.transactionType==='refund'));
+    return rows.filter(r=>r.liabilityKind===kind&&r.liabilityId===id&&r.liabilityDate<=date).reduce((sum,r)=>sum+Math.max(0,expToMinor(r.liabilityReductionMinor)),0);
+  }
+  function expObligationRemaining(kind,id,date){
+    date=date||todayStr();const row=kind==='fixed'?expInstById(id):expFinanceRows('recurring-due').find(r=>r.id===id);if(!row)return 0;
+    const planned=expToMinor(kind==='fixed'?row.plannedAmountMinor:row.amountMinor),paid=expNet(expActiveTx().filter(t=>(kind==='fixed'?t.fixedExpenseInstanceId===id:t.recurringDueId===id)&&t.transactionDate<=date));
+    return Math.max(0,planned-Math.max(0,paid)-expObligationAdjustments(kind,id,date));
+  }
+  function expPreviewLiabilityReduction(kind,id,amount,date){
+    if(!['fixed','recurring'].includes(kind)||!Number.isSafeInteger(amount)||amount<=0||!expValidFinanceDate(date)||date>todayStr()||amount>expObligationRemaining(kind,id,date))throw Error('اختر مبلغ تخفيض لا يتجاوز المتبقي وتاريخًا صحيحًا.');
+    return {kind,id,amount,date,snapshot:expFinanceSnapshot(),before:expObligationRemaining(kind,id,date),after:expObligationRemaining(kind,id,date)-amount};
+  }
+  function expApplyLiabilityReduction(v){if(v.snapshot!==expFinanceSnapshot())return false;expPreviewLiabilityReduction(v.kind,v.id,v.amount,v.date);expFinancePut({kind:'liability-reduction',liabilityKind:v.kind,liabilityId:v.id,liabilityDate:v.date,liabilityReductionMinor:v.amount,date:v.date});return true;}
+  function expOpenLiabilityReduction(kind,id){
+    expOpenForm('<div class="exp-form-head"><h3>إلغاء أو تخفيض المتبقي لهذه المرة</h3><button data-close>✕</button></div><p>هذا إعفاء من التزام، وليس استرداد مال. لا يغيّر الدفعات أو الأشهر التالية.</p>'+expFinanceField('مقدار التخفيض','lrAmount','text',expObligationRemaining(kind,id)/100)+expFinanceField('تاريخ سريان التخفيض','lrDate','date',todayStr())+'<div id="lrPreview" role="status"></div><div id="lrErr" class="exp-err"></div><button id="lrCheck">معاينة</button><button id="lrSave" class="exp-save" disabled>حفظ التخفيض</button><div id="lrHistory"></div>');
+    const q=id=>document.getElementById(id);let v=null;
+    ['lrAmount','lrDate'].forEach(id=>q(id).oninput=()=>{v=null;q('lrSave').disabled=true;});
+    q('lrCheck').onclick=()=>{try{v=expPreviewLiabilityReduction(kind,id,expParseAmount(q('lrAmount').value),q('lrDate').value);q('lrPreview').textContent='المتبقي في تاريخ التعديل: '+expMoney(v.before)+' ← '+expMoney(v.after);q('lrErr').textContent='';q('lrSave').disabled=false;}catch(e){q('lrErr').textContent=e.message;q('lrSave').disabled=true;}};
+    q('lrSave').onclick=()=>{if(!v||!expApplyLiabilityReduction(v)){q('lrErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};
+    const rows=expFinanceRows('liability-reduction').filter(r=>r.liabilityKind===kind&&r.liabilityId===id);
+    q('lrHistory').innerHTML=rows.map(r=>'<p>'+expArDate(r.liabilityDate)+' · '+expMoney(r.liabilityReductionMinor)+' <button data-reduction-undo="'+expEsc(r.id)+'">إلغاء هذا التخفيض</button></p>').join('');
+    q('lrHistory').querySelectorAll('[data-reduction-undo]').forEach(b=>b.onclick=()=>{const r=expFinanceRows('liability-reduction').find(r=>r.id===b.dataset.reductionUndo);if(!r)return;hifzShowConfirm({title:'إلغاء التخفيض؟',body:'سيعود المبلغ إلى الالتزام غير المدفوع، وتبقى الدفعات كما هي.',okText:'إلغاء التخفيض',cancelText:'رجوع',onOk:()=>{r.deletedAt=Date.now();r.updatedAt=Date.now();expSave(expState);expOpenLiabilityReduction(kind,id);expRefresh();}});});
+  }
+  function expPreviewRefundSettlement(txId,refundMinor,receiptDate,reductionMinor,effectiveDate){
+    const t=expActiveTx().find(t=>t.id===txId&&t.transactionType==='expense');
+    if(!t||!Number.isSafeInteger(refundMinor)||refundMinor<=0||!Number.isSafeInteger(reductionMinor)||reductionMinor<0||!expValidFinanceDate(receiptDate)||receiptDate<t.transactionDate||receiptDate>todayStr())throw Error('تحقق من المصروف والمبلغ وتاريخ الاسترداد.');
+    const kind=t.fixedExpenseInstanceId?'fixed':t.recurringDueId?'recurring':null,id=t.fixedExpenseInstanceId||t.recurringDueId;
+    if(reductionMinor&&(!kind||!expValidFinanceDate(effectiveDate)||effectiveDate<receiptDate||effectiveDate>todayStr()))throw Error('اختر تاريخ تعديل الالتزام من يوم الاسترداد وحتى اليوم.');
+    const remaining=kind?expObligationRemaining(kind,id,effectiveDate||receiptDate):0;
+    // Refunds can exceed the net paid amount in imported data; only the part reopening liability is cancellable.
+    const obligation=kind==='fixed'?expInstById(id):expFinanceRows('recurring-due').find(r=>r.id===id);
+    const planned=obligation?expToMinor(kind==='fixed'?obligation.plannedAmountMinor:obligation.amountMinor):0;
+    const reopened=kind?Math.min(refundMinor,Math.max(0,planned-expObligationAdjustments(kind,id,effectiveDate||receiptDate)-remaining)):0;
+    if(reductionMinor>remaining+reopened)throw Error('التخفيض يتجاوز المتبقي بعد الاسترداد.');
+    return {txId,refundMinor,receiptDate,reductionMinor,effectiveDate,kind,id,snapshot:expFinanceSnapshot(),remaining:remaining+reopened-reductionMinor};
+  }
+  function expApplyRefundSettlement(v){
+    if(v.snapshot!==expFinanceSnapshot())return false;const checked=expPreviewRefundSettlement(v.txId,v.refundMinor,v.receiptDate,v.reductionMinor,v.effectiveDate),t=expActiveTx().find(t=>t.id===v.txId);
+    expAddTransaction({amountMinor:v.refundMinor,transactionDate:v.receiptDate,categoryId:t.categoryId,transactionType:'refund',relatedTransactionId:t.id,recurringDueId:t.recurringDueId||null,recurringRuleId:t.recurringRuleId||null,fixedExpenseInstanceId:t.fixedExpenseInstanceId||null,tripId:t.tripId||null,countAgainstWeeklyBudget:t.countAgainstWeeklyBudget!==false,description:'استرجاع',liabilityKind:checked.kind,liabilityId:checked.id||null,liabilityReductionMinor:v.reductionMinor,liabilityDate:v.effectiveDate||v.receiptDate});return true;
+  }
   function expOpenRefundForm(txId){
-    const t=expState.transactions.find(x=>x.id===txId); if(!t) return;
-    const refunded=expActiveTx().filter(x=>x.relatedTransactionId===txId&&x.transactionType==="refund").reduce((a,x)=>a+expToMinor(x.amountMinor),0);
-    const remain=Math.max(0, expToMinor(t.amountMinor)-refunded);
-    expOpenForm('<div class="exp-form-head"><h3>استرجاع مبلغ</h3><button data-close>✕</button></div>'+
-      '<div class="exp-card-hint">استرجاع فعلي لمبلغ أُعيد من الجهة/المتجر (يختلف عن «تراجع عن الدفع»).</div>'+
-      '<div class="exp-foot" style="border:none;margin:0 0 .8rem"><div class="exp-foot-row"><span>المبلغ الأصلي</span><b>'+expMoney(t.amountMinor)+'</b></div><div class="exp-foot-row"><span>المتبقي القابل للاسترجاع</span><b>'+expMoney(remain)+'</b></div></div>'+
-      '<div class="exp-field"><label>مبلغ الاسترجاع (ر.س)</label><input class="amount" id="rfAmt" inputmode="decimal" value="'+(remain/100)+'"></div>'+
-      expFinanceField('تاريخ استلام الاسترجاع','rfDate','date',todayStr())+'<div class="exp-err" id="rfErr"></div><button class="exp-save" id="rfSave">تسجيل الاسترجاع</button>');
-    const g=id=>expFormBox.querySelector(id);
-    g("#rfSave").onclick=()=>{
-      if(expSaving) return;
-      const amt=expParseAmount(g("#rfAmt").value);
-      if(isNaN(amt)||amt<=0){ g("#rfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
-      const date=g("#rfDate").value;if(!date||date<t.transactionDate||date>todayStr()){g("#rfErr").textContent="اختر تاريخ استلام صحيحًا بعد المصروف وحتى اليوم.";return;}
-      const proceed=()=>{ expSaving=true; expAddTransaction({ amountMinor:amt, transactionDate:date, categoryId:t.categoryId, transactionType:"refund", relatedTransactionId:txId, recurringDueId:t.recurringDueId||null, recurringRuleId:t.recurringRuleId||null, fixedExpenseInstanceId:t.fixedExpenseInstanceId||null, tripId:t.tripId||null, countAgainstWeeklyBudget:t.countAgainstWeeklyBudget!==false, description:"استرجاع" }); expCloseForm(); expRefresh(); };
-      if(amt>remain){ hifzShowConfirm({title:"الاسترجاع يتجاوز المتبقي", body:"مبلغ الاسترجاع أكبر من المتبقي القابل للاسترجاع. المتابعة؟", okText:"متابعة", cancelText:"إلغاء", onOk:proceed}); }
-      else proceed();
-    };
+    const t=expActiveTx().find(t=>t.id===txId&&t.transactionType==='expense');if(!t)return;
+    const refunded=expActiveTx().filter(x=>x.relatedTransactionId===txId&&x.transactionType==='refund').reduce((a,x)=>a+expToMinor(x.amountMinor),0),remain=Math.max(0,expToMinor(t.amountMinor)-refunded),linked=t.fixedExpenseInstanceId||t.recurringDueId;
+    expOpenForm('<div class="exp-form-head"><h3>استرجاع مبلغ</h3><button data-close>✕</button></div><p>سجل المال الذي عاد فعلًا. إلغاء الالتزام لا يعني استلام المال.</p><p>المتبقي القابل للاسترجاع: '+expMoney(remain)+'</p>'+expFinanceField('مبلغ الاسترجاع','rfAmt','text',remain/100)+expFinanceField('تاريخ استلام الاسترجاع','rfDate','date',todayStr())+(linked?'<details><summary>هل تغير الالتزام؟</summary><label for="rfMode">حالة المتبقي لهذه المرة</label><select id="rfMode"><option value="keep">الالتزام مستمر</option><option value="reduce">تخفيض جزئي</option><option value="cancel">إلغاء المتبقي لهذه المرة</option></select>'+expFinanceField('مقدار التخفيض الجزئي (ليس مبلغ الاسترداد)','rfReduction','text','0')+expFinanceField('تاريخ سريان تعديل الالتزام','rfEffective','date',todayStr())+'<p>الدفعات والسلسلة القادمة تبقى كما هي. إلغاء سجل الاسترداد يلغي التخفيض المرتبط به أيضًا.</p></details>':'')+'<div id="rfPreview" role="status"></div><div class="exp-err" id="rfErr"></div><button class="exp-save" id="rfSave">تسجيل الاسترجاع</button>');
+    const q=id=>document.getElementById(id);let snapshot=expFinanceSnapshot();
+    const preview=()=>{const amount=expParseAmount(q('rfAmt').value),date=q('rfDate').value,mode=q('rfMode')?.value||'keep',effective=q('rfEffective')?.value||date;let reduction=mode==='reduce'?expParseAmount(q('rfReduction').value):0;
+      if(mode==='cancel'){const base=expPreviewRefundSettlement(txId,amount,date,0,effective);reduction=base.remaining;}
+      const v=expPreviewRefundSettlement(txId,amount,date,reduction,effective);q('rfPreview').textContent=linked?'المتبقي بعد الاسترداد والتعديل: '+expMoney(v.remaining):'يُحسب الاسترداد بتاريخ استلامه في الأسبوع ودورة الراتب.';return v;};
+    expFormBox.querySelectorAll('input,select').forEach(el=>el.oninput=()=>{try{preview();q('rfErr').textContent='';}catch(e){q('rfErr').textContent=e.message;}});
+    q('rfSave').onclick=()=>{if(expSaving)return;try{if(snapshot!==expFinanceSnapshot()){snapshot=expFinanceSnapshot();preview();throw Error('تغيرت البيانات. راجع المعاينة ثم احفظ من جديد.');}const v=preview(),proceed=()=>{if(!expApplyRefundSettlement(v)){q('rfErr').textContent='تغيرت البيانات؛ أعد المحاولة.';return;}expCloseForm();expRefresh();};if(v.refundMinor>remain)hifzShowConfirm({title:'الاسترجاع يتجاوز المتبقي',body:'مبلغ الاسترجاع أكبر من المبلغ الأصلي المتبقي. المتابعة؟',okText:'متابعة',cancelText:'إلغاء',onOk:proceed});else proceed();}catch(e){q('rfErr').textContent=e.message;}};
+    try{preview();}catch(_){}
   }
   function expReportDaily(){
     const r=expDayRange(expRepDate);
@@ -15272,8 +15307,8 @@
     const refunds=expRefundsInRange(r);
     expEnsureMonth(y,m);
     const insts=expMonthInstances(y,m);
-    const unpaid=insts.filter(i=>i.status==="unpaid").reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
-    const partial=insts.filter(i=>i.status==="partial").reduce((a,i)=>a+Math.max(0,i.plannedAmountMinor-i.paidAmountMinor),0);
+    const unpaid=insts.filter(i=>i.status==="unpaid").reduce((a,i)=>a+expObligationRemaining('fixed',i.id),0);
+    const partial=insts.filter(i=>i.status==="partial").reduce((a,i)=>a+expObligationRemaining('fixed',i.id),0);
     /* أعلى الفئات = المتغيّرة فقط (استبعاد دفعات الالتزامات) */
     const byCat=expByCategory(r, t=>expClassify(t)!=="fixed"); const catKeys=Object.keys(byCat).filter(k=>byCat[k]!==0).sort((a,b)=>byCat[b]-byCat[a]).slice(0,6);
     const catLines=catKeys.map(k=>{ const c=expCatById(k); return '<div class="exp-foot-row"><span>'+(c?expEsc(c.name):"—")+'</span><b>'+expMoney(byCat[k])+'</b></div>'; }).join("");
