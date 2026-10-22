@@ -87,6 +87,33 @@ test('app sync across independent browsers preserves offline edits alongside rem
    for(const d of [a,b]){await d.page.exposeBinding('financeBarrier',async()=>{if(++financeArrivals>=2)financeRelease();await financeBarrier;});await d.page.evaluate(()=>window.holdFinanceRead=true);}
    await Promise.all([a.page.evaluate(async()=>{const d=integration.expState();d.transactions.push({id:'finance-a',amountMinor:10000,transactionType:'expense',transactionDate:'2026-10-01',createdAt:Date.now(),updatedAt:Date.now()});d.settings.salaryAmountMinor=900000;integration.expSave(d);const result=await integration.expPushRemote(d);if(!result.ok)throw new Error(result.error);}),b.page.evaluate(async()=>{const d=integration.expState();d.transactions.push({id:'finance-b',amountMinor:20000,transactionType:'expense',transactionDate:'2026-10-01',createdAt:Date.now(),updatedAt:Date.now()});d.settings.defaultPaymentMethod='نقد';d.financeEntries=[{id:'income-b',kind:'income',date:'2026-10-01',amountMinor:900000,updatedAt:Date.now()}];integration.expSave(d);const result=await integration.expPushRemote(d);if(!result.ok)throw new Error(result.error);})]);
    for(const d of [a,b]){await d.page.evaluate(()=>window.holdFinanceRead=false);await d.page.evaluate(()=>integration.expPullRemote({manual:true}));const finance=await d.page.evaluate(()=>integration.expState());assert.ok(finance.transactions.some(t=>t.id==='finance-a'));assert.ok(finance.transactions.some(t=>t.id==='finance-b'));assert.equal(finance.settings.salaryAmountMinor,900000);assert.equal(finance.settings.defaultPaymentMethod,'نقد');assert.ok(finance.financeEntries.some(t=>t.id==='income-b'));assert.deepEqual(d.errors,[]);}
+   // An offline finance correction must survive alongside a new online plan/income.
+   await b.page.evaluate(async()=>{
+     await firebase.firestore().disableNetwork();
+     const d=integration.expState(),now=Date.now();
+     const old=d.transactions.find(t=>t.id==='finance-b');old.deletedAt=now;old.updatedAt=now;
+     d.financeEntries.push({id:'offline-saving',kind:'saving',goalId:'offline-goal',date:'2026-10-02',amountMinor:25000,createdAt:now,updatedAt:now});
+     d.savingsGoals.push({id:'offline-goal',name:'Offline reserve',targetMinor:100000,currentMinor:0,isActive:true,createdAt:now,updatedAt:now});
+     integration.expSave(d);
+   });
+   await a.page.evaluate(async()=>{
+     const d=integration.expState(),now=Date.now();
+     d.financeEntries.push({id:'plan_2026-09-27',kind:'plan',cycleStart:'2026-09-27',expectedMinor:900000,savingMinor:100000,updatedAt:now});
+     d.financeEntries.push({id:'online-bonus',kind:'income',name:'Bonus',date:'2026-10-02',amountMinor:50000,updatedAt:now});
+     integration.expSave(d);const result=await integration.expPushRemote(d);if(!result.ok)throw new Error(result.error);
+   });
+   await b.page.evaluate(async()=>{await firebase.firestore().enableNetwork();const r=await integration.expPushRemote(integration.expState());if(!r.ok)throw new Error(r.error);});
+   for(const d of [a,b]){
+     await d.page.evaluate(()=>integration.expPullRemote({manual:true}));
+     const state=await d.page.evaluate(()=>integration.expState());
+     assert.ok(state.transactions.find(t=>t.id==='finance-b').deletedAt);
+     assert.equal(state.financeEntries.filter(t=>t.id==='offline-saving').length,1);
+     assert.equal(state.financeEntries.find(t=>t.id==='offline-saving').amountMinor,25000);
+     assert.equal(state.financeEntries.find(t=>t.id==='plan_2026-09-27').savingMinor,100000);
+     assert.ok(state.financeEntries.some(t=>t.id==='online-bonus'));
+     assert.ok(state.savingsGoals.some(t=>t.id==='offline-goal'));
+     assert.deepEqual(d.errors,[]);
+   }
    let arrivals=0,release;const barrier=new Promise(resolve=>release=resolve);
    for(const d of [a,b]){await d.page.exposeBinding('txnBarrier',async()=>{if(++arrivals>=2)release();await barrier;});await d.page.evaluate(()=>window.holdLearningRead=true);}
    await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].name='Concurrent A';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].notes='Concurrent B';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');})]);
