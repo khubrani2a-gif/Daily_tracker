@@ -14902,6 +14902,35 @@
       }
     };
   }
+  function expValidFinanceDate(date){return typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&!isNaN(new Date(date+'T12:00:00').getTime())&&fmtDate(new Date(date+'T12:00:00'))===date;}
+  function expPreviewBudgetStart(categoryId,date){
+    const c=expCatById(categoryId);if(!c||!c.budgets?.length||!expValidFinanceDate(date))throw Error('اختر فئة لها ميزانية وتاريخًا صحيحًا.');
+    const before=c.budgets.slice().sort((a,b)=>a.from.localeCompare(b.from)),from=expWeekRange(date).start;
+    if(from>expWeekRange(todayStr()).start||before[1]&&from>=before[1].from)throw Error('البداية يجب أن تسبق التعديل التالي وألا تتجاوز الأسبوع الحالي.');
+    const after=before.map((b,i)=>i?{...b}:{...b,from});
+    const cycle=expSalaryCycleRange(date,expState.settings.salaryCycleStartDay),previous=expSalaryCycleRange(expDateShift(cycle.start,-1),expState.settings.salaryCycleStartDay);
+    const affectedRanges=[expWeekRange(date),previous,cycle].map(r=>({...r,before:expCategoryPlanInRange(c,r),after:expCategoryPlanInRange({...c,budgets:after},r)}));
+    return {categoryId,from,snapshot:JSON.stringify(c),before,after,affectedRanges};
+  }
+  function expApplyBudgetStart(v){
+    const c=expCatById(v.categoryId);if(!c||JSON.stringify(c)!==v.snapshot)return false;
+    const checked=expPreviewBudgetStart(c.id,v.from);if(JSON.stringify(checked.after)!==JSON.stringify(v.after))return false;
+    c.budgets=v.after.map(b=>({...b}));c.updatedAt=Date.now();
+    c.budgetCorrections=(c.budgetCorrections||[]).concat({id:newId(),date:todayStr(),before:v.before,after:v.after,updatedAt:c.updatedAt});expSave(expState);return true;
+  }
+  function expUndoBudgetStart(id){
+    const c=expCatById(id),r=c?.budgetCorrections?.filter(r=>!r.undoneAt).at(-1);if(!r||JSON.stringify(c.budgets)!==JSON.stringify(r.after)||c.updatedAt!==r.updatedAt)return false;
+    c.budgets=r.before.map(b=>({...b}));r.undoneAt=Date.now();c.updatedAt=Date.now();expSave(expState);return true;
+  }
+  function expOpenBudgetHistory(id){
+    const c=expCatById(id);if(!c)return;const first=(c.budgets||[]).slice().sort((a,b)=>a.from.localeCompare(b.from))[0];if(!first)return;
+    expOpenForm('<div class="exp-form-head"><h3>مراجعة بداية الميزانية · '+expEsc(c.name)+'</h3><button data-close>✕</button></div><p>البداية المسجلة: '+expEsc(first.from)+'. لا نستنتج تاريخًا بديلًا تلقائيًا. التصحيح يغيّر الخطط التاريخية فقط، ولا يغيّر مشترياتك أو استرداداتك.</p>'+expFinanceField('تاريخ البداية الصحيح (يُطبّق من بداية أسبوعه)','bhDate','date',todayStr())+'<p>التغييرات اللاحقة: '+expEsc((c.budgets||[]).filter(b=>b!==first&&b.from!==first.from).map(b=>b.from).join('، ')||'لا يوجد')+'</p><div id="bhPreview" role="status"></div><div id="bhErr" class="exp-err"></div><button id="bhCheck" class="exp-save">معاينة التصحيح</button><button id="bhSave" class="exp-save" disabled>حفظ التصحيح التاريخي</button>'+(c.budgetCorrections?.some(r=>!r.undoneAt)?'<button id="bhUndo">تراجع عن آخر تصحيح للبداية</button>':''));
+    let preview=null;const q=id=>document.getElementById(id);
+    q('bhDate').oninput=()=>{preview=null;q('bhSave').disabled=true;};
+    q('bhCheck').onclick=()=>{try{preview=expPreviewBudgetStart(id,q('bhDate').value);q('bhPreview').innerHTML='<p>البداية الجديدة: '+expEsc(preview.from)+'</p><p>مقارنة فترات حول البداية المختارة (كل الفترات الأقدم المتأثرة تتغير أيضًا):</p>'+preview.affectedRanges.map(r=>'<p>'+expArDate(r.start)+' — '+expArDate(r.end)+': '+expMoney(r.before)+' ← '+expMoney(r.after)+'</p>').join('');q('bhErr').textContent='';q('bhSave').disabled=false;}catch(e){q('bhErr').textContent=e.message;preview=null;q('bhSave').disabled=true;}};
+    q('bhSave').onclick=()=>{if(!preview||!expApplyBudgetStart(preview)){q('bhErr').textContent='تغيرت البيانات. أعد المعاينة.';q('bhSave').disabled=true;return;}expCloseForm();expRefresh();};
+    if(q('bhUndo'))q('bhUndo').onclick=()=>{if(!expUndoBudgetStart(id)){q('bhErr').textContent='يوجد تعديل أحدث؛ راجع البداية يدويًا حتى لا يُستبدل.';return;}expCloseForm();expRefresh();};
+  }
   function expOpenBudgetForm(catId){
     const c=expCatById(catId); if(!c) return;
     const wr=expWeekRange(todayStr());
@@ -14911,9 +14940,10 @@
       '<p class="exp-card-hint">الأسبوع الانتقالي الأقصر يأخذ نصيبه حسب عدد الأيام؛ المبلغ المدخل هو حد ٧ أيام.</p><div id="bfPreview" role="status"></div><div class="exp-err" id="bfErr"></div>'+
       '<div class="exp-card-hint">متى تريد تطبيق التعديل؟</div>'+
       '<button class="exp-optbtn" data-scope="thisWeek">من هذا الأسبوع<small>يبدأ من '+expArDateShort(wr.start)+'</small></button>'+
-      '<button class="exp-optbtn" data-scope="nextWeek">من الأسبوع القادم<small>لا يغيّر أسبوعك الحالي</small></button>'
+      '<button class="exp-optbtn" data-scope="nextWeek">من الأسبوع القادم<small>لا يغيّر أسبوعك الحالي</small></button><details><summary>تاريخ الميزانية</summary><button id="bfHistory">مراجعة تاريخ البداية</button></details>'
     );
     const g=id=>expFormBox.querySelector(id);
+    g('#bfHistory').onclick=()=>expOpenBudgetHistory(catId);
     const preview=()=>{const amount=expParseAmount(g('#bfAmt').value),days=Math.round((new Date(wr.end+'T12:00:00')-new Date(wr.start+'T12:00:00'))/86400000)+1;g('#bfPreview').textContent=Number.isSafeInteger(amount)&&amount>=0?'حد الأسبوع الحالي ('+_arn(days)+' أيام) عند التطبيق من هذا الأسبوع: '+expMoney(Math.round(amount*days/7)):'';};
     g('#bfAmt').oninput=preview;preview();
     expFormBox.querySelectorAll("[data-scope]").forEach(b=> b.onclick=()=>{
