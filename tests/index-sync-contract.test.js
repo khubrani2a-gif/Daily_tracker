@@ -73,7 +73,8 @@ test("Firestore paths remain unchanged and onSnapshot is absent",()=>{
   assert.match(html,/collection\("meta"\)\.doc\("expenses"\)/);
   assert.match(html,/collection\("meta"\)\.doc\("weeklyGoals"\)/);
   assert.match(html,/collection\("meta"\)\.doc\("learning"\)/);
-  assert.doesNotMatch(html,/onSnapshot/);
+  // Match the API identifier, not a suffix in names such as confirmationSnapshot.
+  assert.doesNotMatch(html,/\bonSnapshot\b/);
 });
 
 test("server-first and explicit cache fallback are present for docs and queries",()=>{
