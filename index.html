@@ -1297,6 +1297,9 @@
 
   /* ===== المصاريف ===== */
   .exp-launch h2{font-size:1.16rem}
+  #expDashSummary{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  #expDashSummary .exp-card{min-width:0}
+  @media(max-width:600px){#expDashSummary{grid-template-columns:1fr}}
   .exp-sumgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin:.5rem 0 .7rem}
   @media(max-width:520px){ .exp-sumgrid{grid-template-columns:repeat(2,1fr)} }
   .exp-sumcard{background:var(--chip-bg);border:1px solid var(--line);border-radius:14px;padding:.55rem .6rem;text-align:center;min-width:0}
@@ -3675,7 +3678,8 @@
         <div class="exp-tabs" style="top:0">
           <button class="exp-tab active" data-rep="daily">يومي</button>
           <button class="exp-tab" data-rep="weekly">أسبوعي</button>
-          <button class="exp-tab" data-rep="monthly">شهري</button>
+          <button class="exp-tab" data-rep="salary">دورة الراتب</button>
+          <button class="exp-tab" data-rep="monthly">شهر ميلادي</button>
           <button class="exp-tab" data-rep="yearly">سنوي</button>
         </div>
         <div class="exp-report-tools"><input type="search" id="expSearch" placeholder="ابحث في المعاملات أو الفئات…" aria-label="البحث في المعاملات"><button type="button" id="expExportCsv">تصدير CSV</button></div>
@@ -3815,10 +3819,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=165"></script>
+<script src="data-core.js?v=166"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=165"></script>
-<script src="learning-core.js?v=165"></script>
+<script src="calendar-core.js?v=166"></script>
+<script src="learning-core.js?v=166"></script>
 <script>
 (function(){
   "use strict";
@@ -13202,7 +13206,7 @@
   /* الفئة المدمجة في التطبيق تُعرف بـ seedKey (أو مطابقة اسمها لبذرة) — لا تُحذف نهائيًا، تُخفى فقط */
   function expCategoryIsBuiltIn(c){ return !!(c && (c.seedKey || EXP_DEFAULT_NAMES.indexOf(c.name)>=0)); }
   function expWeeklyBudgetTotal(weekStart){
-    return expVarCategoriesVisible().reduce((a,c)=> a + expBudgetForWeek(c, weekStart), 0);
+    return expVarCategoriesAll().reduce((a,c)=> a + expBudgetForWeek(c, weekStart), 0);
   }
   /* هل تُحتسب المعاملة ضمن استهلاك الميزانية الأسبوعية العادية؟
      التصنيف محفوظ على مستوى المعاملة (countAgainstWeeklyBudget) لحماية التقارير التاريخية. */
@@ -13277,7 +13281,11 @@
     if(t.isActive===false && !expHasOpenSuspension(t) && key >= expCurMonthKey()) return false;
     return true;
   }
-  function expPlannedForMonth(t, y, m){ const key=y+"-"+_pad2(m); return (t.overrides && t.overrides[key]!=null)? expToMinor(t.overrides[key]) : expToMinor(t.defaultAmountMinor); }
+  function expPlannedForMonth(t, y, m){
+    const key=expMonthKey(y,m); if(t.overrides&&t.overrides[key]!=null)return expToMinor(t.overrides[key]);
+    const version=(t.amountHistory||[]).filter(x=>x.from<=key).sort((a,b)=>b.from.localeCompare(a.from))[0];
+    return expToMinor(version?version.amountMinor:t.defaultAmountMinor);
+  }
   function expEnsureMonth(y, m){
     let changed=false;
     expState.fixedTemplates.forEach(t=>{
@@ -13407,7 +13415,7 @@
   function expActivityCanUndo(rec){
     if(!rec||rec.undoneAt) return false;
     if(rec.type==="payment") return !!expState.transactions.find(t=>t.id===rec.txId&&!t.deletedAt);
-    if(rec.type==="fixed-edit") return !!expTplById(rec.templateId);
+    if(rec.type==="fixed-edit") return !!expTplById(rec.templateId) && !(expState.activityLog||[]).some(x=>x.templateId===rec.templateId&&!x.undoneAt&&(x.createdAt||0)>(rec.createdAt||0));
     return false;
   }
   function expActivityUndo(id){
@@ -13415,8 +13423,9 @@
     if(rec.type==="payment"){
       const tx=expState.transactions.find(t=>t.id===rec.txId); tx.deletedAt=Date.now(); tx.updatedAt=tx.deletedAt;
       if(tx.fixedExpenseInstanceId) expRecalcInstance(expInstById(tx.fixedExpenseInstanceId));
-      expRestoreFixedSnapshot(rec.before);
+      if(!(expState.activityLog||[]).some(x=>x.templateId===rec.templateId&&!x.undoneAt&&(x.createdAt||0)>(rec.createdAt||0))) expRestoreFixedSnapshot(rec.before);
     } else if(rec.type==="fixed-edit") expRestoreFixedSnapshot(rec.before);
+    expState.instances.forEach(expRecalcInstance);
     rec.undoneAt=Date.now(); rec.updatedAt=rec.undoneAt; expSave(expState); expRefresh(); return true;
   }
   function expRecordPayment(instId, amountMinor, dateStr, method){
@@ -13704,6 +13713,45 @@
       expRenderSyncRow();   /* حدّث شارة «آخر تحديث» مع كل إعادة رسم */
     }
   }
+  /* حدود التقارير لا تنقل المعاملات: التاريخ هو المصدر الوحيد للتجميع. */
+  function expFinancePeriods(dateStr){
+    const week=expWeekRange(dateStr), cycle=expSalaryCycleRange(dateStr,expState.settings.salaryCycleStartDay);
+    const weekBudget=expWeeklyBudgetTotal(week.start), weekSpent=expVarNetInWeek(week);
+    const spent=expNetInRange(cycle), salary=expToMinor(expState.settings.salaryAmountMinor);
+    // احتساب الالتزامات من الدفعات الحية، بما فيها المتأخرات، دون توليد/حفظ عند القراءة.
+    let outstanding=0, overdue=0;const overdueRows=[];
+    const keys=new Set();
+    const add=(id,planned,due,templateId)=>{
+      if(due>cycle.end)return;
+      const paid=id?expNet(expActiveTx().filter(tx=>tx.fixedExpenseInstanceId===id)):0;
+      const remain=Math.max(0,planned-Math.max(0,paid));
+      outstanding+=remain;if(due<cycle.start){overdue+=remain;if(remain)overdueRows.push({templateId,due,remaining:remain});}
+    };
+    expState.instances.forEach(i=>{keys.add(i.templateId+'|'+expMonthKey(i.year,i.month));if(expInstVisible(i,i.year,i.month))add(i.id,expToMinor(i.plannedAmountMinor),i.dueDate,i.templateId);});
+    expState.fixedTemplates.forEach(t=>{
+      let key=t.startMonth||cycle.start.slice(0,7), guard=0;
+      while(key<=cycle.end.slice(0,7)&&guard++<1200){
+        const y=+key.slice(0,4),m=+key.slice(5,7);
+        if(!keys.has(t.id+'|'+key)&&expTplGenActive(t,y,m))add(null,expPlannedForMonth(t,y,m),expDueDate(t,y,m),t.id);
+        key=expShiftMonthKey(key,1);
+      }
+    });
+    return {week,cycle,weekBudget,weekSpent,weekRemaining:weekBudget-weekSpent,salary,spent,remaining:salary-spent,outstanding,overdue,overdueRows,available:salary-spent-outstanding};
+  }
+  function expRenderPeriodSummary(){
+    const x=expFinancePeriods(todayStr()),money=expMoney;
+    const line=(label,value)=>'<div class="exp-foot-row"><span>'+label+'</span><b>'+value+'</b></div>';
+    return '<section class="exp-card"><h3>ميزانية الأسبوع</h3><p class="exp-card-hint">'+expArDate(x.week.start)+' — '+expArDate(x.week.end)+'</p>'+line('الميزانية',money(x.weekBudget))+line('المصروف المحتسب',money(x.weekSpent))+line('المتبقي من ميزانية الأسبوع',money(x.weekRemaining))+'<p class="exp-card-hint">حد إنفاق مستقل؛ لا يتجدد عند نزول الراتب ولا يترحل تلقائيًا.</p></section>'
+      +'<section class="exp-card"><h3>دورة الراتب</h3><p class="exp-card-hint">'+expArDate(x.cycle.start)+' — '+expArDate(x.cycle.end)+'</p>'+line('راتب الدورة',x.salary?money(x.salary):'حدده من الإعدادات')+line('صافي الصرف',money(x.spent))+line('المتبقي المحسوب من الراتب',x.salary?money(x.remaining):'—')+line('التزامات غير مدفوعة، تشمل المتأخرات',money(x.outstanding))+(x.overdue?line('منها متأخرات دورات سابقة',money(x.overdue))+'<details><summary>تفاصيل المتأخرات</summary>'+x.overdueRows.map(row=>line(expEsc((expTplById(row.templateId)||{}).name||'التزام')+' · '+expArDate(row.due),money(row.remaining))).join('')+'</details>':'')+line('المتاح المحسوب بعد الالتزامات',x.salary?money(x.available):'—')+'<p class="exp-card-hint">تقدير من السجلات، وليس رصيد البنك. لا يشمل رصيدًا سابقًا أو دخلًا غير مسجل.</p>'+(x.salary&&x.available<x.weekRemaining?'<p class="exp-card-hint">المتاح من الراتب أقل من متبقي ميزانية الأسبوع.</p>':'')+(x.week.start<x.cycle.start&&x.week.end>=x.cycle.start?'<p class="exp-card-hint">هذا الأسبوع بدأ قبل دورة الراتب؛ ميزانيته مستمرة حتى نهاية الأسبوع.</p>':'')+'</section>';
+  }
+  function expReportSalary(){
+    const r=expCurrentReportRange(), rows=expTxInRange(r).sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
+    const planned=expVarCategoriesAll().reduce((sum,c)=>sum+expCategoryPlanInRange(c,r),0);
+    const body=document.getElementById('expReportBody');
+    body.innerHTML=expNavBar('دورة الراتب · '+expArDate(r.start)+' — '+expArDate(r.end))+'<div class="exp-card"><div class="exp-foot-row"><span>صافي الصرف</span><b>'+expMoney(expNet(rows))+'</b></div><div class="exp-foot-row"><span>الخطة المتغيرة الموزعة حسب الأيام</span><b>'+expMoney(planned)+'</b></div><p class="exp-card-hint">الخطة تقدير للفترة وليست مبلغًا متاحًا. ميزانية السبت–الجمعة تستمر عبر حدود الدورة.</p></div>'+expReportVisualScan(r,'دورة الراتب')+(rows.length?rows.map(expTxRow).join(''):'<div class="exp-empty">لا معاملات في هذه الدورة.</div>');
+    expWireTxMenus(body);
+    expWireNav(delta=>{const d=new Date(r.start+'T12:00:00');d.setMonth(d.getMonth()+delta);expRepDate=fmtDate(d);});
+  }
   function expSummaryCards(){
     const today = todayStr();
     const dayNet = expNetInRange(expDayRange(today));
@@ -13751,8 +13799,7 @@
     host.querySelector("[data-tripadd]").onclick=(e)=>{ e.stopPropagation(); expOpenExpenseForm(null, trip.id); };
   }
   function expRenderDash(){
-    document.getElementById("expDashSummary").innerHTML = expSummaryCards().map(c=>
-      '<div class="exp-sumcard'+(c.over?' over':'')+'"><small>'+c.label+'</small><b>'+c.val+'</b></div>').join("");
+    document.getElementById("expDashSummary").innerHTML = expRenderPeriodSummary();
     expRenderTravelBanner("expDashBanner");
     expRenderFixedCard();
     expRenderVarCard();
@@ -13831,7 +13878,7 @@
     const rows=expVarCategoriesVisible().map(c=>{
       const weeklyBudget=expBudgetForWeek(c,week.start);
       const weeklySpent=expNetInRange(week,t=>t.categoryId===c.id&&expClassify(t)==="variable"&&expCountsWeekly(t));
-      const monthlyBudget=expMonthPlanFromWeeklyBudget(weeklyBudget,month);
+      const monthlyBudget=expCategoryPlanInRange(c,month);
       const monthlySpent=expNetInRange(month,t=>t.categoryId===c.id&&expClassify(t)==="variable"&&expCountsWeekly(t));
       const weeklyRemaining=weeklyBudget-weeklySpent, weeklyPct=weeklyBudget>0?Math.max(0,expPct(weeklySpent,weeklyBudget)):0;
       return {c,weeklyBudget,weeklySpent,weeklyRemaining,weeklyPct,over:weeklyBudget>0&&weeklyRemaining<0,monthlyBudget,monthlySpent};
@@ -13840,7 +13887,7 @@
   }
   function expRenderVarCard(){
     const box=document.getElementById("expVarCard"); if(!box)return;
-    const today=todayStr(), progress=expVariableBudgetProgress(today), wr=progress.week, month=progress.month, view=expVarViewLoad(), hidden=expVarHiddenForWeek(wr.start);
+    const today=todayStr(), progress=expVariableBudgetProgress(today), wr=progress.week, month=progress.month, salaryRange=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay), view=expVarViewLoad(), hidden=expVarHiddenForWeek(wr.start);
     /* «المتجاوزة فقط» فلتر أسبوعي؛ النسخة القديمة المخزنة بلا أسبوع لا تُخفي صفوف أسبوع جديد. */
     const overOnly=view.overOnly&&view.overOnlyWeek===wr.start;
     const hiddenCount=expVarCategoriesAll().length-progress.rows.length;
@@ -13860,12 +13907,13 @@
         (hasBudget?'<div class="exp-bar"><i class="'+(cls==="ok"?"":cls)+'" style="width:'+used+'%"></i>'+(pct>100?'<em class="exp-bar-over" title="تجاوز الميزانية">+</em>':'')+'</div><div class="exp-var-meta"><span>'+_arn(pct)+'٪ مستخدم</span><span class="exp-pill '+cls+'">'+status+'</span></div>':'<div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">'+status+'</span></div>')+'</div>';
     };
     const rows=data.map(x=>{
-      const hasPlan=x.weeklyBudget>0||x.monthlyBudget>0;
-      const noPlan=x.monthlySpent?'<div class="exp-row-sub">صُرف '+expMoney(x.monthlySpent)+' هذا الشهر · لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>':'<div class="exp-row-sub">لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>';
-      return '<div class="exp-row exp-var-row"><div class="exp-row-main"><div class="exp-row-name">'+(x.c.icon?expEsc(x.c.icon)+" ":"")+expEsc(x.c.name)+'</div>'+(hasPlan?renderPeriod("هذا الأسبوع",wr,x.weeklyBudget,x.weeklySpent,"week")+renderPeriod("هذا الشهر",month,x.monthlyBudget,x.monthlySpent,"month"):noPlan)+'</div><button class="exp-mini" data-catmenu="'+expEsc(x.c.id)+'" title="خيارات '+expEsc(x.c.name)+'">⋯</button></div>';
+      const cyclePlan=expCategoryPlanInRange(x.c,salaryRange), cycleSpent=expNetInRange(salaryRange,t=>t.categoryId===x.c.id&&expClassify(t)==="variable"&&expCountsWeekly(t));
+      const hasPlan=x.weeklyBudget>0||cyclePlan>0;
+      const noPlan=cycleSpent?'<div class="exp-row-sub">صُرف '+expMoney(cycleSpent)+' خلال دورة الراتب · لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>':'<div class="exp-row-sub">لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>';
+      return '<div class="exp-row exp-var-row"><div class="exp-row-main"><div class="exp-row-name">'+(x.c.icon?expEsc(x.c.icon)+" ":"")+expEsc(x.c.name)+'</div>'+(hasPlan?renderPeriod("هذا الأسبوع",wr,x.weeklyBudget,x.weeklySpent,"week")+renderPeriod("دورة الراتب",salaryRange,cyclePlan,cycleSpent,"month"):noPlan)+'</div><button class="exp-mini" data-catmenu="'+expEsc(x.c.id)+'" title="خيارات '+expEsc(x.c.name)+'">⋯</button></div>';
     }).join("") || '<div class="exp-var-empty-state">'+(overOnly?"لا توجد فئات متجاوزة ضمن العرض الحالي.":"لا توجد فئات أسبوعية ظاهرة.")+'</div>';
     const insight=exceeded.length?'<div class="exp-var-insight">⚠️ تجاوزت '+_arn(exceeded.length)+' فئات ميزانيتها الأسبوعية'+(exceeded[0]?'؛ أكبر تجاوز في «'+expEsc(exceeded[0].c.name)+'» بمقدار '+expMoney(-exceeded[0].weeklyRemaining):"")+'.</div>':"";
-    box.innerHTML='<h3>🛒 ميزانيات المصروفات المتغيرة</h3><div class="exp-card-hint">الأسبوع: '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+' · الشهر الميلادي: '+expArDateShort(month.start)+' — '+expArDateShort(month.end)+'. خطة الشهر مشتقة من ميزانية الأسبوع بحسب أيام الشهر.</div>'+
+    box.innerHTML='<h3>🛒 ميزانيات المصروفات المتغيرة</h3><div class="exp-card-hint">الأسبوع: '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'. دورة الراتب مستقلة عن الأسبوع؛ خطتها تقديرية بحسب الأيام.</div>'+
       '<div class="exp-var-summary"><div><small>ميزانية الأسبوع</small><b>'+expMoney(totalBudget)+'</b></div><div><small>المصروف</small><b>'+expMoney(totalSpent)+'</b></div><div class="'+(totalRemain<0?'danger':'accent')+'"><small>'+(totalRemain<0?'التجاوز':'المتبقي')+'</small><b>'+expMoney(Math.abs(totalRemain))+'</b></div><div><small>المستخدم</small><b>'+_arn(totalPct)+'٪</b></div></div>'+
       '<div class="exp-var-tools"><select id="expVarSort" aria-label="ترتيب الفئات"><option value="custom"'+(view.sort==="custom"?" selected":"")+'>الترتيب المخصص</option><option value="spent"'+(view.sort==="spent"?" selected":"")+'>الأعلى صرفًا</option><option value="over"'+(view.sort==="over"?" selected":"")+'>الأعلى تجاوزًا</option></select><button id="expVarOver" class="'+(overOnly?'active':'')+'" aria-pressed="'+overOnly+'">المتجاوزة فقط</button>'+(hidden.size?'<button id="expVarHidden" class="'+(view.showHidden?'active':'')+'">'+(view.showHidden?'إخفاء المخفية':'إظهار المخفية')+' ('+_arn(hidden.size)+')</button>':'')+'</div>'+insight+rows+
       '<button class="exp-add-line" id="expAddVar">＋ إضافة فئة أسبوعية</button>'+
@@ -14409,6 +14457,9 @@
           const before=expFixedSnapshot(t.id), oldName=t.name, oldAmount=expToMinor(t.defaultAmountMinor); expSaving=true;
           t.name=name; t.amountType=type; t.dueDay=due; t.note=note; t.updatedAt=Date.now();
           const dNow=new Date(todayStr()+"T12:00:00"), cy=dNow.getFullYear(), cm=dNow.getMonth()+1, curKey=cy+"-"+_pad2(cm);
+          if(!Array.isArray(t.amountHistory)||!t.amountHistory.length)t.amountHistory=[{from:t.startMonth||"0001-01",amountMinor:oldAmount}];
+          const effective=scope==="fromNext"?expShiftMonthKey(curKey,1):curKey;
+          if(scope!=="thisOnly") {t.amountHistory=t.amountHistory.filter(x=>x.from<effective);t.amountHistory.push({from:effective,amountMinor:amt});}
           if(!t.overrides) t.overrides={};
           if(scope==="thisOnly"){
             t.overrides[curKey]=amt;
@@ -14421,6 +14472,8 @@
           } else { /* fromNext */
             if(t.overrides[curKey]==null) t.overrides[curKey]=expPlannedForMonth(t,cy,cm);
             t.defaultAmountMinor=amt;
+            Object.keys(t.overrides).forEach(k=>{if(k>=effective)delete t.overrides[k];});
+            expState.instances.filter(i=>i.templateId===t.id&&expMonthKey(i.year,i.month)>=effective).forEach(i=>{i.plannedAmountMinor=amt;expRecalcInstance(i);});
           }
           expSave(expState);
           const activity=expActivityPush({type:"fixed-edit",templateId:t.id,templateName:name,oldName,oldAmountMinor:oldAmount,newAmountMinor:amt,scope,before});
@@ -14529,6 +14582,7 @@
   function expCurrentReportRange(){
     if(expRepMode==="daily") return expDayRange(expRepDate);
     if(expRepMode==="weekly") return expWeekRange(expRepDate);
+    if(expRepMode==="salary") return expSalaryCycleRange(expRepDate,expState.settings.salaryCycleStartDay);
     if(expRepMode==="monthly") return expMonthRange(expRepDate);
     const y=new Date(expRepDate+"T12:00:00").getFullYear(); return {start:y+"-01-01",end:y+"-12-31"};
   }
@@ -14544,6 +14598,7 @@
   function expRenderReport(){
     if(expRepMode==="daily") expReportDaily();
     else if(expRepMode==="weekly") expReportWeekly();
+    else if(expRepMode==="salary") expReportSalary();
     else if(expRepMode==="monthly") expReportMonthly();
     else expReportYearly();
     expApplySearch();
@@ -14558,7 +14613,8 @@
     while(cursor<=r.end && guard++<60){
       const wr=expWeekRange(cursor), start=wr.start<r.start?r.start:wr.start, end=wr.end>r.end?r.end:wr.end;
       const days=Math.max(0,Math.round((new Date(end+"T12:00:00")-new Date(start+"T12:00:00"))/86400000)+1);
-      total+=expBudgetForWeek(cat,wr.start)*days/7;
+      const offset=Math.round((new Date(start+"T12:00:00")-new Date(wr.start+"T12:00:00"))/86400000),budget=expBudgetForWeek(cat,wr.start);
+      total+=Math.round(budget*(offset+days)/7)-Math.round(budget*offset/7);
       const next=new Date(cursor+"T12:00:00"); next.setDate(next.getDate()+7); cursor=fmtDate(next);
     }
     return Math.max(0,Math.round(total));
@@ -14576,7 +14632,7 @@
     return {kind:"neutral",icon:"🔎",title:"لا توجد ميزانية للمقارنة",text:"تظهر الفئات الأعلى صرفًا، لكن أضف ميزانية لفحص مستوى الخطر."};
   }
   function expReportVisualScan(r,label){
-    const rows=expReportScanRows(r), total=rows.reduce((sum,row)=>sum+row.actual,0), planned=rows.reduce((sum,row)=>sum+row.plan,0), risk=expReportRisk(rows);
+    const rows=expReportScanRows(r), total=rows.reduce((sum,row)=>sum+row.actual,0), planned=expVarCategoriesAll().reduce((sum,c)=>sum+expCategoryPlanInRange(c,r),0), risk=expReportRisk(rows);
     if(!rows.length)return '<section class="exp-fin-scan" aria-label="المسح المالي"><div class="exp-fin-scan-head"><b>🔎 المسح المالي · '+label+'</b><small>حسب الفئة</small></div><div class="exp-fin-risk"><div class="exp-fin-risk-icon">✅</div><div class="exp-fin-risk-copy"><b>لا توجد مصروفات متغيرة</b><span>أضف مصروفاتك لتظهر قراءة بصرية حسب الفئات.</span></div></div></section>';
     const chart=rows.slice(0,5).map(row=>{const pct=row.plan?row.pct:Math.round(row.actual/Math.max(1,total)*100), kind=row.plan?(pct>100?"danger":pct>=80?"near":"") : "", width=Math.max(4,Math.min(100,pct)); const meta=row.plan?(''+_arn(pct)+'٪ من الخطة'):(''+_arn(pct)+'٪ من الصرف'); return '<div class="exp-fin-row"><div class="exp-fin-row-label">'+(row.cat.icon?expEsc(row.cat.icon)+" ":"")+expEsc(row.cat.name)+'</div><div class="exp-fin-track"><i class="'+kind+'" style="width:'+width+'%"></i></div><div class="exp-fin-row-value"><b>'+expMoney(row.actual)+'</b>'+meta+'</div></div>';}).join("");
     return '<section class="exp-fin-scan" aria-label="المسح المالي"><div class="exp-fin-scan-head"><b>🔎 المسح المالي · '+label+'</b><small>أعلى ٥ فئات</small></div><div class="exp-fin-risk '+risk.kind+'"><div class="exp-fin-risk-icon">'+risk.icon+'</div><div class="exp-fin-risk-copy"><b>'+risk.title+'</b><span>'+risk.text+'</span></div></div><div class="exp-fin-scan-stats"><div class="exp-fin-scan-stat"><small>المصروف المصنّف</small><b>'+expMoney(total)+'</b></div><div class="exp-fin-scan-stat"><small>الخطة للفترة</small><b>'+(planned?expMoney(planned):"—")+'</b></div><div class="exp-fin-scan-stat"><small>فئات تحتاج متابعة</small><b>'+_arn(rows.filter(row=>row.plan&&row.pct>=80).length)+'</b></div></div>'+chart+'<div class="exp-fin-scan-note">المسح يقارن المصروفات المتغيرة المحتسبة ضمن الميزانية بخطط الفئات؛ مصروفات السفر المستقلة والالتزامات تظهر في أقسامها الخاصة.</div></section>';
