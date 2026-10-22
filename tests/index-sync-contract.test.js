@@ -481,11 +481,11 @@ test("weekly goal review offers alternate, edit, and cancellation controls",()=>
   assert.match(html,/statsSaveWeeklyGoal\(\);/);
 });
 
-test("weekly and calendar-month variable budgets keep separate progress rows",()=>{
+test("weekly and salary-cycle variable budgets keep separate progress rows",()=>{
   ["صُرف ","لم يُصرف شيء من ","تجاوزت بـ ","اكتملت الميزانية","لا توجد ميزانية","٪ مستخدم"].forEach(text=>assert.ok(html.includes(text),text));
   ["expVarViewLoad","expVarToggleHidden","expShowVarCategoryDetails","expMoveVarTransactions","expMonthPlanFromWeeklyBudget","expVariableBudgetProgress"].forEach(name=>assert.match(html,new RegExp("function "+name+"\\("),name));
   assert.match(html,/renderPeriod\("هذا الأسبوع",wr,x\.weeklyBudget,x\.weeklySpent,"week"\)/);
-  assert.match(html,/renderPeriod\("هذا الشهر",month,x\.monthlyBudget,x\.monthlySpent,"month"\)/);
+  assert.match(html,/renderPeriod\("دورة الراتب",salaryRange,cyclePlan,cycleSpent,"month"\)/);
   assert.match(html,/month=expMonthRange\(dateStr\)/);
   assert.match(html,/weekly\*days\/7/);
   assert.match(html,/overOnlyWeek===wr\.start/);
