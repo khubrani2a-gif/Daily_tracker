@@ -40,7 +40,7 @@ window.firebase = (function(){
   const mkColl=(p)=>({ doc:(d)=>mkRef(p+"/"+d),
     get:(opts)=> window.__rColl(p).then(arr=>({ forEach:(cb)=>(arr||[]).forEach(x=>cb({id:x.id,data:()=>x})), empty:!(arr&&arr.length), size:(arr?arr.length:0), metadata:{fromCache:false} })),
     where:function(){ return { get:(opts)=> mkColl(p).get(), where:function(){return this;} }; } });
-  const fs=function(){ return { settings:undefined, enablePersistence:()=>({catch:()=>{}}), collection:(c)=>mkColl(c) }; };
+  const fs=function(){ return { settings:undefined, enablePersistence:()=>({catch:()=>{}}), collection:(c)=>mkColl(c), runTransaction:async fn=>{const writes=[];const result=await fn({get:r=>r.get({source:"server"}),set:(r,v)=>writes.push(()=>r.set(v))});for(const w of writes)await w();return result;} }; };
   const auth=function(){ return { onAuthStateChanged:(cb)=>{ setTimeout(()=>cb({uid:"U1",displayName:"T",email:"t@t"}),10); }, signOut:()=>Promise.resolve(), signInWithPopup:()=>Promise.resolve() }; };
   auth.GoogleAuthProvider=function(){};
   return { initializeApp:()=>({}), firestore:fs, auth:auth };
