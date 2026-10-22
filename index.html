@@ -13791,6 +13791,7 @@
   function expRefresh(){
     expApplyRecurringDue();
     expRenderLaunch();
+    if(document.getElementById('ulRows')&&expUnifiedLedgerRefresh)expUnifiedLedgerRefresh();
     if(!expOverlay.hidden){
       if(expCurView==="family") familyRenderOverview();
       else if(expCurView==="shopping") familyRenderShopping();
@@ -13920,17 +13921,17 @@
   }
   // These views derive from existing records; opening or cancelling them never changes money.
   function expSetupAllocation(x,cats,amounts){
-    const projected=expPlanCategories(x.cycle).map(c=>{const i=cats.findIndex(r=>r.id===c.id);if(i<0)return c;return {...c,budgets:(c.budgets||[]).filter(b=>b.from!==x.week.start).concat({from:x.week.start,amountMinor:amounts[i]}).sort((a,b)=>a.from.localeCompare(b.from))};});
+    const planned=new Map(expPlanCategories(x.cycle).map(c=>[c.id,c]));cats.forEach(c=>planned.set(c.id,c));const projected=[...planned.values()].map(c=>{const i=cats.findIndex(r=>r.id===c.id);if(i<0)return c;return {...c,budgets:(c.budgets||[]).filter(b=>b.from!==x.week.start).concat({from:x.week.start,amountMinor:amounts[i]}).sort((a,b)=>a.from.localeCompare(b.from))};});
     const flexible=projected.reduce((sum,c)=>{const reserved=x.obligationRows.filter(r=>r.recurring&&r.categoryId===c.id).reduce((s,r)=>s+r.remaining,0),paid=expNetInRange(x.cycle,t=>!!t.recurringRuleId&&t.categoryId===c.id&&expClassify(t)!=='fixed');return sum+Math.max(0,expCategoryPlanInRange(c,x.cycle)-Math.max(0,reserved+paid));},0);
     return {flexible,commitments:expSalaryAllocation(x).commitments};
   }
   function expOpenFinanceSetup(){
     const x=expFinancePeriods(todayStr()),plan=expCyclePlan(x.cycle.start),cats=expVarCategoriesAll();
-    expOpenForm('<div class="exp-form-head"><h3>إعداد خطتي المالية · اختياري</h3><button data-close>✕</button></div><p>راجع ثم احفظ. الخطة لا تسجل دخلًا مستلمًا أو تحويل ادخار. يمكنك العودة إليها في أي وقت.</p>'+expFinanceField('الدخل المتوقع لهذه الدورة','fsIncome','text',(plan.expectedMinor==null?x.salary:plan.expectedMinor)/100)+expFinanceField('حجز الادخار لهذه الدورة','fsSaving','text',expToMinor(plan.savingMinor)/100)+'<h4>حدود الفئات للأسبوع الحالي</h4>'+cats.map((c,i)=>expFinanceField(c.name,'fsBudget'+i,'text',expBudgetForWeek(c,x.week.start)/100)).join('')+(!cats.length?'<p>لا فئات بحدود أسبوعية بعد. أضف فئة من إدارة الفئات في الملخص ثم أعد فتح الإعداد.</p><button id="fsCategories">إدارة الفئات</button>':'')+'<p>الالتزامات المتبقية: '+expMoney(x.outstanding)+'</p><button id="fsObligations">عرض وإدارة الالتزامات</button><p>تسري الحدود من بداية الأسبوع الحالي؛ لا تمس الأسابيع السابقة.</p><div id="fsPreview" role="status"></div><div id="fsErr" class="exp-err"></div><button id="fsCheck" class="exp-save">معاينة الخطة</button><button id="fsSave" class="exp-save" disabled>حفظ بعد المعاينة</button>');
+    expOpenForm('<div class="exp-form-head"><h3>إعداد خطتي المالية · اختياري</h3><button data-close>✕</button></div><p>راجع ثم احفظ. الخطة لا تسجل دخلًا مستلمًا أو تحويل ادخار. يمكنك العودة إليها في أي وقت.</p>'+expFinanceField('الدخل المتوقع لهذه الدورة','fsIncome','text',(plan.expectedMinor==null?x.salary:plan.expectedMinor)/100)+expFinanceField('حجز الادخار لهذه الدورة','fsSaving','text',expToMinor(plan.savingMinor)/100)+'<details id="fsBudgets"'+(cats.some(c=>expBudgetForWeek(c,x.week.start)>0)?'':' open')+'><summary>ميزانيات الفئات الأسبوعية</summary>'+cats.map((c,i)=>expFinanceField(c.name,'fsBudget'+i,'text',expBudgetForWeek(c,x.week.start)/100)).join('')+'</details>'+(!cats.length?'<p>لا فئات بحدود أسبوعية بعد. أضف فئة من إدارة الفئات في الملخص ثم أعد فتح الإعداد.</p><button id="fsCategories">إدارة الفئات</button>':'')+'<p>الالتزامات المتبقية: '+expMoney(x.outstanding)+'</p><button id="fsObligations">عرض وإدارة الالتزامات</button><p>تسري الحدود من بداية الأسبوع الحالي؛ لا تمس الأسابيع السابقة.</p><div id="fsPreview" role="status"></div><div id="fsErr" class="exp-err"></div><button id="fsCheck" class="exp-save">معاينة الخطة</button><button id="fsSave" class="exp-save" disabled>حفظ بعد المعاينة</button>');
     let checked='';
     const values=()=>[expParseAmount(document.getElementById('fsIncome').value),expParseAmount(document.getElementById('fsSaving').value),...cats.map((c,i)=>expParseAmount(document.getElementById('fsBudget'+i).value))];
     expFormBox.querySelectorAll('input').forEach(el=>el.oninput=()=>{checked='';document.getElementById('fsSave').disabled=true;});
-    document.getElementById('fsCheck').onclick=()=>{const v=values();if(v.some(n=>!Number.isSafeInteger(n)||n<0)){document.getElementById('fsErr').textContent='أدخل مبالغ صحيحة غير سالبة.';return;}const allocation=expSetupAllocation(x,cats,v.slice(2));if(!Number.isSafeInteger(allocation.flexible+allocation.commitments+v[1])){document.getElementById('fsErr').textContent='المجموع أكبر من الحد المدعوم.';return;}checked=JSON.stringify(v);document.getElementById('fsErr').textContent='';document.getElementById('fsPreview').textContent='دخل متوقع: '+expMoney(v[0])+' · حجز ادخار: '+expMoney(v[1])+' · حدود الأسبوع: '+expMoney(v.slice(2).reduce((a,b)=>a+b,0))+' · التزامات متبقية: '+expMoney(x.outstanding)+' · خطة الصرف المتغير للدورة بعد استبعاد التزامات الفئات: '+expMoney(allocation.flexible)+' · التزامات محجوزة ومدفوعة: '+expMoney(allocation.commitments)+' · غير موزع في الخطة: '+expMoney(v[0]-allocation.flexible-allocation.commitments-v[1])+' — حدود الأسبوع والمتاح للدورة فترتان متداخلتان، لا تُجمعان.';document.getElementById('fsSave').disabled=false;};
+    document.getElementById('fsCheck').onclick=()=>{const v=values();if(v.some(n=>!Number.isSafeInteger(n)||n<0)){document.getElementById('fsErr').textContent='أدخل مبالغ صحيحة غير سالبة.';return;}const allocation=expSetupAllocation(x,cats,v.slice(2));if(!Number.isSafeInteger(allocation.flexible+allocation.commitments+v[1])){document.getElementById('fsErr').textContent='المجموع أكبر من الحد المدعوم.';return;}checked=JSON.stringify(v);document.getElementById('fsErr').textContent='';document.getElementById('fsPreview').innerHTML=[['الدخل المتوقع',v[0]],['حدود الأسبوع',v.slice(2).reduce((a,b)=>a+b,0)],['خطة الصرف المتغير للدورة',allocation.flexible],['التزامات محجوزة ومدفوعة',allocation.commitments],['حجز الادخار',v[1]],['غير موزع في الخطة',v[0]-allocation.flexible-allocation.commitments-v[1]]].map(([label,amount])=>'<div class="exp-foot-row"><span>'+label+'</span><b>'+expMoney(amount)+'</b></div>').join('')+'<p class="exp-card-hint">حدود الأسبوع والمتاح للدورة لا يُجمعان.</p>';document.getElementById('fsSave').disabled=false;};
     document.getElementById('fsSave').onclick=()=>{const v=values();if(!checked||checked!==JSON.stringify(v))return;cats.forEach((c,i)=>{if(v[i+2]!==expBudgetForWeek(c,x.week.start))expSetCategoryBudget(c.id,v[i+2],x.week.start);});expFinancePut({id:'plan_'+x.cycle.start,kind:'plan',cycleStart:x.cycle.start,expectedMinor:v[0],savingMinor:v[1]});expCloseForm();expRefresh();};
     document.getElementById('fsObligations').onclick=()=>expOpenCommitments();const manage=document.getElementById('fsCategories');if(manage)manage.onclick=()=>expOpenCategoryManager();
   }
@@ -13957,11 +13958,12 @@
     const movements=expFinanceRows().filter(r=>['income','saving'].includes(r.kind)).map(r=>({id:r.id,source:'finance',type:r.kind==='income'?'income':r.amountMinor<0?'withdraw':'deposit',date:r.date,name:r.name||((expState.savingsGoals||[]).find(g=>g.id===r.goalId)||{}).name||'حركة',amount:expToMinor(r.amountMinor),row:r}));
     const q=(filters.text||'').trim().toLowerCase();return tx.concat(movements).filter(r=>(!filters.type||r.type===filters.type)&&(!filters.start||r.date>=filters.start)&&(!filters.end||r.date<=filters.end)&&(!q||r.name.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));
   }
+  let expUnifiedLedgerRefresh=null;
   function expOpenUnifiedLedger(){
     const labels={purchase:'شراء · صرف',refund:'استرداد · خفض الصرف',transfer:'تحويل مسجل',income:'دخل مستلم',deposit:'تحويل إلى الادخار',withdraw:'سحب من الادخار'};
     expOpenForm('<div class="exp-form-head"><h3>السجل المالي الموحد</h3><button data-close>✕</button></div><p>المشتريات والدخل والادخار سجلات مختلفة. الادخار ليس مصروف شراء؛ لا يمثل السجل رصيد البنك. الإشارة تبيّن اتجاه المال خارج الادخار: − صرف أو ادخار، + استلام أو سحب.</p><div class="exp-field"><label for="ulType">نوع الحركة</label><select id="ulType"><option value="">كل الأنواع</option>'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div>'+expFinanceField('من تاريخ','ulStart','date','')+expFinanceField('إلى تاريخ','ulEnd','date','')+expFinanceField('بحث في الوصف والفئة','ulText','text','')+'<div id="ulRows"></div>');
     const render=()=>{const rows=expUnifiedLedgerRows({type:document.getElementById('ulType').value,start:document.getElementById('ulStart').value,end:document.getElementById('ulEnd').value,text:document.getElementById('ulText').value}),box=document.getElementById('ulRows');box.innerHTML=rows.map(r=>'<section data-ledger-id="'+expEsc(r.id)+'"><p><b>'+labels[r.type]+'</b> · '+expArDate(r.date)+' · '+(r.type==='purchase'?'−':r.type==='refund'||r.type==='income'||r.type==='withdraw'?'+':r.type==='deposit'?'−':'⇄ ')+expMoney(Math.abs(r.amount))+'</p>'+(r.source==='transaction'?expTxRow(r.row):'<div class="exp-row"><span>'+expEsc(r.name)+'</span><button data-ledger-correct="'+expEsc(r.id)+'">'+(r.type==='income'?'تعديل أو إلغاء':'تصحيح الحركة')+'</button></div>')+'</section>').join('')||'<p class="exp-empty">لا حركات تطابق المرشحات. غيّر النوع أو التواريخ أو البحث، أو سجل حركة من الملخص.</p>';expWireTxMenus(box);box.querySelectorAll('[data-ledger-correct]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r.id===b.dataset.ledgerCorrect&&r.source==='finance');expOpenFinanceLedger(r.row.kind,r.date);});};
-    document.getElementById('ulText').removeAttribute('inputmode');['ulType','ulStart','ulEnd','ulText'].forEach(id=>document.getElementById(id).oninput=render);render();
+    expUnifiedLedgerRefresh=render;document.getElementById('ulText').removeAttribute('inputmode');['ulType','ulStart','ulEnd','ulText'].forEach(id=>document.getElementById(id).oninput=render);render();
   }
   function expFinanceAlerts(date){
     const x=expFinancePeriods(date),items=[];
@@ -13972,7 +13974,7 @@
   }
   const expDismissedFinanceAlerts=new Set();
   function expRenderFinanceAlert(){
-    const rows=expFinanceAlerts(todayStr()),first=rows.find(r=>!expDismissedFinanceAlerts.has(r.id));
+    const rows=expFinanceAlerts(todayStr()).filter(r=>!expDismissedFinanceAlerts.has(r.id)),first=rows[0];
     if(!first)return '';return '<section class="exp-card" aria-label="تنبيه مالي"><p role="status">'+expEsc(first.text)+'</p><button data-finance-action="'+first.action+'">معالجة التنبيه</button><button data-finance-dismiss="'+expEsc(first.id)+'">إخفاء لهذا العرض</button>'+(rows.length>1?'<details><summary>تنبيهات أخرى</summary>'+rows.filter(r=>r!==first).map(r=>'<p>'+expEsc(r.text)+' <button data-finance-action="'+r.action+'">مراجعة</button></p>').join('')+'</details>':'')+'</section>';
   }
   function expWireFinanceSummary(){
@@ -14506,9 +14508,24 @@
   }
 
   /* ---------- النماذج ---------- */
-  function expOpenForm(html){ expFormBox.innerHTML = html; expFormOverlay.hidden=false; expSaving=false;
-    expFormBox.querySelectorAll("[data-close]").forEach(b=> b.onclick=expCloseForm); }
-  function expCloseForm(){ expFormOverlay.hidden=true; expFormBox.innerHTML=""; }
+  let expFormOpener=null;
+  function expOpenForm(html){
+    expUnifiedLedgerRefresh=null;
+    if(expFormOverlay.hidden)expFormOpener=document.activeElement;
+    expFormBox.innerHTML=html;expFormOverlay.hidden=false;expSaving=false;
+    expFormBox.setAttribute('role','dialog');expFormBox.setAttribute('aria-modal','true');
+    const title=expFormBox.querySelector('h3,h2');if(title){if(!title.id)title.id='expFormTitle';expFormBox.setAttribute('aria-labelledby',title.id);expFormBox.removeAttribute('aria-label');}else{expFormBox.removeAttribute('aria-labelledby');expFormBox.setAttribute('aria-label','نموذج');}
+    expFormBox.querySelectorAll('[data-close]').forEach(b=>b.onclick=expCloseForm);
+    const first=expFormBox.querySelector('input:not([type="hidden"]),select,textarea')||expFormBox.querySelector('button');if(first)first.focus({preventScroll:true});else{expFormBox.tabIndex=-1;expFormBox.focus({preventScroll:true});}
+  }
+  function expCloseForm(){expUnifiedLedgerRefresh=null;expFormOverlay.hidden=true;expFormBox.innerHTML='';const opener=expFormOpener;expFormOpener=null;if(opener?.isConnected)opener.focus({preventScroll:true});}
+  expFormOverlay.addEventListener('keydown',e=>{
+    if(!document.getElementById('hifzDialog').hidden||document.querySelector('.prio-menu-backdrop'))return;
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();expCloseForm();return;}
+    if(e.key!=='Tab')return;
+    const nodes=[...expFormBox.querySelectorAll('button,input,select,textarea,summary,a[href]')].filter(n=>!n.disabled&&n.getClientRects().length),first=nodes[0],last=nodes.at(-1);
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+  });
   expFormOverlay.addEventListener("click", e=>{ if(e.target===expFormOverlay) expCloseForm(); });
 
   /* «meta» يغيّر ما يراه المستخدم فقط (رموز ونص أوضح)، والقيمة الأصلية تبقى ثابتة للسجل والتقارير. */
@@ -14894,7 +14911,11 @@
     bar.hidden=false; if(expUndoTimer) clearTimeout(expUndoTimer);
     const btn=document.getElementById("expUndoBtn");
     btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
-    expUndoTimer=setTimeout(()=>{ bar.hidden=true; }, 6000);
+    if(document.getElementById('ulRows')){
+      document.getElementById('ulUndo')?.remove();expFormBox.insertAdjacentHTML('beforeend','<button id="ulUndo" class="exp-add-line">تراجع عن التصحيح الأخير</button>');
+      document.getElementById('ulUndo').onclick=()=>{restoreFn();bar.hidden=true;document.getElementById('ulUndo')?.remove();expRefresh();};
+    }
+    expUndoTimer=setTimeout(()=>{ bar.hidden=true;document.getElementById('ulUndo')?.remove(); }, 6000);
   }
   function expShowUndo(text, txId){ expShowUndoAction(text, ()=> expRestoreTransaction(txId)); }
 
