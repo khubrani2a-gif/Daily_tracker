@@ -14005,13 +14005,14 @@
     const today = todayStr();
     const dayNet = expNetInRange(expDayRange(today));
     const wr = expWeekRange(today), cycle=expSalaryCycleRange(today,expState.settings.salaryCycleStartDay);
-    const weekNet = expNetInRange(wr), cycleNet = expNetInRange(cycle), salary=expExpectedIncome(cycle.start), remaining=expFinancePeriods(today).available;
+    const finance=expFinancePeriods(today);
+    const weekNet = expNetInRange(wr), cycleNet = expNetInRange(cycle), salary=finance.incomeBasis, remaining=finance.available;
     const budget = expWeeklyBudgetTotal(wr.start), varSpent = expVarNetInWeek(wr);
     return [
       {label:"صرف اليوم", val:expMoney(dayNet)},
       {label:"هذا الأسبوع", val:expMoney(weekNet)},
       {label:"دورة الراتب "+_arn(cycle.day)+"–"+_arn(+cycle.end.slice(-2)), val:expMoney(cycleNet)},
-      salary>0 ? {label:"المتاح المحسوب حتى "+cycle.end, val:expMoney(remaining), over:remaining<0} : {label:"راتب الدورة", val:"حدده من الإعدادات"}
+      salary>0 ? {label:(finance.incomeEstimated?"المتاح المتوقع حتى ":"المتاح المحسوب حتى ")+cycle.end, val:expMoney(remaining), over:remaining<0} : {label:"راتب الدورة", val:"حدده من الإعدادات"}
     ];
   }
   function expRenderLaunch(){
