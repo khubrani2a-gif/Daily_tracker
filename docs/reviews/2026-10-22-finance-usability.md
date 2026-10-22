@@ -25,3 +25,6 @@ Screenshots were captured from isolated sample data at phone, tablet and laptop 
 - Comparisons use immediately preceding equal-length day ranges, explicitly labeled; they are not whole unequal calendar-month comparisons.
 - Savings corrections retain the existing cancel/re-record path and a guarded undo.
 - All features use existing local/cloud persistence and require no paid service. No new background notifications or bank integration are introduced.
+
+## Transition-week follow-up
+Final inspection caught a mismatch when a scheduled week-start change creates a short week: setup displayed a prorated amount but projected/saved it as a full-week rate. Both setup and the existing budget editor now edit the nominal seven-day limit; the preview separately shows the effective current-week amount. Regression covers unchanged and changed limits on the October 31 one-day transition, next-week rates, and preview-versus-save equality. The first deployment was cancelled before publication so this correction is included in v168.
