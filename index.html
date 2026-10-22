@@ -422,10 +422,11 @@
 
   #prayerDetails{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}#prayerDetails summary{cursor:pointer;color:var(--muted);padding:10px;min-height:44px;box-sizing:border-box}
   #locRow input,#locRow select{min-height:44px}
-  .prayer-tile{min-width:0}.prayer-actions{display:flex;align-items:center;gap:4px;margin-top:4px}.prayer-actions button{min-height:44px;border:0;background:transparent;color:var(--accent);border-radius:10px;cursor:pointer;font-size:.72rem}.prayer-actions [data-prayer-edit]{min-width:44px;margin-inline-start:auto;font-size:1.1rem}.prayer-actions [data-prayer-adhkar]{flex:1}.prayer-actions button:hover{background:var(--accent-soft)}
+  .prayer-tile{min-width:0;border:1.5px solid var(--line);border-radius:14px;background:var(--chip-bg);display:flex;flex-direction:column}.prayer-tile:has(.next){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.prayer-tile .prayer{border:0;border-radius:12px 12px 0 0;flex:1}.prayer-tile .prayer-actions{border-top:1px solid var(--line);margin:0;padding:2px 4px}.prayer-tile .prayer:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}.prayer-actions{display:flex;align-items:center;gap:4px;margin-top:4px}.prayer-actions button{min-height:44px;border:0;background:transparent;color:var(--accent);border-radius:10px;cursor:pointer;font-size:.72rem}.prayer-actions [data-prayer-edit]{min-width:44px;margin-inline-start:auto;font-size:1.1rem}.prayer-actions [data-prayer-adhkar]{flex:1}.prayer-actions button:hover{background:var(--accent-soft)}
   .prayer{touch-action:manipulation;-webkit-user-select:none}.prayer:disabled{cursor:default;opacity:.65}
-  .prayer-clock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.prayer-clock-grid>div{padding:8px 2px}.prayer-clock-grid strong{display:block;font-size:clamp(1.2rem,5vw,1.8rem);font-variant-numeric:tabular-nums;direction:ltr;line-height:1.6}.prayer-clock-grid small{display:block;font-weight:400}.prayer-clock-now{font-size:.68rem;font-weight:400;opacity:.85}.prayer-clock-active{border-radius:10px;background:var(--paper);color:var(--accent)}
+  .prayer-clock-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}.prayer-clock-grid>div{padding:8px 2px}.prayer-clock-grid strong{display:block;font-size:clamp(1.2rem,5vw,1.8rem);font-variant-numeric:tabular-nums;direction:ltr;line-height:1.6}.prayer-clock-grid small{display:block;font-weight:400}.prayer-clock-now{font-size:.68rem;font-weight:400;opacity:.85}.prayer-clock-active{border-radius:10px;background:var(--paper);color:var(--accent)}
 
+  .prayer-clock-grid>div{min-width:0;overflow-wrap:anywhere}.prayer-clock-primary{order:-1;background:var(--paper);border-radius:12px}.prayer-clock-grid .prayer-clock-primary strong{font-size:clamp(1rem,5.2vw,1.9rem)}.prayer-clock-grid .prayer-clock-secondary strong{font-size:clamp(.8rem,3.5vw,1.1rem)}.prayer-clock-secondary{align-self:center;font-size:.8em}.prayer-clock-now{overflow-wrap:anywhere}.prayer-clock-grid #iqamahLabel{font:inherit;color:inherit;background:transparent;border:0;border-bottom:1px dashed currentColor;cursor:pointer;min-height:44px;padding:4px}.prayer-clock-grid #iqamahLabel:focus-visible{outline:2px solid var(--accent)}
   #locRow{flex-wrap:wrap;gap:12px}#locRow label{display:grid;gap:6px;flex:1 1 220px;min-width:0}#locRow input,#locRow select{width:100%;min-width:0;box-sizing:border-box}#locRow p{flex-basis:100%}#prayerFeedback{padding:10px;border:1px solid var(--accent);border-radius:12px}#prayerUndo{margin-inline-start:8px}.prayer .pstatus{display:block;font-size:.75rem;margin-top:4px}.prayer[aria-pressed="true"]{outline-offset:2px}
   #prayerSummary{font-size:.86rem}#prayerTimesInfo{font-size:.78rem;line-height:1.6;overflow-wrap:anywhere}.task-sheet-save[data-prayer-status],#prayerAdhkar{background:var(--paper);color:var(--ink);border:1px solid var(--line)}.task-sheet-save[data-prayer-status][aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}.task-sheet-save[data-prayer-status="missed"]{color:var(--danger)}
   .prayers{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
@@ -437,24 +438,22 @@
   .prayer:hover{border-color:var(--accent-2)}
   .prayer .pmark{font-size:1.2rem;display:block;margin-bottom:.25rem;color:var(--chk-border);transition:.18s}
   .prayer.done{
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));
-    border-color:transparent;color:#fff;
-    box-shadow:0 4px 12px -4px rgba(14,122,112,.5);
+    background:var(--accent-soft);
+    border-color:var(--line);color:var(--ink);box-shadow:none;
   }
-  .prayer.done .pmark{color:#fff}
+  .prayer.done .pmark{color:var(--accent)}
   .prayer.late{
-    background:linear-gradient(135deg,#b8912a,#d9b34a);
-    border-color:transparent;color:#fff;
-    box-shadow:0 4px 12px -4px rgba(195,154,43,.5);
+    background:var(--chip-bg);
+    border-color:var(--line);color:var(--ink);box-shadow:none;
   }
-  .prayer.late .pmark{color:#fff}
+  .prayer.late .pmark{color:var(--gold)}.prayer.late .pstatus{display:inline-block;border:1px solid var(--gold);border-radius:20px;padding:2px 8px}
   .prayer.missed{border-color:var(--danger);color:var(--danger);background:var(--chip-bg)}
   .prayer.missed .pmark{color:var(--danger)}
   .pstate-legend{font-size:.68rem;color:var(--muted);text-align:center;margin-top:.55rem}
   .pstate-legend b{font-weight:600}
   .lg-on{color:var(--accent)} .lg-late{color:var(--gold)} .lg-miss{color:var(--danger)}
   .ptime{display:block;font-size:.68rem;font-weight:400;margin-top:.2rem;opacity:.8}
-  .prayer.next{border-color:var(--gold);animation:glowpulse 2.2s infinite}
+  .prayer.next{border-color:var(--accent);animation:none}
   @keyframes glowpulse{
     0%,100%{box-shadow:0 0 0 0 rgba(195,154,43,.38)}
     50%{box-shadow:0 0 0 6px rgba(195,154,43,.10)}
@@ -2693,7 +2692,7 @@
         <div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
         <p id="prayerFeedback" role="status" hidden><span id="prayerFeedbackText"></span> <button type="button" id="prayerUndo">تراجع</button></p>
         <div class="pstate-legend">اضغط «صليت» للتسجيل · ⋯ لتصحيح الحالة</div>
-        <details id="prayerDetails"><summary>المواقيت والإعدادات</summary><p id="prayerTimesInfo" class="pstate-legend"></p><p class="pstate-legend">الإقامة بعد الأذان: الفجر ٢٥ د · الظهر والعصر والعشاء ٢٠ د · المغرب ١٠ د.</p>
+        <details id="prayerDetails"><summary>المواقيت والإعدادات</summary><p id="prayerTimesInfo" class="pstate-legend"></p><p class="pstate-legend" id="prayerIqamahSummary">الإقامة بعد الأذان: الفجر ٢٥ د · الظهر والعصر والعشاء ٢٠ د · المغرب ١٠ د.</p>
         <div class="loc-row" id="locRow" hidden>
           <label>المدينة والدولة<input type="text" id="cityInput" maxlength="180" placeholder="مثال: جدة، السعودية"></label>
           <label>طريقة الحساب<select id="prayerMethod"><option value="">تلقائية حسب الموقع</option><option value="1">جامعة كراتشي</option><option value="2">أمريكا الشمالية ISNA</option><option value="3">رابطة العالم الإسلامي</option><option value="4">أم القرى — مكة</option><option value="5">الهيئة المصرية للمساحة</option><option value="8">الخليج</option><option value="9">الكويت</option><option value="10">قطر</option><option value="11">سنغافورة</option><option value="12">فرنسا</option><option value="13">تركيا</option><option value="15">لجنة رؤية الهلال</option><option value="16">دبي</option></select></label>
@@ -3815,10 +3814,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=163"></script>
+<script src="data-core.js?v=164"></script>
 <script src="planner-core.js"></script>
-<script src="calendar-core.js?v=163"></script>
-<script src="learning-core.js?v=163"></script>
+<script src="calendar-core.js?v=164"></script>
+<script src="learning-core.js?v=164"></script>
 <script>
 (function(){
   "use strict";
@@ -8032,6 +8031,13 @@
   function timesError(msg){const strip=document.getElementById('nextStrip');strip.textContent='⚠️ '+msg;strip.hidden=false;strip.classList.remove('iqamah');}
   const PRAYER_IQAMAH={Fajr:25,Dhuhr:20,Asr:20,Maghrib:10,Isha:20};
   const prayerLiveRequests=new Map();
+  function prayerIqamahDelay(key){let saved;try{saved=JSON.parse(localStorage.getItem('h2do-iqamah-settings')||'{}');}catch(e){}const n=Number(saved?.[key]);return Number.isInteger(n)&&n>=1&&n<=90?n:PRAYER_IQAMAH[key];}
+  function openIqamahSettings(key,friday){
+    if(friday){document.getElementById('fridaySettings').click();return;}
+    if(!Object.hasOwn(PRAYER_IQAMAH,key))return;
+    const owner=accountStorage.owner,name=PRAYERS[PRAYER_KEYS.indexOf(key)],sheet=taskSheet('توقيت إقامة '+name,'<div class="friday-form"><label for="prayerIqamahMinutes">الدقائق بعد الأذان حسب مسجدك</label><input id="prayerIqamahMinutes" type="number" min="1" max="90" value="'+prayerIqamahDelay(key)+'"><p class="pstate-legend">تقدير حسب المدة التي تحددها، محفوظ لهذا الجهاز. إعداد الجمعة مستقل.</p><p id="prayerIqamahError" role="alert"></p><button type="button" class="task-sheet-save" id="prayerIqamahSave">حفظ</button></div>');
+    sheet.over.querySelector('#prayerIqamahSave').onclick=()=>{if(accountChanging||owner!==accountStorage.owner){sheet.close();return;}const n=Number(sheet.over.querySelector('#prayerIqamahMinutes').value);if(!Number.isInteger(n)||n<1||n>90){sheet.over.querySelector('#prayerIqamahError').textContent='أدخل عددًا صحيحًا من ١ إلى ٩٠ دقيقة.';return;}const prefs=Object.fromEntries(Object.keys(PRAYER_IQAMAH).map(k=>[k,prayerIqamahDelay(k)]));prefs[key]=n;localStorage.setItem('h2do-iqamah-settings',JSON.stringify(prefs));sheet.close();updateNext();};
+  }
   let prayerLiveDay=null;
   function prayerEpoch(date,hm,zone){
     const desired=Date.parse(date+'T'+hm+':00Z');let epoch=desired;
@@ -8058,12 +8064,12 @@
     if(!today){strip.textContent='جارٍ تحميل مواقيت اليوم للعدّاد — تحقق من الاتصال إذا تأخر';return;}
     const fard=[['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']];
     let next=null,active=null;
-    for(const [key,name] of fard){const at=prayerEpoch(clock.date,today[key],today._meta.zone),iq=at+(key==='Dhuhr'&&isFriday(clock.date)?fridayPrefs().iqamah:PRAYER_IQAMAH[key])*60000;
+    for(const [key,name] of fard){const at=prayerEpoch(clock.date,today[key],today._meta.zone),iq=at+(key==='Dhuhr'&&isFriday(clock.date)?fridayPrefs().iqamah:prayerIqamahDelay(key))*60000;
       if(at>now&&!next)next={key,name,at,iq,hm:today[key]};
       if(at<=now&&iq>now)active={key,name,at,iq,hm:today[key]};
     }
     if(!next){const tomorrow=new Date(Date.parse(clock.date+'T12:00:00Z')+86400000).toISOString().slice(0,10),t=prayerLiveTimes(tomorrow);
-      if(t){const at=prayerEpoch(tomorrow,t.Fajr,t._meta.zone);next={key:'Fajr',name:'الفجر غدًا',at,iq:at+PRAYER_IQAMAH.Fajr*60000,hm:t.Fajr};}
+      if(t){const at=prayerEpoch(tomorrow,t.Fajr,t._meta.zone);next={key:'Fajr',name:'الفجر غدًا',at,iq:at+prayerIqamahDelay('Fajr')*60000,hm:t.Fajr};}
     }
     if(currentDate===clock.date)nextKey=active?.key||(next&&!next.name.includes('غدًا')?next.key:null);
     let fridayStage=null;if(isFriday(clock.date)&&(active?.key==='Dhuhr'||(!active&&next?.key==='Dhuhr'))){const prefs=fridayPrefs(),at=prayerEpoch(clock.date,today.Dhuhr,today._meta.zone);fridayStage={first:at-prefs.firstLead*60000,second:at,iq:at+prefs.iqamah*60000};}
@@ -8071,11 +8077,21 @@
     const signature=[next?.name,iq?.name,!!active,clock.date,currentDate].join('|');
     if(strip.dataset.clockSignature!==signature||!strip.querySelector('#adhanCountdown')){
       strip.dataset.clockSignature=signature;
-      strip.innerHTML='<div class="prayer-clock-now">الآن · بتوقيت المدينة'+(currentDate!==clock.date?' · '+expEsc(clock.date):'')+'</div><div class="prayer-clock-grid"><div><span id="adhanLabel"></span><strong id="adhanCountdown"></strong><small id="adhanTime"></small></div><div class="'+(active?'prayer-clock-active':'')+'"><span id="iqamahLabel"></span><strong id="iqamahCountdown"></strong><small id="iqamahTime"></small></div></div>';
+      strip.innerHTML='<div class="prayer-clock-now">الآن · بتوقيت المدينة'+(currentDate!==clock.date?' · '+expEsc(clock.date):'')+'</div><div class="prayer-clock-grid"><div><span id="adhanLabel"></span><strong id="adhanCountdown"></strong><small id="adhanTime"></small></div><div class="'+(active?'prayer-clock-active':'')+'"><button type="button" id="iqamahLabel" title="تعديل مدة الإقامة" aria-label="تعديل مدة الإقامة"></button><strong id="iqamahCountdown"></strong><small id="iqamahTime"></small></div></div>';
     }
     strip.querySelector('#adhanLabel').textContent=next?'أذان '+next.name:'أذان الفجر غدًا';strip.querySelector('#adhanCountdown').textContent=next?count(next.at):'—';strip.querySelector('#adhanTime').textContent=next?fmt12(next.hm):'بانتظار مواقيت الغد';
     strip.querySelector('#iqamahLabel').textContent=iq?'إقامة '+iq.name:'الإقامة';strip.querySelector('#iqamahCountdown').textContent=iq?count(iq.iq):'—';strip.querySelector('#iqamahTime').textContent=active?'دخل وقت الصلاة':iq?'بعد الأذان بـ '+PRAYER_IQAMAH[iq.key]+' د':'';
     if(fridayStage){const f=fridayStage,first=now<f.first,before=now<f.second;strip.querySelector('#adhanLabel').textContent=first?'أذان الجمعة الأول':before?'أذان الجمعة الثاني':'وقت الخطبة';strip.querySelector('#adhanCountdown').textContent=first?count(f.first):before?count(f.second):'الإنصات للخطبة';strip.querySelector('#adhanTime').textContent=first?'تنبيه مبكر · تقديري':before?'عند صعود الإمام':'وفق وقت الأذان الثاني';strip.querySelector('#iqamahLabel').textContent='إقامة الجمعة · تقديرية';strip.querySelector('#iqamahCountdown').textContent=count(f.iq);strip.querySelector('#iqamahTime').textContent='نحو '+fridayPrefs().iqamah+' د بعد الأذان الثاني';}
+
+    const loc=prayerLocation(),city=loc?.city||loc?.address||today._meta.zone;
+    strip.querySelector('.prayer-clock-now').textContent='الآن · بتوقيت '+city+(currentDate!==clock.date?' · '+clock.date:'');
+    const adhanBox=strip.querySelector('#adhanCountdown').parentElement,iqBox=strip.querySelector('#iqamahCountdown').parentElement;
+    adhanBox.className=active?'prayer-clock-secondary':'prayer-clock-primary';iqBox.className=active?'prayer-clock-primary':'prayer-clock-secondary';
+    const iqLabel=strip.querySelector('#iqamahLabel');iqLabel.disabled=!iq;iqLabel.setAttribute('aria-label',iqLabel.textContent+' — تعديل مدة الإقامة');iqLabel.onclick=()=>openIqamahSettings(iq?.key,!!fridayStage);
+    if(iq){const hm=prayerClock(today._meta.zone,new Date(iq.iq)).time;strip.querySelector('#iqamahTime').textContent='الإقامة نحو '+fmt12(hm)+(fridayStage?' · بعد الخطبة':'');}
+    document.getElementById('prayerIqamahSummary').textContent='الإقامة بعد الأذان: '+fard.map(([key,name])=>name+' '+prayerIqamahDelay(key).toLocaleString('ar-EG')+' د').join(' · ')+' — اضغط اسم الإقامة لتعديلها.';
+    document.querySelectorAll('[data-prayer-index]').forEach(el=>el.classList.toggle('next',PRAYER_KEYS[+el.dataset.prayerIndex]===nextKey));
+
 
   }
   const locRow=document.getElementById('locRow'),cityInput=document.getElementById('cityInput');
