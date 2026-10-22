@@ -83,9 +83,9 @@ test("weekly reset keeps configured categories and calendar-month progress witho
     const markup=await page.evaluate(()=>window.__mfkrExp.renderVarCard());
     assert.match(markup,/المطاعم والطلبات/);
     assert.match(markup,/هذا الأسبوع/);
-    assert.match(markup,/هذا الشهر/);
+    assert.match(markup,/دورة الراتب/);
     assert.match(markup,/لم يُصرف شيء من/);
-    assert.doesNotMatch(markup,/دورة الراتب/);
+    assert.doesNotMatch(markup,/خطة الشهر مشتقة/);
     assert.doesNotMatch(markup,/NaN|Infinity/);
 
     const after=await page.evaluate(()=>window.__mfkrExp.state());
