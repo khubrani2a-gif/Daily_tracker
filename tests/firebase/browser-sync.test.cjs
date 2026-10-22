@@ -6,12 +6,13 @@ const root=path.resolve(__dirname,'../..');
 // Use the same compat SDK version as production, with real Firestore transport.
 // Emulator-only tokens bypass Google login without exposing production credentials.
 const sdkRoot=path.dirname(require.resolve('firebase-app-sdk/package.json'));
-const expose=`window.integration={blankState,persistDay,pullRemote,syncPendingDays,syncPullAllModules,dailyPending,learningLoad,learningSave,learningPullRemote,ready:()=>!!user&&!accountChanging};`;
+const expose=`window.integration={expState:()=>expState,expSave,expPushRemote,expPullRemote,blankState,persistDay,pullRemote,syncPendingDays,syncPullAllModules,dailyPending,learningLoad,learningSave,learningPullRemote,ready:()=>!!user&&!accountChanging};`;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8')
  .replace('firebase.initializeApp(FIREBASE_CONFIG);','firebase.initializeApp({projectId:"demo-daily-tracker",apiKey:"demo-only",appId:"demo-only"});')
  .replace('db = firebase.firestore();','db = firebase.firestore(); db.useEmulator("127.0.0.1",8080,{mockUserToken:{sub:"browser-owner"}});')
  .replace('firebase.auth().onAuthStateChanged(u=>{','(cb=>cb({uid:"browser-owner"}))(u=>{')
  .replace('const snap=await transaction.get(ref);','const snap=await transaction.get(ref);if(window.holdLearningRead)await window.txnBarrier();')
+ .replace('const remote=await transaction.get(targetRef);','const remote=await transaction.get(targetRef);if(window.holdFinanceRead)await window.financeBarrier();')
  .replace('function storageKey(date){',expose+'\nfunction storageKey(date){');
 async function openDevice(browser,origin){
  const context=await browser.newContext(),page=await context.newPage();
@@ -79,6 +80,13 @@ test('app sync across independent browsers preserves offline edits alongside rem
    await b.page.evaluate(()=>integration.learningPullRemote('academic-seed'));
    await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.terms=[{id:'term-a',yearId:'year',name:'A',startDate:'2026-01-01',endDate:'2026-06-30'}];integration.learningSave(d);await integration.learningPullRemote('academic-a');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.terms=[{id:'term-b',yearId:'year',name:'B',startDate:'2026-07-01',endDate:'2026-12-31'}];integration.learningSave(d);await integration.learningPullRemote('academic-b');})]);
    for(const device of [a,b]){await device.page.evaluate(()=>integration.learningPullRemote('academic-verify'));assert.deepEqual(await device.page.evaluate(()=>integration.learningLoad().terms.map(t=>t.id).sort()),['term-a','term-b']);}
+   // Force independent finance writers to read the same server revision before committing.
+   await a.page.evaluate(async()=>{const d=integration.expState();d.settings.salaryAmountMinor=800000;integration.expSave(d);await integration.expPushRemote(d);});
+   await b.page.evaluate(()=>integration.expPullRemote({manual:true}));
+   let financeArrivals=0,financeRelease;const financeBarrier=new Promise(resolve=>financeRelease=resolve);
+   for(const d of [a,b]){await d.page.exposeBinding('financeBarrier',async()=>{if(++financeArrivals>=2)financeRelease();await financeBarrier;});await d.page.evaluate(()=>window.holdFinanceRead=true);}
+   await Promise.all([a.page.evaluate(async()=>{const d=integration.expState();d.transactions.push({id:'finance-a',amountMinor:10000,transactionType:'expense',transactionDate:'2026-10-01',createdAt:Date.now(),updatedAt:Date.now()});d.settings.salaryAmountMinor=900000;integration.expSave(d);const result=await integration.expPushRemote(d);if(!result.ok)throw new Error(result.error);}),b.page.evaluate(async()=>{const d=integration.expState();d.transactions.push({id:'finance-b',amountMinor:20000,transactionType:'expense',transactionDate:'2026-10-01',createdAt:Date.now(),updatedAt:Date.now()});d.settings.defaultPaymentMethod='نقد';d.financeEntries=[{id:'income-b',kind:'income',date:'2026-10-01',amountMinor:900000,updatedAt:Date.now()}];integration.expSave(d);const result=await integration.expPushRemote(d);if(!result.ok)throw new Error(result.error);})]);
+   for(const d of [a,b]){await d.page.evaluate(()=>window.holdFinanceRead=false);await d.page.evaluate(()=>integration.expPullRemote({manual:true}));const finance=await d.page.evaluate(()=>integration.expState());assert.ok(finance.transactions.some(t=>t.id==='finance-a'));assert.ok(finance.transactions.some(t=>t.id==='finance-b'));assert.equal(finance.settings.salaryAmountMinor,900000);assert.equal(finance.settings.defaultPaymentMethod,'نقد');assert.ok(finance.financeEntries.some(t=>t.id==='income-b'));assert.deepEqual(d.errors,[]);}
    let arrivals=0,release;const barrier=new Promise(resolve=>release=resolve);
    for(const d of [a,b]){await d.page.exposeBinding('txnBarrier',async()=>{if(++arrivals>=2)release();await barrier;});await d.page.evaluate(()=>window.holdLearningRead=true);}
    await Promise.all([a.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].name='Concurrent A';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');}),b.page.evaluate(async()=>{const d=integration.learningLoad();d.courses[0].notes='Concurrent B';d.courses[0].updatedAt=Date.now();integration.learningSave(d);await integration.learningPullRemote('race');})]);
