@@ -11,7 +11,7 @@ const errs=[];
 const openFinance=async(p)=>{
   await p.locator('a[data-app-view="expenses"]').click(); await p.waitForTimeout(250);
   await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(350);
-  await p.click('.exp-tab[data-view="dash"]'); await p.waitForTimeout(300);
+  await p.click('[data-family-finance]'); await p.waitForTimeout(300);
 };
 const clickTxt=async(p,sel,txt)=>{ const els=await p.$$(sel); for(const e of els){ if(((await e.textContent())||"").includes(txt)){ await e.click(); return true; } } return false; };
 async function page(b){ const ctx=await b.newContext({viewport:{width:1000,height:900}}); const p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message)); return p; }

@@ -16,7 +16,7 @@ const openFamily=async(p)=>{
   await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(350);
 };
 /* تبويب المالية: فيه بطاقات الميزانية والالتزامات وزر «＋ إضافة مصروف» */
-const openFinance=async(p)=>{ await openFamily(p); await p.click('.exp-tab[data-view="dash"]'); await p.waitForTimeout(300); };
+const openFinance=async(p)=>{ await openFamily(p); await p.click('[data-family-finance]'); await p.waitForTimeout(300); };
 // everything in TODAY's day/week/month/year -> no navigation needed
 function seed(extra){ return (a)=>{ localStorage.clear(); const now=Date.now(); const tk=a.tk;
   const mk=(o)=>Object.assign({id:o.id,amountMinor:0,transactionDate:tk,categoryId:"CA",transactionType:"expense",fixedExpenseInstanceId:null,relatedTransactionId:null,tripId:null,countAgainstWeeklyBudget:true,originalAmountMinor:null,originalCurrency:null,exchangeRate:null,exchangeRateSource:null,merchantCountry:null,createdAt:now,updatedAt:now,deletedAt:null},o);
@@ -38,7 +38,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   let p=await b.newPage({viewport:{width:1000,height:900}}); p.on("pageerror",e=>errs.push(e.message));
   await p.addInitScript(seed(), {tk:today()});
   await p.goto(fileUrl); await p.waitForTimeout(700);
-  await openFamily(p);
+  await openFinance(p);
   await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
 
   console.log("Weekly (single-count, travel excluded, refund reduces)");

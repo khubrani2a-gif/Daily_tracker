@@ -280,7 +280,7 @@ test("a used custom category is not deleted without reassignment, and reassignme
 async function openFinance(page){
   await page.locator('a[data-app-view="expenses"]').click(); await page.waitForTimeout(250);
   await page.locator("#expOpenBtn").click(); await page.waitForTimeout(350);
-  await page.locator('.exp-tab[data-view="dash"]').click(); await page.waitForTimeout(300);
+  await page.locator('[data-family-finance]').click(); await page.waitForTimeout(300);
 }
 
 test("the add-category form renders exactly one #vfBudget and saves the entered budget",async()=>{

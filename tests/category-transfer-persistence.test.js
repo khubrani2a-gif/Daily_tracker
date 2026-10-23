@@ -102,13 +102,8 @@ test("manual expense-category transfer survives close/reopen and full reload",as
     /* افتح العائلة ثم الشاشة التي تعرض الفئات الأسبوعية */
     await page.locator('[data-app-view="expenses"]').click(); await page.waitForTimeout(200);
     await page.locator("#expOpenBtn").click(); await page.waitForTimeout(400);
-    for(const view of ["finance","dash","family"]){
-      const tab=page.locator('.exp-tab[data-view="'+view+'"]');
-      if(await tab.count()){
-        await tab.click(); await page.waitForTimeout(350);
-        if(await page.locator('[data-catmenu="'+HOME_ID+'"]:visible').count()) break;
-      }
-    }
+    await page.locator('[data-family-finance]').click();
+    await page.waitForTimeout(350);
 
     /* نفس مسار المستخدم: قائمة الفئة ← «نقل مصروفات هذا الأسبوع» */
     await page.locator('[data-catmenu="'+HOME_ID+'"]:visible').first().click(); await page.waitForTimeout(300);
