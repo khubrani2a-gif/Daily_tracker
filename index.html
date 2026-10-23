@@ -1472,6 +1472,8 @@
   .exp-sec-head{font-weight:700;font-size:.9rem;margin:1rem 0 .5rem;color:var(--accent)}
   .exp-undo{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:230;background:var(--ink);color:var(--paper);border-radius:12px;padding:.6rem 1rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.88rem}
   .exp-undo[hidden]{display:none}
+  body:has(#ulUndo) #expUndo{display:none}
+  @media(max-width:700px){.exp-undo{bottom:var(--mobile-scroll-clearance);max-width:calc(100vw - 2rem)}}
   .exp-undo button{border:none;background:transparent;color:var(--accent-2);font-family:inherit;font-weight:700;font-size:.88rem;cursor:pointer}
   .exp-barmini{display:flex;gap:2px;align-items:flex-end;height:44px;margin-top:.4rem}
   .exp-barmini .bm{flex:1;background:var(--accent-soft);border-radius:3px 3px 0 0;min-height:3px;position:relative}
@@ -15097,7 +15099,6 @@
     const btn=document.getElementById("expUndoBtn");
     btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
     if(document.getElementById('ulRows')){
-      bar.hidden=true; // The inline undo remains reachable inside the open dialog.
       document.getElementById('ulUndo')?.remove();expFormBox.insertAdjacentHTML('beforeend','<button id="ulUndo" class="exp-add-line">تراجع عن التصحيح الأخير</button>');
       document.getElementById('ulUndo').onclick=()=>{restoreFn();bar.hidden=true;document.getElementById('ulUndo')?.remove();expRefresh();};
     }

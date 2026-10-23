@@ -18,3 +18,6 @@ Scope approved: direct settlement-conflict review, guided savings correction aft
 
 ## Boundaries
 Corrections remain explicit; no automatic choice between conflicting records. Undo is guarded and available in the current correction screen. Snapshot invalidation is conservative, including unrelated financial changes. Missing obligations are identified, not silently recreated. The picker does not introduce multi-cycle allocation.
+
+## Final undo follow-up
+The first Pages run was cancelled before publication. A reproduced close-ledger case showed the toast needed to reappear after the dialog closed, and the mobile navigation covered its button. Hide the floating toast only while inline undo exists; position it above mobile navigation. The original six-second lifetime and callback remain intact. New failing reproduction then guided/usability suites 26/26 passed (13 guided cases total). Final full suite now includes 527 tests; final CI/deployment evidence supersedes the first candidate.
