@@ -393,6 +393,7 @@ const rdCache = (p)=> p.evaluate(()=> JSON.parse(localStorage.getItem("h2do-read
   const readingModuleState = await p.evaluate(()=> window.__mfkrSync.module("reading"));
   ok("reading module reachable via the same read-only coordinator diagnostics as other modules", readingModuleState && typeof readingModuleState.inFlight === "boolean");
   await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(300);
+  if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
   await p.click('.exp-tab[data-view="settings"]'); await p.waitForTimeout(300);
   const rowCount = (await p.$$("#expModStatus .exp-foot-row")).length;
   ok("per-module status list shows exactly 9 rows", rowCount===9);

@@ -90,6 +90,7 @@ const dayKey="users/U1/days/"+today();
   console.log("D. Global manual sync 'مزامنة جميع البيانات' works + per-module status");
   const B4=await device(b); await B4.goto(fileUrl); await B4.waitForTimeout(800); await verifyFake(B4,"D");
   await B4.click('a[data-app-view="expenses"]'); await B4.click("#expOpenBtn"); await B4.waitForTimeout(300);
+  if(await B4.isVisible('[data-family-finance]')) await B4.click('[data-family-finance]');
   await B4.click('.exp-tab[data-view="settings"]'); await B4.waitForTimeout(300);
   ok("global sync button present", !!(await B4.$("#expGlobalSyncBtn")));
   ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===9);

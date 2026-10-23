@@ -122,7 +122,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("fractional STRING '12.5' → invalid, raw='12.5', amountMinor 0 (NOT rounded)", byId.FRS.amountMinor===0 && byId.FRS.amountInvalid===true && byId.FRS.amountRaw==="12.5");
     /* الإجمالي الدقيق عبر التقرير اليومي: 80000+50000+30000+0+0+0+0 - 20000 = 140000 (لا تسلسل، لا NaN، لا تقريب) */
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(250);
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="daily"]'); await p.waitForTimeout(200);
     ok("exact daily net = 1400 (strings summed, invalid/fractional as 0, refund subtracted)", (await stat(p,"صافي الصرف"))==="١٬٤٠٠ ر.س");
     /* minorParse وحدة — الصحيح فقط يُقبل */
@@ -174,7 +175,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"4");
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(250);
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
     ok("fixed actual = 1000 (fixed payment counted here)", (await stat(p,"الثابتة الفعلية"))==="١٬٠٠٠ ر.س");
     ok("variable normal = 300", (await stat(p,"المتغيّرة العادية"))==="٣٠٠ ر.س");
@@ -324,14 +326,16 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("liveTrips excludes the deleted trip", (await p.evaluate(()=> window.__mfkrExp.liveTrips())).indexOf("DT")<0);
     /* التقرير السنوي: DT لا تظهر كبند رحلة، والعدّاد يستثنيها */
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
     ok("yearly trip count = 1 (deleted trip excluded)", (await stat(p,"عدد الرحلات"))==="١");
     ok("yearly travel KPI = 400 (only the live trip, deleted trip's retained tx excluded)", (await stat(p,"إجمالي السفر (ضمن إجمالي السنة)"))==="٤٠٠ ر.س");
     const yBody=await p.$eval("#expReportBody",e=>e.textContent);
     ok("yearly report does not render the deleted trip's name", !yBody.includes("رحلة محذوفة"));
     /* قائمة الرحلات: DT غير معروضة */
-    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
     const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
     ok("trips list shows the live trip, not the deleted trip", tBody.includes("رحلة حيّة") && !tBody.includes("رحلة محذوفة"));
     /* نموذج تعديل TXD: DT لا تُعرض كخيار حيّ، بل «محذوفة (محفوظة)» تحمل معرّفها فلا يُفكّ الارتباط صامتًا */
@@ -416,7 +420,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"6");
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="yearly"]'); await p.waitForTimeout(200);
     /* الإجمالي = 300 (عادي) + 500 (سفر متغيّر) = 800، والسفر متداخل ضمنه لا يُضاف ثالثًا */
     ok("yearly total = 800 (travel already inside via fixed/variable, not added again)", (await stat(p,"إجمالي السنة"))==="٨٠٠ ر.س");
@@ -466,7 +471,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("single batched write (one localStorage snapshot after the op, not one per tx)", true);   /* verified structurally: expDeleteTripWithExpenses calls expSave once */
     /* التقارير: الإجماليات لم تعد تشمل VT1/FX1؛ N1 المستقلة تبقى */
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
     ok("monthly: fixed actual = 0 (deleted fixed payment excluded)", (await stat(p,"الثابتة الفعلية"))==="٠ ر.س");
     ok("monthly: travel = 0 (deleted trip variable expense excluded)", (await stat(p,"✈️ السفر"))==="٠ ر.س");
@@ -486,7 +492,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     });
     ok("category breakdown: N1's category (CA, now «"+catInfo.name+"») shows only 200 (VT1's contribution removed)", catInfo.row==="٢٠٠ ر.س");
     ok("hierarchy migration renamed CA الأكل → البقالة while keeping the same id", catInfo.name==="البقالة");
-    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
     const tBody=await p.$eval("#expTripsBody",e=>e.textContent);
     ok("trips list: deleted trip row not shown (no data-triprow for TR)", !(await p.$('[data-triprow="TR"]')));
     ok("trips list shows the empty-state message (no live trips left)", tBody.includes("لا توجد رحلات"));
@@ -515,7 +522,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p2.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data2);
     await p2.goto(fileUrl); await p2.waitForTimeout(800); await verifyFake(p2,"7b");
     await p2.click('a[data-app-view="expenses"]'); await p2.click("#expOpenBtn"); await p2.waitForTimeout(200);
-    await p2.click('.exp-tab[data-view="trips"]'); await p2.waitForTimeout(200);
+    if(await p2.isVisible('[data-family-finance]')) await p2.click('[data-family-finance]');
+  await p2.click('.exp-tab[data-view="trips"]'); await p2.waitForTimeout(200);
     /* افتح قائمة خيارات الصفّ مباشرةً (النقر على الصفّ نفسه ينتقل لصفحة التفاصيل ويُزيل زرّ القائمة) */
     await p2.click('[data-tripmenu="TR2"]'); await p2.waitForTimeout(200);
     /* افتح قائمة خيارات الرحلة ثم زر «حذف» → شاشة الخيارَين + إلغاء */
@@ -553,7 +561,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("Undo snackbar text mentions the trip+expenses deletion", undoTxt.includes("حُذفت الرحلة"));
     /* لا تظهر الرحلة/معاملاتها في أي مسار عرض بعد ذلك (شارة الإطلاق تُحدَّث مع كل expRefresh بصرف النظر عن العرض الحالي) */
     ok("launch banner: no travel banner for the deleted trip", await p2.evaluate(()=> !!document.getElementById("expLaunchBanner") && document.getElementById("expLaunchBanner").hidden));
-    await p2.click('.exp-tab[data-view="reports"]'); await p2.waitForTimeout(150);
+    if(await p2.isVisible('[data-family-finance]')) await p2.click('[data-family-finance]');
+  await p2.click('.exp-tab[data-view="reports"]'); await p2.waitForTimeout(150);
     await p2.click('.exp-tab[data-rep="daily"]'); await p2.waitForTimeout(200);
     ok("daily report: no row for deleted UX1", !(await p2.$('[data-txmenu="UX1"]')));
     ok("daily report: no row for deleted UX2", !(await p2.$('[data-txmenu="UX2"]')));
@@ -589,7 +598,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     await p.addInitScript((d)=> localStorage.setItem("h2do-expenses", JSON.stringify(d)), data);
     await p.goto(fileUrl); await p.waitForTimeout(800); await verifyFake(p,"7c");
     await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(200);
-    await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(200);
     await p.click('[data-tripmenu="TR4"]'); await p.waitForTimeout(200);
     const menuItems = await p.$$(".prio-menu-item");
     for(const it of menuItems){ const t=(await it.textContent())||""; if(t.includes("حذف")){ await it.click(); break; } }
@@ -604,7 +614,8 @@ const want = (id)=> GROUPS.length===0 || GROUPS.indexOf(id)>=0;
     ok("trip-only: trip tombstoned", !!s1.trips.find(t=>t.id==="TR4").deletedAt);
     ok("trip-only: PX1/PX2 NEVER touched (deletedAt still null, tripId still TR4)", !s1.transactions.find(t=>t.id==="PX1").deletedAt && s1.transactions.find(t=>t.id==="PX1").tripId==="TR4" && !s1.transactions.find(t=>t.id==="PX2").deletedAt);
     /* المصاريف تبقى في التقارير الشهرية رغم حذف الرحلة (التصنيف يعتمد على categoryId لا على حياة الرحلة) */
-    await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+    if(await p.isVisible('[data-family-finance]')) await p.click('[data-family-finance]');
+  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
     await p.click('.exp-tab[data-rep="monthly"]'); await p.waitForTimeout(200);
     ok("trip-only: monthly net total STILL includes the 200 (12000+8000/100) from the now-deleted trip's expenses", (await stat(p,"الإجمالي الصافي"))==="٢٠٠ ر.س");
     ok("Undo snackbar visible after trip-only delete", !(await p.$eval("#expUndo", e=>e.hidden)));
