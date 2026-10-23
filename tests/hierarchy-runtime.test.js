@@ -1,3 +1,4 @@
+const {openFinanceSection,openAdvancedExpense}=require('./finance-navigation.cjs');
 "use strict";
 
 function loadChromium(){
@@ -60,21 +61,21 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
-    await page.locator("#expOpenBtn").click(); await page.locator('[data-family-finance]').click(); await page.locator("#expAddBtn").click();
+    await page.locator("#expOpenBtn").click(); await page.locator('[data-family-finance]').click(); await openAdvancedExpense(page);
     await page.locator("#efAmount").fill("25"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"خضار وفواكه"}).click(); await page.locator("#efDetails").fill("تموين الأسبوع");
     await page.locator("#efSave").click(); await page.waitForTimeout(80);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses")));
     let tx=state.transactions.at(-1); assert.equal(tx.categoryId,"legacy_food"); assert.ok(tx.subcategoryId); assert.equal(tx.customSubcategory,null); assert.equal(tx.description,"تموين الأسبوع");
 
-    await page.locator("#expAddBtn").click(); await page.locator("#efAmount").fill("10"); await page.locator("#efCat").selectOption("legacy_food");
+    await openAdvancedExpense(page); await page.locator("#efAmount").fill("10"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"أخرى"}).click(); await page.locator("#efSave").click();
     assert.match(await page.locator("#efErr").textContent(),/اكتب نوع المصروف/);
     await page.locator("#efCustomSub").fill("منتج موسمي"); await page.locator("#efSave").click(); await page.waitForTimeout(80);
     state=await page.evaluate(()=>JSON.parse(localStorage.getItem("h2do-expenses"))); tx=state.transactions.at(-1);
     assert.equal(tx.customSubcategory,"منتج موسمي"); assert.equal(state.categories.find(c=>c.id==="legacy_food").subcategories.some(s=>s.name==="منتج موسمي"),false);
 
-    await page.locator("#expAddBtn").click(); await page.locator("#efAmount").fill("12"); await page.locator("#efCat").selectOption("legacy_food");
+    await openAdvancedExpense(page); await page.locator("#efAmount").fill("12"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"أخرى"}).click(); await page.locator("#efCustomSub").fill("قسم المخبز");
     await page.locator("#efSaveCustomToggle").click();
     assert.equal(await page.locator("#efSaveCustomToggle").getAttribute("aria-pressed"),"true");

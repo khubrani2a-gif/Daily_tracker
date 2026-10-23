@@ -1,3 +1,4 @@
+const {openFinanceSection,openAdvancedExpense}=require('./finance-navigation.cjs');
 "use strict";
 
 /* إدارة الفئات الرئيسية: مصدر واحد للفئات + ظهور/إخفاء + ترتيب + حذف آمن.
@@ -280,14 +281,14 @@ test("a used custom category is not deleted without reassignment, and reassignme
 async function openFinance(page){
   await page.locator('a[data-app-view="expenses"]').click(); await page.waitForTimeout(250);
   await page.locator("#expOpenBtn").click(); await page.waitForTimeout(350);
-  await page.locator('[data-family-finance]').click(); await page.waitForTimeout(300);
+  await page.locator('[data-family-finance]').click(); await openFinanceSection(page,'plan'); await page.waitForTimeout(300);
 }
 
 test("the add-category form renders exactly one #vfBudget and saves the entered budget",async()=>{
   const {browser,ctx,page,errs}=await open();
   try{
     await openFinance(page);
-    await page.locator("#expAddVar").click(); await page.waitForTimeout(300);
+    await openFinanceSection(page,'plan'); await page.locator("#expAddVar").click(); await page.waitForTimeout(300);
 
     /* لا مُعرّفات مكرّرة داخل النموذج (كان حقل الميزانية يُرسم مرّتين) */
     const dup=await page.evaluate(()=>{

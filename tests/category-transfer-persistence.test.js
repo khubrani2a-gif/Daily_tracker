@@ -1,3 +1,4 @@
+const {openFinanceSection}=require('./finance-navigation.cjs');
 "use strict";
 
 /* انحدار: نقل المصروفات يدويًا بين الفئات يجب أن يصمد بعد الإغلاق وإعادة التحميل.
@@ -102,7 +103,7 @@ test("manual expense-category transfer survives close/reopen and full reload",as
     /* افتح العائلة ثم الشاشة التي تعرض الفئات الأسبوعية */
     await page.locator('[data-app-view="expenses"]').click(); await page.waitForTimeout(200);
     await page.locator("#expOpenBtn").click(); await page.waitForTimeout(400);
-    await page.locator('[data-family-finance]').click();
+    await page.locator('[data-family-finance]').click(); await openFinanceSection(page,'plan');
     await page.waitForTimeout(350);
 
     /* نفس مسار المستخدم: قائمة الفئة ← «نقل مصروفات هذا الأسبوع» */

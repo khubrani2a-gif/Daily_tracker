@@ -2460,7 +2460,7 @@
 
 
 #learningBulkRows,#learningTemplateDays{display:flex;flex-wrap:wrap;gap:12px}#learningSubjects .learning-item,#learningSubjectContent .learning-item{overflow-wrap:anywhere}#learningSubjectActions{display:flex;flex-wrap:wrap;gap:8px}#learningOccurrenceFields input,#learningBulkFields input,#learningTemplateFields input{width:100%;min-width:0;box-sizing:border-box}#learningSubjectActions button{white-space:normal}#learningBulkRows label{display:block}#plannerCalendarIssues select{max-width:100%}.task-sheet:has(#learningFormSave) #learningFormSave{position:sticky;bottom:0;z-index:2;box-shadow:0 -4px 12px var(--paper)}#learningSubjectActions details{width:100%}#learningSubjectActions summary{cursor:pointer;padding:10px;border:1px solid var(--line);border-radius:10px}
-body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
+body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 #expOverlay.family-mode{color:var(--ink)}
 .family-mode .exp-tabs{display:none}.family-mode .exp-body{max-width:1000px;margin-inline:auto}
   :is(#familyManageBody,#familyOverviewBody,#familyShoppingBody,.family-form) button:not(.task-sheet-close){font:inherit;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);padding:.65rem .8rem;min-height:44px;cursor:pointer}
@@ -2470,6 +2470,39 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   :is(#familyManageBody,#familyOverviewBody,#familyShoppingBody) .exp-card{margin-block:1rem}
   :is(#familyManageBody,#familyOverviewBody,#familyShoppingBody) .family-nav button[aria-pressed="true"],.family-form button.task-sheet-save{background:var(--accent);color:white}
   .family-form .template-manager-actions{flex-wrap:wrap}.family-form .template-manager-row{flex-wrap:wrap}.family-form .template-manager-copy{min-width:0;overflow-wrap:anywhere;white-space:normal;max-width:100%}.family-form .template-manager-copy small{white-space:normal;overflow-wrap:anywhere}.family-form label{min-width:0}.family-form input{width:100%}.family-nav{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0 1rem}.family-nav button[aria-pressed="true"]{background:var(--accent,#12867b);color:white}.family-filter{display:block;margin-bottom:1rem}.family-task-line{display:flex;align-items:center;gap:.5rem}.family-task-line>.family-task-row{flex:1;min-width:0}.family-task-card{border-bottom:1px solid var(--line);padding:.5rem 0}:is(#familyManageBody,#familyOverviewBody) .family-step{display:flex;flex-direction:row;align-items:center;gap:.5rem;padding:.6rem;overflow-wrap:anywhere}:is(#familyManageBody,#familyOverviewBody) .family-step input{width:1.2rem;height:1.2rem;min-height:1.2rem;padding:0;flex-shrink:0}.family-task-row{display:flex;flex-direction:column;gap:.4rem;width:100%;text-align:start;padding:1rem;margin:.5rem 0;white-space:normal;overflow-wrap:anywhere}.family-task-row span{font-size:.9em;opacity:.8}.family-shopping-row{flex-wrap:wrap}.family-shopping-row .exp-row-main{min-width:100px;overflow-wrap:anywhere}.family-row-actions{display:flex;gap:.4rem;flex-wrap:wrap}.family-shopping-row details{max-width:100%}#familyShoppingBody textarea{width:100%;box-sizing:border-box;min-height:5rem}#familyManageBody select,#familyOverviewBody select,#familyShoppingBody select{max-width:100%}
+
+  /* Finance daily workspace: compact summary, stable destinations, optional detail. */
+  #expOverlay:not(.family-mode)>.adhkar-sheet{max-width:1050px;padding-bottom:0}
+  .finance-context{display:flex;justify-content:space-between;align-items:start;gap:.6rem;padding:.4rem 1rem}
+  .finance-context[hidden],.finance-nav[hidden]{display:none}
+  .finance-context button,.finance-context summary,.finance-section-head button,#expPlanActions button,.finance-due button{font:inherit;min-height:44px;border:1px solid var(--line);border-radius:12px;padding:.5rem .8rem;color:var(--accent);background:var(--paper);cursor:pointer}
+  .finance-context details{position:relative}.finance-context details>div{position:absolute;z-index:5;left:0;min-width:190px;padding:.5rem;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px #0002;display:grid;gap:.4rem}
+  #expFinanceNav{position:sticky;bottom:0;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--paper);border-top:1px solid var(--line);padding:.45rem .8rem max(.45rem,env(safe-area-inset-bottom));gap:.5rem}
+  #expFinanceNav[hidden]{display:none}
+  #expFinanceNav button{font:inherit;background:transparent;border:0;border-radius:14px;min-height:60px;color:var(--muted);cursor:pointer;display:grid;justify-items:center;gap:.1rem}
+  #expFinanceNav button span{font-size:1.45rem;line-height:1.2}#expFinanceNav button.active{color:var(--accent);background:var(--accent-soft);font-weight:700}
+  #expOverlay button:focus-visible,#expOverlay summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  #expDashSummary{grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin:.3rem 0 1rem}
+  #expDashSummary>[aria-label="تنبيه مالي"]{grid-column:1/-1}
+  #expDashSummary .finance-metric{padding:1rem .65rem;text-align:center;height:100%;border-radius:19px}
+  #expDashSummary .finance-metric h3{font-size:.85rem;color:var(--ink);margin:0 0 .5rem}
+  #expDashSummary .finance-metric>button{display:block;width:100%;font:inherit;font-size:1.5rem;font-weight:800;line-height:1.6;color:var(--accent);background:transparent;border:0;min-height:48px;cursor:pointer;overflow-wrap:anywhere}
+  #expDashSummary .finance-negative>button{color:var(--danger)}
+  #expDashSummary .finance-metric p,#expDashSummary .finance-metric small{font-size:.68rem;display:block;color:var(--muted);line-height:1.7;margin:.2rem 0}
+  #expAddBtn{padding:1rem;border-radius:15px;font-size:1.05rem;background:linear-gradient(120deg,var(--accent),#099e93);color:white;border:0;min-height:58px}
+  .finance-due{display:flex;justify-content:space-between;align-items:center;gap:.8rem;margin-bottom:1rem}.finance-due h3{margin:0;font-size:.95rem}.finance-due p{margin:.3rem 0}.finance-due small{color:var(--muted)}.finance-due button{background:var(--accent-soft);flex-shrink:0}
+  .finance-section-head{display:flex;justify-content:space-between;align-items:center;gap:.5rem}.finance-section-head h3{margin:.3rem 0}
+  .finance-recent-row{width:100%;display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:.6rem;text-align:right;background:transparent;color:var(--ink);font:inherit;padding:1rem 0;border:0;border-bottom:1px solid var(--line);cursor:pointer}
+  .finance-recent-row:last-child{border-bottom:0}.finance-recent-row b,.finance-recent-row small{display:block;overflow-wrap:anywhere}.finance-recent-row small,.finance-recent-row time{font-size:.72rem;color:var(--muted)}.finance-row-icon{background:var(--accent-soft);border-radius:12px;color:var(--accent);padding:.5rem;text-align:center;font-size:1.2rem}
+  #expViewLedger [data-ledger-id]{border-bottom:1px solid var(--line);padding:.6rem 0}#expViewLedger [data-ledger-correct]{font:inherit;padding:.5rem;min-height:44px;border:1px solid var(--line);background:var(--paper);color:var(--accent);border-radius:12px}
+  #expViewLedger .exp-form-head{display:none}#expViewPlan details>summary{padding:.7rem 0;cursor:pointer}
+  #fqDetails summary{cursor:pointer;padding:.65rem 0}#fqDetails{margin:.5rem 0}#fqAmount{font-size:1.6rem}#fqSave{min-height:52px}
+  body:has(#expOverlay:not([hidden]):not(.family-mode)) #expUndo{bottom:100px;max-width:calc(100vw - 2rem);width:max-content;flex-wrap:wrap}
+  @media(min-width:1000px){#expViewDash,#expViewLedger,#expViewPlan{padding:1.4rem 2rem}#expDashSummary .finance-metric>button{font-size:2rem}}
+  @media(max-width:360px){#expDashSummary{gap:.45rem}#expDashSummary .finance-metric{padding:.7rem .4rem}#expDashSummary .finance-metric>button{font-size:1.15rem}.finance-recent-row{grid-template-columns:32px minmax(0,1fr)}.finance-recent-row time{grid-column:2}}
+
+  .family-nav [data-family-manage]{position:relative}.family-nav [data-family-manage]>summary{cursor:pointer;border:1px solid var(--line);border-radius:12px;padding:.5rem;min-height:44px;color:var(--accent);background:var(--paper)}.family-nav [data-family-manage]>button{position:absolute;z-index:6;left:0;min-width:170px;box-shadow:0 8px 24px #0002;background:var(--paper);color:var(--ink)}
+  #expViewLedger summary,#expLedgerDialog summary{cursor:pointer;padding:.6rem 0;color:var(--accent)}#expLedgerDialog>h3{display:none}
 </style>
 </head>
 <body>
@@ -3660,13 +3693,11 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
           <span></span>
         </div>
       </div>
-      <div class="exp-tabs">
-        <button class="exp-tab active" data-view="family">العائلة</button>
-        <button class="exp-tab" data-view="dash">المالية</button>
-        <button class="exp-tab" data-view="shopping">التسوق</button>
-        <button class="exp-tab" data-view="trips">الرحلات</button>
-        <button class="exp-tab" data-view="reports">المراجعة</button>
-        <button class="exp-tab" data-view="settings">الإعدادات</button>
+      <div class="finance-context" id="expFinanceContext">
+        <button type="button" data-view="family">‹ العائلة</button>
+        <details id="expFinanceMore"><summary aria-label="المزيد من خيارات المالية">⋯ المزيد</summary><div>
+          <button type="button" data-view="trips">الرحلات</button><button type="button" data-view="reports">التقارير والمراجعة</button><button type="button" data-view="settings">الإعدادات والمزامنة</button>
+        </div></details>
       </div>
       <div class="exp-sync-row" id="expSyncRow">
         <span class="exp-sync-text" id="expSyncText"></span>
@@ -3682,6 +3713,12 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
         <div class="exp-sumgrid" id="expDashSummary"></div>
         <div id="expDashBanner" hidden></div>
         <button class="exp-primary" id="expAddBtn" style="width:100%;margin-bottom:1rem">＋ إضافة مصروف</button>
+        <div id="expNextObligation"></div>
+        <section class="exp-card finance-recent"><div class="finance-section-head"><h3>آخر الحركات</h3><button type="button" id="expRecentAll">عرض الكل</button></div><div id="expRecentRows"></div></section>
+      </div>
+      <div class="exp-view" id="expViewLedger" hidden></div>
+      <div class="exp-view" id="expViewPlan" hidden>
+        <div id="expPlanActions"></div>
         <div class="exp-cards">
           <div class="exp-card" id="expFixedCard"></div>
           <div class="exp-card" id="expVarCard"></div>
@@ -3713,6 +3750,11 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
       <div class="exp-view" id="expViewSettings" hidden>
         <div id="expSettingsBody"></div>
       </div>
+      <nav id="expFinanceNav" class="finance-nav" aria-label="أقسام المالية">
+        <button type="button" data-view="dash"><span aria-hidden="true">⌂</span>الملخص</button>
+        <button type="button" data-view="ledger"><span aria-hidden="true">☷</span>السجل</button>
+        <button type="button" data-view="plan"><span aria-hidden="true">◎</span>الخطة</button>
+      </nav>
     </div>
   </div>
 
@@ -11669,7 +11711,7 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=175;
+  const DATA_VERSION=1, APP_RELEASE=176;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -13832,7 +13874,7 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expCycleAvailableLabel(cycle){return cycle.estimated?"المتاح المتوقع":"المتاح للدورة";}
   let familyTab='summary',familyFilterMember='';const familyFilters={tasks:'today',events:'today'},familyExpandedSteps=new Set();
   function familyRenderLaunch(){const box=document.getElementById('familyLaunchSummary');if(!box)return;box.innerHTML='<div class="exp-sumcard"><small>مهام المنزل المتبقية في التاريخ المختار</small><b>'+_arn(familyPendingTasks().length)+'</b></div><div class="exp-sumcard"><small>المشتريات المتبقية</small><b>'+_arn(familyPendingShopping().length)+'</b></div>';const btn=document.getElementById('expOpenBtn');if(btn){btn.textContent='فتح العائلة';btn.onclick=expOpenOverlay;}const quick=document.getElementById('familyQuickShop');if(quick){quick.hidden=false;quick.onclick=()=>{expOpenOverlay();expSetView('shopping');};}}
-  function familyNav(){return '<nav class="family-nav" aria-label="أقسام العائلة">'+[['summary','الملخص'],['tasks','المهام'],['events','المواعيد'],['shopping','التسوق']].map(([id,label])=>'<button type="button" data-family-tab="'+id+'" aria-pressed="'+(familyTab===id)+'">'+label+'</button>').join('')+'<button type="button" data-family-people>الأعضاء</button><button type="button" data-family-finance>المالية</button></nav>';}
+  function familyNav(){return '<nav class="family-nav" aria-label="أقسام العائلة">'+[['summary','الملخص'],['tasks','المهام'],['events','المواعيد'],['shopping','التسوق']].map(([id,label])=>'<button type="button" data-family-tab="'+id+'" aria-pressed="'+(familyTab===id)+'">'+label+'</button>').join('')+'<button type="button" data-family-finance>المالية</button><details data-family-manage><summary>إدارة العائلة</summary><button type="button" data-family-people>الأعضاء والأرشيف</button></details></nav>';}
   function familyBindNav(box){box.querySelectorAll('[data-family-tab]').forEach(b=>b.onclick=()=>{familyTab=b.dataset.familyTab;expSetView(familyTab==='shopping'?'shopping':'familyManage');});box.querySelector('[data-family-people]').onclick=()=>familyManageMembers();box.querySelector('[data-family-finance]').onclick=()=>expSetView('dash');}
   function familyRenderOverview(){familyRenderManage(document.getElementById('familyOverviewBody'));}
   function familyEventPhase(row){
@@ -13847,7 +13889,7 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     familyBindNav(box);box.querySelector('#familyMemberFilter').onchange=e=>{familyFilterMember=e.target.value;familyRenderManage(box);};
     if(familyTab==='summary'||familyTab==='shopping'){
       const shopping=familyPendingShopping().filter(x=>!familyFilterMember||x.assignee===familyFilterMember),cycle=expSalaryCycleStatus(todayStr());
-      box.insertAdjacentHTML('beforeend','<div class="exp-sumgrid"><div class="exp-sumcard"><small>مهام تاريخ العرض</small><b>'+_arn(pending.filter(r=>r.task.kind!=='appointment'&&r.date===currentDate).length)+'</b></div><div class="exp-sumcard"><small>مشتريات متبقية</small><b>'+_arn(shopping.length)+'</b></div></div><div class="exp-card"><h3>'+(next&&familyEventPhase(next)==='ongoing'?'جارٍ الآن':'الموعد القادم')+'</h3><p>'+ (next?expEsc(next.task.text)+' · '+expEsc(next.date)+' '+expEsc(next.task.dueTime||'طوال اليوم')+(next.task.endTime?' – '+expEsc(next.task.endTime):''):'لا توجد مواعيد قادمة')+'</p><div class="exp-grid2"><button id="familyQuickEvent">＋ موعد</button><button id="familyQuickTask">＋ مهمة</button></div></div><div class="exp-card"><h3>مالية العائلة</h3><p>خطة دورة الراتب بتاريخ '+expEsc(todayStr())+' · '+expCycleAvailableLabel(cycle)+': '+expMoney(cycle.available)+'</p><button id="familyOpenFinance">فتح المالية</button></div>');
+      box.insertAdjacentHTML('beforeend','<div class="exp-sumgrid"><div class="exp-sumcard"><small>مهام تاريخ العرض</small><b>'+_arn(pending.filter(r=>r.task.kind!=='appointment'&&r.date===currentDate).length)+'</b></div><div class="exp-sumcard"><small>مشتريات متبقية</small><b>'+_arn(shopping.length)+'</b></div></div><div class="exp-card"><h3>'+(next&&familyEventPhase(next)==='ongoing'?'جارٍ الآن':'الموعد القادم')+'</h3><p>'+ (next?expEsc(next.task.text)+' · '+expEsc(next.date)+' '+expEsc(next.task.dueTime||'طوال اليوم')+(next.task.endTime?' – '+expEsc(next.task.endTime):''):'لا توجد مواعيد قادمة')+'</p><div class="exp-grid2"><button id="familyQuickEvent">＋ موعد</button><button id="familyQuickTask">＋ مهمة</button></div></div><div class="exp-card"><h3>مالية العائلة</h3><p>خطة دورة الراتب بتاريخ '+expEsc(todayStr())+' · '+expCycleAvailableLabel(cycle)+': '+expMoney(cycle.available)+'</p><small>بعد الالتزامات وحجز الادخار · ليس رصيد البنك</small><button id="familyOpenFinance">فتح المالية</button></div>');
       box.querySelector('#familyQuickEvent').onclick=familyOpenEvents;box.querySelector('#familyQuickTask').onclick=familyOpenTask;box.querySelector('#familyOpenFinance').onclick=()=>expSetView('dash');
       if(allDay.length)box.querySelector('#familyQuickEvent').closest('.exp-card').insertAdjacentHTML('beforeend','<p>طوال اليوم: '+allDay.map(r=>expEsc(r.task.text)).join(' · ')+'</p>');
       const activity=(expState.activityLog||[]).filter(x=>/^(member_|shopping_)/.test(x.type)&&!x.deletedAt).slice(-5).reverse();box.insertAdjacentHTML('beforeend','<details><summary>نشاط الأعضاء والتسوق</summary>'+activity.map(x=>'<p>'+expEsc(x.detail)+'</p>').join('')+'</details>');
@@ -13893,12 +13935,14 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expRefresh(){
     expApplyRecurringDue();
     expRenderLaunch();
-    if(document.getElementById('ulRows')&&expUnifiedLedgerRefresh)expUnifiedLedgerRefresh();
+    if(expFormBox.querySelector('#ulRows')&&expUnifiedLedgerRefresh)expUnifiedLedgerRefresh();
     if(!expOverlay.hidden){
       if(expCurView==="family") familyRenderOverview();
       else if(expCurView==="familyManage") familyRenderManage();
       else if(expCurView==="shopping") familyRenderShopping();
       else if(expCurView==="dash") expRenderDash();
+      else if(expCurView==="plan") expRenderPlan();
+      else if(expCurView==="ledger"&&expFormOverlay.hidden){if(expPageLedgerRefresh)expPageLedgerRefresh();else expPageLedgerRefresh=expRenderUnifiedLedger(document.getElementById("expViewLedger"));}
       else if(expCurView==="trips"){ if(expTripDetailId) expRenderTripDetail(); else expRenderTrips(); }
       else if(expCurView==="reports") expRenderReport();
       else if(expCurView==="settings") expRenderSettings();
@@ -13946,20 +13990,32 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expFinanceField(label,id,type,value){return '<div class="exp-field"><label for="'+id+'">'+expEsc(label)+'</label><input id="'+id+'" type="'+type+'" '+(type==='text'?'inputmode="decimal" ':'')+'value="'+expEsc(value==null?'':String(value))+'"></div>';}
   function expDuplicateExpense(amount,date,category,exclude){return expActiveTx().some(t=>t.id!==exclude&&t.transactionType==='expense'&&t.amountMinor===amount&&t.transactionDate===date&&t.categoryId===category);}
   function expOpenQuickExpense(){
+    const owner=user?.uid||'guest';
     const cats=expVarCategoriesAll(),templates=expFinanceRows('expense-template');
     const recent=[...new Set(expActiveTx().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(t=>t.categoryId))].filter(id=>cats.some(c=>c.id===id)).slice(0,4);
-    expOpenForm('<div class="exp-form-head"><h3>مصروف سريع</h3><button data-close>✕</button></div>'+expFinanceField('المبلغ','fqAmount','text','')+'<div class="exp-field"><label for="fqCat">الفئة</label><select id="fqCat">'+cats.map(c=>'<option value="'+expEsc(c.id)+'">'+expEsc(c.name)+'</option>').join('')+'</select></div><div class="exp-chips">'+recent.map(id=>'<button data-recent-cat="'+expEsc(id)+'">'+expEsc(expCatById(id).name)+'</button>').join('')+'</div>'+expFinanceField('التاريخ','fqDate','date',todayStr())+'<details><summary>وصف وقالب</summary><div class="exp-field"><label for="fqName">وصف اختياري</label><input id="fqName"></div><label><input type="checkbox" id="fqTemplate"> حفظ كقالب</label><div class="exp-chips">'+templates.map(t=>'<button data-use-template="'+expEsc(t.id)+'">'+expEsc(t.name)+'</button>').join('')+'</div></details><div id="fqErr" class="exp-err"></div><label id="fqDuplicate" hidden><input type="checkbox" id="fqConfirm"> هذا مصروف آخر مستقل</label><button id="fqSave" class="exp-save">حفظ المصروف</button><button id="fqSplit" class="exp-add-line">تقسيم فاتورة بين فئات</button>');
+    expOpenForm('<div class="exp-form-head"><h3>إضافة مصروف</h3><button data-close>✕</button></div>'+expFinanceField('المبلغ','fqAmount','text','')+'<div class="exp-field"><label for="fqCat">الفئة</label><select id="fqCat">'+cats.map(c=>'<option value="'+expEsc(c.id)+'">'+expEsc(c.name)+'</option>').join('')+'</select></div><div class="exp-chips">'+recent.map(id=>'<button data-recent-cat="'+expEsc(id)+'">'+expEsc(expCatById(id).name)+'</button>').join('')+'</div>'+expFinanceField('التاريخ','fqDate','date',todayStr())+'<details id="fqDetails"><summary>تفاصيل إضافية</summary><div class="exp-field"><label for="fqName">وصف اختياري</label><input id="fqName"></div><label><input type="checkbox" id="fqTemplate"> حفظ كقالب</label><div class="exp-chips">'+templates.map(t=>'<button data-use-template="'+expEsc(t.id)+'">'+expEsc(t.name)+'</button>').join('')+'</div><button type="button" id="fqAdvanced" class="exp-add-line">تفاصيل المصروف الكاملة</button><button id="fqSplit" class="exp-add-line">تقسيم فاتورة بين فئات</button></details><div id="fqErr" class="exp-err" role="alert"></div><label id="fqDuplicate" hidden><input type="checkbox" id="fqConfirm"> هذا مصروف آخر مستقل</label><button id="fqSave" class="exp-save">حفظ المصروف</button>');
     const q=id=>document.getElementById(id);
     expFormBox.querySelectorAll('[data-recent-cat]').forEach(b=>b.onclick=()=>q('fqCat').value=b.dataset.recentCat);
     expFormBox.querySelectorAll('[data-use-template]').forEach(b=>b.onclick=()=>{const t=templates.find(t=>t.id===b.dataset.useTemplate);if(!cats.some(c=>c.id===t.categoryId)){q('fqErr').textContent='فئة القالب مؤرشفة؛ اختر فئة نشطة.';return;}q('fqCat').value=t.categoryId;q('fqAmount').value=t.amountMinor/100;q('fqName').value=t.name;});
-    q('fqSplit').onclick=()=>expOpenSplitExpense();
+    q('fqAdvanced').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,category:q('fqCat').value,name:q('fqName').value};expOpenExpenseForm(null,'');document.getElementById('efAmount').value=draft.amount;document.getElementById('efDate').value=draft.date;const cat=document.getElementById('efCat');cat.value=draft.category;cat.dispatchEvent(new Event('change'));document.getElementById('efDetails').value=draft.name;};
+    q('fqSplit').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,name:q('fqName').value};expOpenSplitExpense();document.getElementById('fsTotal').value=draft.amount;document.getElementById('fsDate').value=draft.date;document.getElementById('fsName').value=draft.name;};
     q('fqSave').onclick=()=>{const amount=expParseAmount(q('fqAmount').value),date=q('fqDate').value,category=q('fqCat').value,name=q('fqName').value.trim();
-      if(!(amount>0)||amount>100000000||!date||date>todayStr()||!category){q('fqErr').textContent='تحقق من المبلغ والفئة والتاريخ غير المستقبلي.';return;}
+      if(owner!==(user?.uid||'guest')){q('fqErr').textContent='تغير الحساب؛ أعد فتح النموذج.';return;}
+      if(!(amount>0)||amount>100000000||!date||date>todayStr()||!expVarCategoriesAll().some(c=>c.id===category)){q('fqErr').textContent='تحقق من المبلغ والفئة والتاريخ غير المستقبلي.';return;}
       if(expDuplicateExpense(amount,date,category)&&!q('fqConfirm').checked){q('fqErr').textContent='يوجد مصروف بنفس المبلغ والفئة والتاريخ؛ راجعه قبل التسجيل.';q('fqDuplicate').hidden=false;return;}
       if(q('fqTemplate').checked&&!name){q('fqErr').textContent='اكتب اسمًا للقالب.';return;}
+      if(q('fqSave').disabled)return;
       q('fqSave').disabled=true;
-      if(q('fqTemplate').checked)expFinancePut({kind:'expense-template',name,amountMinor:amount,categoryId:category});
-      expAddTransaction({amountMinor:amount,transactionDate:date,categoryId:category,transactionType:'expense',description:name||null,paymentMethod:expState.settings.defaultPaymentMethod});expCloseForm();expRefresh();
+      try{
+        const tx=expAtomicFinance(()=>{if(q('fqTemplate').checked)expFinancePut({kind:'expense-template',name,amountMinor:amount,categoryId:category});return expAddTransaction({amountMinor:amount,transactionDate:date,categoryId:category,transactionType:'expense',description:name||null,paymentMethod:expState.settings.defaultPaymentMethod});});
+        const snapshot=expStableRecord(tx),id=tx.id;
+        expCloseForm();expRefresh();expShowUndoAction('تم تسجيل مصروف '+expMoney(amount),()=>{
+          const current=expState.transactions.find(t=>t.id===id&&!t.deletedAt);
+          if(owner!==(user?.uid||'guest')||!current||expStableRecord(current)!==snapshot||expActiveTx().some(t=>t.relatedTransactionId===id)){hifzShowToast('تغير المصروف أو ارتبط بحركة أخرى؛ راجعه من السجل.');return;}
+          try{expAtomicFinance(()=>expDeleteTransaction(id));}catch(error){hifzShowToast('تعذر التراجع عن المبلغ؛ حاول تصحيحه من السجل.');}
+        });document.getElementById('expUndoBtn').textContent='تراجع عن تسجيل المصروف';
+      }catch(error){q('fqSave').disabled=false;q('fqErr').textContent='تعذّر الحفظ. احتفظنا بالمسودة ولم نسجل المصروف؛ حاول مجددًا.';}
+
     };
   }
   function expCreateSplitExpense(total,date,parts,name){
@@ -14101,8 +14157,8 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   }
   function expOpenCommitments(){
     expOpenFinanceDetail('outstanding');
-    expFormBox.insertAdjacentHTML('beforeend','<div class="exp-chips"><button id="fcManage">إدارة الالتزامات والاستحقاقات في الملخص</button></div>');
-    document.getElementById('fcManage').onclick=()=>{expCloseForm();expSetView('dash');document.getElementById('expFixedCard')?.scrollIntoView({block:'start'});};
+    expFormBox.insertAdjacentHTML('beforeend','<div class="exp-chips"><button id="fcManage">إدارة الالتزامات والاستحقاقات في الخطة</button></div>');
+    document.getElementById('fcManage').onclick=()=>{expCloseForm();expSetView('plan');document.getElementById('expFixedCard')?.scrollIntoView({block:'start'});};
   }
   function expOpenPaydayReview(){
     const x=expFinancePeriods(todayStr());
@@ -14124,11 +14180,27 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     const q=(filters.text||'').trim().toLowerCase();return tx.concat(movements).filter(r=>(!filters.type||r.type===filters.type)&&(!filters.start||r.date>=filters.start)&&(!filters.end||r.date<=filters.end)&&(!q||r.name.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id));
   }
   let expUnifiedLedgerRefresh=null;
-  function expOpenUnifiedLedger(){
+  let expPageLedgerRefresh=null;
+  function expOpenUnifiedLedger(focusId){
+    document.getElementById('expViewLedger').innerHTML='';expPageLedgerRefresh=null;
+    expOpenForm('<div class="exp-form-head"><h3>السجل المالي الموحد</h3><button data-close>✕</button></div><div id="expLedgerDialog"></div>');
+    expUnifiedLedgerRefresh=expRenderUnifiedLedger(document.getElementById('expLedgerDialog'));
+    if(focusId){const row=[...expFormBox.querySelectorAll('[data-ledger-id]')].find(r=>r.dataset.ledgerId===focusId);if(row){row.tabIndex=-1;row.scrollIntoView({block:'center'});row.focus({preventScroll:true});}}
+  }
+  function expRestoreLedgerFocus(host,opener){
+    if(!opener)return;
+    if(opener.isConnected){opener.focus({preventScroll:true});return;}
+    const id=opener.closest('[data-ledger-id]')?.dataset.ledgerId;
+    const row=[...host.querySelectorAll('[data-ledger-id]')].find(r=>r.dataset.ledgerId===id);
+    const target=row?.querySelector('[data-ledger-correct],[data-txmenu]')||host.querySelector('#ulText');
+    target?.focus({preventScroll:true});
+  }
+  function expRenderUnifiedLedger(host){
     const labels={purchase:'شراء · صرف',refund:'استرداد · خفض الصرف',transfer:'تحويل مسجل',income:'دخل مستلم',deposit:'تحويل إلى الادخار',withdraw:'سحب من الادخار',settlement:'تسوية التزام · ليست حركة نقدية'};
-    expOpenForm('<div class="exp-form-head"><h3>السجل المالي الموحد</h3><button data-close>✕</button></div><p>المشتريات والدخل والادخار سجلات مختلفة. الادخار ليس مصروف شراء؛ لا يمثل السجل رصيد البنك. الإشارة تبيّن اتجاه المال خارج الادخار: − صرف أو ادخار، + استلام أو سحب.</p><div class="exp-field"><label for="ulType">نوع الحركة</label><select id="ulType"><option value="">كل الأنواع</option>'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div>'+expFinanceField('من تاريخ','ulStart','date','')+expFinanceField('إلى تاريخ','ulEnd','date','')+expFinanceField('بحث في الوصف والفئة','ulText','text','')+'<div id="ulRows"></div>');
-    const render=()=>{const rows=expUnifiedLedgerRows({type:document.getElementById('ulType').value,start:document.getElementById('ulStart').value,end:document.getElementById('ulEnd').value,text:document.getElementById('ulText').value}),box=document.getElementById('ulRows');box.innerHTML=rows.map(r=>'<section data-ledger-id="'+expEsc(r.id)+'"><p><b>'+labels[r.type]+'</b> · '+expArDate(r.date)+' · '+(r.type==='purchase'?'−':r.type==='refund'||r.type==='income'||r.type==='withdraw'?'+':r.type==='deposit'?'−':'⇄ ')+expMoney(Math.abs(r.amount))+'</p>'+(r.source==='transaction'?expTxRow(r.row):'<div class="exp-row"><span>'+expEsc(r.name)+'</span><button data-ledger-correct="'+expEsc(r.id)+'">'+(r.type==='income'?'تعديل أو إلغاء':'تصحيح الحركة')+'</button></div>')+'</section>').join('')||'<p class="exp-empty">لا حركات تطابق المرشحات. غيّر النوع أو التواريخ أو البحث، أو سجل حركة من الملخص.</p>';expWireTxMenus(box);box.querySelectorAll('[data-ledger-correct]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r.id===b.dataset.ledgerCorrect&&r.source==='finance');if(r.type==='settlement')expOpenLiabilityReduction(r.row.liabilityKind,r.row.liabilityId);else expOpenFinanceLedger(r.row.kind,r.date);});};
-    expUnifiedLedgerRefresh=render;document.getElementById('ulText').removeAttribute('inputmode');['ulType','ulStart','ulEnd','ulText'].forEach(id=>document.getElementById(id).oninput=render);render();
+    host.innerHTML='<h3>السجل المالي الموحد</h3><p class="exp-card-hint">حركاتك المسجلة · ليس رصيد البنك</p><details class="finance-ledger-help"><summary>معنى أنواع الحركات</summary><p>الادخار ليس مصروف شراء. الإشارة تبيّن اتجاه المال خارج الادخار: − صرف أو ادخار، + استلام أو سحب. تسوية الالتزام ليست حركة نقدية.</p></details>'+expFinanceField('بحث في الوصف والفئة','ulText','text','')+'<div class="exp-field"><label for="ulType">نوع الحركة</label><select id="ulType"><option value="">كل الأنواع</option>'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div><details id="ulDates"><summary>تحديد فترة</summary><div class="exp-grid2">'+expFinanceField('من تاريخ','ulStart','date','')+expFinanceField('إلى تاريخ','ulEnd','date','')+'</div></details><div id="ulRows"></div>';
+
+    const render=()=>{const active=host.contains(document.activeElement)?document.activeElement:null;const rows=expUnifiedLedgerRows({type:host.querySelector('#ulType').value,start:host.querySelector('#ulStart').value,end:host.querySelector('#ulEnd').value,text:host.querySelector('#ulText').value}),box=host.querySelector('#ulRows');box.innerHTML=rows.map(r=>'<section data-ledger-id="'+expEsc(r.id)+'"><p><b>'+labels[r.type]+'</b> · '+expArDate(r.date)+' · '+(r.type==='purchase'?'−':r.type==='refund'||r.type==='income'||r.type==='withdraw'?'+':r.type==='deposit'?'−':'⇄ ')+expMoney(Math.abs(r.amount))+'</p>'+(r.source==='transaction'?expTxRow(r.row):'<div class="exp-row"><span>'+expEsc(r.name)+'</span><button data-ledger-correct="'+expEsc(r.id)+'">'+(r.type==='income'?'تعديل أو إلغاء':'تصحيح الحركة')+'</button></div>')+'</section>').join('')||'<p class="exp-empty">لا حركات تطابق المرشحات. غيّر النوع أو التواريخ أو البحث، أو سجل حركة من الملخص.</p>';expWireTxMenus(box);box.querySelectorAll('[data-ledger-correct]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r.id===b.dataset.ledgerCorrect&&r.source==='finance');if(r.type==='settlement')expOpenLiabilityReduction(r.row.liabilityKind,r.row.liabilityId);else expOpenFinanceLedger(r.row.kind,r.date);});if(active&&!active.isConnected)expRestoreLedgerFocus(host,active);};
+    host.querySelector('#ulText').removeAttribute('inputmode');['ulType','ulStart','ulEnd','ulText'].forEach(id=>host.querySelector('#'+id).oninput=render);render();return render;
   }
   function expSettlementRows(kind,id){
     return expFinanceRows('liability-reduction').map(row=>({source:'finance',row})).concat(expActiveTx().filter(r=>r.transactionType==='refund').map(row=>({source:'transaction',row}))).filter(({row})=>row.liabilityKind===kind&&row.liabilityId===id&&row.liabilityReductionMinor>0);
@@ -14186,9 +14258,9 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     const rows=expFinanceAlerts(todayStr()).filter(r=>!expDismissedFinanceAlerts.has(r.id)),first=rows[0];
     if(!first)return '';return '<section class="exp-card" aria-label="تنبيه مالي"><p role="status">'+expEsc(first.text)+'</p><button data-finance-action="'+first.action+'" data-liability-kind="'+expEsc(first.liabilityKind||'')+'" data-liability-id="'+expEsc(first.liabilityId||'')+'">معالجة التنبيه</button><button data-finance-dismiss="'+expEsc(first.id)+'">إخفاء لهذا العرض</button>'+(rows.length>1?'<details><summary>تنبيهات أخرى</summary>'+rows.filter(r=>r!==first).map(r=>'<p>'+expEsc(r.text)+' <button data-finance-action="'+r.action+'" data-liability-kind="'+expEsc(r.liabilityKind||'')+'" data-liability-id="'+expEsc(r.liabilityId||'')+'">مراجعة</button></p>').join('')+'</details>':'')+'</section>';
   }
-  function expWireFinanceSummary(){
-    const host=document.getElementById('expDashSummary');if(!host)return;
-    const handlers={setup:expOpenFinanceSetup,ledger:expOpenUnifiedLedger,payday:expOpenPaydayReview,splitweek:()=>expOpenSplitWeek(),commitments:expOpenCommitments,budgets:()=>{expCloseForm();expSetView('dash');document.getElementById('expVarCard')?.scrollIntoView({block:'start'});},quick:()=>expOpenQuickExpense(),income:()=>expOpenFinanceLedger('income'),saving:()=>expOpenFinanceLedger('saving'),plan:()=>expOpenSalaryPlan(),spent:()=>{expRepMode='salary';expRepDate=todayStr();expSetView('reports');},review:()=>expOpenCycleReview()};
+  function expWireFinanceSummary(host=document.getElementById('expDashSummary')){
+    if(!host)return;
+    const handlers={setup:expOpenFinanceSetup,ledger:expOpenUnifiedLedger,payday:expOpenPaydayReview,splitweek:()=>expOpenSplitWeek(),commitments:expOpenCommitments,budgets:()=>{expCloseForm();expSetView('plan');document.getElementById('expVarCard')?.scrollIntoView({block:'start'});},quick:()=>expOpenQuickExpense(),income:()=>expOpenFinanceLedger('income'),saving:()=>expOpenFinanceLedger('saving'),plan:()=>expOpenSalaryPlan(),spent:()=>{expRepMode='salary';expRepDate=todayStr();expSetView('reports');},review:()=>expOpenCycleReview()};
     host.querySelectorAll('[data-finance-dismiss]').forEach(b=>b.onclick=()=>{expDismissedFinanceAlerts.add(b.dataset.financeDismiss);expRenderDash();});
     host.querySelectorAll('[data-finance-detail]').forEach(b=>b.onclick=()=>expOpenFinanceDetail(b.dataset.financeDetail));
     host.querySelectorAll('[data-finance-action]').forEach(b=>b.onclick=()=>b.dataset.financeAction==='settlement-review'?expOpenSettlementReview(b.dataset.liabilityKind,b.dataset.liabilityId):handlers[b.dataset.financeAction]?.());
@@ -14260,15 +14332,17 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     else if(key==='outstanding'){title='الالتزامات غير المدفوعة';html=x.obligationRows.map(r=>line(r.name+' · '+expArDate(r.due),r.remaining)).join('')||'<p>لا التزامات متبقية.</p>';}
     else if(key==='remaining'){title='كيف حُسب المتبقي؟';html=line(x.incomeEstimated?'دخل متوقع، لم يؤكد استلامه':'الدخل المستلم',x.incomeCashBasis)+line('مخصص من دورة سابقة',x.allocations.incoming)+line('محجوز لدورة لاحقة',-x.allocations.outgoing)+line('صافي الصرف',-x.spent)+line('المتبقي قبل الالتزامات والادخار',x.remaining);}
     else {title='كيف حُسب المتاح؟';html=line(x.incomeEstimated?'دخل متوقع، لم يؤكد استلامه':'الدخل المستلم',x.incomeCashBasis)+line('مخصص من دورة سابقة',x.allocations.incoming)+line('محجوز لدورة لاحقة',-x.allocations.outgoing)+line('صافي الصرف',-x.spent)+line('التزامات غير مدفوعة',-x.outstanding)+line('صافي تحويلات الادخار',-x.savingsTransferred)+line('حجز الادخار المتبقي',-x.savingsReserved)+line('المتاح المحسوب',x.available)+'<p>السحب من الادخار لا يلغي هدف الحجز تلقائيًا. والاسترداد المرتبط بالتزام يعيد المبلغ إلى غير المدفوع ما دام الالتزام قائمًا؛ إلغاء الالتزام إجراء مستقل.</p>';}
+    if(key==='available'){const forecast=expFinanceForecast(todayStr());html+='<details><summary>توقع الصرف</summary><p>'+(forecast?'إذا استمر متوسط الصرف المتغير المسجل، يصل إلى '+expMoney(forecast.projected)+' بنهاية الدورة. مبني على '+_arn(forecast.recordedDays)+' أيام مسجلة؛ يفترض اكتمال السجل، ولا يشمل الالتزامات الثابتة.':'يتاح توقع الصرف بعد مرور أسبوع وتسجيل مصروفات في ثلاثة أيام على الأقل.')+'</p></details>';}
+    if(key==='weekRemaining')html+='<p>الأسبوع يحتفظ بحدوده حتى لو بدأ راتب جديد، وفق إعداد بداية الأسبوع. المتبقي للأسبوع والمتاح للدورة لا يُجمعان.</p><button id="fdSplitWeek" class="exp-add-line">تفصيل الأسبوع عبر دورات الراتب</button>';
     expOpenForm('<div class="exp-form-head"><h3>'+title+'</h3><button data-close>✕</button></div>'+html);expWireTxMenus(expFormBox);
+    if(document.getElementById('fdSplitWeek'))document.getElementById('fdSplitWeek').onclick=()=>expOpenSplitWeek();
   }
   function expRenderPeriodSummary(){
-    const x=expFinancePeriods(todayStr()),forecast=expFinanceForecast(todayStr()),next=x.obligationRows.filter(r=>r.due>=todayStr()).sort((a,b)=>a.due.localeCompare(b.due))[0];
-    const line=(label,value,key)=>'<div class="exp-foot-row"><span>'+label+'</span>'+(key?'<button class="exp-mini" data-finance-detail="'+key+'">'+expMoney(value)+'</button>':'<b>'+expMoney(value)+'</b>')+'</div>';
-    const alert=x.weekRemaining<0?'تجاوزت ميزانية الأسبوع بـ '+expMoney(-x.weekRemaining):x.available<0?'الخطة تتجاوز المتاح بـ '+expMoney(-x.available):x.overdue?'راجع التزامات متأخرة بقيمة '+expMoney(x.overdue):'';
-    return '<section class="exp-card"><h3>هذا الأسبوع</h3><p class="exp-card-hint">'+expArDate(x.week.start)+' — '+expArDate(x.week.end)+'</p>'+line('المتبقي من حد الأسبوع',x.weekRemaining,'weekRemaining')+'<details><summary>تفاصيل الأسبوع</summary>'+line('الميزانية',x.weekBudget,'weekBudget')+line('المصروف المحتسب',x.weekSpent,'weekSpent')+'<p>الميزانية مستمرة حتى نهاية الأسبوع، حتى لو بدأ راتب جديد. حد الأسبوع والمتاح للدورة لا يُجمعان وليسا رصيد البنك.</p><button data-finance-action="splitweek">تفصيل الأسبوع عبر دورات الراتب</button></details><button class="exp-primary" data-finance-action="quick">＋ مصروف سريع</button></section>'
-      +'<section class="exp-card"><h3>دورة الراتب</h3><p class="exp-card-hint">'+expArDate(x.cycle.start)+' — '+expArDate(x.cycle.end)+'</p>'+line(x.incomeEstimated?'المتاح المتوقع':'المتاح من الدخل المسجل',x.available,'available')+line('الدخل المتوقع للخطة',expCyclePlan(x.cycle.start).expectedMinor==null?x.salary:expToMinor(expCyclePlan(x.cycle.start).expectedMinor))+line('الدخل المستلم المسجل',x.incomeReceived)+(x.allocations.incoming?line('مخصص من دخل دورة سابقة',x.allocations.incoming):'')+(x.allocations.outgoing?line('محجوز لدورة لاحقة',-x.allocations.outgoing):'')+'<p class="exp-card-hint">'+(x.incomeEstimated?'يعتمد على المتوقع فقط لعدم تسجيل استلام. هذا تقدير وليس رصيدًا فعليًا.':'يعتمد على المستلم فقط، وقد يكون جزءًا من الراتب؛ لا يُضاف إليه المتوقع. بعد الالتزامات وحجز الادخار، وليس رصيد البنك.')+'</p>'+(next?'<p>الاستحقاق القادم: '+expEsc(next.name)+' · '+expArDate(next.due)+' · '+expMoney(next.remaining)+'</p>':'<p class="exp-card-hint">لا استحقاق قادم مسجل في الدورة.</p>')+'<details><summary>تفاصيل الحساب والتوقع</summary>'+line(x.incomeEstimated?'الدخل المتوقع':'أساس الحساب بعد تخصيص الدخل',x.incomeBasis,'remaining')+line('صافي الصرف',x.spent,'spent')+line('المتبقي قبل الالتزامات والادخار',x.remaining,'remaining')+line('الالتزامات غير المدفوعة (تشمل المتأخرات)',x.outstanding,'outstanding')+line('صافي تحويلات الادخار',x.savingsTransferred)+line('حجز ادخار متبقٍ',x.savingsReserved)+(forecast?'<p>إذا استمر متوسط الصرف المتغير المسجل، يصل إلى '+expMoney(forecast.projected)+' بنهاية الدورة. الحساب: الصرف المتغير ÷ '+_arn(forecast.elapsed)+' يومًا × '+_arn(forecast.total)+' يومًا؛ لديك تسجيلات في '+_arn(forecast.recordedDays)+' أيام. تقدير يفترض اكتمال السجل، ولا يشمل الالتزامات الثابتة.</p>':'<p>يتاح توقع الصرف بعد مرور أسبوع وتسجيل مصروفات في ثلاثة أيام على الأقل.</p>')+'</details><div class="exp-chips"><button data-finance-action="setup">إعداد خطتي · اختياري</button><button data-finance-action="ledger">السجل المالي الموحد</button><button data-finance-action="payday">مراجعة يوم الراتب</button><button data-finance-action="income">الدخل</button><button data-finance-action="plan">خطة راتبي</button><button data-finance-action="saving">حركات الادخار</button><button data-finance-action="spent">تفاصيل الصرف</button><button data-finance-action="review">مراجعة الدورة السابقة</button></div></section>';
+    const x=expFinancePeriods(todayStr());
+    const card=(title,value,key,range,note)=>'<section class="exp-card finance-metric'+(value<0?' finance-negative':'')+'"><h3>'+title+'</h3><button type="button" data-finance-detail="'+key+'" aria-label="'+title+'، تفاصيل الحساب">'+expMoney(value)+'</button><p class="exp-card-hint">'+expArDate(range.start)+' — '+expArDate(range.end)+'</p><small>'+note+'</small></section>';
+    return card('المتبقي من حد الأسبوع',x.weekRemaining,'weekRemaining',x.week,'حد صرف مستقل عن دورة الراتب')+card(x.incomeEstimated?'المتاح المتوقع للدورة':'المتاح من الدخل المسجل',x.available,'available',x.cycle,(x.incomeEstimated?'تقدير من الدخل المتوقع':'بعد الالتزامات وحجز الادخار')+' · ليس رصيد البنك').replace('</section>','<details><summary>تفاصيل الدخل</summary><p>الدخل المتوقع للخطة: '+expMoney(expExpectedIncome(x.cycle.start))+'</p><p>الدخل المستلم المسجل: '+expMoney(x.incomeReceived)+'</p><p>لا يُجمع المتوقع مع المستلم.</p></details></section>');
   }
+
   function expReportSalary(){
     const r=expCurrentReportRange(), rows=expTxInRange(r).sort((a,b)=>b.transactionDate.localeCompare(a.transactionDate));
     const planned=expPlanCategories(r).reduce((sum,c)=>sum+expCategoryPlanInRange(c,r),0);
@@ -14325,15 +14399,26 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     host.querySelector("[data-tripadd]").onclick=(e)=>{ e.stopPropagation(); expOpenExpenseForm(null, trip.id); };
   }
   function expRenderDash(){
-    document.getElementById("expDashSummary").innerHTML = expRenderFinanceAlert()+expRenderPeriodSummary();
-    expWireFinanceSummary();
-    expRenderTravelBanner("expDashBanner");
-    expRenderFixedCard();
-    expRenderVarCard();
-    expRenderSavingsCard();
-    expRenderBudgetCompareCard();
-    expRenderCategoryChartCard();
-    expRenderRecurringCard();
+    document.getElementById('expDashSummary').innerHTML=expRenderFinanceAlert()+expRenderPeriodSummary();
+    expWireFinanceSummary();expRenderTravelBanner('expDashBanner');
+    const x=expFinancePeriods(todayStr()),next=x.obligationRows.slice().sort((a,b)=>a.due.localeCompare(b.due))[0],host=document.getElementById('expNextObligation');
+    host.innerHTML=next?'<section class="exp-card finance-due"><div><h3>'+(next.due<todayStr()?'استحقاق يحتاج متابعة':'الاستحقاق القادم')+'</h3><p>'+expEsc(next.name)+' · '+expMoney(next.remaining)+'</p><small>'+expArDate(next.due)+'</small></div><button type="button" id="expNextPay">'+(next.recurring?'مراجعة':'سداد')+'</button></section>':'';
+    if(next)document.getElementById('expNextPay').onclick=()=>{
+      if(next.recurring){expSetView('plan');document.getElementById('expRecurringCard').scrollIntoView({block:'start'});return;}
+      const year=+next.due.slice(0,4),month=+next.due.slice(5,7);
+      const inst=expMonthInstances(year,month).find(i=>i.templateId===next.templateId&&i.dueDate===next.due);
+      if(inst)expOpenPaymentForm(inst.id);else expOpenCommitments();
+    };
+    const labels={purchase:'مصروف',refund:'استرداد',income:'دخل مستلم',deposit:'تحويل إلى الادخار',withdraw:'سحب من الادخار',transfer:'تحويل',settlement:'تسوية · ليست حركة نقدية'};
+    const rows=expUnifiedLedgerRows().sort((a,b)=>b.date.localeCompare(a.date)||(b.row.createdAt||0)-(a.row.createdAt||0)||a.id.localeCompare(b.id)).slice(0,3);
+    document.getElementById('expRecentRows').innerHTML=rows.map(r=>'<button type="button" class="finance-recent-row" data-recent-record="'+expEsc(r.id)+'"><span class="finance-row-icon" aria-hidden="true">'+({purchase:'−',refund:'↩',income:'＋',deposit:'◎',withdraw:'↗',transfer:'⇄',settlement:'≋'}[r.type])+'</span><span><b>'+expEsc(r.source==='transaction'?(r.row.description||(expCatById(r.row.categoryId)||{}).name||labels[r.type]):r.name||labels[r.type])+'</b><small>'+labels[r.type]+' · '+expMoney(Math.abs(r.amount))+'</small></span><time>'+expArDate(r.date)+'</time></button>').join('')||'<p class="exp-empty">لا حركات مسجلة بعد. ابدأ بإضافة مصروف، أو سجل الدخل من الخطة.</p>';
+    document.querySelectorAll('[data-recent-record]').forEach(b=>b.onclick=()=>expOpenUnifiedLedger(b.dataset.recentRecord));
+    document.getElementById('expRecentAll').onclick=()=>expSetView('ledger');
+  }
+  function expRenderPlan(){
+    const host=document.getElementById('expPlanActions');
+    host.innerHTML='<section class="exp-card"><div class="finance-section-head"><h3>خطتي المالية</h3><button data-finance-action="setup">تعديل الخطة</button></div><p class="exp-card-hint">الدخل المتوقع وحدود الأسبوع وحجز الادخار. تعديل الخطة لا يسجل استلامًا أو تحويلًا.</p><div class="exp-chips"><button data-finance-action="income">الدخل المستلم</button><button data-finance-action="saving">حركات الادخار</button></div><details><summary>مراجعة الدورات وتفاصيلها</summary><div class="exp-chips"><button data-finance-action="payday">مراجعة يوم الراتب</button><button data-finance-action="review">مراجعة الدورة السابقة</button><button data-finance-action="splitweek">الأسبوع عبر دورات الراتب</button><button data-finance-action="plan">تفاصيل توزيع الراتب</button></div></details></section>';
+    expWireFinanceSummary(host);expRenderFixedCard();expRenderVarCard();expRenderSavingsCard();expRenderBudgetCompareCard();expRenderCategoryChartCard();expRenderRecurringCard();
   }
   function expRenderFixedCard(){
     const box = document.getElementById("expFixedCard");
@@ -14738,7 +14823,15 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     expFormBox.querySelectorAll('[data-close]').forEach(b=>b.onclick=expCloseForm);
     const first=expFormBox.querySelector('input:not([type="hidden"]),select,textarea')||expFormBox.querySelector('button');if(first)first.focus({preventScroll:true});else{expFormBox.tabIndex=-1;expFormBox.focus({preventScroll:true});}
   }
-  function expCloseForm(){expDetachFormViewport();document.body.classList.remove('finance-form-open');expUnifiedLedgerRefresh=null;expFormOverlay.hidden=true;expFormBox.innerHTML='';const opener=expFormOpener;expFormOpener=null;if(opener?.isConnected)opener.focus({preventScroll:true});}
+  function expCloseForm(){
+    expDetachFormViewport();document.body.classList.remove('finance-form-open');expUnifiedLedgerRefresh=null;expFormOverlay.hidden=true;expFormBox.innerHTML='';
+    const opener=expFormOpener;expFormOpener=null;
+    if(!expOverlay.hidden&&expCurView==='ledger'){
+      const host=document.getElementById('expViewLedger');if(expPageLedgerRefresh)expPageLedgerRefresh();else expPageLedgerRefresh=expRenderUnifiedLedger(host);
+      expRestoreLedgerFocus(host,opener);
+    }else if(opener?.isConnected)opener.focus({preventScroll:true});
+  }
+
   expFormOverlay.addEventListener('keydown',e=>{
     if(!document.getElementById('hifzDialog').hidden||document.querySelector('.prio-menu-backdrop'))return;
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();expCloseForm();return;}
@@ -15181,9 +15274,9 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expShowUndoAction(text, restoreFn){
     const bar=document.getElementById("expUndo"); document.getElementById("expUndoText").textContent=text;
     bar.hidden=false; if(expUndoTimer) clearTimeout(expUndoTimer);
-    const btn=document.getElementById("expUndoBtn");
+    const btn=document.getElementById("expUndoBtn");btn.textContent="تراجع";
     btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
-    if(document.getElementById('ulRows')){
+    if(expFormBox.querySelector('#ulRows')){
       document.getElementById('ulUndo')?.remove();expFormBox.insertAdjacentHTML('beforeend','<button id="ulUndo" class="exp-add-line">تراجع عن التصحيح الأخير</button>');
       document.getElementById('ulUndo').onclick=()=>{restoreFn();bar.hidden=true;document.getElementById('ulUndo')?.remove();expRefresh();};
     }
@@ -15853,6 +15946,12 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expOpenOverlay(){ expOverlay.hidden=false; expSetView("family"); document.body.style.overflow="hidden"; expRenderSyncRow(); expTriggerPull(); /* مزامنة عند فتح الوحدة */ }
   function expCloseOverlay(){ expOverlay.hidden=true; document.body.style.overflow=""; }
   function expSetView(v){
+    if(v!=='ledger'){document.getElementById('expViewLedger').innerHTML='';expPageLedgerRefresh=null;}
+    const familyMode=['family','familyManage','shopping'].includes(v);
+    document.getElementById('expFinanceNav').hidden=familyMode;document.getElementById('expFinanceContext').hidden=familyMode;
+    document.getElementById('expFinanceMore').open=false;
+    document.getElementById('expViewLedger').hidden=v!=='ledger';document.getElementById('expViewPlan').hidden=v!=='plan';
+    expOverlay.querySelectorAll('#expFinanceNav [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===v);if(b.dataset.view===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     expCurView=v;if(v==="shopping")familyTab="shopping";else if(v==="family")familyTab="summary";expOverlay.classList.toggle("family-mode",["family","familyManage","shopping"].includes(v));
     const heading=expOverlay.querySelector(".adhkar-head h2");if(heading)heading.textContent=["family","familyManage","shopping"].includes(v)?"👨‍👩‍👧 العائلة":"المالية";
     document.getElementById("expViewFamily").hidden = v!=="family";
@@ -15868,6 +15967,8 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
     else if(v==="familyManage") familyRenderManage();
     else if(v==="shopping") familyRenderShopping();
     else if(v==="dash") expRenderDash();
+    else if(v==="plan") expRenderPlan();
+    else if(v==="ledger") expPageLedgerRefresh=expRenderUnifiedLedger(document.getElementById("expViewLedger"));
     else if(v==="trips"){ expTripDetailId=null; expRenderTrips(); }
     else if(v==="reports") expRenderReport();
     else expRenderSettings();
@@ -15875,11 +15976,11 @@ body:has(#expOverlay.family-mode:not([hidden])) .quick-nav{visibility:hidden}
   function expInit(){
     document.getElementById("expOpenBtn").onclick=expOpenOverlay;
     const quickExpense=document.getElementById("expQuickAdd");
-    if(quickExpense) quickExpense.onclick=()=> expOpenExpenseForm(null);
+    if(quickExpense) quickExpense.onclick=()=> expOpenQuickExpense();
     document.getElementById("familyQuickShop").onclick=()=>{ expOpenOverlay(); expSetView("shopping"); };
     document.getElementById("expClose").onclick=expCloseOverlay;
-    document.getElementById("expAddBtn").onclick=()=> expOpenExpenseForm(null);
-    expOverlay.querySelectorAll(".exp-tab[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
+    document.getElementById("expAddBtn").onclick=()=> expOpenQuickExpense();
+    expOverlay.querySelectorAll("[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
     const search=document.getElementById("expSearch"); search.oninput=()=>{ expSearchTerm=search.value; expApplySearch(); };
     document.getElementById("expExportCsv").onclick=expExportCurrentCsv;
