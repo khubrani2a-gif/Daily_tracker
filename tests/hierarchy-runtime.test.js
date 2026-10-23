@@ -60,7 +60,7 @@ test("expense hierarchy migrates legacy data and saves predefined and custom sub
     assert.equal(state.transactions.find(t=>t.id==="old").categoryId,state.categories.find(c=>c.name==="المطاعم والطلبات").id);
 
     await page.locator('[data-app-view="expenses"]').click();
-    await page.locator("#expOpenBtn").click(); await page.locator('.exp-tab[data-view="dash"]').click(); await page.locator("#expAddBtn").click();
+    await page.locator("#expOpenBtn").click(); await page.locator('[data-family-finance]').click(); await page.locator("#expAddBtn").click();
     await page.locator("#efAmount").fill("25"); await page.locator("#efCat").selectOption("legacy_food");
     await page.locator("[data-subchip]").filter({hasText:"خضار وفواكه"}).click(); await page.locator("#efDetails").fill("تموين الأسبوع");
     await page.locator("#efSave").click(); await page.waitForTimeout(80);

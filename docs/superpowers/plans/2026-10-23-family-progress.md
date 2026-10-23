@@ -8,3 +8,6 @@ Task 2: implemented; RED tasks button/migration probes reproduced missing canoni
 Task 3: implemented; integration tests cover shopping undo, stale edits and linked receipt update without duplication. Completion itself has no financial side effect.
 Review Focus: simultaneous offline member additions/archive, failed writes/drafts, migration retries after move/deletion, duplicate linked receipts and responsive RTL.
 Ruling: member removal is reversible archival preserving assignment IDs and historical names; assignments can be changed through the canonical editor.
+Final review: fresh reviewer /root/family_final_review found restore-epoch member resurrection and shopping draft loss. Both reproduced RED then passed GREEN. Narrow-name overflow regraded as required responsive behavior and fixed with a failing 320px test.
+Ruling: finance navigation tests now use the visible family finance action because finance tabs are hidden in the family view; financial assertions unchanged.
+Ruling: previous full test runs overlapped working-file edits; their failures are not accepted as a final gate. A frozen final candidate receives a new complete run.
