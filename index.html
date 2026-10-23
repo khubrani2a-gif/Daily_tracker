@@ -11628,6 +11628,7 @@
     safeRun("renderActivity", renderActivityCard);
     safeRun("renderProgress", renderProgress);
     safeRun("expRenderLaunch", ()=>{ if(typeof expRenderLaunch === "function") expRenderLaunch(); });
+    safeRun("familyRefresh", ()=>{ if(typeof familyRefresh === "function") familyRefresh(); });
     safeRun("renderReadingCard", ()=>{ if(typeof renderReadingCard === "function") renderReadingCard(); });
     safeRun("renderLearningCard", ()=>{ if(typeof learningRenderHome === "function") learningRenderHome(); });
   }

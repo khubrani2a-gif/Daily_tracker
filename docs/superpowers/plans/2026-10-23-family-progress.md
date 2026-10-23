@@ -11,3 +11,5 @@ Ruling: member removal is reversible archival preserving assignment IDs and hist
 Final review: fresh reviewer /root/family_final_review found restore-epoch member resurrection and shopping draft loss. Both reproduced RED then passed GREEN. Narrow-name overflow regraded as required responsive behavior and fixed with a failing 320px test.
 Ruling: finance navigation tests now use the visible family finance action because finance tabs are hidden in the family view; financial assertions unchanged.
 Ruling: previous full test runs overlapped working-file edits; their failures are not accepted as a final gate. A frozen final candidate receives a new complete run.
+Final: fixed open-family daily-sync refresh — new task missing from open list RED→GREEN. All 15 family browser cases pass. Financial/reading navigation checks pass after adapting the route; no numerical assertions changed.
+Firebase emulator acceptance: 8/8 pass. Responsive screens: 390, 820 and 1440 pixels, light/dark, no document overflow or browser errors. Narrow member sheet: 320px regression passes.
