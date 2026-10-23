@@ -14448,7 +14448,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const key=b.dataset.financeShortcut;
       if(key==='commitments'){expOpenCommitments();return;}
       expSetView(key==='saving'?'plan':key);
-      if(key==='saving'){const card=document.getElementById('expSavingsCard');card.setAttribute('tabindex','-1');card.focus({preventScroll:true});card.scrollIntoView({block:'start'});}
+      const target=document.getElementById(key==='saving'?'expSavingsCard':key==='ledger'?'ulText':'expPlanActions');
+      if(target){if(key!=='ledger')target.setAttribute('tabindex','-1');target.focus({preventScroll:true});target.scrollIntoView({block:'start'});}
     });
     const x=expFinancePeriods(todayStr()),next=x.obligationRows.slice().sort((a,b)=>a.due.localeCompare(b.due))[0],host=document.getElementById('expNextObligation');
     host.innerHTML=next?'<section class="exp-card finance-due"><div><h3>'+(next.due<todayStr()?'استحقاق يحتاج متابعة':'الاستحقاق القادم')+'</h3><p>'+expEsc(next.name)+' · '+expMoney(next.remaining)+'</p><small>'+expArDate(next.due)+'</small></div><button type="button" id="expNextPay">'+(next.recurring?'مراجعة':'سداد')+'</button></section>':'';

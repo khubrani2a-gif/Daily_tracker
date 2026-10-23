@@ -21,3 +21,5 @@ Preserve money calculations, undo and original action handlers. Four shortcuts, 
 ## Ledger
 Baseline: v176 passed596+8 in prior turn; clean branch from published6e09d1b.
 Ruling: use existing isolated worktree, new branch; no approval repetition because user authorized development and previously opted out of repeated permission.
+
+Review: keyboard focus issue reproduced by regression; fixed to focus ledger search or plan section. Existing plan render may generate unpaid obligation instances; preserve this baseline behavior, assert no cash movements/balance changes rather than no storage writes.

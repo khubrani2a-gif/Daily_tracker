@@ -66,3 +66,9 @@ test('summary meters explain their denominator and preserve signed balances',()=
  assert.equal(await p.locator('.finance-negative').count(),2);for(const b of await bars.all())assert.equal(await b.getAttribute('aria-valuenow'),'0');assert.deepEqual(await p.evaluate(money),[900000,900000,-830000,-100000]);
  await p.evaluate(()=>{audit.expState().settings.salaryAmountMinor=0;audit.expState().categories[0].budgets=[];audit.expSetView('dash');});assert.equal(await bars.count(),0);
 }));
+test('keyboard shortcuts move focus into the opened finance destination',()=>run(async({p})=>{
+ for(const key of ['ledger','plan']){
+  await p.evaluate(()=>audit.expSetView('dash'));await p.locator('[data-finance-shortcut="'+key+'"]').focus();await p.keyboard.press('Enter');
+  const active=await p.evaluate(()=>({id:document.activeElement.id,visible:!!document.activeElement.getClientRects().length}));assert.equal(active.visible,true);assert.equal(active.id,key==='ledger'?'ulText':'expPlanActions');
+ }
+}));

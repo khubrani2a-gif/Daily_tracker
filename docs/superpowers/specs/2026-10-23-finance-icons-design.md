@@ -7,4 +7,4 @@ Scope: shortcuts السجل، الالتزامات، الادخار، خطتي; 
 
 Progress indicators must have an explicit denominator and clamp visuals only, never financial values. No denominator means no misleading progress bar. No new financial persistence. No third-party icon dependency.
 
-Acceptance: each shortcut reaches its existing target, navigation writes no financial data; quick save and undo remain correct. Mobile 320/390, tablet820 and desktop1440 light/dark do not overflow; visible icon labels and keyboard focus. Test full suite and inspect actual screenshots before publishing.
+Acceptance: each shortcut reaches its existing target, navigation creates no cash movements and changes no balances; quick save and undo remain correct. Mobile 320/390, tablet820 and desktop1440 light/dark do not overflow; visible icon labels and keyboard focus. Test full suite and inspect actual screenshots before publishing.
