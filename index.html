@@ -2503,6 +2503,25 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   .family-nav [data-family-manage]{position:relative}.family-nav [data-family-manage]>summary{cursor:pointer;border:1px solid var(--line);border-radius:12px;padding:.5rem;min-height:44px;color:var(--accent);background:var(--paper)}.family-nav [data-family-manage]>button{position:absolute;z-index:6;left:0;min-width:170px;box-shadow:0 8px 24px #0002;background:var(--paper);color:var(--ink)}
   #expViewLedger summary,#expLedgerDialog summary{cursor:pointer;padding:.6rem 0;color:var(--accent)}#expLedgerDialog>h3{display:none}
+
+  /* Named local icons: presentation only, existing finance actions retained. */
+  .finance-icon{width:26px;height:26px;flex-shrink:0;vertical-align:middle}
+  #expFinanceShortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;margin:0 0 1.2rem}
+  #expFinanceShortcuts button{font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;min-height:96px;min-width:0;padding:.8rem .25rem;border:1px solid var(--line);border-radius:17px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px #00000004}
+  #expFinanceShortcuts .finance-icon{width:29px;height:29px;color:var(--accent)}
+  #expFinanceShortcuts button span{font-size:.8rem;font-weight:700}
+  #expFinanceShortcuts button:hover{border-color:var(--accent);background:var(--accent-soft)}
+  #expAddBtn,#expFinanceMore>summary{display:flex;align-items:center;justify-content:center;gap:.65rem}
+  #expDashSummary .finance-metric h3{display:flex;align-items:center;justify-content:center;gap:.45rem;min-height:2.5rem}
+  #expDashSummary .finance-metric h3 .finance-icon{width:23px;height:23px;color:var(--accent)}
+  .finance-meter{height:7px;border-radius:999px;overflow:hidden;background:var(--line);margin:.55rem 0 .35rem}
+  .finance-meter>span{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+  .finance-negative .finance-meter>span{background:var(--danger)}
+  #expDashSummary .finance-meter-caption{color:var(--ink)}
+  .finance-row-icon{display:flex;align-items:center;justify-content:center}.finance-row-icon .finance-icon{width:23px;height:23px}
+  #expFinanceNav .finance-icon{width:24px;height:24px}#expFinanceNav button{align-content:center;gap:.3rem}
+  #expViewPlan .exp-card{scroll-margin-block:1rem}
+  @media(max-width:360px){#expFinanceShortcuts{gap:.4rem}#expFinanceShortcuts button{min-height:86px}#expFinanceShortcuts button span{font-size:.72rem}#expDashSummary .finance-metric h3{flex-direction:column;gap:.2rem}}
 </style>
 </head>
 <body>
@@ -3713,6 +3732,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <div class="exp-sumgrid" id="expDashSummary"></div>
         <div id="expDashBanner" hidden></div>
         <button class="exp-primary" id="expAddBtn" style="width:100%;margin-bottom:1rem">＋ إضافة مصروف</button>
+        <nav id="expFinanceShortcuts" aria-label="اختصارات المالية"></nav>
         <div id="expNextObligation"></div>
         <section class="exp-card finance-recent"><div class="finance-section-head"><h3>آخر الحركات</h3><button type="button" id="expRecentAll">عرض الكل</button></div><div id="expRecentRows"></div></section>
       </div>
@@ -11711,7 +11731,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=176;
+  const DATA_VERSION=1, APP_RELEASE=177;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -14337,10 +14357,31 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     expOpenForm('<div class="exp-form-head"><h3>'+title+'</h3><button data-close>✕</button></div>'+html);expWireTxMenus(expFormBox);
     if(document.getElementById('fdSplitWeek'))document.getElementById('fdSplitWeek').onclick=()=>expOpenSplitWeek();
   }
+  function expIcon(name){
+    const paths={
+      wallet:'<path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v11H6a3 3 0 0 1-3-3V6"/><path d="M20 12h-5v4h5M8 14v4m-2-2h4"/>',
+      ledger:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+      calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5 2 2 5-5"/>',
+      saving:'<path d="M5 10 3 8v6l2 1 1 4h3l1-2h6l1 2h3v-5l2-1v-3l-2-1-1-3-3 1a9 9 0 0 0-11 3Z"/><path d="M10 6h4m3 4h.01"/>',
+      target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+      home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
+      coins:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v5c0 4 16 4 16 0V5M4 10v5c0 4 16 4 16 0v-5M4 15v4c0 4 16 4 16 0v-4"/>',
+      more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+      refund:'<path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12"/>',
+      transfer:'<path d="M3 7h17l-4-4M21 17H4l4 4"/>',
+      income:'<path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/>'
+    };
+    return '<svg class="finance-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(paths[name]||paths.ledger)+'</svg>';
+  }
   function expRenderPeriodSummary(){
     const x=expFinancePeriods(todayStr());
-    const card=(title,value,key,range,note)=>'<section class="exp-card finance-metric'+(value<0?' finance-negative':'')+'"><h3>'+title+'</h3><button type="button" data-finance-detail="'+key+'" aria-label="'+title+'، تفاصيل الحساب">'+expMoney(value)+'</button><p class="exp-card-hint">'+expArDate(range.start)+' — '+expArDate(range.end)+'</p><small>'+note+'</small></section>';
-    return card('المتبقي من حد الأسبوع',x.weekRemaining,'weekRemaining',x.week,'حد صرف مستقل عن دورة الراتب')+card(x.incomeEstimated?'المتاح المتوقع للدورة':'المتاح من الدخل المسجل',x.available,'available',x.cycle,(x.incomeEstimated?'تقدير من الدخل المتوقع':'بعد الالتزامات وحجز الادخار')+' · ليس رصيد البنك').replace('</section>','<details><summary>تفاصيل الدخل</summary><p>الدخل المتوقع للخطة: '+expMoney(expExpectedIncome(x.cycle.start))+'</p><p>الدخل المستلم المسجل: '+expMoney(x.incomeReceived)+'</p><p>لا يُجمع المتوقع مع المستلم.</p></details></section>');
+    const meter=(value,total,label)=>{
+      if(!Number.isSafeInteger(total)||total<=0)return '';
+      const pct=Math.max(0,Math.min(100,Math.round(value/total*100)));
+      return '<div class="finance-meter" role="meter" aria-label="'+label+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'" aria-valuetext="'+expMoney(value)+' من '+expMoney(total)+'"><span style="width:'+pct+'%"></span></div><small class="finance-meter-caption">'+label+' · من '+expMoney(total)+'</small>';
+    };
+    const card=(title,value,key,range,note,total,icon,label)=>'<section class="exp-card finance-metric'+(value<0?' finance-negative':'')+'"><h3>'+expIcon(icon)+'<span>'+title+'</span></h3><button type="button" data-finance-detail="'+key+'" aria-label="'+title+'، تفاصيل الحساب">'+expMoney(value)+'</button>'+meter(value,total,label)+'<p class="exp-card-hint">'+expArDate(range.start)+' — '+expArDate(range.end)+'</p><small>'+note+'</small></section>';
+    return card('المتبقي من حد الأسبوع',x.weekRemaining,'weekRemaining',x.week,'حد صرف مستقل عن دورة الراتب',x.weekBudget,'calendar','المتبقي من الحد')+card(x.incomeEstimated?'المتاح المتوقع للدورة':'المتاح من الدخل المسجل',x.available,'available',x.cycle,(x.incomeEstimated?'تقدير من الدخل المتوقع':'بعد الالتزامات وحجز الادخار')+' · ليس رصيد البنك',x.incomeBasis,'coins','المتاح من أساس الدخل').replace('</section>','<details><summary>تفاصيل الدخل</summary><p>الدخل المتوقع للخطة: '+expMoney(expExpectedIncome(x.cycle.start))+'</p><p>الدخل المستلم المسجل: '+expMoney(x.incomeReceived)+'</p><p>لا يُجمع المتوقع مع المستلم.</p></details></section>');
   }
 
   function expReportSalary(){
@@ -14401,6 +14442,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function expRenderDash(){
     document.getElementById('expDashSummary').innerHTML=expRenderFinanceAlert()+expRenderPeriodSummary();
     expWireFinanceSummary();expRenderTravelBanner('expDashBanner');
+    const shortcuts=document.getElementById('expFinanceShortcuts');
+    shortcuts.innerHTML=[['ledger','ledger','السجل'],['commitments','calendar','الالتزامات'],['saving','saving','الادخار'],['plan','target','خطتي']].map(([key,icon,label])=>'<button type="button" data-finance-shortcut="'+key+'">'+expIcon(icon)+'<span>'+label+'</span></button>').join('');
+    shortcuts.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+      const key=b.dataset.financeShortcut;
+      if(key==='commitments'){expOpenCommitments();return;}
+      expSetView(key==='saving'?'plan':key);
+      if(key==='saving'){const card=document.getElementById('expSavingsCard');card.setAttribute('tabindex','-1');card.focus({preventScroll:true});card.scrollIntoView({block:'start'});}
+    });
     const x=expFinancePeriods(todayStr()),next=x.obligationRows.slice().sort((a,b)=>a.due.localeCompare(b.due))[0],host=document.getElementById('expNextObligation');
     host.innerHTML=next?'<section class="exp-card finance-due"><div><h3>'+(next.due<todayStr()?'استحقاق يحتاج متابعة':'الاستحقاق القادم')+'</h3><p>'+expEsc(next.name)+' · '+expMoney(next.remaining)+'</p><small>'+expArDate(next.due)+'</small></div><button type="button" id="expNextPay">'+(next.recurring?'مراجعة':'سداد')+'</button></section>':'';
     if(next)document.getElementById('expNextPay').onclick=()=>{
@@ -14411,7 +14460,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     };
     const labels={purchase:'مصروف',refund:'استرداد',income:'دخل مستلم',deposit:'تحويل إلى الادخار',withdraw:'سحب من الادخار',transfer:'تحويل',settlement:'تسوية · ليست حركة نقدية'};
     const rows=expUnifiedLedgerRows().sort((a,b)=>b.date.localeCompare(a.date)||(b.row.createdAt||0)-(a.row.createdAt||0)||a.id.localeCompare(b.id)).slice(0,3);
-    document.getElementById('expRecentRows').innerHTML=rows.map(r=>'<button type="button" class="finance-recent-row" data-recent-record="'+expEsc(r.id)+'"><span class="finance-row-icon" aria-hidden="true">'+({purchase:'−',refund:'↩',income:'＋',deposit:'◎',withdraw:'↗',transfer:'⇄',settlement:'≋'}[r.type])+'</span><span><b>'+expEsc(r.source==='transaction'?(r.row.description||(expCatById(r.row.categoryId)||{}).name||labels[r.type]):r.name||labels[r.type])+'</b><small>'+labels[r.type]+' · '+expMoney(Math.abs(r.amount))+'</small></span><time>'+expArDate(r.date)+'</time></button>').join('')||'<p class="exp-empty">لا حركات مسجلة بعد. ابدأ بإضافة مصروف، أو سجل الدخل من الخطة.</p>';
+    document.getElementById('expRecentRows').innerHTML=rows.map(r=>'<button type="button" class="finance-recent-row" data-recent-record="'+expEsc(r.id)+'"><span class="finance-row-icon" aria-hidden="true">'+expIcon({purchase:'wallet',refund:'refund',income:'income',deposit:'saving',withdraw:'transfer',transfer:'transfer',settlement:'ledger'}[r.type])+'</span><span><b>'+expEsc(r.source==='transaction'?(r.row.description||(expCatById(r.row.categoryId)||{}).name||labels[r.type]):r.name||labels[r.type])+'</b><small>'+labels[r.type]+' · '+expMoney(Math.abs(r.amount))+'</small></span><time>'+expArDate(r.date)+'</time></button>').join('')||'<p class="exp-empty">لا حركات مسجلة بعد. ابدأ بإضافة مصروف، أو سجل الدخل من الخطة.</p>';
     document.querySelectorAll('[data-recent-record]').forEach(b=>b.onclick=()=>expOpenUnifiedLedger(b.dataset.recentRecord));
     document.getElementById('expRecentAll').onclick=()=>expSetView('ledger');
   }
@@ -15979,6 +16028,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(quickExpense) quickExpense.onclick=()=> expOpenQuickExpense();
     document.getElementById("familyQuickShop").onclick=()=>{ expOpenOverlay(); expSetView("shopping"); };
     document.getElementById("expClose").onclick=expCloseOverlay;
+    document.getElementById("expAddBtn").innerHTML=expIcon('wallet')+'<span>إضافة مصروف</span>';
+    document.querySelectorAll('#expFinanceNav button').forEach(b=>{const span=b.querySelector('span');if(span)span.innerHTML=expIcon({dash:'home',ledger:'ledger',plan:'target'}[b.dataset.view]);});
+    document.querySelector('#expFinanceMore>summary').innerHTML=expIcon('more')+'<span>المزيد</span>';
     document.getElementById("expAddBtn").onclick=()=> expOpenQuickExpense();
     expOverlay.querySelectorAll("[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
