@@ -1394,6 +1394,8 @@
   .exp-form-overlay{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
   @media(min-width:620px){ .exp-form-overlay{align-items:center} }
   .exp-form-overlay[hidden]{display:none}
+  body.finance-form-open .quick-nav{visibility:hidden}
+  #expFormOverlay .exp-form{max-height:calc(var(--finance-visible-height,100dvh) - 1rem);padding-bottom:max(1.4rem,env(safe-area-inset-bottom,0px));scroll-padding-bottom:1.4rem}
   .exp-form{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;padding:1rem 1rem 1.4rem;box-shadow:0 -8px 30px rgba(0,0,0,.28);animation:expUp .22s cubic-bezier(.22,1,.36,1)}
   @media(min-width:620px){ .exp-form{border-radius:20px} }
   @media(max-width:700px){
@@ -1406,6 +1408,8 @@
     }
   }
   @keyframes expUp{from{transform:translateY(6%);opacity:.6}to{transform:none;opacity:1}}
+  .exp-review-row{display:flex;align-items:center;gap:.6rem;padding:.8rem;border:1px solid var(--line);border-radius:12px;margin:.5rem 0;min-height:44px;overflow-wrap:anywhere}.exp-review-row input{width:22px;height:22px;flex-shrink:0}.exp-review-row span{min-width:0}
+  #expFormBox [data-saving-review]{min-height:44px;padding:.4rem;border:1px solid var(--line);border-radius:10px;background:var(--chip-bg);color:var(--ink);font:inherit}
   .exp-form-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
   .exp-form-head h3{font-size:1.05rem;font-family:"Thmanyah Display","Thmanyah Sans",serif}
   .exp-form-head button{border:none;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:.2rem .4rem}
@@ -3815,7 +3819,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٧٠</div>
+    <div class="app-version">النسخة ١٧١</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -13913,13 +13917,21 @@
   function expIncomeAllocations(cycleStart){
     let incoming=0,outgoing=0;expFinanceRows('income').filter(expValidIncomeAllocation).forEach(r=>{if(r.allocation.targetCycle===cycleStart)incoming+=r.allocation.amountMinor;if(r.allocation.sourceCycle===cycleStart)outgoing+=r.allocation.amountMinor;});return {incoming,outgoing};
   }
+  function expIncomeFieldError(field,message){const error=new Error(message);error.field=field;return error;}
   function expPreviewIncome(input){
     const old=input.id?expFinanceRows('income').find(r=>r.id===input.id):null;
     if(input.id&&!old)throw Error('تغير سجل الدخل أو حُذف. أعد فتحه.');
-    if(!Number.isSafeInteger(input.amountMinor)||input.amountMinor<=0||!expValidFinanceDate(input.date)||input.date>todayStr()||!String(input.name||'').trim()||!['salary','other'].includes(input.incomeType))throw Error('تحقق من المبلغ والمصدر وتاريخ الاستلام.');
+    if(!Number.isSafeInteger(input.amountMinor)||input.amountMinor<=0)throw expIncomeFieldError('fiAmount','أدخل مبلغ الدخل أكبر من صفر وبصيغة صحيحة.');
+    if(!expValidFinanceDate(input.date))throw expIncomeFieldError('fiDate','اختر تاريخ استلام صحيحًا.');
+    if(input.date>todayStr())throw expIncomeFieldError('fiDate','تاريخ الاستلام لا يكون في المستقبل؛ سجّل الدخل عند وصوله فعلًا.');
+    if(!String(input.name||'').trim())throw expIncomeFieldError('fiName','اكتب مصدر الدخل.');
+    if(!['salary','other'].includes(input.incomeType))throw expIncomeFieldError('fiType','اختر نوع الدخل.');
     const cycle=expSalaryCycleRange(input.date,expState.settings.salaryCycleStartDay),target=input.salaryPlanCycle||'',amount=input.allocationMinor??0;
-    if(target&&(!expValidFinanceDate(target)||expSalaryCycleRange(target,expState.settings.salaryCycleStartDay).start!==target))throw Error('اختر بداية دورة راتب صحيحة.');
-    if(!Number.isSafeInteger(amount)||amount<0||amount>input.amountMinor||amount&&(!target||target<=cycle.start))throw Error('التخصيص لا يتجاوز الدخل ويكون لدورة لاحقة فقط. خفّض التخصيص أولًا عند تخفيض الدخل.');
+    if(target&&(!expValidFinanceDate(target)||expSalaryCycleRange(target,expState.settings.salaryCycleStartDay).start!==target))throw expIncomeFieldError('fiCycle','اختر دورة راتب من القائمة أو يومًا ضمن الدورة المطلوبة.');
+    if(!Number.isSafeInteger(amount)||amount<0)throw expIncomeFieldError('fiAllocation','أدخل مبلغ تخصيص صحيحًا أو صفرًا دون تخصيص.');
+    if(amount>input.amountMinor)throw expIncomeFieldError('fiAllocation','التخصيص أكبر من الدخل المستلم؛ خفّض المبلغ المخصص.');
+    if(amount&&!target)throw expIncomeFieldError('fiCycleChoice','اختر دورة لاحقة للمبلغ المخصص.');
+    if(amount&&target<=cycle.start)throw expIncomeFieldError('fiCycleChoice','هذه دورة الاستلام أو دورة أقدم. يمكن ربطها للمتابعة دون تخصيص؛ لنقل المتاح اختر دورة لاحقة.');
     const record={...(old||{}),kind:'income',name:String(input.name).trim(),amountMinor:input.amountMinor,date:input.date,incomeType:input.incomeType,salaryPlanCycle:target||null,allocation:amount?{sourceCycle:cycle.start,targetCycle:target,amountMinor:amount}:null};
     const snapshot=expFinanceSnapshot(),starts=[...new Set([cycle.start,target,old?.allocation?.sourceCycle,old?.allocation?.targetCycle].filter(Boolean))];
     const before=starts.map(start=>({start,available:expFinancePeriods(start).available})),saved=expState.financeEntries;let after;
@@ -13929,13 +13941,19 @@
   function expApplyIncome(v){if(v.snapshot!==expFinanceSnapshot())return false;const fresh=expPreviewIncome(v.input);expFinancePut(fresh.record);return true;}
   function expOpenIncomeForm(editId){
     const row=expFinanceRows('income').find(r=>r.id===editId);
-    expOpenForm('<div class="exp-form-head"><h3>تسجيل دخل مستلم</h3><button data-close>✕</button></div><p>المال المستلم يُسجل بتاريخ وصوله. الأسبوع السبت–الجمعة مستقل عن دورة الراتب؛ لا يعاد ضبطه عند الاستلام.</p>'+expFinanceField('المبلغ','fiAmount','text',row?row.amountMinor/100:'')+expFinanceField('تاريخ الاستلام','fiDate','date',row?.date||todayStr())+'<div class="exp-field"><label for="fiName">المصدر</label><input id="fiName" value="'+expEsc(row?.name||'راتب')+'"></div><div class="exp-field"><label for="fiType">نوع الدخل</label><select id="fiType"><option value="salary">راتب / دفعة راتب</option><option value="other">دخل آخر</option></select></div><details'+(row?.salaryPlanCycle?' open':'')+'><summary>راتب مبكر أو تخصيص لدورة لاحقة</summary>'+expFinanceField('بداية دورة الراتب المقصودة (اختياري)','fiCycle','date',row?.salaryPlanCycle||'')+expFinanceField('مبلغ مخصص للصرف في تلك الدورة','fiAllocation','text',(row?.allocation?.amountMinor||0)/100)+'<p>الربط وحده للمتابعة. المبلغ المخصص يُحجز من دورة الاستلام ويُتاح في الدورة المحددة؛ لا يصبح دخلًا ثانيًا. لا تخصص مالًا صرفته بالفعل.</p></details><div id="fiPreview" role="status"></div><div id="fiErr" class="exp-err"></div><button class="exp-add-line" id="fiCheck">معاينة الدخل والتخصيص</button><button id="fiSave" class="exp-save">حفظ الدخل</button>');
+    expOpenForm('<div class="exp-form-head"><h3>تسجيل دخل مستلم</h3><button data-close>✕</button></div><p>المال المستلم يُسجل بتاريخ وصوله. الأسبوع السبت–الجمعة مستقل عن دورة الراتب؛ لا يعاد ضبطه عند الاستلام.</p>'+expFinanceField('المبلغ','fiAmount','text',row?row.amountMinor/100:'')+expFinanceField('تاريخ الاستلام','fiDate','date',row?.date||todayStr())+'<div class="exp-field"><label for="fiName">المصدر</label><input id="fiName" value="'+expEsc(row?.name||'راتب')+'"></div><div class="exp-field"><label for="fiType">نوع الدخل</label><select id="fiType"><option value="salary">راتب / دفعة راتب</option><option value="other">دخل آخر</option></select></div><details'+(row?.salaryPlanCycle?' open':'')+'><summary>راتب مبكر أو تخصيص لدورة لاحقة</summary>'+'<div class="exp-field"><label for="fiCycleChoice">دورة الراتب المقصودة</label><select id="fiCycleChoice"></select></div><div id="fiCycleCustom">'+expFinanceField('اختر يومًا ضمن الدورة المطلوبة','fiCycle','date',row?.salaryPlanCycle||'')+'</div><p id="fiCycleRange" role="status"></p>'+expFinanceField('مبلغ مخصص للصرف في تلك الدورة','fiAllocation','text',(row?.allocation?.amountMinor||0)/100)+'<p>الربط وحده للمتابعة. المبلغ المخصص يُحجز من دورة الاستلام ويُتاح في الدورة المحددة؛ لا يصبح دخلًا ثانيًا. لا تخصص مالًا صرفته بالفعل.</p></details><div id="fiPreview" role="status"></div><div id="fiErr" class="exp-err" role="alert"></div><button class="exp-add-line" id="fiCheck">معاينة الدخل والتخصيص</button><button id="fiSave" class="exp-save">حفظ الدخل</button>');
     const q=id=>document.getElementById(id);q('fiType').value=row?.incomeType||(!row?'salary':'other');let v=null,opening=expFinanceSnapshot();
     const read=()=>({...(row?{id:row.id}:{}),amountMinor:expParseAmount(q('fiAmount').value),date:q('fiDate').value,name:q('fiName').value.trim(),incomeType:q('fiType').value,salaryPlanCycle:q('fiCycle').value,allocationMinor:expParseAmount(q('fiAllocation').value)});
     const preview=()=>{v=expPreviewIncome(read());q('fiPreview').innerHTML=v.after.map((r,i)=>'<section class="exp-foot"><b>دورة '+expArDate(r.start)+'</b><div class="exp-foot-row"><span>المتاح قبل التسجيل</span><b>'+expMoney(v.before[i].available)+'</b></div><div class="exp-foot-row"><span>المتاح بعد التسجيل</span><b>'+expMoney(r.available)+'</b></div></section>').join('')+'<p>المستلم النقدي: '+expMoney(v.record.amountMinor)+' مرة واحدة بتاريخ '+expArDate(v.record.date)+'.</p>';q('fiErr').textContent='';opening=v.snapshot;return v;};
-    expFormBox.querySelectorAll('input,select').forEach(el=>el.oninput=()=>{v=null;q('fiPreview').textContent='';});
-    q('fiCheck').onclick=()=>{try{preview();}catch(e){v=null;q('fiErr').textContent=e.message;}};
-    q('fiSave').onclick=()=>{try{if(opening!==expFinanceSnapshot()){v=null;opening=expFinanceSnapshot();throw Error('تغيرت البيانات. أعد المعاينة.');}const input=read();if(input.allocationMinor>0&&(!v||JSON.stringify(v.input)!==JSON.stringify(input))){preview();throw Error('راجع أثر التخصيص أعلاه ثم اضغط حفظ.');}if(!v)v=preview();const chosen=v,save=()=>{if(!expApplyIncome(chosen)){q('fiErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};if(!row&&expFinanceRows('income').some(r=>r.date===input.date&&r.amountMinor===input.amountMinor))hifzShowConfirm({title:'دخل مشابه مسجل',body:'يوجد دخل بنفس المبلغ والتاريخ. هل هذا دخل آخر؟',okText:'دخل آخر',cancelText:'إلغاء',onOk:save});else save();}catch(e){q('fiErr').textContent=e.message;}};
+    const showError=e=>{q('fiErr').textContent=e.message;expFormBox.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));if(e.field&&q(e.field)){const el=q(e.field);el.setAttribute('aria-invalid','true');el.setAttribute('aria-describedby','fiErr');el.closest('details')?.setAttribute('open','');if(e.field==='fiCycle')q('fiCycleCustom').hidden=false;el.focus();}};
+    const resetPreview=()=>{v=null;q('fiPreview').textContent='';q('fiErr').textContent='';expFormBox.querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));};
+    const cycleOptions=()=>{if(!expValidFinanceDate(q('fiDate').value))return;const current=expSalaryCycleRange(q('fiDate').value),day=new Date(current.end+'T12:00:00');day.setDate(day.getDate()+1);const next=expSalaryCycleRange(fmtDate(day));const chosen=q('fiCycle').value;const option=(value,text,r)=>'<option value="'+value+'">'+text+(r?' · '+expArDate(r.start)+' — '+expArDate(r.end):'')+'</option>';q('fiCycleChoice').innerHTML=option('','بدون ربط')+option('current','دورة الاستلام',current)+option('next','الدورة التالية',next)+option('custom','اختيار دورة أخرى');q('fiCycleChoice').value=chosen===current.start?'current':chosen===next.start?'next':chosen?'custom':'';q('fiCycleChoice').dataset.current=current.start;q('fiCycleChoice').dataset.next=next.start;q('fiCycleCustom').hidden=q('fiCycleChoice').value!=='custom';q('fiCycleRange').textContent=chosen&&expValidFinanceDate(chosen)?'الدورة المختارة: '+expArDate(chosen)+' — '+expArDate(expSalaryCycleRange(chosen).end):'الربط اختياري؛ الدخل يبقى بتاريخ استلامه.';};
+    expFormBox.querySelectorAll('input,select').forEach(el=>el.oninput=resetPreview);
+    q('fiDate').oninput=()=>{resetPreview();cycleOptions();};
+    q('fiCycleChoice').onchange=()=>{const choice=q('fiCycleChoice').value;resetPreview();if(choice==='custom'){q('fiCycleCustom').hidden=false;q('fiCycle').focus();return;}q('fiCycle').value=choice?q('fiCycleChoice').dataset[choice]:'';cycleOptions();};
+    q('fiCycle').oninput=()=>{resetPreview();if(expValidFinanceDate(q('fiCycle').value))q('fiCycle').value=expSalaryCycleRange(q('fiCycle').value).start;cycleOptions();};cycleOptions();
+    q('fiCheck').onclick=()=>{try{preview();}catch(e){v=null;showError(e);}};
+    q('fiSave').onclick=()=>{try{if(opening!==expFinanceSnapshot()){v=null;opening=expFinanceSnapshot();throw Error('تغيرت البيانات. أعد المعاينة.');}const input=read();if(input.allocationMinor>0&&(!v||JSON.stringify(v.input)!==JSON.stringify(input))){preview();throw Error('راجع أثر التخصيص أعلاه ثم اضغط حفظ.');}if(!v)v=preview();const chosen=v,save=()=>{if(!expApplyIncome(chosen)){q('fiErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};if(!row&&expFinanceRows('income').some(r=>r.date===input.date&&r.amountMinor===input.amountMinor))hifzShowConfirm({title:'دخل مشابه مسجل',body:'يوجد دخل بنفس المبلغ والتاريخ. هل هذا دخل آخر؟',okText:'دخل آخر',cancelText:'إلغاء',onOk:save});else save();}catch(e){showError(e);}};
   }
   function expOpenSavingsMovement(goalId){
     const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId&&!g.deletedAt);if(!goal)return;
@@ -13978,12 +13996,13 @@
     row.deletedAt=Date.now();row.updatedAt=row.deletedAt;expSave(expState);return true;
   }
 
-  function expOpenFinanceLedger(kind,date){
-    const range=expSalaryCycleRange(date||todayStr(),expState.settings.salaryCycleStartDay),rows=expFinanceRows(kind).filter(r=>expInRange(r.date,range)).sort((a,b)=>b.date.localeCompare(a.date));
-    expOpenForm('<div class="exp-form-head"><h3>'+(kind==='income'?'سجل الدخل':'حركات الادخار')+'</h3><button data-close>✕</button></div>'+(kind==='saving'?'<p>لتصحيح حركة خاطئة: ألغها هنا ثم سجل الحركة الصحيحة من هدف الادخار. الإلغاء لا ينقل مالًا، ويمكن التراجع عنه.</p>':'')+'<p>'+expArDate(range.start)+' — '+expArDate(range.end)+'</p>'+rows.map(r=>'<div class="exp-row"><div class="exp-row-main"><b>'+expEsc(r.name||'حركة')+'</b><div>'+expArDate(r.date)+' · '+expMoney(r.amountMinor)+(r.allocation?' · مخصص '+expMoney(r.allocation.amountMinor)+' لدورة '+expArDate(r.allocation.targetCycle):'')+'</div></div>'+(kind==='income'?'<button data-income-edit="'+expEsc(r.id)+'">تعديل</button>':'')+'<button class="exp-mini" data-finance-remove="'+expEsc(r.id)+'">إلغاء حركة</button></div>').join('')+(!rows.length?'<p>لا توجد حركات مسجلة.</p>':'')+(kind==='income'?'<button id="flAdd" class="exp-save">إضافة دخل</button>':''));
+  function expOpenFinanceLedger(kind,date,goalId){
+    const range=expSalaryCycleRange(date||todayStr(),expState.settings.salaryCycleStartDay),rows=expFinanceRows(kind).filter(r=>goalId?r.goalId===goalId:expInRange(r.date,range)).sort((a,b)=>b.date.localeCompare(a.date));
+    expOpenForm('<div class="exp-form-head"><h3>'+(kind==='income'?'سجل الدخل':'حركات الادخار')+'</h3><button data-close>✕</button></div>'+(kind==='saving'?'<p>لتصحيح حركة خاطئة: ألغها هنا ثم سجل الحركة الصحيحة من هدف الادخار. الإلغاء لا ينقل مالًا، ويمكن التراجع عنه.</p>':'')+'<p>'+(goalId?'حركات الهدف في جميع التواريخ':expArDate(range.start)+' — '+expArDate(range.end))+'</p>'+rows.map(r=>'<div class="exp-row"><div class="exp-row-main"><b>'+expEsc(r.name||'حركة')+'</b><div>'+expArDate(r.date)+' · '+expMoney(r.amountMinor)+(r.allocation?' · مخصص '+expMoney(r.allocation.amountMinor)+' لدورة '+expArDate(r.allocation.targetCycle):'')+'</div></div>'+(kind==='income'?'<button data-income-edit="'+expEsc(r.id)+'">تعديل</button>':'')+(kind==='saving'?'<button data-saving-review="'+expEsc(r.id)+'">مراجعة وتصحيح</button>':'')+'<button class="exp-mini" data-finance-remove="'+expEsc(r.id)+'">إلغاء حركة</button></div>').join('')+(!rows.length?'<p>لا توجد حركات مسجلة.</p>':'')+(kind==='income'?'<button id="flAdd" class="exp-save">إضافة دخل</button>':''));
+    expFormBox.querySelectorAll('[data-saving-review]').forEach(b=>b.onclick=()=>expOpenSavingReview(b.dataset.savingReview));
     expFormBox.querySelectorAll('[data-finance-remove]').forEach(b=>b.onclick=()=>{const confirmationSnapshot=expFinanceSnapshot();hifzShowConfirm({title:'إلغاء حركة مسجلة بالخطأ؟',body:'هذا تصحيح للسجل فقط. يُلغى تخصيص الدخل أو تحرير حجز الادخار المرتبط بالحركة معها. يرفض الإلغاء إذا تغيرت الخطة أو أصبح رصيد ادخار سالبًا.',okText:'إلغاء الحركة',cancelText:'رجوع',onOk:()=>{
       if(confirmationSnapshot!==expFinanceSnapshot()){hifzShowToast('تغيرت البيانات بعد فتح التأكيد؛ راجع الحركة من جديد.');return;}
-      if(!expRemoveFinanceMovement(b.dataset.financeRemove)){hifzShowToast('تعذر الإلغاء: راجع السحوبات اللاحقة أو خطة الادخار التي تغيرت بعد الحركة.');return;}
+      if(!expRemoveFinanceMovement(b.dataset.financeRemove)){if(kind==='saving')expOpenSavingReview(b.dataset.financeRemove);else hifzShowToast('الحركة حُذفت أو تغيرت؛ أعد فتح سجل الدخل.');return;}
       expOpenFinanceLedger(kind,date);expRefresh();const id=b.dataset.financeRemove,deletedSnapshot=JSON.stringify((expState.financeEntries||[]).find(r=>r.id===id));
       expFormBox.insertAdjacentHTML('beforeend','<button class="exp-add-line" id="flUndo">تراجع عن إلغاء الحركة</button>');
       document.getElementById('flUndo').onclick=()=>{const row=(expState.financeEntries||[]).find(r=>r.id===id);if(row){if(JSON.stringify(row)!==deletedSnapshot){hifzShowToast('تغيرت الحركة بعد الإلغاء؛ لا يمكن استعادة نسخة أقدم.');return;}if(row.kind==='income'&&row.allocation&&!expValidIncomeAllocation(row)){hifzShowToast('تغيرت حدود الدورة؛ راجع تخصيص الدخل قبل الاستعادة.');return;}if(row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle)){hifzShowToast('تغيرت خطة الادخار؛ راجعها قبل التراجع.');return;}if(row.kind==='saving'&&row.amountMinor<0){const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);if(dates.some(date=>expSavingBalance(row.goalId,date)+expToMinor(row.amountMinor)<0)){hifzShowToast('لا يمكن التراجع لأن حركة لاحقة تجعل المدخر سالبًا.');return;}}row.deletedAt=null;row.updatedAt=Date.now();expSave(expState);}expOpenFinanceLedger(kind,date);expRefresh();};
@@ -14042,13 +14061,52 @@
     const render=()=>{const rows=expUnifiedLedgerRows({type:document.getElementById('ulType').value,start:document.getElementById('ulStart').value,end:document.getElementById('ulEnd').value,text:document.getElementById('ulText').value}),box=document.getElementById('ulRows');box.innerHTML=rows.map(r=>'<section data-ledger-id="'+expEsc(r.id)+'"><p><b>'+labels[r.type]+'</b> · '+expArDate(r.date)+' · '+(r.type==='purchase'?'−':r.type==='refund'||r.type==='income'||r.type==='withdraw'?'+':r.type==='deposit'?'−':'⇄ ')+expMoney(Math.abs(r.amount))+'</p>'+(r.source==='transaction'?expTxRow(r.row):'<div class="exp-row"><span>'+expEsc(r.name)+'</span><button data-ledger-correct="'+expEsc(r.id)+'">'+(r.type==='income'?'تعديل أو إلغاء':'تصحيح الحركة')+'</button></div>')+'</section>').join('')||'<p class="exp-empty">لا حركات تطابق المرشحات. غيّر النوع أو التواريخ أو البحث، أو سجل حركة من الملخص.</p>';expWireTxMenus(box);box.querySelectorAll('[data-ledger-correct]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r.id===b.dataset.ledgerCorrect&&r.source==='finance');if(r.type==='settlement')expOpenLiabilityReduction(r.row.liabilityKind,r.row.liabilityId);else expOpenFinanceLedger(r.row.kind,r.date);});};
     expUnifiedLedgerRefresh=render;document.getElementById('ulText').removeAttribute('inputmode');['ulType','ulStart','ulEnd','ulText'].forEach(id=>document.getElementById(id).oninput=render);render();
   }
+  function expSettlementRows(kind,id){
+    return expFinanceRows('liability-reduction').map(row=>({source:'finance',row})).concat(expActiveTx().filter(r=>r.transactionType==='refund').map(row=>({source:'transaction',row}))).filter(({row})=>row.liabilityKind===kind&&row.liabilityId===id&&row.liabilityReductionMinor>0);
+  }
+  function expOpenSettlementReview(kind,id){
+    const obligation=kind==='fixed'?expInstById(id):expFinanceRows('recurring-due').find(r=>r.id===id),name=kind==='fixed'?expTplById(obligation?.templateId)?.name:obligation?.name,rows=expSettlementRows(kind,id);
+    expOpenForm('<div class="exp-form-head"><h3>مراجعة تسويات الالتزام</h3><button data-close>✕</button></div><p><b>'+expEsc(name||'التزام يحتاج مراجعة')+'</b></p><p>حدد التخفيض المسجل بالخطأ فقط. إلغاء التخفيض المرتبط باسترداد يبقي مبلغ الاسترداد وتاريخه كما هما.</p>'+(!obligation?'<p class="exp-err">الالتزام المرتبط غير موجود. راجع مصدر الحركات قبل تصحيحها؛ لن يُنشأ التزام تلقائيًا.</p>':'')+'<div id="crRows">'+rows.map(({source,row})=>'<label class="exp-review-row"><input type="checkbox" data-settlement-pick="'+expEsc(source+':'+row.id)+'"><span>'+expEsc(source==='transaction'?'تخفيض مرتبط باسترداد':'تخفيض مستقل')+' · '+expArDate(row.liabilityDate)+'<br>'+expMoney(row.liabilityReductionMinor)+' — إلغاء هذا التخفيض فقط</span></label>').join('')+'</div><div id="crPreview" role="status"></div><div id="crErr" class="exp-err" role="alert"></div><button id="crCheck" class="exp-add-line">معاينة التصحيح</button><button id="crApply" class="exp-save" disabled>تأكيد إلغاء التخفيض المحدد</button><button id="crUndo" class="exp-add-line" hidden>تراجع عن التصحيح</button>');
+    const q=id=>document.getElementById(id);let preview=null,undo=null;
+    const reset=()=>{preview=null;q('crApply').disabled=true;q('crPreview').textContent='';};
+    expFormBox.querySelectorAll('[data-settlement-pick]').forEach(el=>el.onchange=reset);
+    q('crCheck').onclick=()=>{
+      const keys=new Set([...expFormBox.querySelectorAll('[data-settlement-pick]:checked')].map(el=>el.dataset.settlementPick));
+      const selected=expSettlementRows(kind,id).filter(r=>keys.has(r.source+':'+r.row.id));
+      if(!selected.length||selected.length!==keys.size){reset();q('crErr').textContent='اختر تخفيضًا قائمًا تريد إلغاءه. إن تغيرت الحركات، أعد فتح المراجعة.';return;}
+      const snapshot=expFinanceSnapshot(),before=expObligationRemaining(kind,id),saved=selected.map(r=>({source:r.source,row:JSON.parse(JSON.stringify(r.row))}));
+      let after,available,stillConflicts;try{selected.forEach(({source,row})=>{if(source==='finance')row.deletedAt=Date.now();else row.liabilityReductionMinor=0;});after=expObligationRemaining(kind,id);available=expFinancePeriods(todayStr()).available;stillConflicts=expLiabilityConflicts(todayStr()).some(r=>r.kind===kind&&r.id===id);}finally{selected.forEach((r,i)=>{Object.keys(r.row).forEach(k=>delete r.row[k]);Object.assign(r.row,saved[i].row);});}
+      preview={snapshot,saved};q('crPreview').innerHTML='<p>المتبقي على الالتزام اليوم: '+expMoney(before)+' ← '+expMoney(after)+'</p><p>المتاح في الدورة الحالية بعد التصحيح: '+expMoney(available)+'</p><p>الدفعات والاستردادات النقدية لا تتغير.</p>'+(stillConflicts?'<p class="exp-err">يبقى تعارض يحتاج مراجعة بعد هذا التصحيح.</p>':'');q('crErr').textContent='';q('crApply').disabled=false;
+    };
+    q('crApply').onclick=()=>{
+      if(!preview||preview.snapshot!==expFinanceSnapshot()){reset();q('crErr').textContent='تغيرت البيانات؛ أعد المعاينة قبل التصحيح.';return;}
+      const saved=preview.saved;for(const {source,row:old} of saved){const row=(source==='finance'?expState.financeEntries:expState.transactions).find(r=>r.id===old.id);row.updatedAt=Math.max(Date.now(),(row.updatedAt||0)+1);if(source==='finance')row.deletedAt=row.updatedAt;else row.liabilityReductionMinor=0;}
+      expSave(expState);undo={saved,snapshot:expFinanceSnapshot()};preview=null;q('crApply').disabled=true;q('crCheck').disabled=true;expFormBox.querySelectorAll('[data-settlement-pick]').forEach(el=>el.disabled=true);q('crUndo').hidden=false;q('crErr').textContent='';q('crPreview').insertAdjacentHTML('afterbegin','<p>تم حفظ التصحيح.</p>');expRefresh();
+    };
+    q('crUndo').onclick=()=>{if(!undo||undo.snapshot!==expFinanceSnapshot()){q('crErr').textContent='تغيرت البيانات بعد التصحيح؛ أعد فتح المراجعة بدل استعادة نسخة أقدم.';return;}for(const {source,row:old} of undo.saved){const row=(source==='finance'?expState.financeEntries:expState.transactions).find(r=>r.id===old.id),stamp=Math.max(Date.now(),(row.updatedAt||0)+1);Object.keys(row).forEach(k=>delete row[k]);Object.assign(row,old,{updatedAt:stamp,deletedAt:null});}expSave(expState);expOpenSettlementReview(kind,id);expRefresh();};
+  }
+  function expSavingRemovalReview(id){
+    const row=expFinanceRows('saving').find(r=>r.id===id);if(!row)return {blocked:true,reason:'الحركة حُذفت أو تغيرت. أعد فتح حركات الادخار.'};
+    const dates=[...new Set(expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date))].sort(),negativeDate=dates.find(date=>expSavingBalance(row.goalId,date)-expToMinor(row.amountMinor)<0),changed=!!row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle);
+    return {row,changed,blocked:!!negativeDate,negativeDate,reason:negativeDate?'إلغاء هذه الحركة يجعل رصيد الهدف سالبًا بتاريخ '+expArDate(negativeDate)+'. راجع السحب المرتبط أولًا.':changed?'تغيرت خطة الادخار بعد هذه الحركة. يمكنك مراجعة إلغاء الحركة مع إبقاء الخطة الأحدث دون تعديل.':'يمكن إلغاء الحركة بعد مراجعة الأثر. الإلغاء يصحح السجل ولا ينقل مالًا.'};
+  }
+  function expOpenSavingReview(id){
+    const review=expSavingRemovalReview(id),row=review.row;
+    expOpenForm('<div class="exp-form-head"><h3>مراجعة وتصحيح حركة الادخار</h3><button data-close>✕</button></div><p id="srReason">'+expEsc(review.reason)+'</p>'+(row?'<p>'+expEsc(row.name||'حركة ادخار')+' · '+expArDate(row.date)+' · '+expMoney(row.amountMinor)+'</p>':'')+'<div id="srPreview" role="status"></div><div id="srErr" class="exp-err" role="alert"></div><button id="srCheck" class="exp-add-line"'+(review.blocked?' disabled':'')+'>معاينة إلغاء الحركة</button><button id="srApply" class="exp-save" disabled>إلغاء الحركة مع إبقاء الخطة الحالية</button>'+(row?.releaseCycle?'<button id="srPlan" class="exp-add-line">مراجعة خطة الدورة المرتبطة</button>':'')+(row?'<button id="srRelated" class="exp-add-line">عرض حركات هذا الهدف</button>':'')+'<button id="srUndo" class="exp-add-line" hidden>تراجع عن الإلغاء</button>');
+    const q=id=>document.getElementById(id);let preview=null,undo=null;
+    if(q('srPlan'))q('srPlan').onclick=()=>expOpenSalaryPlan(row.releaseCycle);
+    if(q('srRelated'))q('srRelated').onclick=()=>expOpenFinanceLedger('saving',row.date,row.goalId);
+    q('srCheck').onclick=()=>{const current=expSavingRemovalReview(id);if(current.blocked){q('srReason').textContent=current.reason;q('srApply').disabled=true;return;}const snapshot=expFinanceSnapshot(),saved=JSON.parse(JSON.stringify(current.row)),dates=[...new Set([current.row.date,todayStr()])],before=dates.map(date=>({date,available:expFinancePeriods(date).available,balance:expSavingBalance(current.row.goalId,date),reserved:expFinancePeriods(date).savingsReserved}));let after;try{current.row.deletedAt=Date.now();after=dates.map(date=>({date,available:expFinancePeriods(date).available,balance:expSavingBalance(current.row.goalId,date),reserved:expFinancePeriods(date).savingsReserved}));}finally{Object.keys(current.row).forEach(k=>delete current.row[k]);Object.assign(current.row,saved);}preview={snapshot,saved};q('srPreview').innerHTML=after.map((r,i)=>'<section class="exp-card"><b>'+expArDate(r.date)+'</b><p>رصيد الهدف: '+expMoney(before[i].balance)+' ← '+expMoney(r.balance)+'</p><p>المتاح للدورة: '+expMoney(before[i].available)+' ← '+expMoney(r.available)+'</p><p>الحجز المتبقي: '+expMoney(before[i].reserved)+' ← '+expMoney(r.reserved)+'</p></section>').join('')+'<p>لن نستبدل إعدادات خطة الادخار الحالية.</p>';q('srErr').textContent='';q('srApply').disabled=false;};
+    q('srApply').onclick=()=>{if(!preview||preview.snapshot!==expFinanceSnapshot()){q('srErr').textContent='تغيرت البيانات؛ أعد المعاينة.';q('srApply').disabled=true;return;}const current=expSavingRemovalReview(id);if(current.blocked){q('srErr').textContent=current.reason;return;}current.row.updatedAt=Math.max(Date.now(),(current.row.updatedAt||0)+1);current.row.deletedAt=current.row.updatedAt;expSave(expState);undo={saved:preview.saved,snapshot:expFinanceSnapshot()};preview=null;q('srApply').disabled=true;q('srCheck').disabled=true;q('srUndo').hidden=false;q('srPreview').insertAdjacentHTML('afterbegin','<p>تم إلغاء الحركة.</p>');expRefresh();};
+    q('srUndo').onclick=()=>{if(!undo||undo.snapshot!==expFinanceSnapshot()){q('srErr').textContent='تغيرت البيانات بعد الإلغاء؛ راجع الحركة من جديد.';return;}const row=expState.financeEntries.find(r=>r.id===id),stamp=Math.max(Date.now(),(row.updatedAt||0)+1);Object.keys(row).forEach(k=>delete row[k]);Object.assign(row,undo.saved,{updatedAt:stamp,deletedAt:null});expSave(expState);expOpenSavingReview(id);expRefresh();};
+  }
   function expLiabilityConflicts(throughDate){
     const adjustments=expFinanceRows('liability-reduction').concat(expActiveTx().filter(r=>r.transactionType==='refund')).filter(r=>r.liabilityReductionMinor>0&&r.liabilityDate<=throughDate),groups=new Map();
     adjustments.forEach(r=>groups.set(r.liabilityKind+':'+r.liabilityId,{kind:r.liabilityKind,id:r.liabilityId}));
     return [...groups.values()].filter(({kind,id})=>{const row=kind==='fixed'?expInstById(id):expFinanceRows('recurring-due').find(r=>r.id===id);if(!row)return true;const planned=expToMinor(kind==='fixed'?row.plannedAmountMinor:row.amountMinor),tx=expActiveTx().filter(t=>kind==='fixed'?t.fixedExpenseInstanceId===id:t.recurringDueId===id),dates=[...adjustments.filter(r=>r.liabilityKind===kind&&r.liabilityId===id).map(r=>r.liabilityDate),...tx.map(t=>t.transactionDate)].filter(d=>d<=throughDate);return dates.some(d=>expObligationAdjustments(kind,id,d)>Math.max(0,planned-Math.max(0,expNet(tx.filter(t=>t.transactionDate<=d)))));});
   }
   function expFinanceAlerts(date){
-    const x=expFinancePeriods(date),items=expLiabilityConflicts(date).map(r=>({id:'settlement-conflict:'+r.kind+':'+r.id,text:'تسويات التزام تتجاوز المتبقي أو تحتاج ربطًا. راجع السجل قبل الاعتماد على المتاح.',action:'ledger'}));
+    const x=expFinancePeriods(date),items=expLiabilityConflicts(date).map(r=>({id:'settlement-conflict:'+r.kind+':'+r.id,text:'تسويات التزام تتجاوز المتبقي أو تحتاج ربطًا. راجع السجل قبل الاعتماد على المتاح.',action:'settlement-review',liabilityKind:r.kind,liabilityId:r.id}));
     if(x.available<0)items.push({id:'availability:'+x.cycle.start,text:'المتاح للدورة سالب بمقدار '+expMoney(-x.available),action:'plan'});
     x.obligationRows.filter(r=>r.due<=date).sort((a,b)=>a.due.localeCompare(b.due)).forEach(r=>items.push({id:'due:'+r.due+':'+(r.templateId||r.name),text:(r.due<date?'التزام متأخر: ':'مستحق اليوم: ')+r.name+' · '+expMoney(r.remaining),action:'commitments'}));
     expVarCategoriesAll().map(c=>{const budget=expBudgetForWeek(c,x.week.start),spent=expNetInRange(x.week,t=>t.categoryId===c.id&&expClassify(t)==='variable'&&expCountsWeekly(t));return{c,budget,spent};}).filter(r=>r.budget>0&&r.spent>=r.budget*.8).sort((a,b)=>(b.spent/b.budget)-(a.spent/a.budget)).forEach(r=>items.push({id:'category:'+x.week.start+':'+r.c.id,text:(r.spent>r.budget?'تجاوز حد الفئة: ':'اقتربت من حد الفئة: ')+r.c.name+' · '+expMoney(r.spent)+' من '+expMoney(r.budget),action:'budgets'}));
@@ -14057,14 +14115,14 @@
   const expDismissedFinanceAlerts=new Set();
   function expRenderFinanceAlert(){
     const rows=expFinanceAlerts(todayStr()).filter(r=>!expDismissedFinanceAlerts.has(r.id)),first=rows[0];
-    if(!first)return '';return '<section class="exp-card" aria-label="تنبيه مالي"><p role="status">'+expEsc(first.text)+'</p><button data-finance-action="'+first.action+'">معالجة التنبيه</button><button data-finance-dismiss="'+expEsc(first.id)+'">إخفاء لهذا العرض</button>'+(rows.length>1?'<details><summary>تنبيهات أخرى</summary>'+rows.filter(r=>r!==first).map(r=>'<p>'+expEsc(r.text)+' <button data-finance-action="'+r.action+'">مراجعة</button></p>').join('')+'</details>':'')+'</section>';
+    if(!first)return '';return '<section class="exp-card" aria-label="تنبيه مالي"><p role="status">'+expEsc(first.text)+'</p><button data-finance-action="'+first.action+'" data-liability-kind="'+expEsc(first.liabilityKind||'')+'" data-liability-id="'+expEsc(first.liabilityId||'')+'">معالجة التنبيه</button><button data-finance-dismiss="'+expEsc(first.id)+'">إخفاء لهذا العرض</button>'+(rows.length>1?'<details><summary>تنبيهات أخرى</summary>'+rows.filter(r=>r!==first).map(r=>'<p>'+expEsc(r.text)+' <button data-finance-action="'+r.action+'" data-liability-kind="'+expEsc(r.liabilityKind||'')+'" data-liability-id="'+expEsc(r.liabilityId||'')+'">مراجعة</button></p>').join('')+'</details>':'')+'</section>';
   }
   function expWireFinanceSummary(){
     const host=document.getElementById('expDashSummary');if(!host)return;
     const handlers={setup:expOpenFinanceSetup,ledger:expOpenUnifiedLedger,payday:expOpenPaydayReview,splitweek:()=>expOpenSplitWeek(),commitments:expOpenCommitments,budgets:()=>{expCloseForm();expSetView('dash');document.getElementById('expVarCard')?.scrollIntoView({block:'start'});},quick:()=>expOpenQuickExpense(),income:()=>expOpenFinanceLedger('income'),saving:()=>expOpenFinanceLedger('saving'),plan:()=>expOpenSalaryPlan(),spent:()=>{expRepMode='salary';expRepDate=todayStr();expSetView('reports');},review:()=>expOpenCycleReview()};
     host.querySelectorAll('[data-finance-dismiss]').forEach(b=>b.onclick=()=>{expDismissedFinanceAlerts.add(b.dataset.financeDismiss);expRenderDash();});
     host.querySelectorAll('[data-finance-detail]').forEach(b=>b.onclick=()=>expOpenFinanceDetail(b.dataset.financeDetail));
-    host.querySelectorAll('[data-finance-action]').forEach(b=>b.onclick=handlers[b.dataset.financeAction]);
+    host.querySelectorAll('[data-finance-action]').forEach(b=>b.onclick=()=>b.dataset.financeAction==='settlement-review'?expOpenSettlementReview(b.dataset.liabilityKind,b.dataset.liabilityId):handlers[b.dataset.financeAction]?.());
   }
   function expOpenCycleReview(date){
     const current=expSalaryCycleRange(todayStr(),expState.settings.salaryCycleStartDay),d=new Date(current.start+'T12:00:00');d.setDate(d.getDate()-1);date=date||fmtDate(d);
@@ -14593,17 +14651,25 @@
   }
 
   /* ---------- النماذج ---------- */
-  let expFormOpener=null;
+  let expFormOpener=null,expFormViewport=null;
+  function expUpdateFormViewport(){
+    const viewport=window.visualViewport;
+    if(viewport&&viewport.scale===1){expFormOverlay.style.top=viewport.offsetTop+'px';expFormOverlay.style.bottom='auto';expFormOverlay.style.height=viewport.height+'px';expFormOverlay.style.setProperty('--finance-visible-height',viewport.height+'px');}
+    else{expFormOverlay.style.top='';expFormOverlay.style.bottom='';expFormOverlay.style.height='';expFormOverlay.style.removeProperty('--finance-visible-height');}
+  }
+  function expDetachFormViewport(){if(expFormViewport){expFormViewport.removeEventListener('resize',expUpdateFormViewport);expFormViewport.removeEventListener('scroll',expUpdateFormViewport);expFormViewport=null;}}
+
   function expOpenForm(html){
     expUnifiedLedgerRefresh=null;
     if(expFormOverlay.hidden)expFormOpener=document.activeElement;
-    expFormBox.innerHTML=html;expFormOverlay.hidden=false;expSaving=false;
+    expDetachFormViewport();expFormViewport=window.visualViewport;if(expFormViewport){expFormViewport.addEventListener('resize',expUpdateFormViewport);expFormViewport.addEventListener('scroll',expUpdateFormViewport);}expUpdateFormViewport();document.body.classList.add('finance-form-open');
+    expFormBox.innerHTML=html;expFormOverlay.hidden=false;expFormBox.scrollTop=0;expSaving=false;
     expFormBox.setAttribute('role','dialog');expFormBox.setAttribute('aria-modal','true');
     const title=expFormBox.querySelector('h3,h2');if(title){if(!title.id)title.id='expFormTitle';expFormBox.setAttribute('aria-labelledby',title.id);expFormBox.removeAttribute('aria-label');}else{expFormBox.removeAttribute('aria-labelledby');expFormBox.setAttribute('aria-label','نموذج');}
     expFormBox.querySelectorAll('[data-close]').forEach(b=>b.onclick=expCloseForm);
     const first=expFormBox.querySelector('input:not([type="hidden"]),select,textarea')||expFormBox.querySelector('button');if(first)first.focus({preventScroll:true});else{expFormBox.tabIndex=-1;expFormBox.focus({preventScroll:true});}
   }
-  function expCloseForm(){expUnifiedLedgerRefresh=null;expFormOverlay.hidden=true;expFormBox.innerHTML='';const opener=expFormOpener;expFormOpener=null;if(opener?.isConnected)opener.focus({preventScroll:true});}
+  function expCloseForm(){expDetachFormViewport();document.body.classList.remove('finance-form-open');expUnifiedLedgerRefresh=null;expFormOverlay.hidden=true;expFormBox.innerHTML='';const opener=expFormOpener;expFormOpener=null;if(opener?.isConnected)opener.focus({preventScroll:true});}
   expFormOverlay.addEventListener('keydown',e=>{
     if(!document.getElementById('hifzDialog').hidden||document.querySelector('.prio-menu-backdrop'))return;
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();expCloseForm();return;}
@@ -15031,6 +15097,7 @@
     const btn=document.getElementById("expUndoBtn");
     btn.onclick=()=>{ restoreFn(); bar.hidden=true; expRefresh(); };
     if(document.getElementById('ulRows')){
+      bar.hidden=true; // The inline undo remains reachable inside the open dialog.
       document.getElementById('ulUndo')?.remove();expFormBox.insertAdjacentHTML('beforeend','<button id="ulUndo" class="exp-add-line">تراجع عن التصحيح الأخير</button>');
       document.getElementById('ulUndo').onclick=()=>{restoreFn();bar.hidden=true;document.getElementById('ulUndo')?.remove();expRefresh();};
     }
