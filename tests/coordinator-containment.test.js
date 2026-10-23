@@ -1,3 +1,4 @@
+const {openFinanceSection,openAdvancedExpense}=require('./finance-navigation.cjs');
 function __loadChromium(){const c=[process.env.PW_PATH,"playwright","/opt/node22/lib/node_modules/playwright"].filter(Boolean);for(const x of c){try{return require(x).chromium;}catch(e){}}console.error("Playwright not found. Set PW_PATH=/path/to/playwright");process.exit(2);}
 const { chromium } = { chromium: __loadChromium() };
 const path=require("path");
@@ -91,7 +92,7 @@ const dayKey="users/U1/days/"+today();
   const B4=await device(b); await B4.goto(fileUrl); await B4.waitForTimeout(800); await verifyFake(B4,"D");
   await B4.click('a[data-app-view="expenses"]'); await B4.click("#expOpenBtn"); await B4.waitForTimeout(300);
   if(await B4.isVisible('[data-family-finance]')) await B4.click('[data-family-finance]');
-  await B4.click('.exp-tab[data-view="settings"]'); await B4.waitForTimeout(300);
+  await openFinanceSection(B4,'settings'); await B4.waitForTimeout(300);
   ok("global sync button present", !!(await B4.$("#expGlobalSyncBtn")));
   ok("per-module status list present", (await B4.$$("#expModStatus .exp-foot-row")).length===9);
   store[dayKey]=JSON.stringify({date:today(),prayers:[true,true,true,true,false],worship:{},water:0,tasks:[],priorities:[],updatedAt:Date.now()+150000});

@@ -1,3 +1,4 @@
+const {openFinanceSection,openAdvancedExpense}=require('./finance-navigation.cjs');
 function __loadChromium(){const c=[process.env.PW_PATH,"playwright","/opt/node22/lib/node_modules/playwright"].filter(Boolean);for(const x of c){try{return require(x).chromium;}catch(e){}}console.error("Playwright not found. Set PW_PATH=/path/to/playwright");process.exit(2);}
 const { chromium } = { chromium: __loadChromium() };
 const path=require("path");
@@ -11,7 +12,7 @@ const errs=[];
 const openFinance=async(p)=>{
   await p.locator('a[data-app-view="expenses"]').click(); await p.waitForTimeout(250);
   await p.click('a[data-app-view="expenses"]'); await p.click("#expOpenBtn"); await p.waitForTimeout(350);
-  await p.click('[data-family-finance]'); await p.waitForTimeout(300);
+  await p.click('[data-family-finance]'); await openFinanceSection(p,'plan'); await p.waitForTimeout(300);
 };
 const clickTxt=async(p,sel,txt)=>{ const els=await p.$$(sel); for(const e of els){ if(((await e.textContent())||"").includes(txt)){ await e.click(); return true; } } return false; };
 async function page(b){ const ctx=await b.newContext({viewport:{width:1000,height:900}}); const p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message)); return p; }
@@ -40,7 +41,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   ok("الأكل does NOT show تسريع القرض", !foodSub.includes("تسريع"));
 
   console.log("B. Review: fixed payment under الالتزامات الشهرية, not حسب الفئة");
-  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(200);
+  await openFinanceSection(p,'reports'); await p.waitForTimeout(200);
   await p.click('.exp-tab[data-rep="daily"]'); await p.waitForTimeout(200);
   const body=await p.$eval("#expReportBody",e=>e.textContent);
   ok("review has الالتزامات الشهرية section", body.includes("الالتزامات الشهرية"));

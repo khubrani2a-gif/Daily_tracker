@@ -1,3 +1,4 @@
+const {openFinanceSection,openAdvancedExpense}=require('./finance-navigation.cjs');
 function __loadChromium(){const c=[process.env.PW_PATH,"playwright","/opt/node22/lib/node_modules/playwright"].filter(Boolean);for(const x of c){try{return require(x).chromium;}catch(e){}}console.error("Playwright not found. Set PW_PATH=/path/to/playwright");process.exit(2);}
 const { chromium } = { chromium: __loadChromium() };
 const path=require("path");
@@ -39,7 +40,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   await p.addInitScript(seed(), {tk:today()});
   await p.goto(fileUrl); await p.waitForTimeout(700);
   await openFinance(p);
-  await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
+  await openFinanceSection(p,'reports'); await p.waitForTimeout(150);
 
   console.log("Weekly (single-count, travel excluded, refund reduces)");
   await p.click('.exp-tab[data-rep="weekly"]'); await p.waitForTimeout(200);
@@ -80,7 +81,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   // add a normal expense (no trip) still works & counts weekly
   /* زر «＋ إضافة مصروف» انتقل من بطاقة الإطلاق (#expQuickAdd) إلى تبويب المالية (#expAddBtn) */
   await openFinance(p);
-  await p.click("#expAddBtn"); await p.waitForTimeout(200);
+  await openAdvancedExpense(p); await p.waitForTimeout(200);
   await p.fill("#efAmount","45.75");
   /* الفئات الهرمية تُلزم باختيار فئة فرعية قبل الحفظ — نختار أول شريحة متاحة */
   const chip=await p.$("[data-subchip]"); if(chip){ await chip.click(); await p.waitForTimeout(120); }
@@ -88,12 +89,12 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   let s=await rd(p);
   ok("normal expense: tripId null, countWeekly true", s.transactions[0].tripId===null && s.transactions[0].countAgainstWeeklyBudget===true && s.transactions[0].amountMinor===4575);
   // no trip -> no trip select shown (no active trips, no trips)
-  await p.click("#expAddBtn"); await p.waitForTimeout(200);
+  await openAdvancedExpense(p); await p.waitForTimeout(200);
   ok("no trip selector when no trips exist", !(await p.$("#efTrip")));
   await p.click("[data-close]").catch(()=>{});
   // mobile no overflow for exp elements
   await openFamily(p);
-  await p.click('.exp-tab[data-view="trips"]'); await p.waitForTimeout(150);
+  await openFinanceSection(p,'trips'); await p.waitForTimeout(150);
   await p.setViewportSize({width:390,height:820}); await p.waitForTimeout(200);
   const ovf=await p.evaluate(()=>{ let bad=0; document.querySelectorAll("#expOverlay *").forEach(el=>{const r=el.getBoundingClientRect(); if(r.width>0&&r.right>window.innerWidth+1)bad++;}); return bad; });
   ok("no exp element horizontal overflow on mobile", ovf===0);
