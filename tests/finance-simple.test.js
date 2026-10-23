@@ -52,3 +52,23 @@ test('ledger correction restores row keyboard focus after cancellation and savin
 test('ledger keeps search visible and dates optional without losing filtering',()=>run(async({p})=>{
  await p.evaluate(()=>audit.expSetView('ledger'));assert.equal(await p.locator('#ulText').isVisible(),true);assert.equal(await p.locator('#ulStart').isVisible(),false);await p.locator('#ulDates summary').click();await p.locator('#ulStart').fill('2099-01-01');assert.equal(await p.locator('[data-ledger-id]').count(),0);assert.deepEqual(await p.evaluate(money),[0,0,70000,800000]);
 }));
+test('named finance shortcuts open original destinations without changing balances',()=>run(async({p})=>{
+ const before=await p.evaluate(money);
+ assert.equal(await p.locator('#expFinanceShortcuts button').count(),4);
+ await p.locator('[data-finance-shortcut="commitments"] svg').click();assert.equal(await p.locator('#fcManage').isVisible(),true);await p.keyboard.press('Escape');
+ await p.locator('[data-finance-shortcut="saving"]').click();assert.equal(await p.locator('#expSavingsCard').isVisible(),true);
+ await p.locator('#expFinanceNav [data-view="dash"]').click();await p.locator('[data-finance-shortcut="ledger"]').click();assert.equal(await p.locator('#ulText').isVisible(),true);
+ await p.locator('#expFinanceNav [data-view="dash"]').click();await p.locator('[data-finance-shortcut="plan"]').click();assert.equal(await p.locator('#expPlanActions').isVisible(),true);assert.deepEqual(await p.evaluate(money),before);
+}));
+test('summary meters explain their denominator and preserve signed balances',()=>run(async({p})=>{
+ let bars=p.locator('#expDashSummary [role="meter"]');assert.equal(await bars.count(),2);
+ await p.evaluate(()=>{audit.expState().transactions=[{id:'large',transactionType:'expense',amountMinor:900000,categoryId:'c',transactionDate:'2026-10-28'}];audit.expSetView('dash');});
+ assert.equal(await p.locator('.finance-negative').count(),2);for(const b of await bars.all())assert.equal(await b.getAttribute('aria-valuenow'),'0');assert.deepEqual(await p.evaluate(money),[900000,900000,-830000,-100000]);
+ await p.evaluate(()=>{audit.expState().settings.salaryAmountMinor=0;audit.expState().categories[0].budgets=[];audit.expSetView('dash');});assert.equal(await bars.count(),0);
+}));
+test('keyboard shortcuts move focus into the opened finance destination',()=>run(async({p})=>{
+ for(const key of ['ledger','plan']){
+  await p.evaluate(()=>audit.expSetView('dash'));await p.locator('[data-finance-shortcut="'+key+'"]').focus();await p.keyboard.press('Enter');
+  const active=await p.evaluate(()=>({id:document.activeElement.id,visible:!!document.activeElement.getClientRects().length}));assert.equal(active.visible,true);assert.equal(active.id,key==='ledger'?'ulText':'expPlanActions');
+ }
+}));
