@@ -12835,6 +12835,12 @@
       else if(clocks[k]==null) clocks[k]=previous.updatedAt||0;
     });
     d.settings.fieldUpdatedAt=clocks; d.settings.updatedAt=now; d.settings.pristineSeed=false;
+    // All financial record edits must supersede their last committed revision.
+    for(const key of Object.keys(d)){
+      if(!Array.isArray(d[key])||!Array.isArray(committed?.[key]))continue;
+      const previousRows=new Map(committed[key].filter(r=>r&&r.id).map(r=>[r.id,r]));
+      for(const row of d[key]){const old=row&&previousRows.get(row.id);if(old&&expStableRecord(row)!==expStableRecord(old)&&(row.updatedAt||0)<=(old.updatedAt||0))row.updatedAt=expNextRevision(old);}
+    }
     try{localStorage.setItem(EXP_KEY,JSON.stringify(d));}catch(cause){
       // Restore the committed state before any remote write; form inputs remain the draft.
       expAdoptState(committed||expDefault());
