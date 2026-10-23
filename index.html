@@ -3821,7 +3821,7 @@
 
   <footer>
     <div>يُحفظ كل يوم تلقائيًا في متصفحك — تنقّل بين الأيام من أعلى الصفحة</div>
-    <div class="app-version">النسخة ١٧٢</div>
+    <div class="app-version">النسخة ١٧٣</div>
     <div class="footer-actions">
       <button class="tool-btn" id="dataManageBtn">🗄️ إدارة البيانات والنسخ</button>
       <button class="reset-btn" id="resetDay">🗑 مسح بيانات هذا اليوم</button>
@@ -11658,7 +11658,7 @@
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=172;
+  const DATA_VERSION=1, APP_RELEASE=173;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -12827,6 +12827,20 @@
       });
     }catch(e){}
   }
+  let expFinanceBatch=false;
+  function expAtomicFinance(action){
+    const before=expClone(expState);expFinanceBatch=true;
+    try{const result=action();expFinanceBatch=false;expSave(expState);return result;}
+    catch(error){expFinanceBatch=false;expAdoptState(before);throw error;}
+    finally{expFinanceBatch=false;}
+  }
+  function expEditGuard(collection,row,errorId){
+    const original=row?expStableRecord(expClone(row)):null;
+    return ()=>{if(!row)return true;const current=(expState[collection]||[]).find(r=>r.id===row.id);
+      if(current&&!current.deletedAt&&expStableRecord(expClone(current))===original)return true;
+      const message='تغيرت البيانات منذ فتح النموذج. أعد فتحه لمراجعة التعديل الأحدث؛ مسودتك لم تُحفظ.';
+      const error=document.getElementById(errorId);if(error){error.textContent=message;error.setAttribute('role','alert');}else hifzShowToast(message);return false;};
+  }
   function expSave(d){
     let committed=null,previous={}; try{committed=JSON.parse(localStorage.getItem(EXP_KEY)||"null");previous=committed?.settings||{};}catch(e){}
     const now=Date.now(), clocks=Object.assign({},previous.fieldUpdatedAt||{},d.settings.fieldUpdatedAt||{});
@@ -12841,11 +12855,13 @@
       const previousRows=new Map(committed[key].filter(r=>r&&r.id).map(r=>[r.id,r]));
       for(const row of d[key]){const old=row&&previousRows.get(row.id);if(old&&expStableRecord(row)!==expStableRecord(old)&&(row.updatedAt||0)<=(old.updatedAt||0))row.updatedAt=expNextRevision(old);}
     }
+    if(expFinanceBatch)return;
     try{localStorage.setItem(EXP_KEY,JSON.stringify(d));}catch(cause){
       // Restore the committed state before any remote write; form inputs remain the draft.
-      expAdoptState(committed||expDefault());
+      expAdoptState(committed||expDefault());expSaving=false;
+      expFormBox.querySelectorAll('.exp-save').forEach(button=>button.disabled=false);
       const message="تعذر الحفظ على هذا الجهاز. قد تكون مساحة التخزين ممتلئة. احتفظ بالمدخلات وأعد المحاولة بعد توفير مساحة.";
-      hifzShowToast(message);throw new Error(message,{cause});
+      const error=expFormBox.querySelector('.exp-err');if(error){error.textContent=message;error.setAttribute('role','alert');}hifzShowToast(message);throw new Error(message,{cause});
     }
     expPushRemote(d);
   }
@@ -13191,7 +13207,12 @@
   }
   function expSchedulePeriodSetting(field,value){
     const range=field==='weekStartDay'?expWeekRange(todayStr()):expSalaryCycleRange(todayStr(),expState.settings.salaryCycleStartDay),d=new Date(range.end+'T12:00:00');d.setDate(d.getDate()+1);const date=fmtDate(d);
-    hifzShowConfirm({title:'تغيير من الفترة القادمة',body:'يبدأ التغيير في '+expArDate(date)+'. تبقى الفترات السابقة كما هي، وقد تكون الفترة الانتقالية أقصر من المعتاد.',okText:'حفظ التغيير',cancelText:'إلغاء',onOk:()=>{expFinancePut({id:'period_'+field+'_'+date,kind:'period-setting',field,value,date});expRefresh();}});
+    hifzShowConfirm({title:'تغيير من الفترة القادمة',body:'يبدأ التغيير في '+expArDate(date)+'. تبقى الفترات السابقة كما هي، وقد تكون الفترة الانتقالية أقصر من المعتاد.',okText:'حفظ التغيير',cancelText:'إلغاء',onOk:()=>{
+      const proposed={id:'period_'+field+'_'+date,kind:'period-setting',field,value,date};
+      const entries=expState.financeEntries,allocations=expFinanceRows('income').filter(r=>expValidIncomeAllocation(r));let invalid=false;
+      try{expState.financeEntries=entries.filter(r=>r.id!==proposed.id).concat(proposed);invalid=allocations.some(r=>!expValidIncomeAllocation(r));}finally{expState.financeEntries=entries;}
+      if(invalid){hifzShowToast('لا يمكن تغيير بداية الدورة الآن: يوجد دخل مخصص لدورة سيتغير تاريخها. راجع تخصيص الدخل أولًا.');expRenderSettings();return;}
+      expFinancePut(proposed);expRefresh();}});
     expRenderSettings();
   }
 
@@ -13972,7 +13993,8 @@
     q('fiCycleChoice').onchange=()=>{const choice=q('fiCycleChoice').value;resetPreview();if(choice==='custom'){q('fiCycleCustom').hidden=false;q('fiCycle').focus();return;}q('fiCycle').value=choice?q('fiCycleChoice').dataset[choice]:'';cycleOptions();};
     q('fiCycle').oninput=()=>{resetPreview();if(expValidFinanceDate(q('fiCycle').value))q('fiCycle').value=expSalaryCycleRange(q('fiCycle').value).start;cycleOptions();};cycleOptions();
     q('fiCheck').onclick=()=>{try{preview();}catch(e){v=null;showError(e);}};
-    q('fiSave').onclick=()=>{try{if(opening!==expFinanceSnapshot()){v=null;opening=expFinanceSnapshot();throw Error('تغيرت البيانات. أعد المعاينة.');}const input=read();if(input.allocationMinor>0&&(!v||JSON.stringify(v.input)!==JSON.stringify(input))){preview();throw Error('راجع أثر التخصيص أعلاه ثم اضغط حفظ.');}if(!v)v=preview();const chosen=v,save=()=>{if(!expApplyIncome(chosen)){q('fiErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};if(!row&&expFinanceRows('income').some(r=>r.date===input.date&&r.amountMinor===input.amountMinor))hifzShowConfirm({title:'دخل مشابه مسجل',body:'يوجد دخل بنفس المبلغ والتاريخ. هل هذا دخل آخر؟',okText:'دخل آخر',cancelText:'إلغاء',onOk:save});else save();}catch(e){showError(e);}};
+    const editUnchanged=expEditGuard('financeEntries',row,'fiErr');
+    q('fiSave').onclick=()=>{if(!editUnchanged())return;try{if(opening!==expFinanceSnapshot()){v=null;opening=expFinanceSnapshot();throw Error('تغيرت البيانات. أعد المعاينة.');}const input=read();if(input.allocationMinor>0&&(!v||JSON.stringify(v.input)!==JSON.stringify(input))){preview();throw Error('راجع أثر التخصيص أعلاه ثم اضغط حفظ.');}if(!v)v=preview();const chosen=v,save=()=>{if(!expApplyIncome(chosen)){q('fiErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};if(!row&&expFinanceRows('income').some(r=>r.date===input.date&&r.amountMinor===input.amountMinor))hifzShowConfirm({title:'دخل مشابه مسجل',body:'يوجد دخل بنفس المبلغ والتاريخ. هل هذا دخل آخر؟',okText:'دخل آخر',cancelText:'إلغاء',onOk:save});else save();}catch(e){showError(e);}};
   }
   function expOpenSavingsMovement(goalId){
     const goal=(expState.savingsGoals||[]).find(g=>g.id===goalId&&!g.deletedAt);if(!goal)return;
@@ -14712,7 +14734,8 @@
       '<div class="exp-err" id="sgErr"></div><button class="exp-save" id="sgSave">حفظ الهدف</button>'
     );
     const q=id=>expFormBox.querySelector(id);
-    q("#sgSave").onclick=()=>{
+    const editUnchanged=expEditGuard('savingsGoals',goal,'sgErr');
+    q("#sgSave").onclick=()=>{if(!editUnchanged())return;
       const name=q("#sgName").value.trim(), target=expParseAmount(q("#sgTarget").value), current=expParseAmount(q("#sgCurrent").value);
       if(!name){q("#sgErr").textContent="اكتب اسم الهدف.";return;}
       if(isNaN(target)||target<=0||isNaN(current)||current<0){q("#sgErr").textContent="تحقق من المبالغ المدخلة.";return;}
@@ -14735,7 +14758,8 @@
       '<div class="exp-field"><label for="rtMode">التسجيل</label><select id="rtMode"><option value="confirm"'+(!rule||rule.paymentMode==='confirm'?' selected':'')+'>انتظار تأكيد الدفع</option><option value="auto"'+(rule&&rule.paymentMode!=='confirm'?' selected':'')+'>خصم تلقائي مؤكد</option></select></div><div class="exp-err" id="rtErr"></div><button class="exp-save" id="rtSave">حفظ المعاملة</button>'
     );
     const q=id=>expFormBox.querySelector(id);
-    q("#rtSave").onclick=()=>{
+    const editUnchanged=expEditGuard('recurringTransactions',rule,'rtErr');
+    q("#rtSave").onclick=()=>{if(!editUnchanged())return;
       const name=q("#rtName").value.trim(), amount=expParseAmount(q("#rtAmount").value), categoryId=q("#rtCat").value, nextDate=q("#rtNext").value;
       if(!name){q("#rtErr").textContent="اكتب اسم المعاملة.";return;}
       if(isNaN(amount)||amount<=0){q("#rtErr").textContent="أدخل مبلغًا صحيحًا.";return;}
@@ -14855,7 +14879,8 @@
       const sar=Math.round(fa*rate); g("#efAmount").value=(sar/100); out.textContent="المبلغ المعتمد ≈ "+expMoney(sar); return sar; };
     if(g("#efFxCalc")) g("#efFxCalc").onclick=fxCalc;
     if(tx && tx.originalAmountMinor!=null && tx.exchangeRate) { const o=g("#efFxOut"); if(o) o.textContent="سعر محفوظ: ١ "+(tx.originalCurrency||"")+" = "+_arn(tx.exchangeRate)+" ر.س"; }
-    g("#efSave").onclick=()=>{
+    const editUnchanged=expEditGuard('transactions',tx,'efErr');
+    g("#efSave").onclick=()=>{if(!editUnchanged())return;
       if(expSaving) return;
       const amt = expParseAmount(g("#efAmount").value);
       const err = g("#efErr");
@@ -14919,11 +14944,16 @@
     );
     const g=id=>expFormBox.querySelector(id);
     g('#pfReduction').onclick=()=>expOpenLiabilityReduction('fixed',instId);
-    g("#pfSave").onclick=()=>{
+    const editUnchanged=expEditGuard('instances',inst,'pfErr');
+    g("#pfSave").onclick=()=>{if(!editUnchanged())return;
       if(expSaving) return;
       const amt=expParseAmount(g("#pfAmt").value);
       if(isNaN(amt)||amt<=0){ g("#pfErr").textContent="أدخل مبلغًا صحيحًا."; return; }
-      const proceed=(adoptPlan)=>{ const before=expFixedSnapshot(inst.templateId), date=g("#pfDate").value||todayStr(), method=g("#pfPay").value||null; expSaving=true; g("#pfSave").disabled=true; if(adoptPlan) expAdoptPaymentPlan(instId, amt); const tx=expRecordPayment(instId, amt, date, method), activity=tx?expActivityPush({type:"payment",templateId:inst.templateId,templateName:tpl.name,txId:tx.id,amountMinor:amt,transactionDate:date,paymentMethod:method,before}):null; expCloseForm(); expRefresh(); if(activity) expShowUndoAction("سُجلت دفعة «"+tpl.name+"»",()=>expActivityUndo(activity.id)); };
+      const proceed=(adoptPlan)=>{if(!editUnchanged())return;try{
+        const before=expFixedSnapshot(inst.templateId),date=g("#pfDate").value||todayStr(),method=g("#pfPay").value||null;expSaving=true;g("#pfSave").disabled=true;
+        const activity=expAtomicFinance(()=>{if(adoptPlan)expAdoptPaymentPlan(instId,amt);const tx=expRecordPayment(instId,amt,date,method);return tx?expActivityPush({type:"payment",templateId:inst.templateId,templateName:tpl.name,txId:tx.id,amountMinor:amt,transactionDate:date,paymentMethod:method,before}):null;});
+        expCloseForm();expRefresh();if(activity)expShowUndoAction("سُجلت دفعة «"+tpl.name+"»",()=>expActivityUndo(activity.id));
+      }catch(error){g("#pfErr").textContent=error.message;}};
       /* الإدخال الأعلى هنا يعني غالبًا تعديل مبلغ الالتزام (مثل الإيجار).
          نعتمد المبلغ للدورة الحالية ونسجل الدفعة مباشرة بدل وضع تأكيد ثانٍ قد يحجب الحفظ. */
       proceed(amt > remain && remain>=0);
@@ -14963,7 +14993,8 @@
       '<button class="exp-save" id="ffSave">'+(t?"حفظ":"إضافة")+'</button>'
     );
     const g=id=>expFormBox.querySelector(id);
-    g("#ffSave").onclick=()=>{
+    const editUnchanged=expEditGuard('fixedTemplates',t,'ffErr');
+    g("#ffSave").onclick=()=>{if(!editUnchanged())return;
       if(expSaving) return;
       const name=g("#ffName").value.trim(); const amt=expParseAmount(g("#ffAmt").value);
       if(!name){ g("#ffErr").textContent="أدخل الاسم."; return; }
@@ -14973,6 +15004,8 @@
       if(t){
         /* تعديل قالب موجود مع اختيار نطاق التطبيق (لا يُعاد كتابة الشهور السابقة تلقائيًا) */
         const applyChange=(scope)=>{
+          if(!editUnchanged())return;
+          try{const activity=expAtomicFinance(()=>{
           const before=expFixedSnapshot(t.id), oldName=t.name, oldAmount=expToMinor(t.defaultAmountMinor); expSaving=true;
           t.name=name; t.amountType=type; t.dueDay=due; t.note=note; t.updatedAt=Date.now();
           const dNow=new Date(todayStr()+"T12:00:00"), cy=dNow.getFullYear(), cm=dNow.getMonth()+1, curKey=cy+"-"+_pad2(cm);
@@ -14996,7 +15029,9 @@
           }
           expSave(expState);
           const activity=expActivityPush({type:"fixed-edit",templateId:t.id,templateName:name,oldName,oldAmountMinor:oldAmount,newAmountMinor:amt,scope,before});
+          return activity;});
           expCloseForm(); expRefresh(); expShowUndoAction("تم تعديل التزام «"+name+"»",()=>expActivityUndo(activity.id));
+          }catch(error){const errorBox=g("#ffErr")||expFormBox.querySelector(".exp-err");if(errorBox)errorBox.textContent=error.message;else hifzShowToast(error.message);}
         };
         if(amt!==t.defaultAmountMinor){
           expScopeDialog("متى تريد تطبيق تعديل المبلغ؟", [
@@ -15031,7 +15066,8 @@
       '<button class="exp-save" id="vfSave">'+(c?"حفظ":"إضافة")+'</button>'
     );
     const g=id=>expFormBox.querySelector(id);
-    g("#vfSave").onclick=()=>{
+    const editUnchanged=expEditGuard('categories',c,'vfErr');
+    g("#vfSave").onclick=()=>{if(!editUnchanged())return;
       if(expSaving) return;
       const name=g("#vfName").value.trim(); if(!name){ g("#vfErr").textContent="أدخل الاسم."; return; }
       const icon=g("#vfIcon").value.trim()||null;
@@ -15093,7 +15129,8 @@
     g('#bfHistory').onclick=()=>expOpenBudgetHistory(catId);
     const preview=()=>{const amount=expParseAmount(g('#bfAmt').value),days=Math.round((new Date(wr.end+'T12:00:00')-new Date(wr.start+'T12:00:00'))/86400000)+1;g('#bfPreview').textContent=Number.isSafeInteger(amount)&&amount>=0?'حد الأسبوع الحالي ('+_arn(days)+' أيام) عند التطبيق من هذا الأسبوع: '+expMoney(Math.round(amount*days/7)):'';};
     g('#bfAmt').oninput=preview;preview();
-    expFormBox.querySelectorAll("[data-scope]").forEach(b=> b.onclick=()=>{
+    const editUnchanged=expEditGuard('categories',c,'bfErr');
+    expFormBox.querySelectorAll("[data-scope]").forEach(b=> b.onclick=()=>{if(!editUnchanged())return;
       const amt=expParseAmount(g("#bfAmt").value);
       if(isNaN(amt)||amt<0){ g("#bfErr").textContent="أدخل ميزانية صحيحة (غير سالبة)."; return; }
       let from=wr.start;
@@ -15103,7 +15140,7 @@
   }
   function expScopeDialog(title, opts, cb){
     expOpenForm('<div class="exp-form-head"><h3>'+title+'</h3><button data-close>✕</button></div>'+
-      opts.map(o=>'<button class="exp-optbtn" data-scopeval="'+o.val+'">'+o.label+'</button>').join(""));
+      opts.map(o=>'<button class="exp-optbtn" data-scopeval="'+o.val+'">'+o.label+'</button>').join("")+'<div class="exp-err" role="alert"></div>');
     expFormBox.querySelectorAll("[data-scopeval]").forEach(b=> b.onclick=()=>{ const v=b.dataset.scopeval; cb(v); });
   }
 
@@ -15266,11 +15303,12 @@
   }
   /* تراجع عن الدفع: عكس دفعة سُجّلت خطأً — حذف ناعم (tombstone) يُزامَن ويعيد حساب الالتزام، غير الاسترجاع الفعلي */
   function expUndoPayment(txId){
+    const opening=expStableRecord(expState.transactions.find(t=>t.id===txId&&!t.deletedAt));
     hifzShowConfirm({
       title:"هل تريد التراجع عن هذه الدفعة؟",
       body:"سيتم عكس أثرها من الالتزام والتقارير.",
       okText:"تراجع عن الدفع", cancelText:"إلغاء",
-      onOk:()=>{ expDeleteTransaction(txId); expRefresh(); expShowUndo("تراجعت عن الدفعة", txId); }
+      onOk:()=>{const current=expState.transactions.find(t=>t.id===txId&&!t.deletedAt);if(!current||expStableRecord(current)!==opening){hifzShowToast("تغيرت الدفعة؛ راجع المبلغ الأحدث قبل التراجع.");return;}expDeleteTransaction(txId); expRefresh(); expShowUndo("تراجعت عن الدفعة", txId); }
     });
   }
   /* تصحيح التصنيف: نقل معاملة إلى «التزام شهري» (وربطها بالتزام) أو إلى «مصروف أسبوعي» (فئة) */
@@ -15373,7 +15411,8 @@
       if(mode==='cancel'){const base=expPreviewRefundSettlement(txId,amount,date,0,effective,editId);reduction=base.remaining;}
       const v=expPreviewRefundSettlement(txId,amount,date,reduction,effective,editId);q('rfPreview').textContent=linked?'المتبقي بعد الاسترداد والتعديل: '+expMoney(v.remaining):'يُحسب الاسترداد بتاريخ استلامه في الأسبوع ودورة الراتب.';return v;};
     expFormBox.querySelectorAll('input,select').forEach(el=>el.oninput=()=>{try{preview();q('rfErr').textContent='';}catch(e){q('rfErr').textContent=e.message;}});
-    q('rfSave').onclick=()=>{if(expSaving)return;try{if(snapshot!==expFinanceSnapshot()){snapshot=expFinanceSnapshot();preview();throw Error('تغيرت البيانات. راجع المعاينة ثم احفظ من جديد.');}const v=preview(),proceed=()=>{if(!expApplyRefundSettlement(v)){q('rfErr').textContent='تغيرت البيانات؛ أعد المحاولة.';return;}expCloseForm();expRefresh();};if(v.refundMinor>remain)hifzShowConfirm({title:'الاسترجاع يتجاوز المتبقي',body:'مبلغ الاسترجاع أكبر من المبلغ الأصلي المتبقي. المتابعة؟',okText:'متابعة',cancelText:'إلغاء',onOk:proceed});else proceed();}catch(e){q('rfErr').textContent=e.message;}};
+    const editUnchanged=expEditGuard('transactions',editing,'rfErr');
+    q('rfSave').onclick=()=>{if(!editUnchanged())return;if(expSaving)return;try{if(snapshot!==expFinanceSnapshot()){snapshot=expFinanceSnapshot();preview();throw Error('تغيرت البيانات. راجع المعاينة ثم احفظ من جديد.');}const v=preview(),proceed=()=>{if(!expApplyRefundSettlement(v)){q('rfErr').textContent='تغيرت البيانات؛ أعد المحاولة.';return;}expCloseForm();expRefresh();};if(v.refundMinor>remain)hifzShowConfirm({title:'الاسترجاع يتجاوز المتبقي',body:'مبلغ الاسترجاع أكبر من المبلغ الأصلي المتبقي. المتابعة؟',okText:'متابعة',cancelText:'إلغاء',onOk:proceed});else proceed();}catch(e){q('rfErr').textContent=e.message;}};
     try{preview();}catch(_){}
   }
   function expReportDaily(){
@@ -15753,7 +15792,8 @@
     const allocSum=()=>{ let sum=0; expFormBox.querySelectorAll(".tf-alloc").forEach(inp=>{ const v=expParseAmount(inp.value); if(!isNaN(v)&&v>0) sum+=v; }); const total=expParseAmount(g("#tfBudget").value); const out=g("#tfAllocSum"); let s="الموزع على الفئات: "+expMoney(sum); if(!isNaN(total)&&total>0){ s+=" · غير الموزع: "+expMoney(total-sum); if(sum>total) s+=" ⚠️ التوزيع يتجاوز الميزانية"; } out.textContent=s; };
     expFormBox.querySelectorAll(".tf-alloc").forEach(inp=> inp.oninput=allocSum);
     if(g("#tfBudget")) g("#tfBudget").oninput=()=>{ if(!g("#tfAllocBox").hidden) allocSum(); };
-    g("#tfSave").onclick=()=>{
+    const editUnchanged=expEditGuard('trips',t,'tfErr');
+    g("#tfSave").onclick=()=>{if(!editUnchanged())return;
       if(expSaving) return;
       const name=g("#tfName").value.trim(); const start=g("#tfStart").value, end=g("#tfEnd").value;
       const err=g("#tfErr");
