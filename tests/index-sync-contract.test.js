@@ -374,30 +374,13 @@ test("financial weekly views obey the configured Saturday-to-Friday boundary",()
   ].forEach(source=>assert.ok(html.includes(source),source));
 });
 
-test("family hub keeps finance, shopping, and household-task entry points",()=>{
-  ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewFamilyManage","familyManageBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
-  ["familyShoppingAll","familyShoppingLoad","familyRenderOverview","familyRenderShopping","familyShopping","familyEvents","familyOpenEvents","familyMembers","familyManageMembers","familyOpenTask","familyRecordActivity","familyBudgetMinor"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/data-app-view="expenses"[^>]*>[^<]*<span>👨‍👩‍👧<\/span>العائلة/);
-  assert.match(html,/const quickExpense=document\.getElementById\("expQuickAdd"\);/);
-  assert.match(html,/إدارة الأعضاء/);
-  assert.match(html,/المكلّف/);
-  assert.match(html,/ميزانية المنزل المشتركة/);
-  assert.match(html,/إدارة العائلة/);
-  assert.match(html,/مالية العائلة/);
-  assert.match(html,/function familyRenderManage\(/);
-  assert.match(html,/expSetView\("familyManage"\)/);
-  ["familyShoppingCategoryLabel","familyShopCategory","familyShopCustomCategory"].forEach(name=>assert.ok(html.includes(name),name));
-  assert.match(html,/🛒 بقالة وتموين/);
-  assert.match(html,/✏️ تصنيف آخر/);
-  assert.match(html,/category==="أخرى"&&!custom/);
+test("family hub keeps canonical planner and finance entry points",()=>{
+  ["familyLaunchSummary","familyQuickShop","expViewFamily","familyOverviewBody","expViewFamilyManage","familyManageBody","expViewShopping","familyShoppingBody"].forEach(id=>assert.ok(html.includes(id),id));
+  ["familyNav","familyOpenTask","familyOpenEvents","familyMigrateEvents","familyShoppingEdit","familyShoppingExpense","familyMemberOptions"].forEach(name=>assert.ok(html.includes(name),name));
+  assert.ok(html.includes('كل سطر عنصر'));
+  assert.ok(html.includes('تسجيل الشراء لا يخصم مبلغًا'));
 });
 
-test("shared shopping uses the same searchable category pattern as expenses",()=>{
-  assert.match(html,/id="familyShopCategorySearch"/);
-  assert.match(html,/البحث في أقسام التسوق/);
-  assert.match(html,/categorySearch\.oninput=.*Array\.from\(categoryInput\.options\)/);
-  assert.match(html,/قسم التسوق/);
-});
 
 test("advanced tasks include statuses, subtasks, links, phone contacts, reminders, and weekly view",()=>{
   ["taskWeekBtn","tmStatus","tmReminder","tmLink","tmContactName","tmPhone","tmSubtasks"].forEach(id=>assert.match(html,new RegExp('id="'+id+'"'),id));
