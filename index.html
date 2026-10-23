@@ -2522,6 +2522,30 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   #expFinanceNav .finance-icon{width:24px;height:24px}#expFinanceNav button{align-content:center;gap:.3rem}
   #expViewPlan .exp-card{scroll-margin-block:1rem}
   @media(max-width:360px){#expFinanceShortcuts{gap:.4rem}#expFinanceShortcuts button{min-height:86px}#expFinanceShortcuts button span{font-size:.72rem}#expDashSummary .finance-metric h3{flex-direction:column;gap:.2rem}}
+
+  .expense-refined .exp-expense-section{padding:.5rem 0;border:0;background:transparent;margin:0 0 .35rem}
+  .expense-refined .exp-field{margin-bottom:.65rem}.expense-refined .exp-field>label{font-size:.84rem}
+  .expense-refined .amount{font-size:1.8rem;min-height:62px}
+  .expense-refined .expense-category-search summary{font-size:.78rem;color:var(--muted);padding:.3rem;cursor:pointer}
+  #efCategoryHint{font-size:.75rem;line-height:1.6;margin:.3rem 0}
+  #efCategoryIcon .finance-icon{width:22px;height:22px;color:var(--accent);margin-inline-end:.3rem}
+  .expense-selector{display:flex;align-items:center;gap:.6rem;justify-content:space-between;width:100%;min-height:54px;border:1px solid var(--line);border-radius:14px;padding:.7rem;background:var(--paper);color:var(--ink);font:inherit;cursor:pointer}
+  .expense-selector .finance-icon{color:var(--accent)}#efSubField>label{display:none}
+  #efSubPanel{border:1px solid var(--line);border-radius:16px;padding:.8rem;margin:.5rem 0}#efSubPanel[hidden]{display:none}
+  #efSubPanel #efSubChips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:.7rem 0}
+  #efSubPanel [data-subchip]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;border-radius:13px;min-height:80px;white-space:normal;overflow-wrap:anywhere;padding:.5rem;font-size:.85rem}
+  #efSubPanel [data-subchip][hidden]{display:none}#efSubPanel .finance-icon{color:var(--accent);width:28px;height:28px}
+  #efSubDone{min-height:44px;width:100%;border:1px solid var(--accent);border-radius:12px;color:var(--accent);background:transparent;font:inherit}
+  .expense-option-group{border:1px solid var(--line);border-radius:15px;padding:.6rem;margin-bottom:.65rem;background:var(--paper)}
+  .expense-option-group>summary{display:flex;align-items:center;gap:.6rem;min-height:44px;cursor:pointer;font-weight:700}.expense-option-group>summary .finance-icon{color:var(--accent)}.expense-option-group[open]>summary{margin-bottom:.7rem}
+  .expense-category-add{display:flex;gap:.4rem;align-items:center;margin-top:.6rem;min-height:44px;padding:.4rem .7rem;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);border-radius:12px;font:inherit;font-size:.85rem;cursor:pointer}
+  .exp-var-row .exp-row-name{display:flex;align-items:center;gap:.55rem}.exp-var-row .exp-row-name .finance-icon{color:var(--accent)}
+  .expense-cycle-details>summary{font-size:.8rem;color:var(--accent);cursor:pointer;padding:.6rem 0}
+  #efBudgetImpact{margin:0 0 .3rem;font-size:.77rem}.expense-refined .exp-expense-savebar{padding:.65rem 0;background:var(--paper)}
+  @media(max-width:360px){#efSubPanel #efSubChips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  .expense-custom-icon{display:inline-block;max-width:2em;overflow:hidden;vertical-align:middle;white-space:nowrap}
+  .expense-quick-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:.7rem 0}.expense-quick-types button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;min-height:78px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:13px;font:inherit;font-size:.85rem;padding:.4rem;overflow-wrap:anywhere}.expense-quick-types button[hidden]{display:none}.expense-quick-types .finance-icon{color:var(--accent)}#fqSubPanel{border:1px solid var(--line);border-radius:14px;padding:.7rem;margin:.5rem 0}#fqSubBack{min-height:44px;width:100%;font:inherit;color:var(--accent);background:transparent;border:1px solid var(--line);border-radius:12px}
 </style>
 </head>
 <body>
@@ -11731,7 +11755,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=177;
+  const DATA_VERSION=1, APP_RELEASE=178;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -14015,9 +14039,18 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const recent=[...new Set(expActiveTx().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(t=>t.categoryId))].filter(id=>cats.some(c=>c.id===id)).slice(0,4);
     expOpenForm('<div class="exp-form-head"><h3>إضافة مصروف</h3><button data-close>✕</button></div>'+expFinanceField('المبلغ','fqAmount','text','')+'<div class="exp-field"><label for="fqCat">الفئة</label><select id="fqCat">'+cats.map(c=>'<option value="'+expEsc(c.id)+'">'+expEsc(c.name)+'</option>').join('')+'</select></div><div class="exp-chips">'+recent.map(id=>'<button data-recent-cat="'+expEsc(id)+'">'+expEsc(expCatById(id).name)+'</button>').join('')+'</div>'+expFinanceField('التاريخ','fqDate','date',todayStr())+'<details id="fqDetails"><summary>تفاصيل إضافية</summary><div class="exp-field"><label for="fqName">وصف اختياري</label><input id="fqName"></div><label><input type="checkbox" id="fqTemplate"> حفظ كقالب</label><div class="exp-chips">'+templates.map(t=>'<button data-use-template="'+expEsc(t.id)+'">'+expEsc(t.name)+'</button>').join('')+'</div><button type="button" id="fqAdvanced" class="exp-add-line">تفاصيل المصروف الكاملة</button><button id="fqSplit" class="exp-add-line">تقسيم فاتورة بين فئات</button></details><div id="fqErr" class="exp-err" role="alert"></div><label id="fqDuplicate" hidden><input type="checkbox" id="fqConfirm"> هذا مصروف آخر مستقل</label><button id="fqSave" class="exp-save">حفظ المصروف</button>');
     const q=id=>document.getElementById(id);
-    expFormBox.querySelectorAll('[data-recent-cat]').forEach(b=>b.onclick=()=>q('fqCat').value=b.dataset.recentCat);
-    expFormBox.querySelectorAll('[data-use-template]').forEach(b=>b.onclick=()=>{const t=templates.find(t=>t.id===b.dataset.useTemplate);if(!cats.some(c=>c.id===t.categoryId)){q('fqErr').textContent='فئة القالب مؤرشفة؛ اختر فئة نشطة.';return;}q('fqCat').value=t.categoryId;q('fqAmount').value=t.amountMinor/100;q('fqName').value=t.name;});
-    q('fqAdvanced').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,category:q('fqCat').value,name:q('fqName').value};expOpenExpenseForm(null,'');document.getElementById('efAmount').value=draft.amount;document.getElementById('efDate').value=draft.date;const cat=document.getElementById('efCat');cat.value=draft.category;cat.dispatchEvent(new Event('change'));document.getElementById('efDetails').value=draft.name;};
+    let quickSubId='';
+    q('fqCat').insertAdjacentHTML('afterend','<p id="fqCategoryHint" class="exp-card-hint"></p><button type="button" id="fqSubChoose" class="expense-selector" aria-expanded="false">نوع المصروف — اختياري</button><div id="fqSubPanel" hidden><label for="fqSubSearch">ابحث عن النوع</label><input id="fqSubSearch" type="search"><div id="fqSubRows" class="expense-quick-types"></div><button type="button" id="fqSubBack">العودة للمصروف</button></div>');
+    q('fqDate').closest('.exp-field').insertAdjacentHTML('afterend','<div class="exp-field"><label for="fqPay">طريقة الدفع</label><select id="fqPay">'+expOptions(EXP_PAYMENTS,expState.settings.defaultPaymentMethod||'مدى',EXP_OPTION_META.payment)+'</select></div>');
+    const closeTypes=()=>{q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');q('fqSubChoose').focus();};
+    const categoryHint=()=>{const c=expCatById(q('fqCat').value),sub=expSubcategoryById(c,quickSubId);if(!sub)quickSubId='';q('fqCategoryHint').innerHTML=expCategoryIcon(c)+' '+expEsc(expCategoryPresentation(c).hint);q('fqSubChoose').innerHTML=expCategoryIcon(c,sub?.name)+'<span>'+expEsc(sub?.name||'نوع المصروف — اختياري')+'</span>';};
+    q('fqCat').addEventListener('change',()=>{quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});categoryHint();
+    q('fqSubChoose').onclick=()=>{const c=expCatById(q('fqCat').value);q('fqSubRows').innerHTML=(c?.subcategories||[]).filter(s=>s.isActive!==false&&!s.archivedAt&&s.name!=='أخرى').map(s=>'<button type="button" data-quick-sub="'+expEsc(s.id)+'">'+expCategoryIcon(c,s.name)+'<span>'+expEsc(s.name)+'</span></button>').join('')+'<button type="button" data-quick-sub="">بدون تحديد</button>';q('fqSubRows').querySelectorAll('button').forEach(b=>b.onclick=()=>{quickSubId=b.dataset.quickSub;categoryHint();closeTypes();});q('fqSubPanel').hidden=false;q('fqSubChoose').setAttribute('aria-expanded','true');q('fqSubSearch').value='';q('fqSubSearch').focus();};
+    q('fqSubSearch').oninput=()=>q('fqSubRows').querySelectorAll('button').forEach(b=>b.hidden=!expNormCategoryText(b.textContent).includes(expNormCategoryText(q('fqSubSearch').value)));
+    q('fqSubBack').onclick=closeTypes;q('fqSubPanel').onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeTypes();}};
+    expFormBox.querySelectorAll('[data-recent-cat]').forEach(b=>b.onclick=()=>{q('fqCat').value=b.dataset.recentCat;quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});
+    expFormBox.querySelectorAll('[data-use-template]').forEach(b=>b.onclick=()=>{const t=templates.find(t=>t.id===b.dataset.useTemplate);if(!cats.some(c=>c.id===t.categoryId)){q('fqErr').textContent='فئة القالب مؤرشفة؛ اختر فئة نشطة.';return;}q('fqCat').value=t.categoryId;q('fqAmount').value=t.amountMinor/100;q('fqName').value=t.name;quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});
+    q('fqAdvanced').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,category:q('fqCat').value,name:q('fqName').value,sub:quickSubId,pay:q('fqPay').value};expOpenExpenseForm(null,'');document.getElementById('efAmount').value=draft.amount;document.getElementById('efDate').value=draft.date;const cat=document.getElementById('efCat');cat.value=draft.category;cat.dispatchEvent(new Event('change'));document.getElementById('efDetails').value=draft.name;document.getElementById('efPay').value=draft.pay;if(draft.sub){const chip=[...expFormBox.querySelectorAll('[data-subchip]')].find(b=>b.dataset.subchip===draft.sub);if(chip)chip.click();}};
     q('fqSplit').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,name:q('fqName').value};expOpenSplitExpense();document.getElementById('fsTotal').value=draft.amount;document.getElementById('fsDate').value=draft.date;document.getElementById('fsName').value=draft.name;};
     q('fqSave').onclick=()=>{const amount=expParseAmount(q('fqAmount').value),date=q('fqDate').value,category=q('fqCat').value,name=q('fqName').value.trim();
       if(owner!==(user?.uid||'guest')){q('fqErr').textContent='تغير الحساب؛ أعد فتح النموذج.';return;}
@@ -14027,7 +14060,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(q('fqSave').disabled)return;
       q('fqSave').disabled=true;
       try{
-        const tx=expAtomicFinance(()=>{if(q('fqTemplate').checked)expFinancePut({kind:'expense-template',name,amountMinor:amount,categoryId:category});return expAddTransaction({amountMinor:amount,transactionDate:date,categoryId:category,transactionType:'expense',description:name||null,paymentMethod:expState.settings.defaultPaymentMethod});});
+        const tx=expAtomicFinance(()=>{if(q('fqTemplate').checked)expFinancePut({kind:'expense-template',name,amountMinor:amount,categoryId:category});return expAddTransaction({amountMinor:amount,transactionDate:date,categoryId:category,transactionType:'expense',description:name||null,paymentMethod:q('fqPay').value||null,subcategoryId:quickSubId||null,subcategory:expSubcategoryById(expCatById(category),quickSubId)?.name||null});});
         const snapshot=expStableRecord(tx),id=tx.id;
         expCloseForm();expRefresh();expShowUndoAction('تم تسجيل مصروف '+expMoney(amount),()=>{
           const current=expState.transactions.find(t=>t.id===id&&!t.deletedAt);
@@ -14359,6 +14392,30 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function expIcon(name){
     const paths={
+      basket:"<path d=\"m4 9 2 11h12l2-11ZM2 9h20M8 3 5 9m11-6 3 6M9 13v4m6-4v4\"/>",
+      house:"<path d=\"m3 10 9-7 9 7M5 9v12h14V9M10 21v-7h4v7\"/>",
+      utensils:"<path d=\"M4 3v6c0 3 6 3 6 0V3M7 3v18M18 3v18m0-18c-5 4-5 9 0 9\"/>",
+      cup:"<path d=\"M3 8h13v8c0 5-13 5-13 0ZM16 9h2c5 0 5 6-2 6M5 3v2m5-2v2M2 22h17\"/>",
+      bus:"<rect x=\"4\" y=\"3\" width=\"16\" height=\"16\" rx=\"3\"/><path d=\"M4 11h16M8 19v3m8-3v3M8 15h.01M16 15h.01\"/>",
+      car:"<path d=\"m4 10 3-6h10l3 6M3 10h18v9H3ZM6 19v3m12-3v3M6 14h2m8 0h2\"/>",
+      medical:"<rect x=\"3\" y=\"6\" width=\"18\" height=\"15\" rx=\"3\"/><path d=\"M8 6V3h8v3m-4 5v6m-3-3h6\"/>",
+      bottle:"<path d=\"M9 3h6v5l3 4v9H6v-9l3-4ZM6 14h12M9 6h6\"/>",
+      ticket:"<path d=\"M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4ZM15 5v3m0 3v2m0 3v3\"/>",
+      people:"<circle cx=\"9\" cy=\"7\" r=\"3\"/><path d=\"M3 21v-4c0-6 12-6 12 0v4M17 4c5 0 5 6 0 6m1 3c4 1 4 4 4 8\"/>",
+      gift:"<path d=\"M3 8h18v5H3ZM5 13v8h14v-8M12 8v13m0-13C0 8 6-4 12 8c6-12 12 0 0 0\"/>",
+      spark:"<path d=\"m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z\"/>",
+      tool:"<path d=\"M21 3a6 6 0 0 1-8 8L5 21l-3-3 10-8a6 6 0 0 1 8-8l-4 4 2 2Z\"/>",
+      shirt:"<path d=\"m8 3-6 4 3 5 3-2v11h8V10l3 2 3-5-6-4c0 4-8 4-8 0Z\"/>",
+      screen:"<rect x=\"3\" y=\"3\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M12 17v4m-5 0h10M7 8h10m-10 4h6\"/>",
+      bulb:"<path d=\"M8 17c0-4-4-4-4-8a8 8 0 0 1 16 0c0 4-4 4-4 8ZM8 21h8M12 17v-6\"/>",
+      book:"<path d=\"M12 5c-4-3-8-3-10-2v16c4-1 7 0 10 2 3-2 6-3 10-2V3c-2-1-6-1-10 2Zm0 0v16\"/>",
+      plane:"<path d=\"m2 13 8-4V3c0-3 4-3 4 0v6l8 4v3l-8-2v5l3 2v2l-5-1-5 1v-2l3-2v-5l-8 2Z\"/>",
+      heart:"<path d=\"M12 21 3 12C-3 4 8-2 12 6c4-8 15-2 9 6Z\"/>",
+      shield:"<path d=\"m12 2 9 4v6c0 5-6 9-9 10-3-1-9-5-9-10V6ZM12 7v6m0 4h.01\"/>",
+      box:"<path d=\"m12 2 10 5v10l-10 5-10-5V7Zm0 10v10M2 7l10 5 10-5M7 4l10 5\"/>",
+      leaf:"<path d=\"M20 3C6 1 0 8 5 16c8 6 16-1 15-13ZM3 21 16 8\"/>",
+      bread:"<path d=\"M4 20V10c-7-9 23-9 16 0v10ZM8 11v5m8-5v5\"/>",
+      fuel:"<path d=\"M3 21V4h11v17M3 10h11M1 21h15M14 12h3v5c0 4 5 4 5 0V7l-4-4\"/>",
       wallet:'<path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v11H6a3 3 0 0 1-3-3V6"/><path d="M20 12h-5v4h5M8 14v4m-2-2h4"/>',
       ledger:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
       calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5 2 2 5-5"/>',
@@ -14573,7 +14630,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const cyclePlan=expCategoryPlanInRange(x.c,salaryRange), cycleSpent=expNetInRange(salaryRange,t=>t.categoryId===x.c.id&&expClassify(t)==="variable"&&expCountsWeekly(t));
       const hasPlan=x.weeklyBudget>0||cyclePlan>0;
       const noPlan=cycleSpent?'<div class="exp-row-sub">صُرف '+expMoney(cycleSpent)+' خلال دورة الراتب · لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>':'<div class="exp-row-sub">لا توجد ميزانية</div><div class="exp-var-meta"><span>غير محسوب كنسبة</span><span class="exp-pill unpaid">لا توجد ميزانية</span></div>';
-      return '<div class="exp-row exp-var-row"><div class="exp-row-main"><div class="exp-row-name">'+(x.c.icon?expEsc(x.c.icon)+" ":"")+expEsc(x.c.name)+'</div>'+(hasPlan?renderPeriod("هذا الأسبوع",wr,x.weeklyBudget,x.weeklySpent,"week")+renderPeriod("دورة الراتب",salaryRange,cyclePlan,cycleSpent,"month"):noPlan)+'</div><button class="exp-mini" data-catmenu="'+expEsc(x.c.id)+'" title="خيارات '+expEsc(x.c.name)+'">⋯</button></div>';
+      return '<div class="exp-row exp-var-row"><div class="exp-row-main"><div class="exp-row-name">'+expCategoryIcon(x.c)+expEsc(x.c.name)+'</div>'+(hasPlan?renderPeriod("هذا الأسبوع",wr,x.weeklyBudget,x.weeklySpent,"week")+'<details class="expense-cycle-details"><summary>دورة الراتب · الخطة والتفاصيل</summary>'+renderPeriod("دورة الراتب",salaryRange,cyclePlan,cycleSpent,"month")+'</details>':noPlan)+'<button type="button" class="expense-category-add" data-category-expense="'+expEsc(x.c.id)+'">'+expIcon('wallet')+' إضافة مصروف</button></div><button class="exp-mini" data-catmenu="'+expEsc(x.c.id)+'" title="خيارات '+expEsc(x.c.name)+'">⋯</button></div>';
     }).join("") || '<div class="exp-var-empty-state">'+(overOnly?"لا توجد فئات متجاوزة ضمن العرض الحالي.":"لا توجد فئات أسبوعية ظاهرة.")+'</div>';
     const insight=exceeded.length?'<div class="exp-var-insight">⚠️ تجاوزت '+_arn(exceeded.length)+' فئات ميزانيتها الأسبوعية'+(exceeded[0]?'؛ أكبر تجاوز في «'+expEsc(exceeded[0].c.name)+'» بمقدار '+expMoney(-exceeded[0].weeklyRemaining):"")+'.</div>':"";
     box.innerHTML='<h3>🛒 ميزانيات المصروفات المتغيرة</h3><div class="exp-card-hint">الأسبوع: '+expArDateShort(wr.start)+' — '+expArDateShort(wr.end)+'. دورة الراتب مستقلة عن الأسبوع؛ خطتها تقديرية بحسب الأيام.</div>'+
@@ -14581,6 +14638,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       '<div class="exp-var-tools"><select id="expVarSort" aria-label="ترتيب الفئات"><option value="custom"'+(view.sort==="custom"?" selected":"")+'>الترتيب المخصص</option><option value="spent"'+(view.sort==="spent"?" selected":"")+'>الأعلى صرفًا</option><option value="over"'+(view.sort==="over"?" selected":"")+'>الأعلى تجاوزًا</option></select><button id="expVarOver" class="'+(overOnly?'active':'')+'" aria-pressed="'+overOnly+'">المتجاوزة فقط</button>'+(hidden.size?'<button id="expVarHidden" class="'+(view.showHidden?'active':'')+'">'+(view.showHidden?'إخفاء المخفية':'إظهار المخفية')+' ('+_arn(hidden.size)+')</button>':'')+'</div>'+insight+rows+
       '<button class="exp-add-line" id="expAddVar">＋ إضافة فئة أسبوعية</button>'+
       '<button class="exp-add-line" id="expManageCats">☷ إدارة الفئات'+(hiddenCount?' ('+_arn(hiddenCount)+' مخفية)':'')+'</button>';
+    box.querySelectorAll('[data-category-expense]').forEach(b=>b.onclick=()=>expOpenExpenseForm(null,'',b.dataset.categoryExpense));
     box.querySelectorAll("[data-catmenu]").forEach(b=>b.onclick=()=>expCatMenu(b,b.dataset.catmenu));
     box.querySelector("#expAddVar").onclick=()=>expOpenVarForm(null);
     box.querySelector("#expManageCats").onclick=()=>expOpenCategoryManager();
@@ -14772,7 +14830,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const state=visible?'ظاهرة في الميزانية الأسبوعية':'مخفية من الميزانية الأسبوعية · تبقى متاحة للإدخال والتقارير';
       const canDelete=!builtIn;                                  /* المدمجة تُخفى فقط؛ المخصصة تمرّ على فحص الاستخدام */
       return '<div class="exp-txitem" data-catrow="'+expEsc(c.id)+'">'+
-        '<div class="t-main"><div class="t-name">'+(c.icon?expEsc(c.icon)+" ":"")+expEsc(c.name)+' '+badge+'</div>'+
+        '<div class="t-main"><div class="t-name">'+expCategoryIcon(c)+expEsc(c.name)+' '+badge+'</div>'+
         '<div class="t-sub">'+state+(use.total?' · '+_arn(use.txs)+' معاملة':'')+'</div></div>'+
         '<button class="exp-mini" data-catup="'+expEsc(c.id)+'" title="أعلى"'+(i===0?' disabled':'')+'>↑</button>'+
         '<button class="exp-mini" data-catdown="'+expEsc(c.id)+'" title="أسفل"'+(i===cats.length-1?' disabled':'')+'>↓</button>'+
@@ -14952,6 +15010,42 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const now=Date.now(); saved={id:newId(),name,isActive:true,isCustom:true,sortOrder:category.subcategories.length,createdAt:now,updatedAt:now,archivedAt:null};
     category.subcategories.push(saved);category.updatedAt=now;return saved;
   }
+  const EXP_CATEGORY_PRESENTATION = {"البقالة": {"icon": "basket", "example": "تموين الأسبوع أو اسم المتجر", "hint": "اختر نوع المشتريات؛ لتوزيع فاتورة متنوعة استخدم تقسيم الفاتورة."}, "احتياجات المنزل": {"icon": "house", "example": "منظفات أو أدوات المطبخ", "hint": "افصل المستهلكات اليومية عن إصلاح المنزل والمشتريات الكبيرة."}, "المطاعم والطلبات": {"icon": "utensils", "example": "اسم المطعم أو الطلب", "hint": "سجّل إجمالي ما دفعته، شاملاً التوصيل إن كان ضمن الفاتورة."}, "القهوة والحلويات": {"icon": "cup", "example": "اسم المقهى أو المناسبة", "hint": "اختر النوع، وأضف اسم المقهى فقط إذا احتجته في السجل."}, "المواصلات": {"icon": "bus", "example": "وجهة المشوار أو مقدم الخدمة", "hint": "للأجرة والنقل العام؛ وقود سيارتك وصيانتها ضمن السيارة."}, "السيارة": {"icon": "car", "example": "المحطة أو الورشة ونوع الخدمة", "hint": "اختر وقودًا أو صيانة أو غيرهما، دون تغيير ميزانيتك تلقائيًا."}, "الصحة والصيدلية": {"icon": "medical", "example": "الصيدلية أو العيادة", "hint": "سجّل المبلغ الذي دفعته فعليًا؛ رد التأمين يسجل كاسترداد عند وصوله."}, "العناية الشخصية": {"icon": "bottle", "example": "الخدمة أو اسم المتجر", "hint": "اختر النوع؛ الوصف والمستفيد اختياريان."}, "الترفيه": {"icon": "ticket", "example": "الفعالية أو النشاط", "hint": "للتذاكر والأنشطة؛ الاشتراك الرقمي له فئته المستقلة."}, "العائلة والضيافة": {"icon": "people", "example": "الزيارة أو التجمع", "hint": "يمكن تحديد المستفيد أو المناسبة من التفاصيل الإضافية."}, "الهدايا والمناسبات": {"icon": "gift", "example": "المناسبة أو وصف الهدية", "hint": "استخدم المستفيد والمناسبة عند الحاجة، دون تكرار تسجيل الهدية."}, "غير مخطط": {"icon": "spark", "example": "سبب المصروف غير المتوقع", "hint": "استخدمه لما لم تخطط له؛ يمكنك مراجعة تصنيفه لاحقًا."}, "صيانة المنزل": {"icon": "tool", "example": "نوع العطل أو اسم الفني", "hint": "اختر الخدمة؛ المبلغ هو المدفوع الآن وليس كامل عرض السعر."}, "الملابس والأحذية": {"icon": "shirt", "example": "القطعة أو المتجر", "hint": "حدّد المستفيد اختياريًا؛ الاسترجاع يسجل على الشراء الأصلي."}, "الاشتراكات والخدمات الرقمية": {"icon": "screen", "example": "اسم الخدمة والفترة", "hint": "سجّل الدفعة الفعلية؛ لا تعاود تسجيلها إذا سددتها ضمن التزام."}, "الفواتير والخدمات": {"icon": "bulb", "example": "مقدم الخدمة والفترة", "hint": "إن كانت الفاتورة التزامًا مسجلاً، استخدم سداد الالتزام لتجنب التكرار."}, "العمل والتعليم": {"icon": "book", "example": "الدورة أو الكتاب أو الجهة", "hint": "يمكن ذكر الغرض في الوصف، دون إنشاء موعد أو مهمة تلقائيًا."}, "السفر": {"icon": "plane", "example": "الخدمة والوجهة", "hint": "اربط المصروف بالرحلة عند الحاجة وراجع أثره على ميزانية الأسبوع."}, "الصدقة والتبرعات": {"icon": "heart", "example": "الجهة أو الغرض — اختياري", "hint": "يكفي النوع والمبلغ؛ لا يلزم ذكر بيانات شخصية."}, "الطوارئ": {"icon": "shield", "example": "سبب الحالة الطارئة", "hint": "تصنيف المصروف لا يسحب من الادخار تلقائيًا؛ سجّل التحويل منفصلًا."}, "مشتريات غير متكررة": {"icon": "box", "example": "الجهاز أو القطعة أو المتجر", "hint": "للمشتريات الكبيرة أو النادرة؛ سجّل المبلغ المدفوع فعليًا."}};
+  function expCategoryPresentation(cat){return EXP_CATEGORY_PRESENTATION[cat&&cat.seedKey]||EXP_CATEGORY_PRESENTATION[cat&&cat.name]||{icon:'ledger',example:'اسم المتجر أو وصف مختصر',hint:'اختر التصنيف المناسب، وأضف التفاصيل التي تحتاجها فقط.'};}
+  function expCategoryIcon(cat,sub){
+    if(!sub&&cat?.icon&&!EXP_CATEGORY_PRESENTATION[cat.seedKey]&&!EXP_CATEGORY_PRESENTATION[cat.name])return '<span class="expense-custom-icon" aria-hidden="true">'+expEsc(cat.icon)+'</span>';
+    const rules=[[/خضار|فواكه/,'leaf'],[/ألبان/,'bottle'],[/مياه|مشروبات|عصائر/,'bottle'],[/لحوم|دجاج|أسماك/,'utensils'],[/مخبوزات/,'bread'],[/وقود/,'fuel'],[/قهوة|شاي/,'cup'],[/أدوية|علاج|تحاليل/,'medical'],[/كتب|دورات|تعليم/,'book'],[/هدية|ورد/,'gift'],[/صيانة|إصلاح|سباكة|فني/,'tool'],[/أخرى/,'more']];
+    const found=rules.find(([re])=>re.test(sub||''));return expIcon(found?found[1]:expCategoryPresentation(cat).icon);
+  }
+  function expRefineExpenseForm(originalTx){
+    const root=expFormBox.querySelector('.exp-expense-form');if(!root)return;
+    root.classList.add('expense-refined');const q=id=>root.querySelector('#'+id),field=id=>q(id)?.closest('.exp-field');
+    root.querySelector('.exp-expense-intro').remove();root.querySelectorAll('.exp-section-title').forEach(n=>n.remove());
+    field('efDetails').querySelector('label').textContent='وصف أو اسم المتجر — اختياري';
+    const catField=field('efCat');catField.querySelector('label').innerHTML='<span id="efCategoryIcon"></span> الفئة';
+    const search=document.createElement('details');search.className='expense-category-search';search.innerHTML='<summary>البحث في الفئات</summary>';catField.append(search);search.append(q('efCatSearch'));
+    catField.insertAdjacentHTML('beforeend','<p id="efCategoryHint" class="exp-card-hint"></p>');
+    const sub=q('efSubField');sub.querySelector('label').textContent='نوع المصروف';
+    sub.insertAdjacentHTML('afterbegin','<button type="button" id="efSubChoose" class="expense-selector" aria-expanded="false" aria-controls="efSubPanel">اختر النوع</button>');
+    const panel=document.createElement('div');panel.id='efSubPanel';panel.hidden=true;panel.innerHTML='<label for="efSubSearch">ابحث عن النوع</label><input id="efSubSearch" type="search" placeholder="ابحث عن نوع…"><button type="button" id="efSubDone">العودة للمصروف</button>';
+    sub.append(panel);panel.insertBefore(q('efSubChips'),q('efSubDone'));q('efRecentSubs').hidden=true;q('efRecentSubChips').replaceChildren();
+    const close=()=>{panel.hidden=true;q('efSubChoose').setAttribute('aria-expanded','false');q('efSubChoose').focus();};
+    q('efSubChoose').onclick=()=>{panel.hidden=!panel.hidden;q('efSubChoose').setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){q('efSubSearch').value='';q('efSubSearch').dispatchEvent(new Event('input'));q('efSubSearch').focus();}};
+    q('efSubDone').onclick=close;panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close();}});
+    panel.addEventListener('click',e=>{if(e.target.closest('[data-subchip]'))close();});
+    q('efSubSearch').oninput=()=>{const needle=expNormCategoryText(q('efSubSearch').value);panel.querySelectorAll('[data-subchip]').forEach(n=>n.hidden=!expNormCategoryText(n.textContent).includes(needle));};
+    const timing=root.querySelector('[aria-label="وقت المصروف ونوعه"] .exp-grid2');const advancedType=field('efType');advancedType.remove();timing.append(field('efPay'));
+    const extra=q('efExtra');const group=(title,icon,nodes)=>{const d=document.createElement('details');d.className='expense-option-group';d.innerHTML='<summary>'+expIcon(icon)+'<span>'+title+'</span></summary>';nodes.filter(Boolean).forEach(n=>d.append(n));extra.append(d);return d;};
+    const nodes={pur:field('efPur'),trip:field('efTrip'),ctx:field('efCtx'),ben:field('efBen'),country:field('efCountry'),note:field('efNote'),count:q('efCount').closest('label'),fxToggle:q('efFxMore'),fx:q('efFxBox')};
+    Object.values(nodes).filter(Boolean).forEach(n=>n.remove());extra.replaceChildren();
+    group('لمن المصروف؟','people',[nodes.ben]);group('رحلة أو مناسبة','plane',[nodes.trip,nodes.ctx]);group('الشراء والعملة','wallet',[nodes.pur,nodes.country,nodes.fxToggle,nodes.fx]);group('ملاحظة','ledger',[nodes.note]);group('خيارات متقدمة','target',[advancedType,nodes.count]);
+    root.querySelector('.exp-expense-savebar small').textContent='يُسجل المصروف عند الضغط على حفظ.';
+    root.querySelector('.exp-expense-savebar').insertAdjacentHTML('afterbegin','<p id="efBudgetImpact" class="exp-card-hint" role="status"></p>');
+    const update=()=>{const cat=expCatById(q('efCat').value),info=expCategoryPresentation(cat);q('efCategoryIcon').innerHTML=expCategoryIcon(cat);q('efCategoryHint').textContent=info.hint;q('efDetails').placeholder=info.example;const selected=root.querySelector('[data-subchip].active');q('efSubChoose').innerHTML=expCategoryIcon(cat,selected?.textContent)+'<span>'+expEsc(selected?.textContent||'اختر النوع')+'</span><span aria-hidden="true">‹</span>';
+      const excluded=q('efCount')&&!q('efCount').checked,isTransfer=q('efType').value==='transfer';q('efBudgetImpact').textContent=isTransfer?'تحويل — لا يسجل كمصروف جديد':expClassify({...originalTx,categoryId:q('efCat').value})==='fixed'?'التزام — خارج ميزانية الأسبوع':excluded?'مستبعد من ميزانية الأسبوع':'يُحتسب ضمن ميزانية الأسبوع';if(q('efTrip')?.value)q('efBudgetImpact').textContent+=' · مرتبط برحلة';
+    };
+    root.addEventListener('change',e=>{if(['efCat','efTrip','efType','efCount'].includes(e.target.id))update();});root.addEventListener('click',e=>{if(e.target.closest('[data-subchip]'))update();});update();
+  }
   function expOpenExpenseForm(editId, preTripId, preCategoryId, familyShoppingId){
     const refund=editId&&expActiveTx().find(t=>t.id===editId&&t.transactionType==='refund');if(refund){expOpenRefundForm(refund.relatedTransactionId,editId);return;}
     const tx = editId ? expState.transactions.find(t=>t.id===editId) : null;
@@ -14969,7 +15063,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const defPay = (tx&&tx.paymentMethod) || expState.settings.defaultPaymentMethod || "مدى";
     /* المصروف الجديد عادي في الغالب؛ لا نفرض هذا السياق على سجل قديم عند تعديله. */
     const defCtx = tx ? (tx.context||"") : "عادي";
-    const catOpts = cats.map(c=>'<option value="'+expEsc(c.id)+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+(c.icon?expEsc(c.icon)+" ":"")+expEsc(c.name)+'</option>').join("");
+    const catOpts = cats.map(c=>'<option value="'+expEsc(c.id)+'"'+(c.id===curCat?' selected':'')+'>'+(c.section==="fixed"?"◆ ":"")+expEsc(c.name)+'</option>').join("");
     /* الرحلة الحالية: عند التعديل من المعاملة، وإلا من المعامل المُمرّر، وإلا الرحلة النشطة المفضّلة */
     const active = expPreferredActiveTrip();
     let curTrip = tx? (tx.tripId||"") : (preTripId!=null? preTripId : (active? active.id : ""));
@@ -15026,11 +15120,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const selectSubcategory=(id)=>{const cat=expCatById(g("#efCat").value);selectedSubId=id||"";["#efSubChips","#efRecentSubChips"].forEach(sel=>g(sel).querySelectorAll("[data-subchip]").forEach(x=>x.classList.toggle("active",x.dataset.subchip===selectedSubId)));const s=expSubcategoryById(cat,selectedSubId);g("#efCustomWrap").hidden=!(s&&s.name==="أخرى");};
     const renderSubcategories=()=>{
       const cat=expCatById(g("#efCat").value), subs=(cat&&cat.subcategories||[]).filter(s=>s&&s.isActive!==false&&!s.archivedAt);
+      if(tx&&cat&&tx.categoryId===cat.id&&selectedSubId===curSubId&&!subs.some(s=>s.id===selectedSubId)){
+        const original=expSubcategoryById(cat,selectedSubId);if(original)subs.push({...original,name:original.name});
+      }
       if(!subs.some(s=>s.id===selectedSubId)) selectedSubId="";
       g("#efSubField").hidden=!cat||cat.section!=="variable";
       g("#efSubChips").innerHTML=subs.length?subs.map(s=>'<button type="button" class="exp-chip'+(s.id===selectedSubId?' active':'')+'" data-subchip="'+expEsc(s.id)+'">'+expEsc(s.name)+'</button>').join(""):'<span class="exp-card-hint">لا توجد فئات فرعية بعد.</span>';
-      const used=new Map();(expState.transactions||[]).filter(t=>t&&!t.deletedAt&&t.transactionType!=="transfer"&&t.categoryId===(cat&&cat.id)&&t.subcategoryId).forEach(t=>{const sub=subs.find(s=>s.id===t.subcategoryId);if(!sub||sub.name==="أخرى")return;const prev=used.get(sub.id)||{sub,count:0,last:0};prev.count++;prev.last=Math.max(prev.last,+t.updatedAt||0,Date.parse((t.transactionDate||"")+"T12:00:00")||0);used.set(sub.id,prev);});
-      const recent=[...used.values()].sort((a,b)=>b.count-a.count||b.last-a.last).slice(0,4);g("#efRecentSubs").hidden=!recent.length;g("#efRecentSubChips").innerHTML=recent.map(row=>'<button type="button" class="exp-recent-chip'+(row.sub.id===selectedSubId?' active':'')+'" data-subchip="'+expEsc(row.sub.id)+'">'+expEsc(row.sub.name)+'</button>').join("");
+      g("#efRecentSubs").hidden=true;g("#efRecentSubChips").innerHTML='';
+      g("#efSubChips").querySelectorAll('[data-subchip]').forEach(b=>b.insertAdjacentHTML('afterbegin',expCategoryIcon(cat,b.textContent)));
       expFormBox.querySelectorAll("[data-subchip]").forEach(b=>b.onclick=()=>selectSubcategory(b.dataset.subchip));selectSubcategory(selectedSubId);
     };
     g("#efCatSearch").oninput=()=>{const q=expNormCategoryText(g("#efCatSearch").value);Array.from(g("#efCat").options).forEach(o=>{const cat=expCatById(o.value), words=[o.textContent,cat&&EXP_CATEGORY_ALIASES[cat.name]].concat((cat&&cat.subcategories||[]).map(s=>s.name));o.hidden=!!q&&!words.some(x=>expNormCategoryText(x).includes(q));});};
@@ -15098,6 +15195,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(savedCustom) hifzShowToast("حُفظت «"+savedCustom.name+"» كفئة فرعية ✅");
       expCloseForm(); expRefresh();
     };
+    expRefineExpenseForm(tx);
     setTimeout(()=>{ const a=g("#efAmount"); if(a) a.focus(); }, 50);
   }
 

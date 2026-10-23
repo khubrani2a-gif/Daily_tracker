@@ -84,7 +84,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   await openAdvancedExpense(p); await p.waitForTimeout(200);
   await p.fill("#efAmount","45.75");
   /* الفئات الهرمية تُلزم باختيار فئة فرعية قبل الحفظ — نختار أول شريحة متاحة */
-  const chip=await p.$("[data-subchip]"); if(chip){ await chip.click(); await p.waitForTimeout(120); }
+  const chip=await p.$("[data-subchip]"); if(chip){ await p.locator("#efSubChoose").click(); await chip.click(); await p.waitForTimeout(120); }
   await p.click("#efSave"); await p.waitForTimeout(400);
   let s=await rd(p);
   ok("normal expense: tripId null, countWeekly true", s.transactions[0].tripId===null && s.transactions[0].countAgainstWeeklyBudget===true && s.transactions[0].amountMinor===4575);
