@@ -38,7 +38,7 @@ const stat=async(p,label)=>{ const s=await p.$$eval("#expReportBody .exp-stat",e
   let p=await b.newPage({viewport:{width:1000,height:900}}); p.on("pageerror",e=>errs.push(e.message));
   await p.addInitScript(seed(), {tk:today()});
   await p.goto(fileUrl); await p.waitForTimeout(700);
-  await openFamily(p);
+  await openFinance(p);
   await p.click('.exp-tab[data-view="reports"]'); await p.waitForTimeout(150);
 
   console.log("Weekly (single-count, travel excluded, refund reduces)");
