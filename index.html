@@ -13495,15 +13495,17 @@
     if(t.fixedExpenseInstanceId && t.fixedExpenseInstanceId!==oldInst) expRecalcInstance(expInstById(t.fixedExpenseInstanceId));
     expSave(expState);
   }
+  // A local reversal must be newer than the record it reverses, even with device clock skew.
+  function expNextRevision(row){return Math.max(Date.now(),(row?.updatedAt||0)+1,(row?.deletedAt||0)+1);}
   function expDeleteTransaction(id){
     const t = expState.transactions.find(x=>x.id===id); if(!t) return;
-    t.deletedAt = Date.now(); t.updatedAt = Date.now();
+    t.updatedAt = expNextRevision(t); t.deletedAt = t.updatedAt;
     if(t.fixedExpenseInstanceId) expRecalcInstance(expInstById(t.fixedExpenseInstanceId));
     expSave(expState);
   }
   function expRestoreTransaction(id){
     const t = expState.transactions.find(x=>x.id===id); if(!t) return;
-    t.deletedAt = null; t.updatedAt = Date.now();
+    t.updatedAt = expNextRevision(t); t.deletedAt = null;
     if(t.fixedExpenseInstanceId) expRecalcInstance(expInstById(t.fixedExpenseInstanceId));
     expSave(expState);
   }
@@ -13530,12 +13532,12 @@
   function expActivityUndo(id){
     const rec=(expState.activityLog||[]).find(item=>item.id===id); if(!expActivityCanUndo(rec)) return false;
     if(rec.type==="payment"){
-      const tx=expState.transactions.find(t=>t.id===rec.txId); tx.deletedAt=Date.now(); tx.updatedAt=tx.deletedAt;
+      const tx=expState.transactions.find(t=>t.id===rec.txId); tx.updatedAt=expNextRevision(tx); tx.deletedAt=tx.updatedAt;
       if(tx.fixedExpenseInstanceId) expRecalcInstance(expInstById(tx.fixedExpenseInstanceId));
       if(!(expState.activityLog||[]).some(x=>x.templateId===rec.templateId&&!x.undoneAt&&(x.createdAt||0)>(rec.createdAt||0))) expRestoreFixedSnapshot(rec.before);
     } else if(rec.type==="fixed-edit") expRestoreFixedSnapshot(rec.before);
     expState.instances.forEach(expRecalcInstance);
-    rec.undoneAt=Date.now(); rec.updatedAt=rec.undoneAt; expSave(expState); expRefresh(); return true;
+    rec.undoneAt=expNextRevision(rec); rec.updatedAt=rec.undoneAt; expSave(expState); expRefresh(); return true;
   }
   function expRecordPayment(instId, amountMinor, dateStr, method){
     const inst = expInstById(instId); if(!inst) return null;
@@ -13673,7 +13675,7 @@
      (لم تُمَسّ أصلًا بهذا الخيار). يبصم updatedAt جديدًا كي يتقارب عبر الأجهزة. */
   function expRestoreDeletedTrip(id){
     const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt); if(!t) return false;
-    t.deletedAt=null; t.updatedAt=Date.now();
+    t.updatedAt=expNextRevision(t); t.deletedAt=null;
     expSave(expState);
     return true;
   }
@@ -13703,15 +13705,14 @@
      في تلك الدفعة بالذات (لا يستعيد أي معاملة أخرى بنفس tripId قد تكون محذوفة سلفًا لسببٍ مختلف).
      يعيد حساب المثيلات المتأثرة، ويبصم updatedAt جديدًا للسجلات المستعادة كي يتقارب عبر الأجهزة. */
   function expRestoreTripWithExpenses(id, txIds){
-    const now=Date.now();
     const t=(expState.trips||[]).find(x=> x && x.id===id && x.deletedAt);
     let restoredTrip=0, restoredTx=0;
-    if(t){ t.deletedAt=null; t.updatedAt=now; restoredTrip=1; }
+    if(t){ t.updatedAt=expNextRevision(t); t.deletedAt=null; restoredTrip=1; }
     const idSet=new Set(txIds||[]);
     const affectedInstIds=new Set();
     (expState.transactions||[]).forEach(x=>{
       if(!x || !idSet.has(x.id) || !x.deletedAt) return;   /* استُعيدت سلفًا أو ليست ضمن هذه الدفعة تحديدًا */
-      x.deletedAt=null; x.updatedAt=now; restoredTx++;
+      x.updatedAt=expNextRevision(x); x.deletedAt=null; restoredTx++;
       if(x.fixedExpenseInstanceId) affectedInstIds.add(x.fixedExpenseInstanceId);
     });
     affectedInstIds.forEach(instId=>{ const inst=expInstById(instId); if(inst) expRecalcInstance(inst); });
@@ -13995,7 +13996,7 @@
       const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);
       if(dates.some(date=>expSavingBalance(row.goalId,date)-expToMinor(row.amountMinor)<0))return false;
     }
-    row.deletedAt=Date.now();row.updatedAt=row.deletedAt;expSave(expState);return true;
+    row.updatedAt=expNextRevision(row);row.deletedAt=row.updatedAt;expSave(expState);return true;
   }
 
   function expOpenFinanceLedger(kind,date,goalId){
@@ -14007,7 +14008,7 @@
       if(!expRemoveFinanceMovement(b.dataset.financeRemove)){if(kind==='saving')expOpenSavingReview(b.dataset.financeRemove);else hifzShowToast('الحركة حُذفت أو تغيرت؛ أعد فتح سجل الدخل.');return;}
       expOpenFinanceLedger(kind,date);expRefresh();const id=b.dataset.financeRemove,deletedSnapshot=JSON.stringify((expState.financeEntries||[]).find(r=>r.id===id));
       expFormBox.insertAdjacentHTML('beforeend','<button class="exp-add-line" id="flUndo">تراجع عن إلغاء الحركة</button>');
-      document.getElementById('flUndo').onclick=()=>{const row=(expState.financeEntries||[]).find(r=>r.id===id);if(row){if(JSON.stringify(row)!==deletedSnapshot){hifzShowToast('تغيرت الحركة بعد الإلغاء؛ لا يمكن استعادة نسخة أقدم.');return;}if(row.kind==='income'&&row.allocation&&!expValidIncomeAllocation(row)){hifzShowToast('تغيرت حدود الدورة؛ راجع تخصيص الدخل قبل الاستعادة.');return;}if(row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle)){hifzShowToast('تغيرت خطة الادخار؛ راجعها قبل التراجع.');return;}if(row.kind==='saving'&&row.amountMinor<0){const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);if(dates.some(date=>expSavingBalance(row.goalId,date)+expToMinor(row.amountMinor)<0)){hifzShowToast('لا يمكن التراجع لأن حركة لاحقة تجعل المدخر سالبًا.');return;}}row.deletedAt=null;row.updatedAt=Date.now();expSave(expState);}expOpenFinanceLedger(kind,date);expRefresh();};
+      document.getElementById('flUndo').onclick=()=>{const row=(expState.financeEntries||[]).find(r=>r.id===id);if(row){if(JSON.stringify(row)!==deletedSnapshot){hifzShowToast('تغيرت الحركة بعد الإلغاء؛ لا يمكن استعادة نسخة أقدم.');return;}if(row.kind==='income'&&row.allocation&&!expValidIncomeAllocation(row)){hifzShowToast('تغيرت حدود الدورة؛ راجع تخصيص الدخل قبل الاستعادة.');return;}if(row.releaseMinor&&row.releasePlanVersion!==expPlanVersion(row.releaseCycle)){hifzShowToast('تغيرت خطة الادخار؛ راجعها قبل التراجع.');return;}if(row.kind==='saving'&&row.amountMinor<0){const dates=expFinanceRows('saving').filter(r=>r.goalId===row.goalId&&r.date>=row.date).map(r=>r.date).concat(row.date);if(dates.some(date=>expSavingBalance(row.goalId,date)+expToMinor(row.amountMinor)<0)){hifzShowToast('لا يمكن التراجع لأن حركة لاحقة تجعل المدخر سالبًا.');return;}}row.updatedAt=expNextRevision(row);row.deletedAt=null;expSave(expState);}expOpenFinanceLedger(kind,date);expRefresh();};
     }});});
     if(kind==='saving'){
       const goals=(expState.savingsGoals||[]).filter(g=>!g.deletedAt);
@@ -15315,7 +15316,7 @@
     q('lrSave').onclick=()=>{if(!v||!expApplyLiabilityReduction(v)){q('lrErr').textContent='تغيرت البيانات؛ أعد المعاينة.';return;}expCloseForm();expRefresh();};
     const rows=expFinanceRows('liability-reduction').filter(r=>r.liabilityKind===kind&&r.liabilityId===id);
     q('lrHistory').innerHTML=rows.map(r=>'<p>'+expArDate(r.liabilityDate)+' · '+expMoney(r.liabilityReductionMinor)+' <button data-reduction-undo="'+expEsc(r.id)+'">إلغاء هذا التخفيض</button></p>').join('');
-    q('lrHistory').querySelectorAll('[data-reduction-undo]').forEach(b=>b.onclick=()=>{const r=expFinanceRows('liability-reduction').find(r=>r.id===b.dataset.reductionUndo);if(!r)return;hifzShowConfirm({title:'إلغاء التخفيض؟',body:'سيعود المبلغ إلى الالتزام غير المدفوع، وتبقى الدفعات كما هي.',okText:'إلغاء التخفيض',cancelText:'رجوع',onOk:()=>{r.deletedAt=Date.now();r.updatedAt=Date.now();expSave(expState);expOpenLiabilityReduction(kind,id);expRefresh();}});});
+    q('lrHistory').querySelectorAll('[data-reduction-undo]').forEach(b=>b.onclick=()=>{const r=expFinanceRows('liability-reduction').find(r=>r.id===b.dataset.reductionUndo);if(!r)return;hifzShowConfirm({title:'إلغاء التخفيض؟',body:'سيعود المبلغ إلى الالتزام غير المدفوع، وتبقى الدفعات كما هي.',okText:'إلغاء التخفيض',cancelText:'رجوع',onOk:()=>{r.updatedAt=expNextRevision(r);r.deletedAt=r.updatedAt;expSave(expState);expOpenLiabilityReduction(kind,id);expRefresh();}});});
   }
   function expPreviewRefundSettlement(txId,refundMinor,receiptDate,reductionMinor,effectiveDate,editId){
     const original=expState.transactions,snapshot=expFinanceSnapshot();

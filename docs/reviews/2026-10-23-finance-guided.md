@@ -21,3 +21,9 @@ Corrections remain explicit; no automatic choice between conflicting records. Un
 
 ## Final undo follow-up
 The first Pages run was cancelled before publication. A reproduced close-ledger case showed the toast needed to reappear after the dialog closed, and the mobile navigation covered its button. Hide the floating toast only while inline undo exists; position it above mobile navigation. The original six-second lifetime and callback remain intact. New failing reproduction then guided/usability suites 26/26 passed (13 guided cases total). Final full suite now includes 527 tests; final CI/deployment evidence supersedes the first candidate.
+
+## Monetary undo follow-up
+
+The user requested verification of amounts, not only undo visibility. A reproducing test found that transaction restore used the local wall clock: a tombstone from a clock-ahead device could win the next merge and remove the restored amount again. Reversals now write a revision strictly newer than the affected record. The same rule covers income/savings undo, payment undo, liability reduction cancellation and trip expense restoration.
+
+Five additional browser tests assert exact cash, weekly spending/remaining, savings balance and liability amounts after undo, storage reload and merge in both directions. Expense/refund tests failed before the fix. Payment undo restores cash and unpaid liability together, so spendable availability can correctly stay unchanged. No real account records are used.
