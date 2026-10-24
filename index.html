@@ -1473,6 +1473,7 @@
   .exp-undo{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:230;background:var(--ink);color:var(--paper);border-radius:12px;padding:.6rem 1rem;display:flex;align-items:center;gap:.8rem;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.88rem}
   .exp-undo[hidden]{display:none}
   body:has(#ulUndo) #expUndo{display:none}
+  body:has(#expFormOverlay:not([hidden])) #expUndo{visibility:hidden}
   @media(max-width:700px){.exp-undo{bottom:var(--mobile-scroll-clearance);max-width:calc(100vw - 2rem)}}
   .exp-undo button{border:none;background:transparent;color:var(--accent-2);font-family:inherit;font-weight:700;font-size:.88rem;cursor:pointer}
   .exp-barmini{display:flex;gap:2px;align-items:flex-end;height:44px;margin-top:.4rem}
@@ -11772,7 +11773,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=180;
+  const DATA_VERSION=1, APP_RELEASE=181;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -13500,9 +13501,16 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function expLiveTrips(){ return (expState.trips||[]).filter(t=> t && !t.deletedAt); }
   /* البحث بالمعرّف يُرجع الحيّة فقط (المحذوفة كأنها غير موجودة للواجهة)؛ الدمج/التوفيق يقرأ المصفوفة الخام مباشرةً */
   function expTripById(id){ return expLiveTrips().find(t=>t.id===id) || null; }
+  function expParseExchangeRate(value){
+    const raw=String(value||"").trim().replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/٫/g,".").replace(/٬/g,",");
+    if(!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(raw))return NaN;
+    const rate=Number(raw.replace(/,/g,""));
+    return Number.isFinite(rate)&&rate>0?rate:NaN;
+  }
   function expTripStatus(trip){
     if(!trip) return "planned";
     if(trip.archivedAt) return "archived";
+    if(trip.completedAt) return "completed";
     if(trip.isManuallyActivated) return "active";
     const today = todayStr();
     if(today < trip.startDate) return "planned";
@@ -13815,7 +13823,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* تفعيل يدوي: عند تفعيل رحلة نُعطّل الأخريات ونبصم updatedAt لها (كي يتقارب الحذف عبر الأجهزة، لا يبقى نشطان) */
   function expSetManualActive(id, on){
     const t=expTripById(id); if(!t) return;
-    t.isManuallyActivated=!!on; t.updatedAt=Date.now();
+    t.isManuallyActivated=!!on; if(on)t.completedAt=null; t.updatedAt=Date.now();
     if(on){ const now=Date.now(); expLiveTrips().forEach(o=>{ if(o.id!==id && o.isManuallyActivated){ o.isManuallyActivated=false; o.updatedAt=now; } }); expActiveTripId=id; }
     expReconcileActiveTrips(expState);
     expSave(expState);
@@ -13832,7 +13840,15 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     cands.forEach(t=>{ if(t!==win && t.isManuallyActivated){ t.isManuallyActivated=false; t.updatedAt=now; changed=true; } });
     return changed;
   }
-  function expCompleteTrip(id){ const t=expTripById(id); if(!t) return; t.isManuallyActivated=false; const y=todayStr(); if(t.endDate>=y) t.endDate=y; t.updatedAt=Date.now(); expSave(expState); }
+  function expCompleteTrip(id){
+    const t=expTripById(id); if(!t) return;
+    const y=todayStr();
+    if(t.startDate>y){hifzShowToast("لم تبدأ الرحلة بعد؛ عدّل تاريخ بدايتها قبل إكمالها.");return;}
+    t.isManuallyActivated=false; t.completedAt=Date.now();
+    if(t.endDate>=y)t.endDate=y;
+    t.updatedAt=t.completedAt; if(expActiveTripId===id)expActiveTripId=null;
+    expSave(expState);
+  }
   /* حذف رحلة مرتبطة بمصاريف: فكّ الارتباط دون حذف المعاملات */
   function expUnlinkTripTransactions(id){ expState.transactions.forEach(t=>{ if(t.tripId===id){ t.tripId=null; t.updatedAt=Date.now(); } }); expSave(expState); }
   /* حذف الرحلة = شاهدة قبر (tombstone) لا إزالة فيزيائية: يتقارب الحذف عبر الأجهزة ولا يُحييه اتحادٌ من نسخة أقدم.
@@ -15218,9 +15234,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     /* عند تغيير الرحلة: حدّث الافتراضي لاحتساب الميزانية الأسبوعية من إعداد الرحلة (قابل للتعديل يدويًا) */
     if(g("#efTrip")) g("#efTrip").onchange=()=>{ const tid=g("#efTrip").value; const cb=g("#efCount"); if(cb) cb.checked = tid? !!(expTripById(tid)||{}).includeInWeeklyBudgets : true; };
     /* حساب الريال من العملة الأجنبية × سعر التحويل (وحدة صغرى صحيحة، بلا أخطاء عائمة) */
-    const fxCalc=()=>{ const fa=expParseAmount(g("#efFxAmt").value); const rate=parseFloat(String(g("#efFxRate").value).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace("٫",".").replace(/[^\d.]/g,"")); const out=g("#efFxOut");
-      if(isNaN(fa)||fa<=0||!isFinite(rate)||rate<=0){ out.textContent=""; return null; }
-      const sar=Math.round(fa*rate); g("#efAmount").value=(sar/100); out.textContent="المبلغ المعتمد ≈ "+expMoney(sar); return sar; };
+    const fxCalc=()=>{ const fa=expParseAmount(g("#efFxAmt").value); const rate=expParseExchangeRate(g("#efFxRate").value); const out=g("#efFxOut");
+      if(isNaN(fa)||fa<=0||!isFinite(rate)||rate<=0){ out.textContent="أدخل مبلغًا وسعر تحويل صحيحين أكبر من صفر."; return null; }
+      const sar=Math.round(fa*rate); if(!Number.isSafeInteger(sar)||sar<=0||sar>100000000){out.textContent="المبلغ المحوّل خارج النطاق المسموح؛ راجع المبلغ وسعر التحويل.";return null;} g("#efAmount").value=(sar/100); out.textContent="المبلغ المعتمد ≈ "+expMoney(sar); return sar; };
     if(g("#efFxCalc")) g("#efFxCalc").onclick=fxCalc;
     if(tx && tx.originalAmountMinor!=null && tx.exchangeRate) { const o=g("#efFxOut"); if(o) o.textContent="سعر محفوظ: ١ "+(tx.originalCurrency||"")+" = "+_arn(tx.exchangeRate)+" ر.س"; }
     const editUnchanged=expEditGuard('transactions',tx,'efErr');
@@ -15242,7 +15258,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const tripId = g("#efTrip")? (g("#efTrip").value||null) : (tx? tx.tripId : (preTripId||null));
       /* لا تُختار رحلة مؤرشفة تلقائيًا؛ لكن يجوز إبقاؤها عند التعديل الصريح */
       const fxAmt=expParseAmount(g("#efFxAmt")?g("#efFxAmt").value:"");
-      const fxRate=g("#efFxRate")? parseFloat(String(g("#efFxRate").value).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace("٫",".").replace(/[^\d.]/g,"")) : NaN;
+      const fxRate=g("#efFxRate")? expParseExchangeRate(g("#efFxRate").value) : NaN;
+      const fxAmountEntered=g("#efFxAmt")&&g("#efFxAmt").value.trim();
+      const fxRateEntered=g("#efFxRate")&&g("#efFxRate").value.trim();
+      if(fxRateEntered&&!Number.isFinite(fxRate)){err.textContent="أدخل سعر تحويل صحيحًا أكبر من صفر.";return;}
+      if((fxAmountEntered||fxRateEntered)&&(isNaN(fxAmt)||fxAmt<=0||!g("#efFxCur").value)){err.textContent="أدخل المبلغ الأصلي وعملته بشكل صحيح.";return;}
       const hasFx = !isNaN(fxAmt) && fxAmt>0 && g("#efFxCur") && g("#efFxCur").value;
       if(!tx&&type==='expense'&&expDuplicateExpense(amt,date,catId)&&!(g('#efDuplicateConfirm')&&g('#efDuplicateConfirm').checked)){
         err.textContent='يوجد مصروف بنفس المبلغ والفئة والتاريخ. تحقق قبل حفظ مصروف آخر.';
@@ -15928,7 +15948,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       '<div class="exp-card-hint">العملة: ريال سعودي (ر.س) · الأرقام: عربية</div>'+
       '</div>'+
       (legacyCats.length? '<div class="exp-card" style="margin-top:1rem"><h3>📥 مراجعة الاستيراد</h3><div class="exp-card-hint">فئات مستوردة تحتاج تحديد ميزانية أسبوعية (القيم القديمة كانت إجماليات شهرية ولم تُحسب تلقائيًا).</div>'+legacyCats.map(c=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(c.name)+'</div><div class="exp-row-sub">إجمالي قديم: '+expMoney(c.legacyMonthlySnapshotMinor||0)+'</div></div><button class="exp-mini" data-setbudget="'+expEsc(c.id)+'">💰</button></div>').join("")+'</div>':'')+
-      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 الفئات المؤرشفة</h3>'+expArchivedList()+'</div>'+
+      '<div class="exp-card" style="margin-top:1rem"><h3>🗂 العناصر المتوقفة والمؤرشفة</h3>'+expArchivedList()+'</div>'+
       /* مزامنة عامّة لكل الأقسام + حالة كل قسم (منطقة مزامنة/تشخيص) */
       '<div class="exp-card" style="margin-top:1rem"><h3>🔄 المزامنة</h3>'+
         '<div class="exp-sync-text" id="expGlobalSyncText" style="margin-bottom:.6rem">'+expEsc(syncSummary().text)+'</div>'+
@@ -15961,9 +15981,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     body.querySelectorAll("[data-restore]").forEach(b=> b.onclick=()=>{ const c=expCatById(b.dataset.restore); if(c){ expSetCategoryActive(c,true,false); expRefresh(); } const t=expTplById(b.dataset.restore); if(t){ expRestoreTemplate(b.dataset.restore); expRefresh(); } });
   }
   function expArchivedList(){
-    const cats=expState.categories.filter(c=>c.archivedAt), tpls=expState.fixedTemplates.filter(t=>t.archivedAt);
-    if(!cats.length && !tpls.length) return '<div class="exp-empty">لا عناصر مؤرشفة.</div>';
-    return cats.concat(tpls).map(x=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(x.name)+'</div><div class="exp-row-sub">'+(x.section?"فئة أسبوعية":"التزام شهري")+'</div></div><button class="exp-mini" data-restore="'+expEsc(x.id)+'" title="استعادة">↩️</button></div>').join("");
+    const cats=expState.categories.filter(c=>c.archivedAt||c.isActive===false), tpls=expState.fixedTemplates.filter(t=>t.archivedAt);
+    if(!cats.length && !tpls.length) return '<div class="exp-empty">لا عناصر متوقفة أو مؤرشفة.</div>';
+    return cats.concat(tpls).map(x=>'<div class="exp-row"><div class="exp-row-main"><div class="exp-row-name">'+expEsc(x.name)+'</div><div class="exp-row-sub">'+(x.section?"فئة أسبوعية":"التزام شهري")+" · "+(x.archivedAt?"مؤرشفة":"متوقفة")+'</div></div><button class="exp-mini" data-restore="'+expEsc(x.id)+'" title="استعادة">↩️</button></div>').join("");
   }
   /* حالة مزامنة كل قسم (مشتقّة من SYNC_STATE — دقيقة، لا تُظهر نجاحًا كاملًا إن نجح قسم واحد) */
   function expModStatusHtml(){
@@ -16060,7 +16080,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       }
     }); };
   }
-  function expOpenTripDetail(id){ expTripDetailId=id; if(expCurView!=="trips"){ expSetView("trips"); } expRenderTripDetail(); }
+  function expOpenTripDetail(id){ if(expCurView!=="trips"){ expSetView("trips"); } expTripDetailId=id; expRenderTripDetail(); }
   function expRenderTripDetail(){
     const t=expTripById(expTripDetailId); const body=document.getElementById("expTripsBody");
     if(!t){ expTripDetailId=null; expRenderTrips(); return; }
