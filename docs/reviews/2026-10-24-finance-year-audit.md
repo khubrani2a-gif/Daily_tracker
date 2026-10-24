@@ -1,6 +1,6 @@
 # Finance and family: annual usage audit
 
-Status: verification in progress; not a claim that production or personal devices have been verified.
+Status: annual simulation, restoration and independent source review complete; remote release checks pending. Personal devices/accounts are not certified.
 
 ## Scope and method
 
@@ -34,4 +34,14 @@ A successful click proves its exercised path, not every input combination. Brows
 
 ## Verification results
 
-Pending final run and independent review. Baseline RED evidence and rerun GREEN evidence retained in the audit workspace.
+- Final annual run: **365 days, 16,514 assertions, 2,337 visible UI clicks, no page errors**. 390 live transactions; 15 income entries (one initial seed, 14 newly recorded); 23 savings movements. Covers 53 weekly ranges and 13 salary-cycle ranges because both end periods are partial.
+- Overspending was intentional: 10 days with negative weekly remaining and 6 days with negative cycle availability; values were preserved and matched the independent oracle.
+- Full-year backup restored on a separate empty synthetic browser: exact live transaction records and finance entries preserved; end-period totals matched. Source and restored data both pass normal reload normalization before comparison. This does not claim byte-for-byte equivalence of all unrelated snapshot collections.
+- Focused new regressions: **12/12 passed**, independently rerun by the fresh reviewer.
+- Initial full application run: **630/630 passed**. Final run after the additional paused-category fix: **630/631 passed**; one existing dhikr UI test timed out under concurrent browser load. Its isolated suite passed 5/5; canonical CI remains the release gate. No financial assertion failed.
+- Firestore emulator: **8/8 passed**.
+- Separate coverage: **164 reachable stable button selectors and 32 menu actions exercised**; 174 existing regression tests, 35 supplemental scenarios and two focused conditional branches passed. Two defensive built-in-delete controls and one inactive-menu alternative have no public route and are marked inspected, not clicked. The new Settings recovery route was actually exercised.
+- Travel: **51 lifecycle/year checks, 9 FX validation cases and 8 linked refund/payment/delete/Undo checks passed**. These are separate scenario counts, not additional unique buttons.
+- Fresh reviewer found **no critical or important source findings** and independently reran all 12 new tests successfully. Documentation completion was the only minor item.
+
+Baseline RED evidence, GREEN reruns, action ledger, synthetic backup, annual CSV and screenshots remain under `/workspace/finance-year-audit/`. No claim that every value/error combination or real account session was exercised.

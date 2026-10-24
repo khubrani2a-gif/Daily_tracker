@@ -21,20 +21,20 @@
 - Restoring a full-year ledger must preserve money and identifiers; do not certify real device/account sessions.
 
 ### Task 1: Coverage inventory
-- [ ] Agent coverage inventories static/dynamic finance/family action families and maps executed tests.
-- [ ] Exercise missing family/settings/category/recurring/goals/protection paths via UI, record result and gaps.
+- [x] Agent coverage inventories static/dynamic finance/family action families and maps executed tests.
+- [x] Exercise missing family/settings/category/recurring/goals/protection paths via UI, record result and gaps.
 - Files: /workspace/finance-year-audit/coverage/*; no production changes.
 
 ### Task 2: Year lifecycle
-- [ ] Root runs 365-day UI-driven ordinary expense/income/saving lifecycle with independent expected totals per date.
-- [ ] Add edit/cancel/duplicate/undo, refresh, annual exports and restoration checks; keep evidence by date/action.
+- [x] Root runs 365-day UI-driven ordinary expense/income/saving lifecycle with independent expected totals per date.
+- [x] Add edit/cancel/duplicate/undo, refresh, annual exports and restoration checks; keep evidence by date/action.
 - Files: /workspace/finance-year-audit/year-ui.cjs and year-result.json.
 
 ### Task 3: Trip lifecycle
-- [ ] Agent trips exercises creation/edit/allocations, before/during/after expenses, FX, include/exclude weekly, filters and both deletion/undo paths.
+- [x] Agent trips exercises creation/edit/allocations, before/during/after expenses, FX, include/exclude weekly, filters and both deletion/undo paths.
 - Files: /workspace/finance-year-audit/trips/*; no production changes.
 
 ### Task 4: Reconcile and review
-- [ ] Root verifies agent evidence and reproduces any consequential defect before changing source.
-- [ ] Fresh reviewer examines coverage, oracle independence, numerical claims, and untested controls.
-- [ ] Report findings, action coverage, limitations, and any proved blockers. Never replace an uncovered branch with a generic test-count claim.
+- [x] Root verifies agent evidence and reproduces any consequential defect before changing source.
+- [x] Fresh reviewer examines coverage, oracle independence, numerical claims, and untested controls.
+- [x] Report findings, action coverage, limitations, and any proved blockers. Never replace an uncovered branch with a generic test-count claim.
