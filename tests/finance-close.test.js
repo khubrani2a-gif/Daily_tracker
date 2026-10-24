@@ -45,3 +45,7 @@ test('cache-only read does not confirm a pending write or advance cloud timestam
 test('expanded More menu stays clickable above report tabs',()=>run(async({p})=>{
  await p.locator('#expFinanceMore summary').click();await p.locator('#expFinanceMore [data-view="reports"]').click();await p.locator('[data-rep="yearly"]').click();await p.locator('#expFinanceMore summary').click();await p.locator('#expFinanceMore [data-view="trips"]').click();assert.equal(await p.locator('#expViewTrips').isVisible(),true);
 }));
+
+test('closing existing backup manager returns focus to finance and preserves its scroll lock',()=>run(async({p})=>{
+ await p.locator('#expFinanceMore summary').click();await p.locator('#expProtectionBtn').click();const overflow=await p.evaluate(()=>document.body.style.overflow);await p.locator('#fpManage').click();assert.equal(await p.locator('#dataOverlay').isVisible(),true);await p.locator('#dataClose').click();assert.equal(await p.locator('#expOverlay').isVisible(),true);assert.equal(await p.locator('#expProtectionBtn').evaluate(e=>e===document.activeElement),true);assert.equal(await p.evaluate(()=>document.body.style.overflow),overflow);
+}));
