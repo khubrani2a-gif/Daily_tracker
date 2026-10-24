@@ -3749,7 +3749,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       <div class="finance-context" id="expFinanceContext">
         <button type="button" data-view="family">‹ العائلة</button>
         <details id="expFinanceMore"><summary aria-label="المزيد من خيارات المالية">⋯ المزيد</summary><div>
-          <button type="button" data-view="trips">الرحلات</button><button type="button" data-view="reports">التقارير والمراجعة</button><button type="button" data-view="settings">الإعدادات والمزامنة</button>
+          <button type="button" id="expProtectionBtn">حماية البيانات</button><button type="button" data-view="trips">الرحلات</button><button type="button" data-view="reports">التقارير والمراجعة</button><button type="button" data-view="settings">الإعدادات والمزامنة</button>
         </div></details>
       </div>
       <div class="exp-sync-row" id="expSyncRow">
@@ -4673,11 +4673,13 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     syncMeta.hidden=false;
     const online=navigator.onLine!==false;
     const compactStatus=document.getElementById("syncSummaryLabel");
+    const financePending=!!SYNC_STATE.expenses?.pendingWrites;
     if(compactStatus){
-      compactStatus.textContent=!user?"📱 الحفظ محلي · تسجيل الدخول":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
+      compactStatus.textContent=!user?"📱 الحفظ محلي · تسجيل الدخول":financePending?"محفوظ على الجهاز · بانتظار مزامنة المالية":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
     }
     syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
-    if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
+    if(financePending)syncLast.textContent="آخر تأكيد سحابي لا يشمل التغييرات المالية المنتظرة";
+    else if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
     else if(!online) syncLast.textContent="تغييراتك محفوظة وستُزامن عند عودة الإنترنت";
     else if(user&&globalSyncTime()) syncLast.textContent="آخر مزامنة سحابية: "+formatGlobalSyncTime(globalSyncTime());
     else if(user) syncLast.textContent="لم تكتمل مزامنة سحابية بعد";
@@ -4688,9 +4690,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function renderGlobalSyncStatus(summary, running){
     if(!syncStatus) return;
-    if(summary&&summary.status==="success"&&navigator.onLine!==false) localStorage.setItem(GLOBAL_SYNC_AT_KEY,String(Date.now()));
+    const financePending=!!SYNC_STATE.expenses?.pendingWrites;
+    if(!financePending&&summary&&summary.status==="success"&&navigator.onLine!==false) localStorage.setItem(GLOBAL_SYNC_AT_KEY,String(Date.now()));
     renderSyncDetails(summary,running);
     if(!user){ syncStatus.textContent="الحفظ المحلي مفعّل — سجّل الدخول للمزامنة بين أجهزتك"; return; }
+    if(financePending){syncStatus.textContent='محفوظ على الجهاز · بانتظار مزامنة المالية';return;}
     if(running){ syncStatus.textContent="🔄 جارٍ مزامنة جميع البيانات"; return; }
     if(navigator.onLine===false && (!summary || summary.status!=="success")){
       syncStatus.textContent="📴 بانتظار الاتصال"; return;
@@ -4863,9 +4867,10 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* ملخّص حالة كل الأقسام (للعرض المجمّع الدقيق) */
   function syncSummary(){
     const names=SYNC_MODULES;
-    let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false;
+    let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false, anyPending=false;
     names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
       if(s.inFlight) flight=true;
+      if(s.pendingWrites){anyPending=true;allServer=false;}
       if(s.lastError){ anyFail=true; allServer=false; }
       const serverOk = s.lastServerSuccessAt>0 && s.lastServerSuccessAt>=s.lastCacheFallbackAt && !s.lastError;
       if(serverOk) anyServer=true; else allServer=false;
@@ -4876,6 +4881,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(anyFail) return anyServer ? {state:"partial", text:"تمت مزامنة بعض الأقسام"} : {state:"fail", text:"تعذّرت المزامنة"};
     if(navigator.onLine===false) return {state:"offline", text:"بانتظار الاتصال"};
     if(anyCache) return {state:"partial", text:"تمت مزامنة بعض الأقسام"};   /* كاش = ليس نجاح خادم كامل */
+    if(anyPending)return {state:"partial",text:"محفوظ على الجهاز · بانتظار مزامنة المالية"};
     if(allServer) return {state:"ok", text:"تمت مزامنة جميع البيانات"};
     return {state:"partial", text:"تمت مزامنة بعض الأقسام"};
   }
@@ -11765,7 +11771,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=179;
+  const DATA_VERSION=1, APP_RELEASE=180;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -12978,29 +12984,43 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
      التخزين محلي أولًا (localStorage + مخزّن Firestore الدائم للكتابات دون اتصال) والمزامنة طبقة فوقه. */
   const EXP_BACKUP_KEY = "h2do-expenses-backup";
   const EXP_SYNC_KEY = "h2do-expenses-syncmeta";
+  let expPushInFlight = 0, expSyncMemory = null;
   let expPushTimer = null, expSyncState = "idle", expLastPullAt = 0, expPushResolvers = [];
   function expDocRef(){ return db.collection("users").doc(user.uid).collection("meta").doc("expenses"); }
   /* قراءة عبر المساعد العام: خادم أولًا ثم كاش صراحةً مع وسم المصدر — نفس عقد بقيّة الأقسام */
   function expGetDoc(){ return getDocServerFirst(expDocRef()); }
   /* ---------- حالة المزامنة (خفيفة، غير مزعجة) + وقت آخر تحديث ---------- */
-  function expSyncMeta(){ try{ return JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}; }catch(e){ return {}; } }
-  function expSetLastSync(ts){ try{ localStorage.setItem(EXP_SYNC_KEY, JSON.stringify({lastSyncAt:ts})); }catch(e){} }
+  function expSyncMeta(){ try{ return {...(JSON.parse(localStorage.getItem(EXP_SYNC_KEY))||{}),...(expSyncMemory||{})}; }catch(e){ return expSyncMemory||{}; } }
+  function expWriteSyncMeta(meta){expSyncMemory=meta;try{localStorage.setItem(EXP_SYNC_KEY,JSON.stringify(meta));expSyncMemory=null;}catch(e){try{localStorage.removeItem(EXP_SYNC_KEY);}catch(_){}}}
+  function expSetLastSync(ts){expWriteSyncMeta({...expSyncMeta(),lastSyncAt:ts});}
+  function expSyncPending(){const m=expSyncMeta();return (+m.revision||0)>(+m.confirmedRevision||0)||expPushInFlight>0||expPushTimer!=null;}
+  function expMarkSyncPending(){const m=expSyncMeta();m.revision=(+m.revision||0)+1;expWriteSyncMeta(m);expRenderSyncRow();return m.revision;}
+  function expConfirmRevision(revision){const m=expSyncMeta();m.confirmedRevision=Math.max(+m.confirmedRevision||0,revision||0);expWriteSyncMeta(m);}
   function expRelTime(ts){ if(!ts) return "لم تتم بعد"; const s=Math.floor((Date.now()-ts)/1000);
     if(s<10) return "الآن"; if(s<60) return "قبل ثوانٍ"; const m=Math.floor(s/60); if(m<60) return "قبل "+_arn(m)+" دقيقة";
     const h=Math.floor(m/60); if(h<24) return "قبل "+_arn(h)+" ساعة"; return "قبل "+_arn(Math.floor(h/24))+" يوم"; }
   function expRenderSyncRow(){
     const st=document.getElementById("expSyncText"); const btn=document.getElementById("expSyncBtn");
     if(!st) return;
-    const online = navigator.onLine !== false;
+    const online = navigator.onLine !== false, pending=expSyncPending(),meta=expSyncMeta();
+    const pendingChanged=syncModule('expenses').pendingWrites!==pending;
+    syncModule('expenses').pendingWrites=pending;
     let txt;
-    if(!db || !user) txt = "بلا مزامنة — سجّل الدخول";
-    else if(expSyncState==="syncing") txt = "🔄 جارٍ التحديث…";
-    else if(expSyncState==="error") txt = "⚠️ تعذّرت المزامنة";
-    else if(!online) txt = "📴 بانتظار الاتصال";
-    else txt = "☁️ تمت المزامنة · "+expRelTime(expSyncMeta().lastSyncAt);
-    st.textContent = txt;
-    if(btn) btn.disabled = (expSyncState==="syncing") || !db || !user;
+    if(expLoadFailed)txt='تعذّر تحميل البيانات — راجع الإعدادات قبل أي تعديل';
+    else if(!db || !user) txt = 'محفوظ على الجهاز · سجّل الدخول للمزامنة';
+    else if(restorePending())txt='محفوظ على الجهاز · الاستعادة بانتظار المزامنة';
+    else if(expSyncState==='error')txt='محفوظ على الجهاز · تعذّرت المزامنة، أعد المحاولة';
+    else if(pending)txt='محفوظ على الجهاز · بانتظار المزامنة'+(!online?' عند عودة الاتصال':'');
+    else if(expSyncState==='syncing')txt='محفوظ على الجهاز · جارٍ التحقق من السحابة';
+    else if(!online)txt='محفوظ على الجهاز · دون اتصال';
+    else if(syncModule('expenses').lastSource==='cache'||expSyncState==='offline')txt='محفوظ على الجهاز · لم يُؤكد الاتصال بالسحابة';
+    else if(meta.lastSyncAt)txt='تم التأكيد من السحابة · '+expRelTime(meta.lastSyncAt);
+    else txt='محفوظ على الجهاز · لم يتم تأكيد المزامنة بعد';
+    st.textContent=txt;st.setAttribute('role','status');st.setAttribute('aria-live','polite');
+    if(btn)btn.disabled=(expSyncState==='syncing')||!db||!user;
+    if(pendingChanged&&typeof renderGlobalSyncStatus==='function')renderGlobalSyncStatus(null,false);
   }
+
   function expSetSyncState(s){ expSyncState=s; expRenderSyncRow(); }
   /* مُشغّل سحب مُخنَّق للأحداث التلقائية (يمنع دفقات القراءة عند تزامن عدّة أحداث مقدّمة) */
   function expTriggerPull(){ if(!db || !user) return; const now=Date.now(); if(now-expLastPullAt < 1500) return; expLastPullAt=now; expPullRemote(); }
@@ -13019,6 +13039,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function expPushRemote(d){
     if(accountChanging||restorePending())return Promise.resolve({ok:false,reason:"accountOrRestore"});
+    const revision=expMarkSyncPending();
     if(!db || !user) return Promise.resolve({ok:false, reason:"noauth"});
     if(expLoadFailed) return Promise.resolve({ok:false, reason:"loadFailed"});   /* فشل تحميل المصاريف → لا ندفع حالة فارغة تطمس الخادم */
     const targetRef=expDocRef(), targetUid=user.uid;
@@ -13027,6 +13048,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     return new Promise((resolve)=>{
       expPushResolvers.push(resolve);
       expPushTimer = setTimeout(()=>{
+        expPushTimer=null;expPushInFlight++;expRenderSyncRow();
         const resolvers = expPushResolvers; expPushResolvers = [];
         try{
           if(accountChanging||restorePending())throw new Error("account or restoration changed");
@@ -13042,9 +13064,10 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
               const reconciled=expMerge(expState,merged);
               expAdoptState(reconciled);
               localStorage.setItem(EXP_KEY,JSON.stringify(expState));
- expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); resolvers.forEach(r=> r({ok:true})); })
-            .catch((e)=>{ expSetSyncState("error"); resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); });
-        }catch(e){ resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); }
+ expConfirmRevision(revision);syncModule("expenses").lastSource="server";expSetLastSync(Date.now()); if(expSyncState!=="syncing") expSetSyncState("idle"); else expRenderSyncRow(); resolvers.forEach(r=> r({ok:true})); })
+            .catch((e)=>{ if(user?.uid===targetUid&&!accountChanging&&!restorePending())expSetSyncState("error"); resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)})); })
+            .finally(()=>{expPushInFlight--;expRenderSyncRow();});
+        }catch(e){expPushInFlight--;if(user?.uid===targetUid&&!accountChanging)expSetSyncState('error');resolvers.forEach(r=> r({ok:false, error:(e&&e.message)||String(e)}));}
       }, 400);
     });
   }
@@ -13179,6 +13202,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function _expPullWork(opts){
     /* ملاحظة: لا نتخطّى القراءة لمجرّد كوننا دون اتصال — نُجري القراءة فيرجع المساعد للكاش ويُبلَّغ cacheFallback */
+    const readRevision=+expSyncMeta().revision||0;
     syncBegin("expenses", opts.trigger);
     expSetSyncState("syncing");
     /* الإنهاء يحسب الحالة من مصدر اللقطة ونجاح كتابة المصالحة:
@@ -13188,7 +13212,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const cache=_fromCache(snap);
       const writeOk = reconWriteOk!==false;
       if(writeOk){
-        if(!cache) expSetLastSync(Date.now());
+        if(!cache){expConfirmRevision(readRevision);expSetLastSync(Date.now());}
         syncEnd("expenses", true, snap);
         expSetSyncState(cache ? (navigator.onLine===false?"offline":"idle") : "idle");
       } else {
@@ -14043,6 +14067,28 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function expFinanceField(label,id,type,value){return '<div class="exp-field"><label for="'+id+'">'+expEsc(label)+'</label><input id="'+id+'" type="'+type+'" '+(type==='text'?'inputmode="decimal" ':'')+'value="'+expEsc(value==null?'':String(value))+'"></div>';}
   function expDuplicateExpense(amount,date,category,exclude){return expActiveTx().some(t=>t.id!==exclude&&t.transactionType==='expense'&&t.amountMinor===amount&&t.transactionDate===date&&t.categoryId===category);}
+  const EXP_PROTECTION_KEY='h2do-finance-protection-v1';
+  function expProtectionPrefs(){try{return JSON.parse(localStorage.getItem(EXP_PROTECTION_KEY))||{};}catch(e){return {};}}
+  function expSaveProtection(patch){try{localStorage.setItem(EXP_PROTECTION_KEY,JSON.stringify({...expProtectionPrefs(),...patch}));expProtectionReminder();return true;}catch(e){const err=document.getElementById('fpError');if(err)err.textContent='تعذّر حفظ هذا الخيار على الجهاز. لم تتغير بياناتك المالية.';return false;}}
+  function expProtectionReminder(){const p=expProtectionPrefs(),due=p.reminder&&(!p.confirmedBackupAt||Date.now()-p.confirmedBackupAt>=7*86400000),b=document.getElementById('expProtectionBtn');if(b)b.textContent='حماية البيانات'+(due?' · حان تذكير النسخة':'');}
+  function expOpenProtection(){
+    const p=expProtectionPrefs(),x=expFinancePeriods(todayStr());
+    const paid=expNetInRange(x.cycle,t=>expClassify(t)==='fixed');
+    const savingBalance=(expState.savingsGoals||[]).reduce((sum,g)=>sum+expSavingBalance(g.id,todayStr()),0);
+    const reviewedSnapshot=expFinanceSnapshot(),owner=user?.uid||'guest';
+    expOpenForm('<div id="financeProtection"><div class="exp-form-head"><h3>'+expIcon('shield')+' حماية البيانات</h3><button data-close>✕</button></div>'+
+      '<p>الحفظ المحلي والنسخ المحلية يبقيان داخل هذا المتصفح وعلى هذا الجهاز. تنزيل ملف مستقل يحمي نسختك إذا حُذفت بيانات المتصفح.</p>'+
+      '<section class="exp-card"><h3>نسخة خارج المتصفح</h3><p>نزّل نسخة JSON من المفكرة كاملة، واحفظها في مكان خاص يمكنك الوصول إليه. طلب التنزيل لا يؤكد حفظ الملف؛ افتحه من التنزيلات وتحقق من وجوده.</p><button id="fpDownload" class="exp-save">تنزيل نسخة JSON</button><button id="fpConfirmBackup" class="exp-add-line"'+(!p.downloadRequestedAt?' disabled':'')+'>تأكدت من حفظ الملف خارج المتصفح</button><p id="fpBackupState" class="exp-card-hint">'+(p.confirmedBackupAt?'آخر تأكيد يدوي لحفظ الملف: '+expEsc(new Date(p.confirmedBackupAt).toLocaleString('ar-SA')):'لم تؤكد حفظ نسخة خارج المتصفح بعد.')+'</p><label class="exp-check"><input type="checkbox" id="fpBackupReminder"'+(p.reminder?' checked':'')+'>تذكير أسبوعي عند فتح المالية على هذا الجهاز</label><button id="fpManage" class="exp-add-line">النسخ المحلية والاستعادة وفحص البيانات</button></section>'+
+      '<details class="exp-card"><summary>تجربة حسابك بين الجوال والكمبيوتر</summary><p>هذه خطوات تحقق يدوي، وليست شهادة بأن جهازَيك اختُبرا.</p><ol><li>افتح المفكرة على الجهازين بالحساب نفسه، وانتظر تأكيد السحابة.</li><li>دوّن المتبقي الحالي، ثم سجّل مصروفًا تجريبيًا بريال واحد باسم «اختبار جهازين».</li><li>حدّث الجهاز الآخر وتأكد من ظهور عملية واحدة فقط. عدّلها إلى ريالين، ثم تحقق من ظهور التعديل على الجهاز الأول.</li><li>احذف العملية ثم اضغط «تراجع» عن الحذف. تحقق من عودة العملية ومبلغها مرة واحدة على الجهازين.</li><li>افصل الاتصال، وسجّل عملية تجريبية أخرى؛ يجب أن تظهر «محفوظ على الجهاز» دون تأكيد سحابي. أعد الاتصال وحدّث، وتحقق من وصولها مرة واحدة.</li><li>احذف عمليتي الاختبار، وزامن الجهازين، وتأكد من عودة المبالغ إلى وضعها السابق.</li></ol><p>لا تختبر الحذف أو الاستعادة على سجلاتك الحقيقية.</p></details>'+
+      '<details class="exp-card"><summary>مطابقة بيانات البداية مع سجلاتك</summary><p>الدورة: '+expArDate(x.cycle.start)+' — '+expArDate(x.cycle.end)+'</p><div class="exp-foot-row"><span>الدخل المستلم المسجل للدورة</span><b>'+expMoney(x.incomeReceived)+'</b></div><div class="exp-foot-row"><span>صافي دفعات الالتزامات الثابتة في الدورة</span><b>'+expMoney(paid)+'</b></div><div class="exp-foot-row"><span>صافي حركات الادخار في الدورة</span><b>'+expMoney(x.savingsTransferred)+'</b></div><div class="exp-foot-row"><span>رصيد أهداف الادخار المسجل حتى اليوم</span><b>'+expMoney(savingBalance)+'</b></div><p>قارن العمليات والتواريخ بالمستندات الأصلية، وافحص الناقص والمكرر. الادخار يشمل الرصيد الابتدائي المسجل؛ لا تسجل التحويل نفسه مرة ثانية. «المتاح للدورة» تقدير من السجل وليس رصيد البنك.</p><button data-fp-review="income" class="exp-add-line">مراجعة سجل الدخل</button><button data-fp-review="payments" class="exp-add-line">مراجعة المصروفات ودفعات الالتزامات</button><button data-fp-review="saving" class="exp-add-line">مراجعة حركات الادخار</button><label class="exp-check"><input type="checkbox" id="fpReviewed">راجعت الأرقام والعمليات المعروضة مقابل سجلاتي</label><p id="fpReviewState" class="exp-card-hint">'+(p.reviewedAt?'آخر إقرار يدوي: '+expEsc(new Date(p.reviewedAt).toLocaleString('ar-SA'))+'؛ أعد المراجعة عند تغير السجلات.':'لم تسجل إقرارًا بالمراجعة بعد. التطبيق لا يطابق حسابك البنكي تلقائيًا.')+'</p></details><p id="fpError" class="exp-err" role="alert"></p></div>');
+    const q=id=>document.getElementById(id),sameOwner=()=>{if(owner===(user?.uid||'guest'))return true;q('fpError').textContent='تغير الحساب؛ أعد فتح حماية البيانات.';return false;};
+    q('fpDownload').onclick=()=>{if(!sameOwner())return;try{dataExportJson();expSaveProtection({downloadRequestedAt:Date.now()});q('fpConfirmBackup').disabled=false;q('fpBackupState').textContent='بدأ طلب التنزيل. تحقق من حفظ الملف ثم أكّد ذلك بنفسك.';}catch(e){q('fpError').textContent='تعذر بدء التنزيل. أعد المحاولة؛ لم نؤكد وجود نسخة خارجية.';}};
+    q('fpConfirmBackup').onclick=()=>{if(sameOwner()&&expSaveProtection({confirmedBackupAt:Date.now()}))q('fpBackupState').textContent='سُجل تأكيدك اليدوي بحفظ الملف خارج المتصفح.';};
+    q('fpBackupReminder').onchange=e=>{if(!sameOwner()||!expSaveProtection({reminder:e.target.checked}))e.target.checked=!e.target.checked;};
+    q('fpReviewed').onchange=e=>{if(!sameOwner()){e.target.checked=false;return;}if(reviewedSnapshot!==expFinanceSnapshot()){e.target.checked=false;q('fpError').textContent='تغيرت البيانات أثناء المراجعة؛ أعد فتح الشاشة لمراجعة الأرقام الحالية.';return;}if(!expSaveProtection({reviewedAt:e.target.checked?Date.now():null})){e.target.checked=false;return;}q('fpReviewState').textContent=e.target.checked?'سُجل إقرارك بالمراجعة، وليس تحققًا آليًا من البنك. أعدها عند تغير السجلات.':'لم تؤكد المراجعة.';};
+    q('fpManage').onclick=()=>{expCloseForm();dataOpen();};
+    expFormBox.querySelectorAll('[data-fp-review]').forEach(b=>b.onclick=()=>{const kind=b.dataset.fpReview;expCloseForm();if(kind==='payments')expSetView('ledger');else expOpenFinanceLedger(kind,todayStr());});
+  }
   function expOpenQuickExpense(){
     const owner=user?.uid||'guest';
     const cats=expVarCategoriesAll(),templates=expFinanceRows('expense-template');
@@ -16126,6 +16172,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const familyMode=['family','familyManage','shopping'].includes(v);
     document.getElementById('expFinanceNav').hidden=familyMode;document.getElementById('expFinanceContext').hidden=familyMode;
     document.getElementById('expFinanceMore').open=false;
+    expProtectionReminder();
     document.getElementById('expViewLedger').hidden=v!=='ledger';document.getElementById('expViewPlan').hidden=v!=='plan';
     expOverlay.querySelectorAll('#expFinanceNav [data-view]').forEach(b=>{b.classList.toggle('active',b.dataset.view===v);if(b.dataset.view===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     expCurView=v;if(v==="shopping")familyTab="shopping";else if(v==="family")familyTab="summary";expOverlay.classList.toggle("family-mode",["family","familyManage","shopping"].includes(v));
@@ -16159,6 +16206,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.querySelectorAll('#expFinanceNav button').forEach(b=>{const span=b.querySelector('span');if(span)span.innerHTML=expIcon({dash:'home',ledger:'ledger',plan:'target'}[b.dataset.view]);});
     document.querySelector('#expFinanceMore>summary').innerHTML=expIcon('more')+'<span>المزيد</span>';
     document.getElementById("expAddBtn").onclick=()=> expOpenQuickExpense();
+    document.getElementById("expProtectionBtn").onclick=expOpenProtection;
     expOverlay.querySelectorAll("[data-view]").forEach(b=> b.onclick=()=> expSetView(b.dataset.view));
     expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(b=> b.onclick=()=>{ expRepMode=b.dataset.rep; expRepDate=todayStr(); expOverlay.querySelectorAll(".exp-tab[data-rep]").forEach(x=>x.classList.toggle("active", x===b)); expRenderReport(); });
     const search=document.getElementById("expSearch"); search.oninput=()=>{ expSearchTerm=search.value; expApplySearch(); };
