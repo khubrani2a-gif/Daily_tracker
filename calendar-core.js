@@ -51,7 +51,7 @@
     return learningSource(record.kind,item,record.date,record.sourceRecurrence).cancelled&&!termException;
   }
   function learningTask(item,record){
-    const source=learningSource(record.kind,item,record.date,record.sourceRecurrence),value={...source},base=record.sourceBase;
+    const source=learningSource(record.kind,item,record.date,record.sourceRecurrence);source.cancelled=learningSourceCancelled(item,record);const value={...source},base=record.sourceBase;
     // A later source edit deliberately replaces the acknowledged occurrence override
     // for that field group. Unchanged source fields retain individual Google edits.
     if(base&&record.value)for(const group of [['dueDate','dueTime','endTime','allDay'],['text'],['notes'],['location'],['link'],['reminders'],['cancelled']]){
@@ -65,7 +65,7 @@
   function learningNormalizeRecords(records){
     // Corrupt optional sync metadata must never make the entire learning document unreadable.
     const safeSnapshot=value=>{if(!value||typeof value!=='object')return null;const clean={};for(const key of fields)if(!['allDay','cancelled','reminders'].includes(key))clean[key]=typeof value[key]==='string'?value[key]:'';clean.allDay=!!value.allDay;clean.cancelled=!!value.cancelled;clean.reminders=Array.isArray(value.reminders)?value.reminders.filter(Number.isInteger):[];return snapshot(clean);};
-    return (Array.isArray(records)?records:[]).filter(r=>r&&['schedule','prep','course','read'].includes(r.kind)&&typeof r.sourceId==='string'&&typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&r.id==='learning|'+r.kind+'|'+r.sourceId+'|'+(r.kind==='schedule'?r.date:'target')).map(r=>({id:r.id,kind:r.kind,sourceId:r.sourceId,date:r.date,sourceRecurrence:r.sourceRecurrence==='once'?'once':'weekly',keepOutsideTerm:!!r.keepOutsideTerm,outcome:['attended','delivered','absent','cancelled'].includes(r.outcome)?r.outcome:'',sourceBase:safeSnapshot(r.sourceBase),value:safeSnapshot(r.value),binding:r.binding?.ownerId===r.id&&typeof r.binding.calendarId==='string'&&typeof r.binding.eventId==='string'?{ownerId:r.id,calendarId:r.binding.calendarId,eventId:r.binding.eventId,base:safeSnapshot(r.binding.base),etag:String(r.binding.etag||''),webLink:String(r.binding.webLink||''),syncedAt:+r.binding.syncedAt||0}:null,updatedAt:+r.updatedAt||0}));
+    return (Array.isArray(records)?records:[]).filter(r=>r&&['schedule','prep','course','read'].includes(r.kind)&&typeof r.sourceId==='string'&&typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&r.id==='learning|'+r.kind+'|'+r.sourceId+'|'+(r.kind==='schedule'?r.date:'target')).map(r=>({id:r.id,kind:r.kind,sourceId:r.sourceId,date:r.date,sourceRecurrence:r.sourceRecurrence==='once'?'once':'weekly',keepOutsideTerm:!!r.keepOutsideTerm,linkGeneration:typeof r.linkGeneration==='string'?r.linkGeneration:'',outcome:['attended','delivered','absent','cancelled'].includes(r.outcome)?r.outcome:'',sourceBase:safeSnapshot(r.sourceBase),value:safeSnapshot(r.value),binding:r.binding?.ownerId===r.id&&typeof r.binding.calendarId==='string'&&typeof r.binding.eventId==='string'?{ownerId:r.id,calendarId:r.binding.calendarId,eventId:r.binding.eventId,base:safeSnapshot(r.binding.base),etag:String(r.binding.etag||''),webLink:String(r.binding.webLink||''),syncedAt:+r.binding.syncedAt||0}:null,updatedAt:+r.updatedAt||0}));
   }
   return {fields,snapshot,merge,toEvent,fromEvent,equal,learningEffective,learningOccurs,learningConflictAffects,learningSource,learningSourceCancelled,learningTask,learningNormalizeRecords};
 });
