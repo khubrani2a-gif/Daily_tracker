@@ -2546,6 +2546,16 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   .expense-custom-icon{display:inline-block;max-width:2em;overflow:hidden;vertical-align:middle;white-space:nowrap}
   .expense-quick-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:.7rem 0}.expense-quick-types button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;min-height:78px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:13px;font:inherit;font-size:.85rem;padding:.4rem;overflow-wrap:anywhere}.expense-quick-types button[hidden]{display:none}.expense-quick-types .finance-icon{color:var(--accent)}#fqSubPanel{border:1px solid var(--line);border-radius:14px;padding:.7rem;margin:.5rem 0}#fqSubBack{min-height:44px;width:100%;font:inherit;color:var(--accent);background:transparent;border:1px solid var(--line);border-radius:12px}
+
+  #fqSubChoose{border:0;background:transparent;padding:.4rem 0;min-height:44px;justify-content:space-between;gap:.4rem;font-size:.9rem;white-space:normal;text-align:start;box-shadow:none}
+  #fqSubChoose small{color:var(--muted);font-weight:400}#fqSubChoose b{font-size:.75rem;color:var(--accent);flex-shrink:0}
+  #fqSubPanel{border:0;padding:0;margin:0 0 .7rem}#fqSubPanel[hidden],#fqSubBack[hidden]{display:none}
+  .expense-quick-types{margin:.25rem 0;gap:.5rem}.expense-quick-types button{min-height:84px;border-radius:16px;padding:.55rem .25rem;transition:border-color .15s}
+  .expense-type-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
+  .expense-type-icon .finance-icon{width:25px;height:25px;color:inherit}.expense-quick-types button:nth-child(3n+2) .expense-type-icon{color:#b48a32;background:color-mix(in srgb,#b48a32 14%,transparent)}
+  .expense-quick-types button:nth-child(3n) .expense-type-icon{color:#638eb5;background:color-mix(in srgb,#638eb5 14%,transparent)}
+  .expense-quick-types button[aria-pressed="true"]{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 13%,var(--paper));font-weight:700}
+  .expense-quick-types .expense-type-clear{grid-column:1/-1;min-height:36px;border:0;background:transparent;color:var(--muted);font-size:.75rem}
 </style>
 </head>
 <body>
@@ -11755,7 +11765,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=178;
+  const DATA_VERSION=1, APP_RELEASE=179;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -14036,20 +14046,30 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function expOpenQuickExpense(){
     const owner=user?.uid||'guest';
     const cats=expVarCategoriesAll(),templates=expFinanceRows('expense-template');
-    const recent=[...new Set(expActiveTx().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(t=>t.categoryId))].filter(id=>cats.some(c=>c.id===id)).slice(0,4);
-    expOpenForm('<div class="exp-form-head"><h3>إضافة مصروف</h3><button data-close>✕</button></div>'+expFinanceField('المبلغ','fqAmount','text','')+'<div class="exp-field"><label for="fqCat">الفئة</label><select id="fqCat">'+cats.map(c=>'<option value="'+expEsc(c.id)+'">'+expEsc(c.name)+'</option>').join('')+'</select></div><div class="exp-chips">'+recent.map(id=>'<button data-recent-cat="'+expEsc(id)+'">'+expEsc(expCatById(id).name)+'</button>').join('')+'</div>'+expFinanceField('التاريخ','fqDate','date',todayStr())+'<details id="fqDetails"><summary>تفاصيل إضافية</summary><div class="exp-field"><label for="fqName">وصف اختياري</label><input id="fqName"></div><label><input type="checkbox" id="fqTemplate"> حفظ كقالب</label><div class="exp-chips">'+templates.map(t=>'<button data-use-template="'+expEsc(t.id)+'">'+expEsc(t.name)+'</button>').join('')+'</div><button type="button" id="fqAdvanced" class="exp-add-line">تفاصيل المصروف الكاملة</button><button id="fqSplit" class="exp-add-line">تقسيم فاتورة بين فئات</button></details><div id="fqErr" class="exp-err" role="alert"></div><label id="fqDuplicate" hidden><input type="checkbox" id="fqConfirm"> هذا مصروف آخر مستقل</label><button id="fqSave" class="exp-save">حفظ المصروف</button>');
+    expOpenForm('<div class="exp-form-head"><h3>إضافة مصروف</h3><button data-close>✕</button></div>'+expFinanceField('المبلغ','fqAmount','text','')+'<div class="exp-field"><label for="fqCat">الفئة</label><select id="fqCat">'+cats.map(c=>'<option value="'+expEsc(c.id)+'">'+expEsc(c.name)+'</option>').join('')+'</select></div>'+expFinanceField('التاريخ','fqDate','date',todayStr())+'<details id="fqDetails"><summary>تفاصيل إضافية</summary><div class="exp-field"><label for="fqName">وصف اختياري</label><input id="fqName"></div><label><input type="checkbox" id="fqTemplate"> حفظ كقالب</label><div class="exp-chips">'+templates.map(t=>'<button data-use-template="'+expEsc(t.id)+'">'+expEsc(t.name)+'</button>').join('')+'</div><button type="button" id="fqAdvanced" class="exp-add-line">تفاصيل المصروف الكاملة</button><button id="fqSplit" class="exp-add-line">تقسيم فاتورة بين فئات</button></details><div id="fqErr" class="exp-err" role="alert"></div><label id="fqDuplicate" hidden><input type="checkbox" id="fqConfirm"> هذا مصروف آخر مستقل</label><button id="fqSave" class="exp-save">حفظ المصروف</button>');
     const q=id=>document.getElementById(id);
     let quickSubId='';
-    q('fqCat').insertAdjacentHTML('afterend','<p id="fqCategoryHint" class="exp-card-hint"></p><button type="button" id="fqSubChoose" class="expense-selector" aria-expanded="false">نوع المصروف — اختياري</button><div id="fqSubPanel" hidden><label for="fqSubSearch">ابحث عن النوع</label><input id="fqSubSearch" type="search"><div id="fqSubRows" class="expense-quick-types"></div><button type="button" id="fqSubBack">العودة للمصروف</button></div>');
+    q('fqCat').insertAdjacentHTML('afterend','<p id="fqCategoryHint" class="exp-card-hint"></p><button type="button" id="fqSubChoose" class="expense-selector" aria-expanded="false">نوع المصروف — اختياري</button><div id="fqSubPanel"><div id="fqSubSearchWrap" hidden><label for="fqSubSearch">ابحث عن النوع</label><input id="fqSubSearch" type="search"></div><div id="fqSubRows" class="expense-quick-types"></div><button type="button" id="fqSubBack">العودة للمصروف</button></div>');
     q('fqDate').closest('.exp-field').insertAdjacentHTML('afterend','<div class="exp-field"><label for="fqPay">طريقة الدفع</label><select id="fqPay">'+expOptions(EXP_PAYMENTS,expState.settings.defaultPaymentMethod||'مدى',EXP_OPTION_META.payment)+'</select></div>');
-    const closeTypes=()=>{q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');q('fqSubChoose').focus();};
-    const categoryHint=()=>{const c=expCatById(q('fqCat').value),sub=expSubcategoryById(c,quickSubId);if(!sub)quickSubId='';q('fqCategoryHint').innerHTML=expCategoryIcon(c)+' '+expEsc(expCategoryPresentation(c).hint);q('fqSubChoose').innerHTML=expCategoryIcon(c,sub?.name)+'<span>'+expEsc(sub?.name||'نوع المصروف — اختياري')+'</span>';};
-    q('fqCat').addEventListener('change',()=>{quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});categoryHint();
-    q('fqSubChoose').onclick=()=>{const c=expCatById(q('fqCat').value);q('fqSubRows').innerHTML=(c?.subcategories||[]).filter(s=>s.isActive!==false&&!s.archivedAt&&s.name!=='أخرى').map(s=>'<button type="button" data-quick-sub="'+expEsc(s.id)+'">'+expCategoryIcon(c,s.name)+'<span>'+expEsc(s.name)+'</span></button>').join('')+'<button type="button" data-quick-sub="">بدون تحديد</button>';q('fqSubRows').querySelectorAll('button').forEach(b=>b.onclick=()=>{quickSubId=b.dataset.quickSub;categoryHint();closeTypes();});q('fqSubPanel').hidden=false;q('fqSubChoose').setAttribute('aria-expanded','true');q('fqSubSearch').value='';q('fqSubSearch').focus();};
+    let allTypes=false;
+    const renderTypes=()=>{
+      const c=expCatById(q('fqCat').value),sub=expSubcategoryById(c,quickSubId);
+      if(!sub)quickSubId='';
+      q('fqCategoryHint').textContent=expCategoryPresentation(c).hint;
+      q('fqSubChoose').innerHTML='<span>أنواع '+expEsc(c?.name||'المصروف')+' <small>· اختياري</small></span><b>'+ (allTypes?'عرض مختصر':'كل الأنواع')+'</b>';
+      q('fqSubChoose').setAttribute('aria-expanded',String(allTypes));q('fqSubChoose').setAttribute('aria-controls','fqSubPanel');
+      q('fqSubSearchWrap').hidden=!allTypes;q('fqSubBack').hidden=!allTypes;q('fqSubSearch').value='';
+      const subs=(c?.subcategories||[]).filter(s=>s.isActive!==false&&!s.archivedAt&&s.name!=='أخرى');
+      q('fqSubRows').innerHTML=subs.map((s,i)=>'<button type="button" data-quick-sub="'+expEsc(s.id)+'" aria-pressed="'+String(s.id===quickSubId)+'"'+(!allTypes&&i>=6&&s.id!==quickSubId?' hidden':'')+'><span class="expense-type-icon">'+expCategoryIcon(c,s.name)+'</span><span>'+expEsc(s.name)+'</span></button>').join('')+(quickSubId||allTypes?'<button type="button" data-quick-sub="" class="expense-type-clear">بدون تحديد</button>':'');
+      q('fqSubRows').querySelectorAll('button').forEach(b=>b.onclick=()=>{quickSubId=b.dataset.quickSub;allTypes=false;renderTypes();const selected=[...q('fqSubRows').querySelectorAll('button')].find(n=>n.dataset.quickSub===quickSubId);(selected||q('fqSubChoose')).focus();});
+    };
+    const closeTypes=()=>{allTypes=false;renderTypes();q('fqSubChoose').focus();};
+    q('fqCat').addEventListener('change',()=>{quickSubId='';allTypes=false;renderTypes();});renderTypes();
+    q('fqSubChoose').onclick=()=>{allTypes=!allTypes;renderTypes();if(allTypes)q('fqSubSearch').focus();};
     q('fqSubSearch').oninput=()=>q('fqSubRows').querySelectorAll('button').forEach(b=>b.hidden=!expNormCategoryText(b.textContent).includes(expNormCategoryText(q('fqSubSearch').value)));
-    q('fqSubBack').onclick=closeTypes;q('fqSubPanel').onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeTypes();}};
-    expFormBox.querySelectorAll('[data-recent-cat]').forEach(b=>b.onclick=()=>{q('fqCat').value=b.dataset.recentCat;quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});
-    expFormBox.querySelectorAll('[data-use-template]').forEach(b=>b.onclick=()=>{const t=templates.find(t=>t.id===b.dataset.useTemplate);if(!cats.some(c=>c.id===t.categoryId)){q('fqErr').textContent='فئة القالب مؤرشفة؛ اختر فئة نشطة.';return;}q('fqCat').value=t.categoryId;q('fqAmount').value=t.amountMinor/100;q('fqName').value=t.name;quickSubId='';q('fqSubPanel').hidden=true;q('fqSubChoose').setAttribute('aria-expanded','false');categoryHint();});
+    q('fqSubBack').onclick=closeTypes;q('fqSubPanel').onkeydown=e=>{if(e.key==='Escape'&&allTypes){e.preventDefault();e.stopPropagation();closeTypes();}};
+    expFormBox.querySelectorAll('[data-use-template]').forEach(b=>b.onclick=()=>{const t=templates.find(t=>t.id===b.dataset.useTemplate);if(!cats.some(c=>c.id===t.categoryId)){q('fqErr').textContent='فئة القالب مؤرشفة؛ اختر فئة نشطة.';return;}q('fqCat').value=t.categoryId;q('fqAmount').value=t.amountMinor/100;q('fqName').value=t.name;quickSubId='';allTypes=false;renderTypes();});
+    const timing=document.createElement('div');timing.className='exp-grid2';q('fqDate').closest('.exp-field').before(timing);timing.append(q('fqDate').closest('.exp-field'),q('fqPay').closest('.exp-field'));
     q('fqAdvanced').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,category:q('fqCat').value,name:q('fqName').value,sub:quickSubId,pay:q('fqPay').value};expOpenExpenseForm(null,'');document.getElementById('efAmount').value=draft.amount;document.getElementById('efDate').value=draft.date;const cat=document.getElementById('efCat');cat.value=draft.category;cat.dispatchEvent(new Event('change'));document.getElementById('efDetails').value=draft.name;document.getElementById('efPay').value=draft.pay;if(draft.sub){const chip=[...expFormBox.querySelectorAll('[data-subchip]')].find(b=>b.dataset.subchip===draft.sub);if(chip)chip.click();}};
     q('fqSplit').onclick=()=>{const draft={amount:q('fqAmount').value,date:q('fqDate').value,name:q('fqName').value};expOpenSplitExpense();document.getElementById('fsTotal').value=draft.amount;document.getElementById('fsDate').value=draft.date;document.getElementById('fsName').value=draft.name;};
     q('fqSave').onclick=()=>{const amount=expParseAmount(q('fqAmount').value),date=q('fqDate').value,category=q('fqCat').value,name=q('fqName').value.trim();
@@ -14392,6 +14412,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function expIcon(name){
     const paths={
+      drop:'<path d="M12 2S4 11 4 15a8 8 0 0 0 16 0c0-4-8-13-8-13Z"/><path d="M8 15c0 3 2 4 4 4"/>',
+      wheel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v5m0 8v5M3 12h5m8 0h5m-6.8-6.8 3.6 3.6m-9.6 6 3.6-3.6"/>',
+      battery:'<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M6 3h3v3m6-3h3v3M6 13h4m-2-2v4m6-2h4"/>',
+      oil:'<path d="M5 7h10v13H3V9l2-2ZM6 3h6v4m3 3 6-4v7l-6 3M6 12h5"/>',
+      delivery:'<path d="M2 5h12v13H2Zm12 5h4l4 5v3h-8M14 15h8"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>',
+      burger:'<path d="M3 10c0-10 18-10 18 0ZM2 14h20M3 18h18v3H3ZM8 6h.01M13 5h.01M17 7h.01"/>',
+      sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/>',
+      moon:'<path d="M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12Z"/>',
       basket:"<path d=\"m4 9 2 11h12l2-11ZM2 9h20M8 3 5 9m11-6 3 6M9 13v4m6-4v4\"/>",
       house:"<path d=\"m3 10 9-7 9 7M5 9v12h14V9M10 21v-7h4v7\"/>",
       utensils:"<path d=\"M4 3v6c0 3 6 3 6 0V3M7 3v18M18 3v18m0-18c-5 4-5 9 0 9\"/>",
@@ -15014,7 +15042,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function expCategoryPresentation(cat){return EXP_CATEGORY_PRESENTATION[cat&&cat.seedKey]||EXP_CATEGORY_PRESENTATION[cat&&cat.name]||{icon:'ledger',example:'اسم المتجر أو وصف مختصر',hint:'اختر التصنيف المناسب، وأضف التفاصيل التي تحتاجها فقط.'};}
   function expCategoryIcon(cat,sub){
     if(!sub&&cat?.icon&&!EXP_CATEGORY_PRESENTATION[cat.seedKey]&&!EXP_CATEGORY_PRESENTATION[cat.name])return '<span class="expense-custom-icon" aria-hidden="true">'+expEsc(cat.icon)+'</span>';
-    const rules=[[/خضار|فواكه/,'leaf'],[/ألبان/,'bottle'],[/مياه|مشروبات|عصائر/,'bottle'],[/لحوم|دجاج|أسماك/,'utensils'],[/مخبوزات/,'bread'],[/وقود/,'fuel'],[/قهوة|شاي/,'cup'],[/أدوية|علاج|تحاليل/,'medical'],[/كتب|دورات|تعليم/,'book'],[/هدية|ورد/,'gift'],[/صيانة|إصلاح|سباكة|فني/,'tool'],[/أخرى/,'more']];
+    const rules=[[/غسيل/,'drop'],[/زيت/,'oil'],[/إطارات/,'wheel'],[/بطارية/,'battery'],[/توصيل/,'delivery'],[/وجبة سريعة/,'burger'],[/إفطار/,'sun'],[/عشاء/,'moon'],[/وجبة عمل/,'book'],[/خضار|فواكه/,'leaf'],[/ألبان/,'bottle'],[/مياه|مشروبات|عصائر/,'bottle'],[/لحوم|دجاج|أسماك/,'utensils'],[/مخبوزات/,'bread'],[/وقود/,'fuel'],[/قهوة|شاي/,'cup'],[/أدوية|علاج|تحاليل/,'medical'],[/كتب|دورات|تعليم/,'book'],[/هدية|ورد/,'gift'],[/صيانة|إصلاح|سباكة|فني/,'tool'],[/أخرى/,'more']];
     const found=rules.find(([re])=>re.test(sub||''));return expIcon(found?found[1]:expCategoryPresentation(cat).icon);
   }
   function expRefineExpenseForm(originalTx){
@@ -15196,7 +15224,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       expCloseForm(); expRefresh();
     };
     expRefineExpenseForm(tx);
-    setTimeout(()=>{ const a=g("#efAmount"); if(a) a.focus(); }, 50);
+    // expOpenForm already focuses the amount; do not steal focus after the user starts editing.
   }
 
   function expOpenPaymentForm(instId){
