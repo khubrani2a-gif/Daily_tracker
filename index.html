@@ -15224,7 +15224,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       expCloseForm(); expRefresh();
     };
     expRefineExpenseForm(tx);
-    setTimeout(()=>{ const a=g("#efAmount"); if(a) a.focus(); }, 50);
+    // expOpenForm already focuses the amount; do not steal focus after the user starts editing.
   }
 
   function expOpenPaymentForm(instId){
