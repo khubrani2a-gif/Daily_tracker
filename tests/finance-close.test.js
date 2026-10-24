@@ -42,3 +42,6 @@ test('status metadata storage failure cannot keep a stale cloud-confirmed label 
 test('cache-only read does not confirm a pending write or advance cloud timestamp',()=>run(async({p,control})=>{
  await login(p);const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('h2do-expenses-syncmeta')).lastSyncAt);control.rejectWrite='expenses';await p.evaluate(async()=>{audit.expState().settings.salaryAmountMinor=555;audit.expSave(audit.expState());await audit.expPushRemote(audit.expState());});control.rejectServerRead=true;await p.evaluate(()=>audit.expPullRemote({manual:true}));assert.doesNotMatch(await p.locator('#expSyncText').innerText(),/تم التأكيد من السحابة/);assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('h2do-expenses-syncmeta')).lastSyncAt),before);
 }));
+test('expanded More menu stays clickable above report tabs',()=>run(async({p})=>{
+ await p.locator('#expFinanceMore summary').click();await p.locator('#expFinanceMore [data-view="reports"]').click();await p.locator('[data-rep="yearly"]').click();await p.locator('#expFinanceMore summary').click();await p.locator('#expFinanceMore [data-view="trips"]').click();assert.equal(await p.locator('#expViewTrips').isVisible(),true);
+}));

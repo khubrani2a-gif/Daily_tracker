@@ -2475,6 +2475,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   #expOverlay:not(.family-mode)>.adhkar-sheet{max-width:1050px;padding-bottom:0}
   .finance-context{display:flex;justify-content:space-between;align-items:start;gap:.6rem;padding:.4rem 1rem}
   .finance-context[hidden],.finance-nav[hidden]{display:none}
+  .finance-context:has(details[open]){position:relative;z-index:20}
   .finance-context button,.finance-context summary,.finance-section-head button,#expPlanActions button,.finance-due button{font:inherit;min-height:44px;border:1px solid var(--line);border-radius:12px;padding:.5rem .8rem;color:var(--accent);background:var(--paper);cursor:pointer}
   .finance-context details{position:relative}.finance-context details>div{position:absolute;z-index:5;left:0;min-width:190px;padding:.5rem;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px #0002;display:grid;gap:.4rem}
   #expFinanceNav{position:sticky;bottom:0;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--paper);border-top:1px solid var(--line);padding:.45rem .8rem max(.45rem,env(safe-area-inset-bottom));gap:.5rem}
