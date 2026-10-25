@@ -1706,7 +1706,7 @@
   .q-focus .adhkar-sheet> :not(.adhkar-top):not(.q-reader):not(#surahMarkDone){display:none!important}
   .q-focus .adhkar-top .adhkar-progress,.q-focus .adhkar-top .adhkar-count,.q-focus #quranTarget,.q-focus #surahEdit,.q-focus .ad-close{display:none!important}
   .q-focus .adhkar-head{flex-wrap:nowrap;gap:8px}.q-focus .adhkar-head h2{font-size:1rem;min-width:0}
-  .q-focus .q-reader{padding:0;border:0;margin-top:8px;max-width:850px}
+  .q-focus #qReader,.q-focus #surahReader{padding:0;border:0;margin-top:8px;max-width:850px}
   .q-focus .q-external,.q-focus .q-swipe-hint{display:none}
   .q-focus .q-reader:has(.q-image-error:not([hidden])) .q-external{display:block}
   .q-image-status{font-size:.8rem;text-align:center;color:var(--muted);margin:4px 0}
@@ -4987,6 +4987,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     return q;
   }
   function qSave(q){
+    for(const entry of (q.readingEntries||[])){if(entry.date===todayStr())entry.target=q.target;}
     q.updatedAt = Math.max(Date.now(),(qLoad().updatedAt||0)+1);
     localStorage.setItem(QURAN_KEY, JSON.stringify(q));
     qMarkWerdDoneForToday(qReadToday(q)>=q.target);
@@ -5082,6 +5083,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       ? "تم إنجاز ورد اليوم ✓ ("+arn(readToday)+" صفحة)"
       : arn(readToday)+" / "+arn(q.target)+" صفحات اليوم";
     document.getElementById("qContinueBtn").textContent = "▶ متابعة القراءة من صفحة "+arn(q.page);
+    const undo=document.getElementById("qUndoReading");if(undo)undo.hidden=!qCanUndo(q,(q.readingEntries||[]).filter(x=>!x.undoneAt).at(-1));if(!document.getElementById("qReader").hidden)qReaderControls("q");
   }
   function qRenderReader(){
     const done=document.getElementById("qReaderDone"),q=qLoad();done.hidden=qViewPage!==604||q.page!==604;done.textContent=q.finalPageReadDate===todayStr()?"تراجع عن تسجيل الصفحة الأخيرة":"قرأت الصفحة الأخيرة (٦٠٤)";
@@ -5090,6 +5092,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     qShowPage("q",qViewPage);
     document.getElementById("qPrev").disabled = qViewPage <= 1;
     document.getElementById("qNext").disabled = qViewPage >= QURAN_LAST_PAGE;
+    qReaderControls("q");
   }
   function qOpenReader(){
     const q = qLoad();
@@ -5208,6 +5211,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const batch=Math.min(w.target||1,w.endPage-w.currentPage+1),entry=(w.readingEntries||[]).filter(x=>!x.undoneAt&&x.date===todayStr()).at(-1);
       markBtn.textContent=(readToday&&!finishing)?(entry?'✓ سُجّلت قراءة '+arn(entry.to-entry.from+1)+' صفحات اليوم':'✓ قراءة اليوم مسجّلة'):(batch===1?(w.currentPage===w.endPage?'تسجيل الصفحة الأخيرة (':'تسجيل قراءة الصفحة (')+arn(w.currentPage)+')':'تسجيل قراءة '+arn(batch)+' صفحات ('+arn(w.currentPage)+'–'+arn(w.currentPage+batch-1)+')');
     }
+    if(!document.getElementById('surahReader').hidden)qReaderControls('surah');
   }
   function qsRenderReader(){
     const w = qsFindItem(qsActiveId);
@@ -5218,6 +5222,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     qShowPage("surah",qsViewPage);
     document.getElementById("surahPrev").disabled = qsViewPage <= w.startPage;
     document.getElementById("surahNext").disabled = qsViewPage >= w.endPage;
+    qReaderControls("surah");
   }
   function qsOpenReader(){
     const w = qsFindItem(qsActiveId);
@@ -5239,17 +5244,18 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     qsRenderReader();
   }
   /* التقدم يتحرك فقط عبر زر "تم قراءة صفحة اليوم"، ومرة واحدة يوميًا (lastReadDate) لمنع التقدّم غير المقصود */
-  function qsMarkTodayDone(){
+  function qsMarkTodayDone(endPage){
     const w = qsFindItem(qsActiveId);
     if(!w) return;
     if(!!w.completed) return;
+    const explicit=Number.isInteger(endPage);if(explicit&&(endPage<w.currentPage||endPage>w.endPage))return;
     /* حالة الإتمام النهائي: القارئ على آخر صفحة (endPage) والمقطع غير مكتمل — قد ينشأ هذا بعد
        «إلغاء إكمال» سابق حُفظ فيه التقدّم عند النهاية. نُتمّه دائمًا دون التقيّد بقيد «مرة واحدة
        يوميًا»؛ أمّا القراءة العادية في منتصف المقطع فتبقى محكومة بذلك القيد كما هي. */
     const finishing = w.currentPage >= w.endPage;
-    if(!finishing && w.lastReadDate === todayStr()) return;
+    if(!explicit&&!finishing && w.lastReadDate === todayStr()) return;
     const before={currentPage:w.currentPage,lastReadDate:w.lastReadDate||'',completed:!!w.completed};
-    w.currentPage = Math.min(w.endPage+1,w.currentPage+(w.target||1));
+    w.currentPage = explicit?endPage+1:Math.min(w.endPage+1,w.currentPage+(w.target||1));
     w.lastReadDate = todayStr();
     if(w.currentPage > w.endPage) w.completed = true;
     const entry={id:newId(),date:todayStr(),from:before.currentPage,to:w.currentPage-1,before,after:{currentPage:w.currentPage,lastReadDate:w.lastReadDate,completed:!!w.completed}};
@@ -5259,11 +5265,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     qMarkWerdDoneForToday(true,w.id);
     renderWorship(); renderProgress();
     qsRenderOverlay();
-    if(w.completed){
+    if(w.completed&&!surahOverlay.classList.contains("q-focus")){
       /* أغلق القارئ بعد الإتمام حتى لا يبقى معلّقًا (خاصةً بعد إلغاء إكمال سابق) */
       document.getElementById("surahReader").hidden = true;document.getElementById("surahFocus").hidden=true;
       celebrate();
     }
+    if(!document.getElementById("surahReader").hidden){qsViewPage=Math.min(w.currentPage,w.endPage);qsRenderReader();}
   }
   function openSurah(id){
     qsActiveId = id;
@@ -5287,18 +5294,49 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   window.addEventListener("popstate", ()=>{ if(!surahOverlay.hidden) closeSurahUI(); });
   document.getElementById("surahClose").onclick = closeSurah;
   document.getElementById("surahContinueBtn").onclick = qsOpenReader;
-  document.getElementById("surahMarkDone").onclick = qsMarkTodayDone;
+  document.getElementById("surahMarkDone").onclick = ()=>document.getElementById("surahReader").hidden?qsMarkTodayDone():qReaderRecord("surah");
   document.getElementById("surahPrev").onclick = qsPrev;
   document.getElementById("surahNext").onclick = qsNext;
   document.getElementById('surahUndo').onclick=()=>qcRollbackComplete(qsActiveId);
   document.getElementById("surahEdit").onclick = ()=>{
     const w=qsFindItem(qsActiveId);if(!w)return;const owner=accountStorage.owner,snapshot=JSON.stringify(w);
-    const sheet=plannerAccessibleSheet(taskSheet('هدف القراءة اليومي','<label>عدد الصفحات يوميًا<input id="qsTargetInput" inputmode="numeric"></label><p>الهدف يحدد كمية التسجيل القادم. إذا كان المتبقي أقل، يُسجّل المتبقي فقط.</p><p id="qsTargetError" role="alert"></p><button id="qsTargetSave" class="task-sheet-save">حفظ الهدف</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);
+    const sheet=plannerAccessibleSheet(taskSheet('هدف القراءة اليومي','<label>عدد الصفحات يوميًا<input id="qsTargetInput" inputmode="numeric"></label><p>الهدف يحدد كمية التسجيل السريع من الملخص. داخل القارئ يمكنك تسجيل ما قرأته فعليًا.</p><p id="qsTargetError" role="alert"></p><button id="qsTargetSave" class="task-sheet-save">حفظ الهدف</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);
     get('qsTargetInput').value=w.target||1;get('qsTargetSave').onclick=()=>{const n=qParsePageNumber(get('qsTargetInput').value);if(!n){get('qsTargetError').textContent='أدخل عددًا من ١ إلى ٦٠٤.';return;}const fresh=qsFindItem(w.id);if(accountChanging||owner!==accountStorage.owner||JSON.stringify(fresh)!==snapshot){get('qsTargetError').textContent='تغيّر المقطع؛ أعد فتح الهدف لمراجعة الأحدث.';return;}fresh.target=n;qsSaveItem(fresh);qsRenderOverlay();sheet.close();};
   };
   document.getElementById("qcWerdBtn").onclick = openQuran;
   document.getElementById("qcAddSurah").onclick = ibAddQuranItem;
 
+  function qReaderControls(prefix){
+    const w=prefix==='surah'?qsFindItem(qsActiveId):qLoad();if(!w)return;const from=prefix==='q'?w.page:w.currentPage,end=prefix==='q'?604:w.endPage,view=prefix==='q'?qViewPage:qsViewPage,button=document.getElementById(prefix==='q'?'qRecordOpen':'surahMarkDone');if(!button)return;
+    const done=prefix==='q'?(w.page===604&&w.finalPageReadDate===todayStr()):!!w.completed||from>end;
+    button.hidden=prefix==='q'?view===604&&w.page===604:false;button.disabled=done||view<from;
+    button.textContent=done?'✓ تم تسجيل القراءة':view<from?'صفحة سبق تسجيلها':from===view?'تسجيل قراءة الصفحة '+from.toLocaleString('ar-EG'):'تسجيل الصفحات '+from.toLocaleString('ar-EG')+'–'+view.toLocaleString('ar-EG');
+  }
+  function qReaderRecord(prefix){
+    const w=prefix==='q'?qLoad():qsFindItem(qsActiveId);if(!w)return;const id=prefix==='surah'?w.id:null,from=prefix==='q'?w.page:w.currentPage,max=prefix==='q'?604:w.endPage,view=prefix==='q'?qViewPage:qsViewPage;
+    if(from>max||view<from||(prefix==='surah'&&w.completed)||(prefix==='q'&&from===604&&w.finalPageReadDate===todayStr()))return;
+    const snapshot=JSON.stringify(w),owner=accountStorage.owner,date=todayStr(),sheet=plannerAccessibleSheet(taskSheet('تسجيل القراءة','<p>تسجيل قراءة متصلة من صفحة <b>'+from.toLocaleString('ar-EG')+'</b>. التنقّل وحده لا يعني أنك قرأتها.</p><label>آخر صفحة قرأتها<input id="qRecordEnd" inputmode="numeric" value="'+view+'"></label><p id="qRecordPreview"></p><p id="qRecordError" role="alert"></p><button id="qRecordSave" class="task-sheet-save">تأكيد تسجيل القراءة</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);let committed=false;
+    const preview=()=>{const end=qParsePageNumber(get('qRecordEnd').value);get('qRecordPreview').textContent=end&&end>=from&&end<=max?'سيُسجّل '+(end-from+1).toLocaleString('ar-EG')+' صفحة: '+from.toLocaleString('ar-EG')+'–'+end.toLocaleString('ar-EG'):'';};get('qRecordEnd').oninput=preview;preview();
+    get('qRecordSave').onclick=()=>{if(committed)return;const fresh=prefix==='q'?qLoad():qsFindItem(id);if(accountChanging||owner!==accountStorage.owner||todayStr()!==date||JSON.stringify(fresh)!==snapshot||(id&&id!==qsActiveId)){get('qRecordError').textContent='تغيّر تقدم القراءة أو اليوم؛ أغلق النافذة وافتحها مجددًا.';return;}const end=qParsePageNumber(get('qRecordEnd').value);if(!end||end<from||end>max){get('qRecordError').textContent='أدخل آخر صفحة بين '+from+' و'+max+'.';return;}committed=true;get('qRecordSave').disabled=true;
+      if(prefix==='surah'){qsMarkTodayDone(end);}else{
+        const before={page:fresh.page,startPage:fresh.startPage,readPagesToday:qReadToday(fresh)-(fresh.finalPageReadDate===date?1:0),finalPageReadDate:fresh.finalPageReadDate||'',dayAnchor:fresh.dayAnchor};
+        fresh.readPagesToday=before.readPagesToday+(end-from+1)-(end===604?1:0);fresh.page=Math.min(604,end+1);if(end===604)fresh.finalPageReadDate=date;
+        const entry={id:newId(),date,from,to:end,before,after:{page:fresh.page,readPagesToday:fresh.readPagesToday,finalPageReadDate:fresh.finalPageReadDate||''},target:fresh.target};fresh.readingEntries=Array.isArray(fresh.readingEntries)?fresh.readingEntries:[];fresh.readingEntries.push(entry);qSave(fresh);qViewPage=fresh.page;qRenderOverlay();qRenderReader();
+      }sheet.close();qReaderScroll(prefix);
+    };
+  }
+  function qCanUndo(q,last){return !!last&&q.page===last.after.page&&(q.finalPageReadDate||'')===(last.after.finalPageReadDate||'')&&(last.date!==todayStr()||q.readPagesToday===last.after.readPagesToday);}
+  function qUndoReading(){
+    const q=qLoad(),last=(q.readingEntries||[]).filter(x=>!x.undoneAt).at(-1);if(!last)return;const owner=accountStorage.owner,snapshot=JSON.stringify(q);
+    const sheet=plannerAccessibleSheet(taskSheet('التراجع عن تسجيل القراءة','<p>إلغاء تسجيل الصفحات '+last.from.toLocaleString('ar-EG')+'–'+last.to.toLocaleString('ar-EG')+' والرجوع إلى صفحة '+last.before.page.toLocaleString('ar-EG')+'.</p><p id="qUndoError" role="alert"></p><button class="task-sheet-save" id="qUndoSave">حفظ التراجع</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);
+    get('qUndoSave').onclick=()=>{const fresh=qLoad();if(accountChanging||owner!==accountStorage.owner||JSON.stringify(fresh)!==snapshot||!qCanUndo(fresh,last)){get('qUndoError').textContent='تغيّر تقدم القراءة؛ راجع أحدث موضع قبل التراجع.';return;}
+      fresh.readingEntries.find(x=>x.id===last.id).undoneAt=Date.now();fresh.page=last.before.page;
+      if(last.date===todayStr()){Object.assign(fresh,last.before);}else{fresh.startPage=fresh.page;if(fresh.finalPageReadDate===last.date)fresh.finalPageReadDate=last.before.finalPageReadDate;const day=last.date===currentDate?state:dailyRead(last.date),done=!!day?.worship?.werd&&last.before.readPagesToday+(last.before.finalPageReadDate===last.date?1:0)>=last.target;if(day&&!!day.worship?.werd!==done){day.worship=Object.assign({},day.worship,{werd:done});persistDay(last.date,day);}}
+      qSave(fresh);qViewPage=fresh.page;qRenderOverlay();if(!document.getElementById('qReader').hidden)qRenderReader();sheet.close();
+    };
+  }
+  const qRecordOpen=document.createElement('button');qRecordOpen.id='qRecordOpen';qRecordOpen.className='adhkar-done-btn';qRecordOpen.onclick=()=>qReaderRecord('q');document.getElementById('qReader').appendChild(qRecordOpen);
+  const qUndoButton=document.createElement('button');qUndoButton.id='qUndoReading';qUndoButton.className='q-focus-button';qUndoButton.textContent='التراجع عن آخر تسجيل';qUndoButton.hidden=true;qUndoButton.onclick=qUndoReading;document.getElementById('qContinueBtn').before(qUndoButton);
   function qReaderFocusLabel(prefix){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay'),button=document.getElementById(prefix+'Focus');if(button){const active=over.classList.contains('q-focus');button.textContent=active?'إنهاء التركيز':'تركيز';button.setAttribute('aria-pressed',String(active));}}
   function qReaderFocus(prefix,on){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay');over.classList.toggle('q-focus',on);qReaderFocusLabel(prefix);qReaderScroll(prefix);document.getElementById(prefix+'Focus').focus({preventScroll:true});}
   function qReaderJump(prefix){
@@ -5311,7 +5349,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const focus=document.createElement('button');focus.id=prefix+'Focus';focus.className='q-focus-button';focus.hidden=true;focus.textContent='تركيز';focus.setAttribute('aria-pressed','false');focus.onclick=()=>qReaderFocus(prefix,!over.classList.contains('q-focus'));over.querySelector('.adhkar-head').appendChild(focus);
     document.getElementById(prefix+'PageLabel').onclick=()=>qReaderJump(prefix);
     const status=document.createElement('p');status.id=prefix+'ImageStatus';status.className='q-image-status';status.setAttribute('role','status');reader.querySelector('.q-iframe').before(status);
-    const error=document.getElementById(prefix+'ImageError');error.classList.add('q-image-error');const retry=document.createElement('button');retry.id=prefix+'ImageRetry';retry.textContent='إعادة تحميل الصفحة';retry.hidden=true;retry.onclick=()=>qShowPage(prefix,prefix==='q'?qViewPage:qsViewPage);error.after(retry);
+    const error=document.getElementById(prefix+'ImageError');error.classList.add('q-image-error');const retry=document.createElement('button');retry.id=prefix+'ImageRetry';retry.className='q-focus-button';retry.textContent='إعادة تحميل الصفحة';retry.hidden=true;retry.onclick=()=>qShowPage(prefix,prefix==='q'?qViewPage:qsViewPage);error.after(retry);
   }
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||document.querySelector('.task-sheet-overlay'))return;for(const prefix of ['q','surah']){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay');if(!over.hidden&&over.classList.contains('q-focus')){e.preventDefault();qReaderFocus(prefix,false);break;}}});
   function qWireSwipe(prefix){const img=document.getElementById(prefix+'Iframe');img.draggable=false;let start=null;
@@ -11869,7 +11907,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=186;
+  const DATA_VERSION=1, APP_RELEASE=187;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;

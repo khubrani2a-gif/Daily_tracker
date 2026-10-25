@@ -1,6 +1,6 @@
 # Quran Focus Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Comfortable focus reading with consistent browsing and explicit, undoable recording.
 **Architecture:** Extend the two existing readers in index.html with shared focus, jump and recording sheets. Retain current persistence and custom completion journal; add main-reader range snapshots for undo.
@@ -23,22 +23,22 @@
 ### Task 1: Focus, navigation and loading
 Files: index.html, tests/quran-focus-v187.test.js.
 Interfaces: qReaderFocus(prefix,on), qReaderJump(prefix), qReaderControls(prefix), qShowPage(prefix,page).
-- [ ] Write failing tests: focus hides metadata, exit preserves page, next/swipe never records, jump accepts Arabic digits and bounds, loading hides stale image.
-- [ ] Run the new test file and observe failures.
-- [ ] Add shared focus CSS, focus toggle, tappable page label, browse-only next, guarded image loading/retry, stable sync browsing.
-- [ ] Run focused tests; inspect phone/landscape geometry; commit.
+- [x] Write failing tests: focus hides metadata, exit preserves page, next/swipe never records, jump accepts Arabic digits and bounds, loading hides stale image.
+- [x] Run the new test file and observe failures.
+- [x] Add shared focus CSS, focus toggle, tappable page label, browse-only next, guarded image loading/retry, stable sync browsing.
+- [x] Run focused tests; inspect phone/landscape geometry; commit.
 
 ### Task 2: Explicit recording and undo
 Files: index.html, tests/quran-focus-v187.test.js, tests/quran-usability-v184.test.js.
 Interfaces: qReaderRecord(prefix), qUndoReading(), qsMarkTodayDone(endPage) (explicit end optional; summary compatibility).
-- [ ] Write failing tests for main range count and undo, custom partial/multiple sessions and undo, stale/day rollover and duplicate submissions, final page.
-- [ ] Implement range confirmation sheets with account/item/date snapshots and exact labels. Use explicit end for custom sessions; preserve summary shortcut behavior. Main journal stores before/after counters and position for guarded undo.
-- [ ] Update the old navigation-recording test to assert the new browsing-only contract and explicit recording.
-- [ ] Run all Quran/iman/coordinator tests; commit.
+- [x] Write failing tests for main range count and undo, custom partial/multiple sessions and undo, stale/day rollover and duplicate submissions, final page.
+- [x] Implement range confirmation sheets with account/item/date snapshots and exact labels. Use explicit end for custom sessions; preserve summary shortcut behavior. Main journal stores before/after counters and position for guarded undo.
+- [x] Update the old navigation-recording test to assert the new browsing-only contract and explicit recording.
+- [x] Run all Quran/iman/coordinator tests; commit.
 
 ### Task 3: Review, release and live checks
 Files: tests/quran-focus-v187.test.js, index.html, sw.js.
-- [ ] Add tests for the five Review Focus conditions, and inspect both themes at 320/390/820/landscape widths with the actual mushaf image.
-- [ ] Obtain fresh whole-branch review; fix important findings with red/green evidence.
+- [x] Add tests for the five Review Focus conditions, and inspect both themes at 320/390/820/landscape widths with the actual mushaf image.
+- [x] Obtain fresh whole-branch review; fix important findings with red/green evidence.
 - [ ] Bump release/cache to187, full CI and Firebase tests, merge and deploy using existing workflows.
 - [ ] Verify public file hashes and anonymous UI smoke (focus, jump, explicit recording and undo). Do not claim personal account/device verification.
