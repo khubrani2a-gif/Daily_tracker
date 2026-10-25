@@ -1700,6 +1700,18 @@
   #surahOverlay .adhkar-head{flex-wrap:wrap}#surahEdit,#surahClose{width:auto;height:auto;min-height:44px;padding:8px 12px;font:inherit}
   #surahUndo{min-height:44px;margin-bottom:12px;font:inherit;color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 
+  .q-focus-button{min-height:44px;padding:8px 12px;font:inherit;color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:12px}
+  .q-nav .q-page-picker{font-size:.85rem;padding:6px;white-space:nowrap}
+  .q-focus .adhkar-sheet{max-width:900px;padding:8px 12px calc(175px + env(safe-area-inset-bottom,0px))}
+  .q-focus .adhkar-sheet> :not(.adhkar-top):not(.q-reader):not(#surahMarkDone){display:none!important}
+  .q-focus .adhkar-top .adhkar-progress,.q-focus .adhkar-top .adhkar-count,.q-focus #quranTarget,.q-focus #surahEdit,.q-focus .ad-close{display:none!important}
+  .q-focus .adhkar-head{flex-wrap:nowrap;gap:8px}.q-focus .adhkar-head h2{font-size:1rem;min-width:0}
+  .q-focus .q-reader{padding:0;border:0;margin-top:8px;max-width:850px}
+  .q-focus .q-external,.q-focus .q-swipe-hint{display:none}
+  .q-focus .q-reader:has(.q-image-error:not([hidden])) .q-external{display:block}
+  .q-image-status{font-size:.8rem;text-align:center;color:var(--muted);margin:4px 0}
+  .q-image-status:empty{display:none}.q-iframe[aria-busy="true"]{min-height:200px}
+  #qRecordOpen{position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:min(688px,calc(100% - 24px));z-index:150;margin:0;min-height:44px}
   .q-done-msg{
     background:var(--accent-soft);color:var(--accent);border-radius:14px;
     padding:.9rem;text-align:center;font-weight:700;margin-bottom:.8rem;
@@ -3435,8 +3447,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       <div class="q-reader" id="qReader" hidden>
         <div class="q-nav">
           <button id="qPrev">◀ السابقة</button>
-          <span id="qPageLabel">صفحة ١</span>
-          <button id="qNext">قرأت · التالية ▶</button>
+          <button class="q-page-picker" id="qPageLabel" title="الانتقال لصفحة">صفحة ١</button>
+          <button id="qNext">التالية ▶</button>
         </div>
         <a class="q-external" id="qExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
         <div class="q-iframe" tabindex="0" aria-label="صفحة المصحف"><img id="qIframe" class="q-page-image" alt="صفحة المصحف" referrerpolicy="no-referrer"></div><p id="qImageError" role="status" hidden>تعذّر تحميل الصفحة؛ استخدم رابط القراءة أعلاه.</p>
@@ -3470,7 +3482,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       <div class="q-reader" id="surahReader" hidden>
         <div class="q-nav">
           <button id="surahPrev">◀ السابقة</button>
-          <span id="surahPageLabel">صفحة</span>
+          <button class="q-page-picker" id="surahPageLabel" title="الانتقال لصفحة داخل المقطع">صفحة</button>
           <button id="surahNext">التالية ▶</button>
         </div>
         <a class="q-external" id="surahExternal" target="_blank" rel="noopener noreferrer">↗ فتح في نافذة جديدة</a>
@@ -4045,7 +4057,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         if((remote.updatedAt||0) > (localMeta.updatedAt||0)){
           localStorage.setItem(CUSTOM_WORSHIP_KEY, JSON.stringify(remote.items||[]));
           localStorage.setItem(CUSTOM_WORSHIP_META_KEY, JSON.stringify({updatedAt: remote.updatedAt}));
-          safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress(); });
+          safeRun("wCustomPull:render", ()=>{ renderWorship(); renderProgress();if(!surahOverlay.hidden){qsRenderOverlay();if(!document.getElementById("surahReader").hidden)qsRenderReader();} });
         }else if((localMeta.updatedAt||0) > (remote.updatedAt||0) && !cache){
           reconcile = wCustomPushRemote(wCustom(), localMeta.updatedAt);
         }
@@ -4984,7 +4996,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function qPageUrl(n){
     return "https://quran.ksu.edu.sa/png_big/"+Math.max(1,Math.min(604,Math.trunc(+n)||1))+".png";
   }
-  function qShowPage(prefix,page){const img=document.getElementById(prefix+'Iframe'),error=document.getElementById(prefix+'ImageError');error.hidden=true;img.onload=()=>{error.hidden=true;if(img.dataset.seekView==='1')qReaderScroll(prefix);};img.onerror=()=>{error.hidden=false;delete img.dataset.seekView;};img.alt='صفحة المصحف '+page;img.src=qPageUrl(page);document.getElementById(prefix+'External').href='https://quran.com/page/'+page;}
+  function qShowPage(prefix,page){
+    const img=document.getElementById(prefix+'Iframe'),error=document.getElementById(prefix+'ImageError'),status=document.getElementById(prefix+'ImageStatus'),retry=document.getElementById(prefix+'ImageRetry'),url=qPageUrl(page);
+    if(img.dataset.page===String(page)&&img.dataset.loaded==='1')return;
+    img.dataset.page=page;img.dataset.loaded='0';img.style.visibility='hidden';img.parentElement.setAttribute('aria-busy','true');error.hidden=true;retry.hidden=true;status.textContent='جارٍ تحميل صفحة '+Number(page).toLocaleString('ar-EG')+'…';
+    img.onload=()=>{if(img.dataset.page!==String(page)||!img.complete||!img.naturalHeight)return;img.dataset.loaded='1';img.style.visibility='visible';img.parentElement.setAttribute('aria-busy','false');error.hidden=true;retry.hidden=true;status.textContent='';if(img.dataset.seekView==='1')qReaderScroll(prefix);};
+    img.onerror=()=>{if(img.dataset.page!==String(page))return;img.style.visibility='hidden';img.parentElement.setAttribute('aria-busy','false');error.hidden=false;retry.hidden=false;status.textContent='';delete img.dataset.seekView;};
+    img.alt='صفحة المصحف '+page;img.src=url;document.getElementById(prefix+'External').href='https://quran.com/page/'+page;
+  }
   function qReadToday(q){return (Number.isInteger(q.readPagesToday)&&q.readPagesToday>=0?q.readPagesToday:Math.max(0,q.page-q.startPage))+(q.finalPageReadDate===todayStr()?1:0);}
   function qParsePageNumber(value){const raw=String(value??'').trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x));const n=Number(raw);return /^\d+$/.test(raw)&&Number.isInteger(n)&&n>=1&&n<=604?n:null;}
   function qDocRef(){
@@ -5012,7 +5031,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
           if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; merged.readPagesToday=0; }
           localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
           qMarkWerdDoneForToday(qReadToday(qLoad())>=qLoad().target);
-          if(!document.getElementById("qReader").hidden){qViewPage=qLoad().page;qRenderReader();}
+          if(!document.getElementById("qReader").hidden){qRenderReader();}
           safeRun("qPull:renderWorship", renderWorship);
           safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
         }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
@@ -5076,27 +5095,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const q = qLoad();
     qViewPage = q.page;
     document.getElementById("qReader").hidden = false;
-    qRenderReader();qReaderScroll("q");
+    document.getElementById("qFocus").hidden=false;qRenderReader();qReaderScroll("q");
   }
-  function qNext(){
-    if(qViewPage >= QURAN_LAST_PAGE) return;
-    const q = qLoad();
-    if(qViewPage>q.page){qViewPage=q.page;qRenderReader();qRenderOverlay();return;}
-    qViewPage++;
-    if(qViewPage > q.page){
-      const wasDone = qReadToday(q) >= q.target;
-      q.readPagesToday=qReadToday(q)-(q.finalPageReadDate===todayStr()?1:0)+1;
-      q.page = qViewPage;
-      qSave(q);
-      const nowDone = qReadToday(q) >= q.target;
-      if(nowDone && !wasDone){
-        qMarkWerdDoneForToday();
-        celebrate();
-      }
-      qRenderOverlay();
-    }
-    qRenderReader();
-  }
+  function qNext(){if(qViewPage>=QURAN_LAST_PAGE)return;qViewPage++;qRenderReader();}
   function qPrev(){
     if(qViewPage <= 1) return;
     qViewPage--;
@@ -5106,11 +5107,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     quranOverlay.hidden = false;
     quranOverlay.scrollTop = 0;
     document.body.style.overflow = "hidden";
-    document.getElementById("qReader").hidden = true;
+    document.getElementById("qReader").hidden = true;document.getElementById("qFocus").hidden=true;
     qRenderOverlay();
     try{ history.pushState({quran:true}, ""); }catch(e){}
   }
   function closeQuranUI(){
+    quranOverlay.classList.remove("q-focus");qReaderFocusLabel("q");
     quranOverlay.hidden = true;
     document.body.style.overflow = "";
     renderWorship(); renderProgress();
@@ -5210,6 +5212,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function qsRenderReader(){
     const w = qsFindItem(qsActiveId);
     if(!w) return;
+    qsViewPage=Math.max(w.startPage,Math.min(w.endPage,qsViewPage));
     const arn = n => n.toLocaleString("ar-EG");
     document.getElementById("surahPageLabel").textContent = "صفحة "+arn(qsViewPage);
     qShowPage("surah",qsViewPage);
@@ -5221,7 +5224,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!w) return;
     qsViewPage = Math.min(w.currentPage, w.endPage);
     document.getElementById("surahReader").hidden = false;
-    qsRenderReader();qReaderScroll("surah");
+    document.getElementById("surahFocus").hidden=false;qsRenderReader();qReaderScroll("surah");
   }
   function qsNext(){
     const w = qsFindItem(qsActiveId);
@@ -5258,7 +5261,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     qsRenderOverlay();
     if(w.completed){
       /* أغلق القارئ بعد الإتمام حتى لا يبقى معلّقًا (خاصةً بعد إلغاء إكمال سابق) */
-      document.getElementById("surahReader").hidden = true;
+      document.getElementById("surahReader").hidden = true;document.getElementById("surahFocus").hidden=true;
       celebrate();
     }
   }
@@ -5267,11 +5270,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     surahOverlay.hidden = false;
     surahOverlay.scrollTop = 0;
     document.body.style.overflow = "hidden";
-    document.getElementById("surahReader").hidden = true;
+    document.getElementById("surahReader").hidden = true;document.getElementById("surahFocus").hidden=true;
     qsRenderOverlay();
     try{ history.pushState({surah:true}, ""); }catch(e){}
   }
   function closeSurahUI(){
+    surahOverlay.classList.remove("q-focus");qReaderFocusLabel("surah");
     surahOverlay.hidden = true;
     document.body.style.overflow = "";
     renderWorship(); renderProgress();
@@ -5295,11 +5299,26 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   document.getElementById("qcWerdBtn").onclick = openQuran;
   document.getElementById("qcAddSurah").onclick = ibAddQuranItem;
 
+  function qReaderFocusLabel(prefix){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay'),button=document.getElementById(prefix+'Focus');if(button){const active=over.classList.contains('q-focus');button.textContent=active?'إنهاء التركيز':'تركيز';button.setAttribute('aria-pressed',String(active));}}
+  function qReaderFocus(prefix,on){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay');over.classList.toggle('q-focus',on);qReaderFocusLabel(prefix);qReaderScroll(prefix);document.getElementById(prefix+'Focus').focus({preventScroll:true});}
+  function qReaderJump(prefix){
+    const w=prefix==='surah'?qsFindItem(qsActiveId):null;if(prefix==='surah'&&!w)return;const id=w?.id,owner=accountStorage.owner,min=w?w.startPage:1,max=w?w.endPage:604;
+    const sheet=plannerAccessibleSheet(taskSheet('الانتقال لصفحة','<label>رقم الصفحة<input id="qJumpPage" inputmode="numeric"></label><p>التنقّل لا يسجّل قراءة. النطاق '+min+'–'+max+'.</p><p id="qJumpError" role="alert"></p><button id="qJumpSave" class="task-sheet-save">انتقال</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);get('qJumpPage').value=prefix==='q'?qViewPage:qsViewPage;
+    get('qJumpSave').onclick=()=>{const latest=id?qsFindItem(id):null;if(accountChanging||owner!==accountStorage.owner||(id&&(!latest||id!==qsActiveId||latest.startPage!==min||latest.endPage!==max))){get('qJumpError').textContent='تغيّر المقطع؛ افتح الانتقال مجددًا.';return;}const page=qParsePageNumber(get('qJumpPage').value);if(!page||page<min||page>max){get('qJumpError').textContent='أدخل صفحة بين '+min+' و'+max+'.';return;}if(prefix==='q'){qViewPage=page;qRenderReader();}else{qsViewPage=page;qsRenderReader();}sheet.close();qReaderScroll(prefix);};
+  }
+  for(const prefix of ['q','surah']){
+    const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay'),reader=document.getElementById(prefix==='q'?'qReader':'surahReader');
+    const focus=document.createElement('button');focus.id=prefix+'Focus';focus.className='q-focus-button';focus.hidden=true;focus.textContent='تركيز';focus.setAttribute('aria-pressed','false');focus.onclick=()=>qReaderFocus(prefix,!over.classList.contains('q-focus'));over.querySelector('.adhkar-head').appendChild(focus);
+    document.getElementById(prefix+'PageLabel').onclick=()=>qReaderJump(prefix);
+    const status=document.createElement('p');status.id=prefix+'ImageStatus';status.className='q-image-status';status.setAttribute('role','status');reader.querySelector('.q-iframe').before(status);
+    const error=document.getElementById(prefix+'ImageError');error.classList.add('q-image-error');const retry=document.createElement('button');retry.id=prefix+'ImageRetry';retry.textContent='إعادة تحميل الصفحة';retry.hidden=true;retry.onclick=()=>qShowPage(prefix,prefix==='q'?qViewPage:qsViewPage);error.after(retry);
+  }
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape'||document.querySelector('.task-sheet-overlay'))return;for(const prefix of ['q','surah']){const over=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay');if(!over.hidden&&over.classList.contains('q-focus')){e.preventDefault();qReaderFocus(prefix,false);break;}}});
   function qWireSwipe(prefix){const img=document.getElementById(prefix+'Iframe');img.draggable=false;let start=null;
     img.addEventListener('pointerdown',e=>{start=e.isPrimary&&e.pointerType!=='mouse'?{x:e.clientX,y:e.clientY,id:e.pointerId}:null;});
     img.addEventListener('pointercancel',()=>start=null);
     img.addEventListener('pointerup',e=>{const from=start;start=null;if(!from||from.id!==e.pointerId)return;const dx=e.clientX-from.x,dy=e.clientY-from.y;if((window.visualViewport?.scale||1)>1||Math.abs(dx)<65||Math.abs(dy)>40)return;const direction=dx>0?1:-1;if(prefix==='surah'){direction>0?qsNext():qsPrev();}else{qViewPage=Math.max(1,Math.min(604,qViewPage+direction));qRenderReader();}qReaderScroll(prefix);});
-    const hint=document.createElement('p');hint.className='pstate-legend';hint.textContent='اسحب يمينًا للتالية أو يسارًا للسابقة. السحب للتصفح فقط؛ ويمكنك تكبير الصفحة بإصبعين.';img.parentElement.before(hint);
+    const hint=document.createElement('p');hint.className='pstate-legend q-swipe-hint';hint.textContent='اسحب يمينًا للتالية أو يسارًا للسابقة. السحب للتصفح فقط؛ ويمكنك تكبير الصفحة بإصبعين.';img.parentElement.before(hint);
   }
   function qReaderScroll(prefix){const img=document.getElementById(prefix+'Iframe'),overlay=document.getElementById(prefix==='q'?'quranOverlay':'surahOverlay');if(!img.complete||!img.naturalHeight){img.dataset.seekView='1';return;}delete img.dataset.seekView;const head=overlay.querySelector('.adhkar-top');overlay.scrollTo({top:overlay.scrollTop+img.getBoundingClientRect().top-overlay.getBoundingClientRect().top-(head?.getBoundingClientRect().height||0)-12,behavior:'auto'});}
   qWireSwipe('q');qWireSwipe('surah');
