@@ -1717,6 +1717,20 @@
     padding:.9rem;text-align:center;font-weight:700;margin-bottom:.8rem;
   }
 
+
+  body:has(.kahf-overlay) .quick-nav{visibility:hidden}
+  .kahf-overlay{padding:0;align-items:flex-end}
+  .kahf-overlay .task-sheet{box-sizing:border-box;width:min(900px,100%);height:92dvh;max-height:92dvh;padding:12px 12px calc(170px + env(safe-area-inset-bottom,0px));scroll-padding-top:72px;background:var(--bg)}
+  .kahf-overlay .task-sheet-head{position:sticky;top:-12px;z-index:2;background:var(--bg);padding:8px 0;gap:8px;flex-wrap:nowrap}
+  .kahf-overlay .task-sheet-head h3{font-size:1rem;flex:1;min-width:0}.kahf-overlay .task-sheet-close{min-width:44px;min-height:44px}
+  .kahf-reader{max-width:850px;margin:auto}.kahf-reader .q-iframe{border:0}.kahf-reader a{display:block;margin:10px 0;color:var(--accent)}
+  .kahf-dock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(688px,100%);box-sizing:border-box;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);z-index:3}
+  .kahf-dock .task-sheet-save{margin:0 0 8px;min-height:44px;padding:10px}.kahf-nav{display:grid;grid-template-columns:1fr auto 1fr;gap:8px}.kahf-nav button{touch-action:manipulation;font-size:.85rem}.kahf-dock button:disabled{opacity:.55}
+  .kahf-focus .task-sheet{height:100dvh;max-height:100dvh;border-radius:0}
+  .kahf-focus #kahfMeta,.kahf-focus .friday-source,.kahf-focus .task-sheet-close,.kahf-focus #fridayKahfExternal{display:none}
+  .kahf-focus .kahf-reader:has(#fridayKahfImageError:not([hidden])) #fridayKahfExternal{display:block}
+  .kahf-keep{display:flex;align-items:center;gap:8px;min-height:44px}.kahf-keep input{width:24px;height:24px;flex-shrink:0}
+
   /* ===== الوتر وقيام الليل ===== */
   .witr-q{font-size:.92rem;font-weight:700;color:var(--ink);text-align:center;margin:.4rem 0 .9rem}
   .witr-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;margin-bottom:1rem}
@@ -8404,12 +8418,39 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     sheet.over.querySelectorAll('[data-friday-prep]').forEach(input=>input.onchange=()=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}const f=fridayDay();f.prep=f.prep||{};f.prep[input.dataset.fridayPrep]=input.checked;save();});
   };
   document.getElementById('fridayKahf').onclick=()=>{
-    const date=currentDate,owner=accountStorage.owner;let page=Math.max(293,Math.min(304,+state.friday?.kahf?.page||293));
-    const sheet=taskSheet('سورة الكهف — الجمعة','<p>'+expEsc(date)+' · موضع قراءة مستقل عن الورد اليومي. فتح الصفحة لا يسجّل الإكمال.</p><div class="friday-actions"><button type="button" id="fridayKahfPrev">السابقة</button><span id="fridayKahfPage"></span><button type="button" id="fridayKahfNext">التالية</button></div><div class="friday-reader" tabindex="0" aria-label="صفحة المصحف — مرّر للقراءة"><img id="fridayKahfFrame" alt="صفحة من سورة الكهف" referrerpolicy="no-referrer" style="width:100%;height:auto;display:block"></div><p id="fridayKahfLoad" role="status" hidden></p><a id="fridayKahfExternal" target="_blank" rel="noopener noreferrer">لم تظهر الصفحة؟ اقرأ الكهف على Quran.com</a><button type="button" id="fridayKahfDone" class="task-sheet-save"></button><p id="fridayKahfStatus" role="status"></p><a class="friday-source" href="https://binbaz.org.sa/fatwas/5172" target="_blank" rel="noopener noreferrer">عن قراءة الكهف يوم الجمعة</a>');
-    const render=()=>{const img=sheet.over.querySelector('#fridayKahfFrame'),notice=sheet.over.querySelector('#fridayKahfLoad');img.onerror=()=>{notice.hidden=false;notice.textContent='تعذّر تحميل صفحة المصحف؛ استخدم رابط القراءة البديل أدناه.';};img.onload=()=>{notice.hidden=true;};img.alt='صفحة المصحف '+page+' — سورة الكهف';img.src='https://quran.ksu.edu.sa/png_big/'+page+'.png';sheet.over.querySelector('#fridayKahfExternal').href='https://quran.com/18';sheet.over.querySelector('#fridayKahfPage').textContent='صفحة '+page.toLocaleString('ar-EG');sheet.over.querySelector('#fridayKahfPrev').disabled=page===293;sheet.over.querySelector('#fridayKahfNext').disabled=page===304;sheet.over.querySelector('#fridayKahfDone').textContent=state.friday?.kahf?.complete?'تراجع عن إكمال الكهف':'أتممت قراءة سورة الكهف';};
-    const move=delta=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}page=Math.max(293,Math.min(304,page+delta));const f=fridayDay();f.kahf={...(f.kahf||{}),page};save();render();};
-    sheet.over.querySelector('#fridayKahfPrev').onclick=()=>move(-1);sheet.over.querySelector('#fridayKahfNext').onclick=()=>move(1);
-    sheet.over.querySelector('#fridayKahfDone').onclick=()=>{if(!fridayCanEdit(date,owner)){sheet.close();return;}const f=fridayDay();f.kahf={...(f.kahf||{}),page,complete:!f.kahf?.complete};save();fridayRender();render();sheet.over.querySelector('#fridayKahfStatus').textContent=f.kahf.complete?'سُجّلت قراءة الكهف لهذه الجمعة':'تم التراجع عن الإكمال';};render();
+    const date=currentDate,owner=accountStorage.owner,openedToday=todayStr();
+    const read=()=>state.friday?.kahf||{},clone=v=>JSON.parse(JSON.stringify(v));
+    const next=k=>Math.max(293,Math.min(304,Math.trunc(+k.nextPage)||293));
+    let page=Math.max(293,Math.min(304,Math.trunc(+(read().nextPage||read().page))||293));
+    const sheet=plannerAccessibleSheet(taskSheet('سورة الكهف — الجمعة',
+      '<div id="kahfMeta"><p>'+expEsc(date)+' · قراءة مستقلة عن الورد اليومي. التنقّل لا يسجّل قراءة.</p><p>تبدأ الكهف في الصفحة ٢٩٣ وتنتهي في ٣٠٤؛ تظهر معها آيات من السور المجاورة على حدود الصفحات.</p><p id="kahfProgress" role="status"></p><button type="button" id="fridayKahfUndo" class="q-focus-button" hidden>التراجع عن آخر تسجيل</button><p id="kahfHistory" hidden></p></div>'+
+      '<div class="kahf-reader"><p id="fridayKahfImageStatus" class="q-image-status" role="status"></p><div class="q-iframe"><img id="fridayKahfIframe" class="q-page-image" alt="صفحة من سورة الكهف" referrerpolicy="no-referrer"></div><p id="fridayKahfImageError" role="status" hidden>تعذّر تحميل صفحة المصحف.</p><button type="button" id="fridayKahfImageRetry" class="q-focus-button" hidden>إعادة تحميل الصفحة</button><a id="fridayKahfExternal" target="_blank" rel="noopener noreferrer">قراءة الصفحة على Quran.com</a></div>'+
+      '<div class="kahf-dock"><button type="button" id="fridayKahfDone" class="task-sheet-save"></button><div class="kahf-nav"><button type="button" id="fridayKahfPrev" class="q-focus-button">السابقة</button><button type="button" id="fridayKahfPage" class="q-focus-button" aria-label="الانتقال إلى صفحة"></button><button type="button" id="fridayKahfNext" class="q-focus-button">التالية</button></div></div><p id="fridayKahfStatus" role="status"></p><a class="friday-source" href="https://binbaz.org.sa/fatwas/5172" target="_blank" rel="noopener noreferrer">عن قراءة الكهف يوم الجمعة</a>'),document.activeElement);
+    sheet.over.classList.remove('planner-overlay');sheet.over.classList.add('kahf-overlay');
+    const get=id=>sheet.over.querySelector('#'+id),panel=sheet.over.querySelector('.task-sheet');
+    const focus=document.createElement('button');focus.id='fridayKahfFocus';focus.className='q-focus-button';focus.type='button';focus.textContent='تركيز';focus.setAttribute('aria-pressed','false');sheet.over.querySelector('.task-sheet-head').appendChild(focus);
+    const setFocus=on=>{sheet.over.classList.toggle('kahf-focus',on);focus.textContent=on?'إنهاء التركيز':'تركيز';focus.setAttribute('aria-pressed',String(on));panel.scrollTop=0;focus.focus({preventScroll:true});};focus.onclick=()=>setFocus(!sheet.over.classList.contains('kahf-focus'));
+    sheet.over.addEventListener('keydown',e=>{if(e.key==='Escape'&&sheet.over.classList.contains('kahf-focus')&&document.querySelectorAll('.task-sheet-overlay').item(document.querySelectorAll('.task-sheet-overlay').length-1)===sheet.over){e.preventDefault();e.stopImmediatePropagation();setFocus(false);}},true);
+    const valid=()=>date===currentDate&&owner===accountStorage.owner&&!accountChanging&&date<=todayStr()&&openedToday===todayStr();
+    const render=()=>{const k=read(),last=(k.readingEntries||[]).at(-1);get('fridayKahfPage').textContent='صفحة '+page.toLocaleString('ar-EG');get('fridayKahfPrev').disabled=page===293;get('fridayKahfNext').disabled=page===304;get('fridayKahfDone').disabled=!!k.complete||page<next(k);get('fridayKahfDone').textContent=k.complete?'✓ اكتملت قراءة الكهف':page<next(k)?'هذه الصفحة مسجّلة':'تسجيل القراءة';get('fridayKahfUndo').hidden=!last&&!k.complete;get('kahfProgress').textContent=k.complete?'اكتملت قراءة الكهف لهذه الجمعة':'المتابعة من صفحة '+next(k).toLocaleString('ar-EG')+' · المقروء '+(Math.max(0,Math.min(12,+k.readPages||0))).toLocaleString('ar-EG')+' من ١٢ صفحة';get('kahfHistory').hidden=!(k.retainedCompletions||[]).length;get('kahfHistory').textContent='قراءات مكتملة محفوظة في السجل: '+(k.retainedCompletions||[]).length.toLocaleString('ar-EG');qShowPage('fridayKahf',page);};
+    const move=to=>{if(!valid()){sheet.close();return;}page=Math.max(293,Math.min(304,to));render();panel.scrollTop=sheet.over.classList.contains('kahf-focus')?0:Math.max(0,sheet.over.querySelector('.kahf-reader').offsetTop-sheet.over.querySelector('.task-sheet-head').offsetHeight);};
+    get('fridayKahfPrev').onclick=()=>move(page-1);get('fridayKahfNext').onclick=()=>move(page+1);get('fridayKahfImageRetry').onclick=()=>{if(valid())qShowPage('fridayKahf',page);};
+    get('fridayKahfPage').onclick=()=>{const jump=plannerAccessibleSheet(taskSheet('الانتقال إلى صفحة من الكهف','<label>رقم الصفحة<input id="kahfJumpPage" inputmode="numeric" value="'+page+'"></label><p>من ٢٩٣ إلى ٣٠٤. التنقّل لا يسجّل قراءة.</p><p id="kahfJumpError" role="alert"></p><button id="kahfJumpSave" class="task-sheet-save">انتقال</button>'),get('fridayKahfPage'));jump.over.querySelector('#kahfJumpSave').onclick=()=>{const n=qParsePageNumber(jump.over.querySelector('#kahfJumpPage').value);if(!valid()){jump.over.querySelector('#kahfJumpError').textContent='تغيّر اليوم أو الحساب؛ أعد فتح القارئ.';return;}if(!n||n<293||n>304){jump.over.querySelector('#kahfJumpError').textContent='أدخل صفحة بين ٢٩٣ و٣٠٤.';return;}jump.close();move(n);};};
+    get('fridayKahfDone').onclick=()=>{
+      if(!valid()){sheet.close();return;}const before=clone(read()),snapshot=JSON.stringify(before),from=next(before);if(before.complete||page<from){render();return;}let committed=false;
+      const confirm=plannerAccessibleSheet(taskSheet('تسجيل قراءة الكهف','<p>بداية التسجيل: صفحة '+from.toLocaleString('ar-EG')+'.</p><label>آخر صفحة قرأتها<input id="kahfRecordEnd" inputmode="numeric" value="'+page+'"></label><p id="kahfRecordPreview"></p><p id="kahfRecordError" role="alert"></p><button id="kahfRecordSave" class="task-sheet-save">حفظ القراءة</button>'),get('fridayKahfDone')),field=confirm.over.querySelector('#kahfRecordEnd');
+      const preview=()=>{const end=qParsePageNumber(field.value);confirm.over.querySelector('#kahfRecordPreview').textContent=end&&end>=from&&end<=304?'سيُسجّل النطاق '+from.toLocaleString('ar-EG')+'–'+end.toLocaleString('ar-EG')+' ('+(end-from+1).toLocaleString('ar-EG')+' صفحات).'+(end===304?' ويُحتسب إكمال الكهف لهذه الجمعة.':''):'';};field.oninput=preview;preview();
+      confirm.over.querySelector('#kahfRecordSave').onclick=()=>{if(committed)return;const error=confirm.over.querySelector('#kahfRecordError'),end=qParsePageNumber(field.value);if(!valid()||JSON.stringify(read())!==snapshot){error.textContent='تغيّر اليوم أو الحساب أو سجل القراءة؛ أعد فتح التسجيل.';return;}if(!end||end<from||end>304){error.textContent='أدخل آخر صفحة من '+from+' إلى 304.';return;}committed=true;const after={page:Math.min(304,end+1),nextPage:Math.min(304,end+1),readPages:end-292,complete:end===304},prior={page:before.page||293,nextPage:from,readPages:+before.readPages||0,complete:!!before.complete};fridayDay().kahf={...before,...after,readingEntries:[...(before.readingEntries||[]),{from,to:end,before:prior,after,at:Date.now()}]};save();fridayRender();confirm.close();page=after.page;render();panel.scrollTop=0;get('fridayKahfStatus').textContent=end===304?'سُجّلت قراءة الكهف لهذه الجمعة':'حُفظ نطاق القراءة؛ يمكنك المتابعة لاحقًا.';};
+    };
+    get('fridayKahfUndo').onclick=()=>{
+      if(!valid()){sheet.close();return;}const before=clone(read()),snapshot=JSON.stringify(before),last=(before.readingEntries||[]).at(-1);if(!last&&!before.complete)return;let committed=false;
+      const prior=last?.before||{page:293,nextPage:293,readPages:0,complete:false};
+      const undo=plannerAccessibleSheet(taskSheet('التراجع عن آخر تسجيل للكهف','<p>ستعود المتابعة إلى صفحة '+prior.nextPage.toLocaleString('ar-EG')+(last?' ويُلغى تسجيل الصفحات '+last.from+'–'+last.to:'. هذا سجل قديم لا يتضمن موضعًا سابقًا؛ ستعود إلى بداية السورة')+'.</p>'+(before.complete?'<label class="kahf-keep"><input type="checkbox" id="kahfUndoKeep"> الاحتفاظ بهذه القراءة المكتملة في السجل</label><p>في الحالتين تعود المتابعة وتُزال علامة الإكمال لهذه الجمعة.</p>':'')+'<p id="kahfUndoError" role="alert"></p><button id="kahfUndoSave" class="task-sheet-save">حفظ التراجع</button>'),get('fridayKahfUndo'));
+      undo.over.querySelector('#kahfUndoSave').onclick=()=>{if(committed)return;if(!valid()||JSON.stringify(read())!==snapshot){undo.over.querySelector('#kahfUndoError').textContent='تغيّر اليوم أو الحساب أو سجل القراءة؛ أعد فتح التراجع.';return;}committed=true;const retained=[...(before.retainedCompletions||[])];if(before.complete&&undo.over.querySelector('#kahfUndoKeep')?.checked)retained.push({date,at:last?.at||Date.now(),retainedAt:Date.now()});fridayDay().kahf={...before,...prior,readingEntries:(before.readingEntries||[]).slice(0,-1),retainedCompletions:retained};save();fridayRender();undo.close();page=prior.nextPage;render();panel.scrollTop=0;get('fridayKahfStatus').textContent='تم التراجع وإرجاع موضع المتابعة.';};
+    };
+    const img=get('fridayKahfIframe');img.draggable=false;let swipe=null;
+    img.addEventListener('pointerdown',e=>{swipe=e.isPrimary&&e.pointerType!=='mouse'?{x:e.clientX,y:e.clientY,id:e.pointerId}:null;});img.addEventListener('pointercancel',()=>swipe=null);img.addEventListener('pointerup',e=>{const start=swipe;swipe=null;if(!start||start.id!==e.pointerId||(window.visualViewport?.scale||1)>1)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)>=65&&Math.abs(dy)<=40)move(page+(dx>0?1:-1));});
+    render();
   };
   document.getElementById('fridaySalawat').onclick=()=>{
     if(!fridayCanEdit(currentDate,accountStorage.owner))return;
@@ -11907,7 +11948,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=187;
+  const DATA_VERSION=1, APP_RELEASE=188;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
