@@ -5183,7 +5183,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById('surahGoalHint').textContent='الهدف اليومي: '+arn(w.target||1)+' صفحة · المتبقي في المقطع: '+arn(done?0:Math.max(0,w.endPage-w.currentPage+1));
     document.getElementById('surahHistoryHint').textContent='القراءات المكتملة في السجل: '+arn(qsCompletionCount(w));
     const historyBox=document.getElementById('surahHistoryList');historyBox.replaceChildren();for(const entry of (w.completedReadings||[]).filter(x=>!x.voidedAt)){const line=document.createElement('p');line.className='pstate-legend';line.textContent=(entry.date||'تاريخ غير مسجل')+' · الصفحات '+arn(entry.startPage)+'–'+arn(entry.endPage)+(entry.retained?' · احتُفظ بها عند التراجع':'');historyBox.appendChild(line);}if(!historyBox.children.length){const line=document.createElement('p');line.className='pstate-legend';line.textContent=done?'قراءة مكتملة قديمة؛ تفاصيل التسجيل السابق غير متاحة.':'لا توجد قراءات مكتملة محتسبة.';historyBox.appendChild(line);}
-    document.getElementById('surahUndo').hidden=!w.lastReadDate&&!done&&!(w.readingEntries||[]).some(x=>!x.undoneAt);
+    const undo=document.getElementById('surahUndo'),hasRecorded=!!w.lastReadDate||done||(w.readingEntries||[]).some(x=>!x.undoneAt);undo.hidden=!hasRecorded&&w.currentPage<=w.startPage;undo.textContent=hasRecorded?'التراجع / تصحيح موضع القراءة':'تصحيح موضع القراءة';
     const doneMsg = document.getElementById("surahDoneMsg");
     const markBtn = document.getElementById("surahMarkDone");
     const contBtn = document.getElementById("surahContinueBtn");
@@ -5405,7 +5405,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         lbl.onclick = ()=> openSurah(w.id);
         const rchip = document.createElement("span");
         rchip.className = "read-chip";
-        rchip.textContent = arn(current)+"/"+arn(w.endPage);
+        rchip.textContent = "المقروء "+arn(Math.max(0,current-w.startPage))+" من "+arn(w.endPage-w.startPage+1);
+        rchip.title = "المتابعة من صفحة "+arn(current);
         rchip.onclick = ()=> openSurah(w.id);
         li.append(chk, lbl, rchip);
       }
@@ -5507,16 +5508,19 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const last=latest&&latest.after.lastReadDate===(w.lastReadDate||'')?latest:null;
     const known=last&&last.after.currentPage===w.currentPage&&last.before.currentPage>=w.startPage&&last.before.currentPage<=w.endPage;
     const completed=!!w.completed||(w.completedReadings||[]).some(x=>x.id===last?.id&&!x.voidedAt),arn=n=>Number(n).toLocaleString('ar-EG');
-    const body=(known?'<p>سيُلغى تسجيل الصفحات '+arn(last.from)+'–'+arn(last.to)+' بتاريخ '+last.date+'، وتعود المتابعة إلى صفحة '+arn(last.before.currentPage)+'.</p>':'<p>لا يتوفر موضع سابق موثوق داخل النطاق الحالي، لأن التسجيل قديم أو تغيّر النطاق. حدّد صفحة المتابعة قبل التسجيل الخاطئ؛ لن نخمنها من الهدف الحالي.</p><label>صفحة المتابعة قبل التسجيل<input id="qsUndoPage" inputmode="numeric" placeholder="من '+arn(w.startPage)+' إلى '+arn(w.endPage)+'"></label>')+(completed?'<label style="display:flex;gap:10px;align-items:center;margin:14px 0"><input type="checkbox" id="qsUndoKeep">الاحتفاظ بهذه القراءة المكتملة في السجل</label><p>بدون هذا الخيار يُلغى احتسابها. في الحالتين يرجع موضع المتابعة.</p>':'')+'<p id="qsUndoError" role="alert"></p><button class="task-sheet-save" id="qsUndoSave">حفظ التراجع</button><button id="qsUndoCancel">إلغاء</button>';
-    const sheet=plannerAccessibleSheet(taskSheet('التراجع عن آخر تسجيل',body),document.activeElement),get=id=>sheet.over.querySelector('#'+id);get('qsUndoCancel').onclick=sheet.close;
+    const body=(known?'<p>موضعك قبل آخر تسجيل: صفحة '+arn(last.before.currentPage)+'. يمكنك العودة إليه أو لبداية المقطع أو اختيار صفحة أخرى.</p>':'<p>لا يتوفر موضع سابق موثوق داخل النطاق الحالي. اختر بداية المقطع أو حدّد صفحة المتابعة بنفسك.</p>')+'<label>صفحة المتابعة بعد التراجع<input id="qsUndoPage" inputmode="numeric" value="'+(known?last.before.currentPage:'')+'" placeholder="من '+arn(w.startPage)+' إلى '+arn(w.endPage)+'"></label><button id="qsUndoStart">العودة لبداية المقطع ('+arn(w.startPage)+')</button><p>الصفحة المختارة هي التالية للقراءة؛ لا تُحسب ضمن المقروء. تُصحّح التسجيلات المعروفة من هذه الصفحة فصاعدًا.</p>'+(completed?'<label style="display:flex;gap:10px;align-items:center;margin:14px 0"><input type="checkbox" id="qsUndoKeep">الاحتفاظ بهذه القراءة المكتملة في السجل</label><p>بدون هذا الخيار يُلغى احتسابها. في الحالتين يرجع موضع المتابعة.</p>':'')+'<p id="qsUndoError" role="alert"></p><button class="task-sheet-save" id="qsUndoSave">حفظ التراجع</button><button id="qsUndoCancel">إلغاء</button>';
+    const sheet=plannerAccessibleSheet(taskSheet('التراجع عن آخر تسجيل',body),document.activeElement),get=id=>sheet.over.querySelector('#'+id);get('qsUndoCancel').onclick=sheet.close;get('qsUndoStart').onclick=()=>{get('qsUndoPage').value=w.startPage;};
     get('qsUndoSave').onclick=()=>{
       const fresh=qsFindItem(id);if(accountChanging||owner!==accountStorage.owner||JSON.stringify(fresh)!==snapshot){get('qsUndoError').textContent='تغيّر المقطع؛ أغلق النافذة وراجع أحدث بياناته.';return;}
-      const previous=known?last.before.currentPage:qParsePageNumber(get('qsUndoPage').value);if(!previous||previous<fresh.startPage||previous>fresh.endPage){get('qsUndoError').textContent='أدخل صفحة داخل نطاق المقطع.';return;}
-      const keep=!!get('qsUndoKeep')?.checked,date=last?last.date:fresh.lastReadDate;
+      const previous=qParsePageNumber(get('qsUndoPage').value);if(!previous||previous<fresh.startPage||previous>fresh.endPage){get('qsUndoError').textContent='أدخل صفحة داخل نطاق المقطع.';return;}
+      const keep=!!get('qsUndoKeep')?.checked,date=last?last.date:fresh.lastReadDate,changedDates=new Set([date]);
       fresh.completedReadings=Array.isArray(fresh.completedReadings)?fresh.completedReadings:[];
       if(completed){let completion=last?fresh.completedReadings.find(x=>x.id===last.id):null;if(!completion){completion={id:last?last.id:newId(),date:date||null,startPage:fresh.startPage,endPage:fresh.endPage,legacy:!last};fresh.completedReadings.push(completion);}if(keep){completion.retained=true;delete completion.voidedAt;}else completion.voidedAt=Date.now();}
-      if(last){fresh.readingEntries.find(x=>x.id===last.id).undoneAt=Date.now();Object.assign(fresh,last.before,{currentPage:previous,completed:false});}else{fresh.currentPage=previous;fresh.completed=false;fresh.lastReadDate='';}
-      qsSaveItem(fresh);qsSyncReadingDay(fresh,date);renderWorship();renderProgress();if(qsActiveId===id&&!surahOverlay.hidden){qsViewPage=Math.min(fresh.currentPage,fresh.endPage);qsRenderOverlay();if(!document.getElementById('surahReader').hidden)qsRenderReader();}sheet.close();
+      if(last&&known&&previous===last.before.currentPage){fresh.readingEntries.find(x=>x.id===last.id).undoneAt=Date.now();Object.assign(fresh,last.before,{currentPage:previous,completed:false});}else{
+        for(const entry of (fresh.readingEntries||[]).filter(x=>!x.undoneAt)){if(entry.to<previous)continue;changedDates.add(entry.date);if(entry.from>=previous){entry.undoneAt=Date.now();}else{entry.originalTo=entry.originalTo??entry.to;entry.to=previous-1;entry.after={currentPage:previous,lastReadDate:entry.date,completed:false};}}
+        const remaining=(fresh.readingEntries||[]).filter(x=>!x.undoneAt).at(-1);fresh.currentPage=previous;fresh.completed=false;fresh.lastReadDate=remaining?.date||'';
+      }
+      qsSaveItem(fresh);for(const changedDate of changedDates)qsSyncReadingDay(fresh,changedDate);renderWorship();renderProgress();if(qsActiveId===id&&!surahOverlay.hidden){qsViewPage=Math.min(fresh.currentPage,fresh.endPage);qsRenderOverlay();if(!document.getElementById('surahReader').hidden)qsRenderReader();}sheet.close();
     };
   }
 
@@ -11846,7 +11850,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=185;
+  const DATA_VERSION=1, APP_RELEASE=186;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
