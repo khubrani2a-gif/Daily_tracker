@@ -5951,18 +5951,26 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     return { surah, range: "من آية "+arn(first.from)+" (سورة "+first.name+") إلى آية "+arn(last.to)+" (سورة "+last.name+") — "+arn(parts.length)+" سور" };
   }
 
-  let witrContext=null,witrReaderSession=null,witrReaderSignature='';
-  function witrSignature(w){return JSON.stringify(w&&[w.key,w.parts,w.target,w.readCount||0]);}
-  function witrReaderValid(){const valid=witrValid()&&witrReaderSession===witrDay().witr&&witrReaderSignature===witrSignature(witrDay().witr);if(!valid)witrShowToast('تغيّر الورد؛ ارجع إلى خطة القراءة وافتحه من جديد.');return valid;}
+  let witrContext=null,witrReaderSignature='';
+  function witrSignature(w){return JSON.stringify(w&&[w.id,w.key,w.parts,w.target,w.readCount||0,w.distribution||null]);}
+  function witrReaderValid(){const valid=witrValid()&&witrReaderSignature===witrSignature(witrDay().witr);if(!valid)witrShowToast('تغيّر الورد؛ ارجع إلى خطة القراءة وافتحه من جديد.');return valid;}
   function qiyamDateShift(date,days){return new Date(Date.parse(date+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);}
   function qiyamNightInfo(){
     const source=prayerCached(currentDate),clock=prayerClock(source?._meta?.zone),times=prayerCached(clock.date);
     const live=currentDate===clock.date,night=live?MufDataCore.qiyamNight(clock.date,clock.minutes,times?.Fajr):currentDate;
     return {date:night||currentDate,uncertain:live&&!night,clock};
   }
-  function qiyamGetDay(date){return date===currentDate?state:(dailyRead(date)||blankState());}
+  function qiyamGetDay(date){return date===currentDate?state:(dailyPending()[date]?.value||dailyRead(date)||blankState());}
   function witrDay(){return witrContext&&witrContext.date!==currentDate?witrContext.day:state;}
-  function witrValid(){return !accountChanging&&(!witrContext||(witrContext.owner===accountStorage.owner&&witrContext.viewDate===currentDate&&(witrContext.date===currentDate||+(dailyRead(witrContext.date)?.updatedAt||0)===witrContext.version)));}
+  function witrValid(){
+    if(accountChanging)return false;if(!witrContext)return true;
+    if(witrContext.owner!==accountStorage.owner||witrContext.viewDate!==currentDate)return false;
+    if(witrContext.date!==currentDate){const latest=qiyamGetDay(witrContext.date);if(+(latest.updatedAt||0)!==witrContext.version){
+      const reading=d=>JSON.stringify([d.witr,MufDataCore.qiyamRows(d.witrSessions)]);
+      if(reading(latest)!==reading(witrContext.day))return false;
+      witrContext.day=latest;witrContext.version=+(latest.updatedAt||0);
+    }}return true;
+  }
   function witrSave(){
     if(!witrValid())throw Error('تغيّر اليوم أو الحساب أو السجل؛ أعد فتح الورد.');
     const day=witrDay(),date=witrContext?.date||currentDate;
@@ -6058,7 +6066,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* تصفير حالة تقسيم الركعات المؤقتة واستعادة واجهة القارئ الافتراضية */
   function witrResetRakahState(){
     witrLoadGeneration++;
-    witrReaderSession=null;witrReaderSignature='';
+    witrReaderSignature='';
     witrRakahDist = null;
     witrFullAyahList = [];
     witrSessionUnits = [];
@@ -6197,8 +6205,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("hifzWirdManualLabel").textContent = "تحديد مخصص ("+arn(c.surahs)+")";
   }
   function witrPickTarget(target){
+    if(!witrValid()){hifzShowToast('تغيّر السجل؛ أعد فتح خطة القراءة.');return;}
     const sugg = witrGenerate(target, witrPool);
-    witrDay().witr = {target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, readPage:0};
+    witrDay().witr = {id:newId(),target, pool:witrPool, parts:sugg.parts, key:sugg.key, startedAt:null, readPage:0};
     /* اقتراح جديد ← أبطِل أي توزيع أُعدّ لاقتراح سابق (آيات مختلفة) */
     witrRakahDist = null; witrPreparedKey = null;
     witrForceNew = false;
@@ -6350,7 +6359,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     /* تجاوز حدّ الهدف (١٠/١٠٠/١٠٠٠) تمامًا — نغطّي الورد كاملًا */
     const existing=witrDay().witr;
     if(existing?.wird&&existing.key===hifzWirdKey(parts))return {...existing,startedAt:existing.startedAt||startedAt||null};
-    return { target: totalAyat, pool:"wird", parts, key: hifzWirdKey(parts), startedAt: startedAt || null, readPage:0, wird:true };
+    return { id:newId(),target: totalAyat, pool:"wird", parts, key: hifzWirdKey(parts), startedAt: startedAt || null, readPage:0, wird:true };
   }
   function hifzWirdStart(){
     const sess = hifzWirdMakeSession(Date.now());
@@ -6423,9 +6432,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     /* حافظ على التوزيع الذي أُعدّ من شاشة الاقتراح لنفس الورد (إن وُجد) قبل التصفير */
     const preDist = (witrRakahDist && witrPreparedKey === w.key) ? witrRakahDist : w.distribution || null;
     witrResetRakahState(); /* ابدأ كل جلسة قراءة بلا تقسيم */
-    witrReaderSession=w;witrReaderSignature=witrSignature(w);
+    witrReaderSignature=witrSignature(w);
     const generation = witrLoadGeneration, owner = accountStorage.owner;
-    const active = ()=>generation === witrLoadGeneration && witrValid() && witrDay().witr === w && !witrOverlay.hidden && owner === accountStorage.owner && !accountChanging;
+    const active = ()=>generation === witrLoadGeneration && witrValid() && witrSignature(witrDay().witr) === witrSignature(w) && !witrOverlay.hidden && owner === accountStorage.owner && !accountChanging;
     witrApplyFontSize();
     document.getElementById("witrLoading").hidden = false;
     document.getElementById("witrAyatBox").hidden = true;
@@ -6438,8 +6447,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
       const rakahs = w.wird ? 1 : witrRakahCount(w.target);
       witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
-      if(typeof w.readPage !== "number") w.readPage = 0;
-      if(w.readPage >= witrAyahChunks.length) w.readPage = witrAyahChunks.length - 1;
+      if(!Number.isInteger(witrDay().witr.readPage)||witrDay().witr.readPage<0)witrDay().witr.readPage=0;
+      if(witrDay().witr.readPage>=witrAyahChunks.length)witrDay().witr.readPage=witrAyahChunks.length-1;
       /* حالة تقسيم الركعات (مؤقتة، لا تُحفظ في Firebase): نبني القائمة الكاملة والوحدات غير القابلة للتقسيم */
       witrFullAyahList = ayahList;
       witrSessionUnits = witrBuildUnits(w, ayahList);
@@ -6628,7 +6637,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       witrOverlay.scrollTop = 0; /* ابدأ من الركعة الأولى */
       witrUpdateRakahBadge();
     }
-    if(witrDay().witr){witrDay().witr.distribution=JSON.parse(JSON.stringify(dist));witrSave();}
+    if(witrDay().witr){witrDay().witr.distribution=JSON.parse(JSON.stringify(dist));if(!document.getElementById("witrReader").hidden)witrReaderSignature=witrSignature(witrDay().witr);witrSave();}
     witrRenderPreDistStatus(); /* حدّث مؤشّر "تم إعداد التوزيع" على شاشة الاقتراح */
     /* إشعار عند تعذّر بلوغ العدد المطلوب بسبب حدود مقاطع الحفظ */
     if(dist.actualCount < dist.requestedCount){
@@ -6642,7 +6651,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(witrPreparedKey === w.key && witrFullAyahList.length) return true; /* محضّر لنفس الورد */
     const generation=witrLoadGeneration,owner=accountStorage.owner;
     const ayahList = await witrBuildAyahList(w.parts);
-    if(!witrValid()||generation!==witrLoadGeneration||owner!==accountStorage.owner||witrDay().witr!==w)return false;
+    if(!witrValid()||generation!==witrLoadGeneration||owner!==accountStorage.owner||witrSignature(witrDay().witr)!==witrSignature(w))return false;
     witrFullAyahList = ayahList;
     witrSessionUnits = witrBuildUnits(w, ayahList);
     witrPreparedKey = w.key;
@@ -6689,7 +6698,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function witrClearDistribution(){
     if(!witrValid()||(!document.getElementById("witrReader").hidden&&!witrReaderValid()))return;
-    if(witrDay().witr){delete witrDay().witr.distribution;witrSave();}
+    if(witrDay().witr){delete witrDay().witr.distribution;if(!document.getElementById("witrReader").hidden)witrReaderSignature=witrSignature(witrDay().witr);witrSave();}
     witrRakahDist = null;
     witrDividerEls = [];
     witrUpdateRakahToggleBtn();

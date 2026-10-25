@@ -21,9 +21,9 @@ test('qiyam goal cards preserve drafts, support keyboard sources and both themes
   assert.equal(await p.evaluate(()=>audit.get().witr.pool),'juzamma');
   assert.equal(await p.locator('#witrPoolChips [data-p="juzamma"]').getAttribute('aria-pressed'),'true');
   assert.equal(await p.evaluate(()=>audit.get().witrSessions.length),0);
-  await p.locator('.witr-virtue summary').click();
-  assert.equal(await p.locator('.witr-virtue a').getAttribute('href'),'https://sunnah.com/abudawud:1398');
-  await p.locator('.witr-virtue summary').click();
+  await p.locator('#witrPlanOptions .witr-virtue summary').click();
+  assert.equal(await p.locator('#witrPlanOptions .witr-virtue a').getAttribute('href'),'https://sunnah.com/abudawud:1398');
+  await p.locator('#witrPlanOptions .witr-virtue summary').click();
   for(const dark of [false,true])for(const width of [320,390,820]){
    await p.setViewportSize({width,height:844});
    await p.evaluate(dark=>document.documentElement.classList.toggle('dark',dark),dark);

@@ -111,7 +111,7 @@
           }
           out[key]=friday;return;
         }
-        if(key==='witr'&&(local[key]===null||Array.isArray(local[key]?.parts))){if(!equal(base?.[key],local[key]))out[key]=copy(local[key]);return;}
+        if(key==='witr'&&(local[key]===null||Array.isArray(local[key]?.parts))){if(!equal(base?.[key],local[key])){if(!qiyamDraftEqual(base?.[key],local[key]))out[key]=copy(local[key]);else if(qiyamDraftEqual(base?.[key],remote?.[key]))out[key]=copy(local[key]);}return;}
         if(key==='prayers'){
           const values=[(base||{})[key],local[key],(remote||{})[key]];
           if(values.every(v=>Array.isArray(v)&&[5,6].includes(v.length)&&v.every(x=>[true,false,'','ontime','late','missed'].includes(x)))){
