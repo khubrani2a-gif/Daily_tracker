@@ -56,6 +56,16 @@
       const out=copy(remote)||{};
       new Set(Object.keys(base||{}).concat(Object.keys(local))).forEach(key=>{
         if(!Object.prototype.hasOwnProperty.call(local,key)){if(base&&Object.prototype.hasOwnProperty.call(base,key))delete out[key];return;}
+        // A Friday reading session and its undo history form one state. Merging
+        // their fields independently can combine completion with a partial range.
+        if(key==='friday'&&record(local[key])){
+          const friday=mergeChanges((base||{})[key],local[key],(remote||{})[key]);
+          if(!equal(base?.friday?.kahf,local.friday.kahf)){
+            if(Object.prototype.hasOwnProperty.call(local.friday,'kahf'))friday.kahf=copy(local.friday.kahf);
+            else delete friday.kahf;
+          }
+          out[key]=friday;return;
+        }
         if(key==='prayers'){
           const values=[(base||{})[key],local[key],(remote||{})[key]];
           if(values.every(v=>Array.isArray(v)&&[5,6].includes(v.length)&&v.every(x=>[true,false,'','ontime','late','missed'].includes(x)))){
