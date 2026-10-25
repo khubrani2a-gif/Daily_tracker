@@ -5400,9 +5400,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* حفظ ترتيب مقاطع القراءة: نعيد ترتيب عناصر quran فقط داخل قائمة الأوراد المخصّصة (نبقي البقية بمواضعها) */
   function qcSaveOrder(orderedIds){
     const full = wCustom();
-    const byId = {};
+    const byId = Object.create(null);
     full.forEach(w=>{ if(w.kind === "quran") byId[w.id] = w; });
-    const newQuran = orderedIds.map(id=> byId[id]).filter(Boolean);
+    const ids=[...new Set(orderedIds)].filter(id=>Object.hasOwn(byId,id));
+    for(const w of full){if(w.kind==="quran"&&!ids.includes(w.id))ids.push(w.id);}
+    const newQuran = ids.map(id=>byId[id]);
     let qi = 0;
     const result = full.map(w=> w.kind === "quran" ? (newQuran[qi++] || w) : w);
     wCustomSave(result);
@@ -5451,12 +5453,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function qcDeleteSegment(id){
     const w = qsFindItem(id);
     if(!w) return;
+    const snapshot=JSON.stringify(w),owner=accountStorage.owner;
     hifzShowConfirm({
       title: "حذف «"+qcDisplayLabel(w.label)+"»؟",
       body: "لن يؤثر ذلك على تقدمك في المقاطع الأخرى.",
       okText: "حذف",
       cancelText: "إلغاء",
       onOk: ()=>{
+        if(accountChanging||owner!==accountStorage.owner||JSON.stringify(qsFindItem(id))!==snapshot){hifzShowToast("تغيّر المقطع. راجع بياناته ثم أعد المحاولة.");return;}
         wCustomSave(wCustom().filter(x=> x.id !== id));
         renderWorship(); renderProgress();
       }
@@ -5467,12 +5471,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function qcRollbackComplete(id){
     const w = qsFindItem(id);
     if(!w) return;
+    const snapshot=JSON.stringify(w),owner=accountStorage.owner;
     hifzShowConfirm({
       title: "إلغاء إكمال هذا المقطع؟",
       body: "سيعود المقطع إلى حالة غير مكتملة.",
       okText: "إلغاء الإكمال",
       cancelText: "رجوع",
       onOk: ()=>{
+        if(accountChanging||owner!==accountStorage.owner||JSON.stringify(qsFindItem(id))!==snapshot){hifzShowToast("تغيّر المقطع. راجع بياناته ثم أعد المحاولة.");return;}
         w.completed = false;
         /* نُبقي التقدّم داخل النطاق كي يصير المقطع «غير مكتمل» دون المساس بسجلّ القراءة (lastReadDate) */
         if(w.currentPage > w.endPage) w.currentPage = w.endPage;
@@ -5483,12 +5489,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
 
   /* محرّر المقطع (ورقة سفلية): العنوان + صفحة البداية/النهاية + الهدف اليومي */
-  let qcEditingId = null;
+  let qcEditingId = null, qcEditingSnapshot=null, qcEditingOwner=null;
   const qcEditSheet = document.getElementById("qcEditSheet");
   function qcOpenEditor(id){
     const w = qsFindItem(id);
     if(!w) return;
-    qcEditingId = id;
+    qcEditingId = id;qcEditingSnapshot=JSON.stringify(w);qcEditingOwner=accountStorage.owner;
     document.getElementById("qcEditTitle").value = qcCleanLabel(w.label);
     document.getElementById("qcEditStart").value = w.startPage;
     document.getElementById("qcEditEnd").value = w.endPage;
@@ -5496,7 +5502,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("qcEditErr").hidden = true;
     qcEditSheet.hidden = false;
   }
-  function qcCloseEditor(){ qcEditSheet.hidden = true; qcEditingId = null; }
+  function qcCloseEditor(){ qcEditSheet.hidden = true; qcEditingId = null; qcEditingSnapshot=null;qcEditingOwner=null; }
   function qcSaveEditor(){
     const w = qsFindItem(qcEditingId);
     if(!w) return;
@@ -5506,6 +5512,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const target = qParsePageNumber(document.getElementById("qcEditTarget").value);
     const err = document.getElementById("qcEditErr");
     const fail = (m)=>{ err.textContent = m; err.hidden = false; };
+    if(accountChanging||qcEditingOwner!==accountStorage.owner||JSON.stringify(w)!==qcEditingSnapshot){return fail("تغيّر المقطع. أغلق التعديل وافتحه مجددًا لمراجعة الأحدث.");}
     if(!title){ return fail("أدخل عنوان المقطع"); }
     if(!start || start < 1){ return fail("صفحة البداية غير صحيحة"); }
     if(!end || end < start){ return fail("صفحة النهاية يجب أن تكون ≥ صفحة البداية"); }
