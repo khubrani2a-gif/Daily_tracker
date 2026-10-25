@@ -18,6 +18,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Qiyam reading and prayer regression
+        run: node --test --test-concurrency=1 tests/qiyam-core-v190.test.js tests/qiyam-night-v190.test.js tests/qiyam-plan-v189.test.js
+        env:
+          QIYAM_SCREENSHOTS_DIR: artifacts/qiyam
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qiyam-review
+          path: artifacts/qiyam
+          if-no-files-found: ignore
       - run: npm test
       - uses: actions/setup-java@v4
         with:
