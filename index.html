@@ -1748,11 +1748,11 @@
   .witr-targets button.witr-card-locked:hover{border-color:var(--line);background:var(--paper)}
   .witr-pool-chips{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-bottom:.5rem}
   .witr-pool-chips[hidden]{display:none} /* السمة hidden يجب أن تغلب على display:flex عند تبديل المسار */
-  .witr-pool-chips span{
+  .witr-pool-chips button{
     border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;font-size:.74rem;color:var(--muted);
     cursor:pointer;transition:.15s;
   }
-  .witr-pool-chips span.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .witr-pool-chips button.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
   .witr-fav-edit{
     display:block;width:100%;text-align:center;font-size:.74rem;color:var(--accent);
     margin-bottom:1.1rem;cursor:pointer;background:none;border:none;font-family:inherit;
@@ -1870,16 +1870,27 @@
     width:1.7em;height:1.7em;border:1px solid var(--accent-2);border-radius:50%;
     font-size:.5em;color:var(--accent);margin:0 .15em;vertical-align:middle;
   }
-  /* وضع ليلي حقيقي (أقرب لل true-black) خاص بشاشة قيام الليل، مناسب للقراءة في غرفة مظلمة */
-  html.dark #witrOverlay{background:#000}
-  html.dark #witrOverlay .adhkar-top{background:#000}
-  html.dark #witrOverlay .witr-suggestion,
-  html.dark #witrOverlay .witr-targets button,
-  html.dark #witrOverlay .witr-actions button,
-  html.dark #witrOverlay .stat-tile,
-  html.dark #witrOverlay #witrFavSearch,
-  html.dark #witrOverlay .witr-fav-dropdown{background:#0a0a0a;border-color:#1e1e1e}
-  html.dark #witrOverlay .witr-ayat-wrap{color:#f0ede4}
+  /* Match the app theme; keep motivational goals readable at mobile widths. */
+  #witrOverlay{background:var(--bg)}
+  #witrOverlay .adhkar-top{background:var(--bg)}
+  #witrOverlay .adhkar-sheet{max-width:720px;margin-inline:auto}
+  .witr-plan-hint{text-align:center;color:var(--muted);font-size:.82rem;margin:-.3rem 0 1rem}
+  #witrTargets{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  #witrTargets button{position:relative;min-height:148px;padding:18px 10px;border-radius:22px;background:var(--paper);box-shadow:0 4px 16px #00000008;touch-action:manipulation}
+  #witrTargets .witr-goal-icon{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 10px;border-radius:16px;background:var(--accent-soft);font-size:1.65rem}
+  #witrTargets button b{font-size:clamp(.9rem,3.8vw,1.1rem);line-height:1.6}
+  #witrTargets button small{display:block;font-size:.85rem;line-height:1.6}
+  #witrTargets button.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}
+  #witrTargets button.active::after{content:'✓';position:absolute;inset-inline-end:10px;top:8px;color:var(--accent);font-weight:800}
+  #witrOverlay button:focus-visible,#witrOverlay summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .witr-virtue{margin:4px 0 18px;color:var(--muted);font-size:.8rem;line-height:1.9}
+  .witr-virtue summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--accent)}
+  .witr-virtue summary::before{content:'＋';margin-inline-end:8px}.witr-virtue[open] summary::before{content:'−'}
+  .witr-virtue p{margin:8px 0}.witr-virtue a{color:var(--accent)}
+  .witr-pool-chips button{font-family:inherit;background:var(--paper);min-height:44px;touch-action:manipulation}
+  .witr-pool-chips button.active{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+  #witrFavEdit{min-height:44px}#witrSuggestion{border-radius:20px}
+  @media(prefers-reduced-motion:reduce){#witrTargets button{transition:none}}
 
   /* ===== حفظ القرآن ===== */
   /* مقاييس بسيطة (بلا نسبة مئوية) — ثلاث حقائق مباشرة بدل شريط/نسبة عامة */
@@ -3564,18 +3575,20 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
       <div id="witrPickView">
         <div class="witr-q" id="witrPickHeading">ما هدفك الليلة؟</div>
+        <p class="witr-plan-hint">اختر وردك، ثم راجع الآيات قبل البدء.</p>
         <div class="witr-targets" id="witrTargets">
-          <button data-t="10"><b>🌱 10 آيات</b><small>تُكتب من الذاكرين</small></button>
-          <button data-t="100"><b>🌿 100 آية</b><small>تُكتب من القانتين</small></button>
-          <button data-t="1000"><b>👑 1000 آية</b><small>تُكتب من المقنطرين</small></button>
-          <button data-t="wird" id="witrWirdCard" hidden><b>📚 ورد الحفظ</b><small>من محفوظاتك</small></button>
+          <button type="button" data-t="10" aria-pressed="false"><span class="witr-goal-icon" aria-hidden="true">🌱</span><b>لم يُكتب من الغافلين</b><small>١٠ آيات</small></button>
+          <button type="button" data-t="100" aria-pressed="false"><span class="witr-goal-icon" aria-hidden="true">🌿</span><b>من القانتين</b><small>١٠٠ آية</small></button>
+          <button type="button" data-t="1000" aria-pressed="false"><span class="witr-goal-icon" aria-hidden="true">✨</span><b>من المقنطرين</b><small>١٠٠٠ آية</small></button>
+          <button type="button" data-t="wird" id="witrWirdCard" aria-pressed="false" hidden><span class="witr-goal-icon" aria-hidden="true">📖</span><b>ورد الحفظ</b><small>من محفوظاتك</small></button>
         </div>
 
-        <div class="witr-pool-chips" id="witrPoolChips">
-          <span data-p="all">جميع السور</span>
-          <span data-p="juzamma">جزء عمّ</span>
-          <span data-p="mufassal">المفصّل</span>
-          <span data-p="fav">السور المفضّلة</span>
+        <details class="witr-virtue"><summary>فضل القيام · مصدر المسميات</summary><p>«من قام بعشر آيات لم يُكتب من الغافلين، ومن قام بمائة آية كُتب من القانتين، ومن قام بألف آية كُتب من المقنطرين».</p><a href="https://sunnah.com/abudawud:1398" target="_blank" rel="noopener noreferrer">سنن أبي داود · ١٣٩٨ — صححه الألباني</a><p>هذه فضائل القيام الواردة في الحديث؛ تسجيل القراءة وحده لا يثبت أداء الصلاة.</p></details>
+        <div class="witr-pool-chips" id="witrPoolChips" role="group" aria-label="مصدر اقتراح الآيات">
+          <button type="button" data-p="all" aria-pressed="false">جميع السور</button>
+          <button type="button" data-p="juzamma" aria-pressed="false">جزء عمّ</button>
+          <button type="button" data-p="mufassal" aria-pressed="false">المفصّل</button>
+          <button type="button" data-p="fav" aria-pressed="false">السور المفضّلة</button>
         </div>
         <button class="witr-fav-edit" id="witrFavEdit">✎ تعديل السور المفضّلة</button>
 
@@ -5676,7 +5689,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     [106,"قريش",4],[107,"الماعون",7],[108,"الكوثر",3],[109,"الكافرون",6],[110,"النصر",3],
     [111,"المسد",5],[112,"الإخلاص",4],[113,"الفلق",5],[114,"الناس",6]
   ].map(([n,name,ayat])=>({n,name,ayat}));
-  const WITR_TARGET_LABEL = {10:"الذاكرين", 100:"القانتين", 1000:"المقنطرين"};
+  const WITR_TARGET_LABEL = {10:"لم يُكتب من الغافلين", 100:"من القانتين", 1000:"من المقنطرين"};
   function witrMinutes(n){ return Math.max(1, Math.round(n*0.3)); }
 
   /* توزيع الجهد على ركعات: يقلّل الرهبة النفسية من رقم كبير كـ ١٠٠٠ آية */
@@ -5979,7 +5992,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const txt = witrPartsText(last.parts);
     document.getElementById("witrDoneMsg").innerHTML =
       "✅ تم الإنجاز<br><b>"+txt.surah+"</b><br>"+txt.range+"<br>"+
-      arn(last.ayat)+" آية"+(WITR_TARGET_LABEL[last.target] ? " · تُكتب من "+WITR_TARGET_LABEL[last.target] : " · ورد حفظ");
+      arn(last.ayat)+" آية · تم تسجيل القراءة";
     const totalAyat = sessions.reduce((a,s)=>a+s.ayat,0);
     document.getElementById("witrTonightStats").textContent =
       "عدد جلسات الليلة: "+arn(sessions.length)+" · إجمالي الآيات المقروءة: "+arn(totalAyat);
@@ -6004,9 +6017,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.querySelectorAll("#witrTargets button").forEach(b=>{
       if(b.dataset.t === "wird") b.classList.toggle("active", wird);
       else b.classList.toggle("active", !wird && !!(w && !w.wird && String(w.target) === b.dataset.t));
+      b.setAttribute("aria-pressed", String(b.classList.contains("active")));
     });
-    document.querySelectorAll("#witrPoolChips span").forEach(c=>{
+    document.querySelectorAll("#witrPoolChips button").forEach(c=>{
       c.classList.toggle("active", c.dataset.p === witrPool);
+      c.setAttribute("aria-pressed", String(c.dataset.p === witrPool));
     });
 
     /* المطلوب ٢: تبديل الأقسام حسب المسار */
@@ -6038,7 +6053,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         line = "من سورة "+f.name+" إلى سورة "+l.name+" ("+arn(w.parts.length)+" سور)";
       }
       document.getElementById("witrSugSurah").textContent = line;
-      document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية • "+arn(witrMinutes(w.target))+" دقائق";
+      document.getElementById("witrSugMeta").textContent = arn(w.target)+" آية · راجع النطاق قبل البدء";
       const startBtn = document.getElementById("witrStartBtn");
       startBtn.textContent = (w.readPage > 0)
         ? "▶ استكمال القراءة (الركعة "+arn(w.readPage+1)+")"
@@ -6086,12 +6101,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         witrRenderPickView();
       }else{                                  /* المسار أ: هدف رقمي */
         witrMode = "goal";
+        if(state.witr && !state.witr.wird && String(state.witr.target) === b.dataset.t){ witrRenderPickView(); return; }
         witrPickTarget(parseInt(b.dataset.t,10));
       }
     };
   });
-  document.querySelectorAll("#witrPoolChips span").forEach(c=>{
+  document.querySelectorAll("#witrPoolChips button").forEach(c=>{
     c.onclick = ()=>{
+      if(witrPool === c.dataset.p) return;
       witrPool = c.dataset.p;
       if(witrPool === "fav" && !witrFavorites().length){
         if(confirm("لا توجد سور مفضّلة بعد. هل تريد إضافتها الآن؟")){
@@ -11952,7 +11969,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=188;
+  const DATA_VERSION=1, APP_RELEASE=189;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
