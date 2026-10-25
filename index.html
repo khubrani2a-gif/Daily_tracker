@@ -1534,6 +1534,10 @@
     overflow-y:auto;overscroll-behavior:contain;
   }
   .adhkar-overlay[hidden]{display:none}
+  #quranOverlay [hidden],#surahOverlay [hidden]{display:none!important}
+  #quranOverlay .adhkar-head{flex-wrap:wrap;gap:8px}
+  #quranOverlay .adhkar-head h2{min-width:0;flex:1 1 140px}
+  #quranTarget{flex:0 0 auto;max-width:100%}
   .adhkar-sheet{max-width:720px;margin:0 auto;padding:1rem 1rem 3rem}
   @media(max-width:700px){
     /* الشاشات الطويلة المستقلة تستخدم تمريرها الخاص أيضًا. */
@@ -3403,7 +3407,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <div class="adhkar-head">
           <button class="ad-btn ad-close" id="quranClose" title="إغلاق">✕ إغلاق</button>
           <h2>📖 الورد اليومي</h2>
-          <button class="ad-btn" id="quranTarget" title="تغيير الهدف اليومي">🎯</button>
+          <button class="ad-btn" id="quranTarget" title="إعدادات القراءة">الإعدادات</button>
         </div>
       </div>
 
@@ -4956,13 +4960,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     try{ q = JSON.parse(localStorage.getItem(QURAN_KEY)) || {}; }catch(e){ q = {}; }
     q.page=qParsePageNumber(q.page)||1;
     q.target=qParsePageNumber(q.target)||5;
-    if(q.dayAnchor !== todayStr()){ q.dayAnchor = todayStr(); q.startPage = q.page; }
+    if(q.dayAnchor !== todayStr()){ q.dayAnchor = todayStr(); q.startPage = q.page; q.readPagesToday=0; }
     q.startPage=qParsePageNumber(q.startPage)||q.page;
     return q;
   }
   function qSave(q){
-    q.updatedAt = Date.now();
+    q.updatedAt = Math.max(Date.now(),(qLoad().updatedAt||0)+1);
     localStorage.setItem(QURAN_KEY, JSON.stringify(q));
+    qMarkWerdDoneForToday(qReadToday(q)>=q.target);
     qPushRemote(q);
     if(typeof renderTodayOverview === "function") renderTodayOverview();
   }
@@ -4970,7 +4975,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     return "https://quran.ksu.edu.sa/png_big/"+Math.max(1,Math.min(604,Math.trunc(+n)||1))+".png";
   }
   function qShowPage(prefix,page){const img=document.getElementById(prefix+'Iframe'),error=document.getElementById(prefix+'ImageError');error.hidden=true;img.onload=()=>{error.hidden=true;};img.onerror=()=>{error.hidden=false;};img.alt='صفحة المصحف '+page;img.src=qPageUrl(page);document.getElementById(prefix+'External').href='https://quran.com/page/'+page;}
-  function qReadToday(q){return Math.max(0,q.page-q.startPage)+(q.finalPageReadDate===todayStr()?1:0);}
+  function qReadToday(q){return (Number.isInteger(q.readPagesToday)&&q.readPagesToday>=0?q.readPagesToday:Math.max(0,q.page-q.startPage))+(q.finalPageReadDate===todayStr()?1:0);}
   function qParsePageNumber(value){const raw=String(value??'').trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x));const n=Number(raw);return /^\d+$/.test(raw)&&Number.isInteger(n)&&n>=1&&n<=604?n:null;}
   function qDocRef(){
     return db.collection("users").doc(user.uid).collection("meta").doc("quran");
@@ -4994,8 +4999,10 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         if(!cache) dataDetectConflict("quran","progress",local,remote,"اعتماد تقدم القرآن الأحدث مع حفظ نسخة أمان");
         if((remote.updatedAt||0) > (local.updatedAt||0)){
           const merged = Object.assign({}, remote);
-          if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; }
+          if(merged.dayAnchor !== todayStr()){ merged.dayAnchor = todayStr(); merged.startPage = merged.page; merged.readPagesToday=0; }
           localStorage.setItem(QURAN_KEY, JSON.stringify(merged));
+          qMarkWerdDoneForToday(qReadToday(qLoad())>=qLoad().target);
+          if(!document.getElementById("qReader").hidden){qViewPage=qLoad().page;qRenderReader();}
           safeRun("qPull:renderWorship", renderWorship);
           safeRun("qPull:overlay", ()=>{ if(!quranOverlay.hidden) qRenderOverlay(); });
         }else if((local.updatedAt||0) > (remote.updatedAt||0) && !cache){
@@ -5045,6 +5052,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("qContinueBtn").textContent = "▶ متابعة القراءة من صفحة "+arn(q.page);
   }
   function qRenderReader(){
+    const done=document.getElementById("qReaderDone"),q=qLoad();done.hidden=qViewPage!==604||q.page!==604;done.textContent=q.finalPageReadDate===todayStr()?"تراجع عن تسجيل الصفحة الأخيرة":"قرأت الصفحة الأخيرة (٦٠٤)";
     const arn = n => n.toLocaleString("ar-EG");
     document.getElementById("qPageLabel").textContent = "صفحة "+arn(qViewPage);
     qShowPage("q",qViewPage);
@@ -5059,10 +5067,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function qNext(){
     if(qViewPage >= QURAN_LAST_PAGE) return;
-    qViewPage++;
     const q = qLoad();
+    if(qViewPage>q.page){qViewPage=q.page;qRenderReader();qRenderOverlay();return;}
+    qViewPage++;
     if(qViewPage > q.page){
       const wasDone = qReadToday(q) >= q.target;
+      q.readPagesToday=qReadToday(q)-(q.finalPageReadDate===todayStr()?1:0)+1;
       q.page = qViewPage;
       qSave(q);
       const nowDone = qReadToday(q) >= q.target;
@@ -5100,53 +5110,34 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   document.getElementById("quranClose").onclick = closeQuran;
   document.getElementById("qContinueBtn").onclick = qOpenReader;
   document.getElementById('qLastPageDone').onclick=()=>{const q=qLoad();if(q.page!==604)return;q.finalPageReadDate=q.finalPageReadDate===todayStr()?'':todayStr();qSave(q);qMarkWerdDoneForToday(qReadToday(q)>=q.target);qRenderOverlay();};
+  const qReaderDone=document.createElement("button");qReaderDone.id="qReaderDone";qReaderDone.className="ad-btn";qReaderDone.hidden=true;document.getElementById("qReader").prepend(qReaderDone);qReaderDone.onclick=()=>{document.getElementById("qLastPageDone").click();qRenderReader();};
   document.getElementById("qPrev").onclick = qPrev;
   document.getElementById("qNext").onclick = qNext;
   document.getElementById("quranTarget").onclick = ()=>{
-    const q = qLoad();
-    const val = prompt("كم عدد الصفحات هدفك اليومي؟", q.target);
-    if(val === null) return;
-    const n = qParsePageNumber(val);
-    if(!n){alert("أدخل عدد صفحات من ١ إلى ٦٠٤");return;}
-    q.target = n;
-    qSave(q);
-    qRenderOverlay();
+    const before=qLoad(),snapshot=JSON.stringify(before),owner=accountStorage.owner;
+    const sheet=plannerAccessibleSheet(taskSheet('إعدادات القراءة','<div class="task-fields"><label>الهدف اليومي بالصفحات<input id="qSettingsTarget" inputmode="numeric"></label><label>صفحة متابعة القراءة<input id="qSettingsPage" inputmode="numeric"></label></div><p>تغيير موضع القراءة لا يضيف صفحات إلى إنجاز اليوم ولا يمحو ما قرأته.</p><button id="qSettingsRestart">بدء ختمة من الصفحة الأولى</button><p id="qSettingsError" role="alert"></p><button class="task-sheet-save" id="qSettingsSave">حفظ</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);
+    get('qSettingsTarget').value=before.target;get('qSettingsPage').value=before.page;
+    let committed=false;sheet.over.beforeClose=()=>committed||(get('qSettingsTarget').value===String(before.target)&&get('qSettingsPage').value===String(before.page))||confirm('إغلاق دون حفظ تغييرات القراءة؟');
+    get('qSettingsRestart').onclick=()=>{get('qSettingsPage').value='1';get('qSettingsError').textContent='اضغط حفظ لاعتماد البداية الجديدة. سيبقى إنجاز اليوم محفوظًا.';};
+    get('qSettingsSave').onclick=()=>{
+      const q=qLoad();if(owner!==accountStorage.owner||accountChanging||JSON.stringify(q)!==snapshot){get('qSettingsError').textContent='تغيّر تقدم القراءة. أغلق الإعدادات وافتحها مجددًا لمراجعة الأحدث.';return;}
+      const target=qParsePageNumber(get('qSettingsTarget').value),page=qParsePageNumber(get('qSettingsPage').value);
+      if(!target||!page){get('qSettingsError').textContent='أدخل أرقامًا من ١ إلى ٦٠٤.';return;}
+      if(page!==q.page){q.readPagesToday=qReadToday(q);q.finalPageReadDate='';q.page=page;q.startPage=page;}
+      q.target=target;qSave(q);qViewPage=q.page;qRenderOverlay();if(!document.getElementById('qReader').hidden)qRenderReader();committed=true;sheet.close();
+    };
   };
 
   /* ---------- قراءة سورة/ورد مخصّص من القرآن (نطاق صفحات محدد + هدف يومي) ---------- */
   function ibAddQuranItem(){
-    const surah = prompt("اسم السورة أو الورد (مثال: سورة البقرة):");
-    if(!surah || !surah.trim()) return;
-    const startStr = prompt("صفحة البداية:", "1");
-    if(startStr === null) return;
-    const start = qParsePageNumber(startStr);
-    if(!start || start < 1){ alert("صفحة البداية غير صحيحة"); return; }
-    const endStr = prompt("صفحة النهاية:", String(start));
-    if(endStr === null) return;
-    const end = qParsePageNumber(endStr);
-    if(!end || end < start){ alert("صفحة النهاية يجب أن تكون أكبر من أو تساوي صفحة البداية"); return; }
-    const targetStr = prompt("عدد الصفحات المستهدف قراءتها يوميًا:", "1");
-    if(targetStr === null) return;
-    const target = qParsePageNumber(targetStr);if(!target){alert("أدخل عدد صفحات من ١ إلى ٦٠٤");return;}
-    const icon = (prompt("رمز اختياري لهذا الورد (اتركه فارغًا لاستخدام 📘):", "") || "").trim();
-    const item = {
-      id: "quran_"+Date.now(),
-      label: surah.trim(),
-      group: "awrad",
-      kind: "quran",
-      icon: icon || "📘",
-      mode: "page",
-      startPage: start,
-      endPage: end,
-      currentPage: start,
-      target: target,
-      lastReadDate: "",
-      completed: false
+    const owner=accountStorage.owner,sheet=plannerAccessibleSheet(taskSheet('إضافة ورد قراءة','<div class="task-fields"><label class="task-field-wide">اسم الورد<input id="qAddTitle" maxlength="100" placeholder="مثل: سورة البقرة"></label><label>صفحة البداية<input id="qAddStart" inputmode="numeric" value="1"></label><label>صفحة النهاية<input id="qAddEnd" inputmode="numeric" value="1"></label><label>الهدف اليومي بالصفحات<input id="qAddTarget" inputmode="numeric" value="1"></label></div><p>حدّد نطاق الصفحات في المصحف. تصفّح الصفحات لا يسجّل القراءة حتى تضغط تسجيل الورد.</p><details><summary>تفصيل اختياري</summary><label>رمز الورد<input id="qAddIcon" maxlength="12" placeholder="📘"></label></details><p id="qAddError" role="alert"></p><button class="task-sheet-save" id="qAddSave">إضافة الورد</button>'),document.activeElement),get=id=>sheet.over.querySelector('#'+id);
+    let committed=false;sheet.over.beforeClose=()=>committed||(!get('qAddTitle').value&&get('qAddStart').value==='1'&&get('qAddEnd').value==='1'&&get('qAddTarget').value==='1'&&!get('qAddIcon').value)||confirm('إغلاق دون حفظ الورد؟');
+    get('qAddSave').onclick=()=>{
+      if(owner!==accountStorage.owner||accountChanging){get('qAddError').textContent='تغيّر الحساب. أعد فتح النموذج.';return;}
+      const label=get('qAddTitle').value.trim(),start=qParsePageNumber(get('qAddStart').value),end=qParsePageNumber(get('qAddEnd').value),target=qParsePageNumber(get('qAddTarget').value);
+      if(!label||!start||!end||!target||end<start){get('qAddError').textContent='أدخل اسمًا وصفحات من ١ إلى ٦٠٤؛ النهاية لا تسبق البداية.';return;}
+      const list=wCustom();list.push({id:'quran_'+newId(),label,group:'awrad',kind:'quran',icon:get('qAddIcon').value.trim()||'📘',mode:'page',startPage:start,endPage:end,currentPage:start,target,lastReadDate:'',completed:false});wCustomSave(list);renderWorship();renderProgress();committed=true;sheet.close();
     };
-    const list = wCustom();
-    list.push(item);
-    wCustomSave(list);
-    renderWorship(); renderProgress();
   }
 
   let qsActiveId = null;
@@ -5812,6 +5803,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
 
   let witrPool = "all";
+  let witrLoadGeneration = 0;
   let witrForceNew = false; /* يفرض عرض شاشة اختيار هدف جديد حتى لو أُنجزت جلسة الليلة */
   const witrOverlay = document.getElementById("witrOverlay");
   function openWitr(){
@@ -5831,6 +5823,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   /* تصفير حالة تقسيم الركعات المؤقتة واستعادة واجهة القارئ الافتراضية */
   function witrResetRakahState(){
+    witrLoadGeneration++;
     witrRakahDist = null;
     witrFullAyahList = [];
     witrSessionUnits = [];
@@ -6184,6 +6177,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     /* حافظ على التوزيع الذي أُعدّ من شاشة الاقتراح لنفس الورد (إن وُجد) قبل التصفير */
     const preDist = (witrRakahDist && witrPreparedKey === w.key) ? witrRakahDist : null;
     witrResetRakahState(); /* ابدأ كل جلسة قراءة بلا تقسيم */
+    const generation = witrLoadGeneration, owner = accountStorage.owner;
+    const active = ()=>generation === witrLoadGeneration && state.witr === w && !witrOverlay.hidden && owner === accountStorage.owner && !accountChanging;
     witrApplyFontSize();
     document.getElementById("witrLoading").hidden = false;
     document.getElementById("witrAyatBox").hidden = true;
@@ -6192,6 +6187,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
     try{
       const ayahList = await witrBuildAyahList(w.parts);
+      if(!active()) return;
       /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
       const rakahs = w.wird ? 1 : witrRakahCount(w.target);
       witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
@@ -6213,6 +6209,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       /* أعِد حساب الشارة بعد ظهور الصندوق (كانت مواضع الفواصل صفرًا وهو مخفي) */
       if(witrRakahDist){ witrOverlay.scrollTop = 0; witrUpdateRakahBadge(); }
     }catch(e){
+      if(!active()) return;
       document.getElementById("witrLoading").hidden = true;
       document.getElementById("witrFallback").hidden = false;
       const p0 = w.parts[0];
@@ -6960,7 +6957,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function hifzAddEntry(surahN, from, to){
     const tomorrow = new Date(hifzToday()+"T12:00:00"); tomorrow.setDate(tomorrow.getDate()+1);
     hifzUpsertSegment({
-      id: "hz_"+Date.now(),
+      id: "hz_"+newId(),
       surahN, from, to,
       easeFactor: 2.5, intervalDays: 1, reviewCount: 0,
       dateAdded: hifzToday(),
@@ -7359,6 +7356,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     hifzSearchTimer = setTimeout(()=>{ hifzRenderArchiveList(); }, 300);
   };
   function closeHifzUI(){
+    hifzReviewingId = null;
+    hifzQueue = []; hifzQueueTotal = 0;
     hifzOverlay.hidden = true;
     document.body.style.overflow = "";
     if(typeof hifzPlReset === "function") hifzPlReset(); /* أوقف الصوت عند إغلاق الشاشة */
@@ -7547,6 +7546,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* المراجعة: استدعاء نشط (Active Recall) في وضع تركيز — تُعرض السورة والآيات مموّهة،
      يسمّع المستخدم من حفظه ثم يضغط لكشف النص، ثم يقيّم نفسه بأزرار السُّنّة النبوية الثلاثة */
   let hifzReviewingId = null;
+  let hifzReviewGeneration = 0;
   const hifzRecallBox = document.getElementById("hifzRecallBox");
   const hifzRateRow = document.getElementById("hifzRateRow");
 
@@ -7611,10 +7611,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     loadingEl.hidden = false; textEl.hidden = true; hintEl.hidden = true; fbEl.hidden = true;
     textEl.innerHTML = "";
     hifzPlReset();
+    const generation = hifzReviewGeneration, owner = accountStorage.owner;
+    const active = ()=>generation === hifzReviewGeneration && hifzReviewingId === segmentId && !hifzOverlay.hidden && owner === accountStorage.owner && !accountChanging;
 
     try{
       const ayahList = await witrBuildAyahList([{n:seg.surahN, name:s.name, from:seg.from, to:seg.to}]);
-      if(hifzReviewingId !== segmentId) return; /* أغلق المستخدم الشاشة أثناء التحميل */
+      if(!active()) return; /* تجاهل نتائج جلسة أُغلقت أو استُبدلت */
       hifzReviewAyat = ayahList;
       ayahList.forEach((a,idx)=>{
         const span = document.createElement("span");
@@ -7634,6 +7636,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       /* إظهار المشغّل فقط إن توفّرت أرقام الآيات العامة (روابط الصوت) */
       if(ayahList.length && typeof ayahList[0].g === "number") hifzPlSetup();
     }catch(e){
+      if(!active()) return;
       loadingEl.hidden = true; fbEl.hidden = false;
       /* عند تعذّر التحميل نفكّ قفل التقييم مباشرة لأن الكشف غير متاح */
       hifzRateRow.classList.remove("locked");
@@ -7672,6 +7675,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   let hifzReviewAyat = [];
   let hifzPlIndex = 0;
   let hifzPlPlaying = false;
+  let hifzAudioGeneration = 0;
   let hifzVerseTarget = 1;        /* تكرار الآية الواحدة */
   let hifzSegTarget = 1;          /* تكرار مقطع A–B */
   let hifzVersePlayCount = 0;     /* كم مرة شُغّلت الآية الحالية */
@@ -7715,6 +7719,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
      تنزع المستمعات، تُفرّغ عنصر الوسائط عبر load() لإجهاض أي تحميل جارٍ وتحرير موارده،
      وتصفّر حالة المشغّل بالكامل — منعًا لتسرّب الذاكرة واستمرار الصوت في الخلفية */
   function hifzPlReset(){
+    hifzReviewGeneration++;
+    hifzAudioGeneration++;
     try{ hifzAudio.pause(); }catch(e){}
     hifzAudio.removeAttribute("src");
     try{ hifzAudio.load(); }catch(e){} /* يُجهض الطلب الجاري ويعيد ضبط عنصر الصوت ويحرّر المخزّن المؤقت */
@@ -7767,10 +7773,19 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     hifzAudio.playbackRate = hifzSpeed; /* أعِد تطبيق السرعة — تغيير المصدر قد يُعيدها إلى الافتراضي */
     hifzPlPlaying = true;
     hifzPlPlayBtn.textContent = "⏸";
-    const p = hifzAudio.play();
-    if(p && p.catch) p.catch(()=>{});
+    hifzTryAudioPlay();
+  }
+  function hifzTryAudioPlay(){
+    const generation = ++hifzAudioGeneration;
+    const failed = ()=>{
+      if(generation !== hifzAudioGeneration || !hifzPlPlaying) return;
+      hifzPlPause();
+      hifzShowToast("تعذّر تشغيل الصوت؛ حاول مرة أخرى أو اختر قارئًا آخر.");
+    };
+    try{ const p = hifzAudio.play(); if(p && p.catch) p.catch(failed); }catch(e){ failed(); }
   }
   function hifzPlPause(){
+    hifzAudioGeneration++;
     hifzPlPlaying = false;
     hifzPlPlayBtn.textContent = "▶";
     try{ hifzAudio.pause(); }catch(e){}
@@ -7841,12 +7856,18 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   /* عند فشل تحميل صوت القارئ بجودة ١٢٨، جرّب ٦٤ مرة واحدة */
   function hifzOnAudioError(){
-    if(hifzAudioTriedLo || !hifzReviewAyat[hifzPlIndex]) return;
+    if(!hifzReviewAyat[hifzPlIndex]) return;
+    if(hifzAudioTriedLo){
+      const playing = hifzPlPlaying;
+      hifzPlPause();
+      if(playing) hifzShowToast("تعذّر تحميل الصوت؛ حاول مرة أخرى أو اختر قارئًا آخر.");
+      return;
+    }
     hifzAudioTriedLo = true;
     const g = hifzReviewAyat[hifzPlIndex].g;
     hifzAudio.src = "https://cdn.islamic.network/quran/audio/64/"+hifzCurrentReciter()+"/"+g+".mp3";
     hifzAudio.playbackRate = hifzSpeed;
-    if(hifzPlPlaying){ const p = hifzAudio.play(); if(p&&p.catch) p.catch(()=>{}); }
+    if(hifzPlPlaying) hifzTryAudioPlay();
   }
   /* ربط/نزع مستمعات الصوت صراحةً — يمنع تراكم المستمعات وتسرّب الذاكرة عبر دورات فتح/إغلاق المراجعة */
   let hifzAudioBound = false;
@@ -11786,7 +11807,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=183;
+  const DATA_VERSION=1, APP_RELEASE=184;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
