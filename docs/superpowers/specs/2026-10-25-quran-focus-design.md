@@ -1,0 +1,7 @@
+# Quran focus reader
+
+User approved implementation of the studied in-reader focus approach. Keep the existing Quran sources, themes, storage and synchronization. Entry is an explicit Focus button (implementation choice; no forced fullscreen). Focus hides stats/history/settings and preserves the viewed page on exit. Header has title and exit; a fixed bottom dock has previous, tappable page number, next, and a separate recording action. Pinch/vertical scroll remain available. Browsing never records reading, in either reader or mode.
+
+Recording previews an explicit contiguous range from the saved next-reading page to a user-confirmed end page. In the custom reader, partial and multiple explicit sessions per day are supported and feed the existing undo journal. Existing summary quick-record remains clearly labeled with its exact goal range. Main Quran reader gains guarded undo of its new explicit range records. Page selection is browsing only, constrained to the section or 1–604. Duplicate/stale/overnight submits cannot add pages. Remote updates refresh progress without moving a valid viewed page. Page loading cannot leave an old image under a new page label; expose retry and external fallback.
+
+Alternatives considered: in-reader focus (chosen recommendation), browser fullscreen (unnecessary mobile variation), separate reader (duplicates accounting). No new dependencies or automatic migration of personal progress. No forced black theme or loss of browser pinch zoom.
