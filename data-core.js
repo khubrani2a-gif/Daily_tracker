@@ -38,7 +38,7 @@
   function equal(a,b){return JSON.stringify(a)===JSON.stringify(b);}
   function record(v){return v&&typeof v==='object'&&!Array.isArray(v);}
   // Reading and actual prayer are separate records. Tombstones are permanent.
-  function qiyamRows(rows){return (Array.isArray(rows)?rows:[]).filter(record).map(r=>({...copy(r),id:typeof r.id==='string'&&r.id?r.id:'legacy:'+JSON.stringify([r.completedAt,r.key,r.target,r.ayat,r.parts])}));}
+  function qiyamRows(rows){return (Array.isArray(rows)?rows:[]).filter(record).map(r=>({...copy(r),id:typeof r.id==='string'&&r.id?r.id:'legacy:'+JSON.stringify([r.completedAt,r.key,r.target,r.ayat,Array.isArray(r.parts)?r.parts.map(p=>[p?.n,p?.from,p?.to]):null])}));}
   function qiyamActive(rows){return qiyamRows(rows).filter(r=>!r.deletedAt);}
   function qiyamMerge(base,local,remote){
     const b=qiyamRows(base),l=qiyamRows(local),r=qiyamRows(remote),out=new Map();
