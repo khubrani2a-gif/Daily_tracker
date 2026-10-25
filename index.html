@@ -2560,6 +2560,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   .expense-quick-types .expense-type-clear{grid-column:1/-1;min-height:36px;border:0;background:transparent;color:var(--muted);font-size:.75rem}
 
 .task-sheet:has([id^="learning"]) {width:min(900px,100%);box-sizing:border-box;overflow-x:hidden}.task-sheet:has([id^="learning"]) :is(input,select,textarea,.task-fields>*,.learning-item,.learning-list){min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}.task-sheet:has([id^="learning"]) .planner-detail-actions{flex-wrap:wrap}.task-sheet:has([id^="learning"]) [hidden]{display:none!important}#learningCourseProgress{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:12px}#learningCourseProgress legend{color:var(--muted);padding-inline:6px}.learning-week-headlines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}#learningSubjectActions>details{width:auto}#learningSubjectActions details button{margin:4px}@media(max-width:420px){.learning-week-headlines{grid-template-columns:1fr}.task-sheet:has([id^="learning"]) .task-fields{grid-template-columns:minmax(0,1fr)}}
+  .learning-conflict-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.learning-conflict-source{min-width:0;overflow-wrap:anywhere}.learning-conflict-source button{white-space:normal}.learning-conflict-pair{margin-block:12px}#learningFormErr .learning-conflict-source{color:var(--ink)}
+  @media(max-width:600px){.learning-conflict-parts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -11581,7 +11583,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(next){const b=document.createElement("b");b.textContent=(next.at<=new Date()&&next.until>=new Date()?"جارية الآن: ":"المحاضرة القادمة: ")+next.item.courseName;summary.appendChild(b);learningAcademicText(summary,next.item.subjectId);learningSetText(summary,"",LEARNING_DAYS[new Date(next.date+"T12:00:00").getDay()]+" · "+next.item.startTime+(next.item.room?" · "+next.item.room:""));learningSetText(summary,"",next.item.section?("الشعبة: "+next.item.section):"");}
     else learningSetText(summary,"","لا توجد محاضرات اليوم");
     if(urgent){const small=document.createElement("small");small.textContent="الأكثر إلحاحًا: "+urgent.title+" · "+urgent.status;summary.appendChild(small);}
-    const clashes=learningTimeConflicts(today,PC.plus(today,6));if(clashes.length){learningSetText(summary,'planner-notice','تعارض وقت يحتاج مراجعة: '+clashes.slice(0,3).map(c=>c.text).join('، '));actions.appendChild(learningButton('مراجعة تعارضات الوقت',learningShowTimeConflicts));}
+    const clashes=learningTimeConflicts(today,PC.plus(today,6));if(clashes.length)learningSetText(summary,'planner-notice','يوجد '+clashes.length+' تعارضات وقت خلال ٧ أيام. تشمل المراجعة المواعيد خارج الفصل المعروض والمؤرشفة.');actions.appendChild(learningButton('مراجعة تعارضات الوقت',learningShowTimeConflicts));
     actions.append(learningButton("فتح التحضير",()=>learningOpenPreparations(false)),learningButton("عرض الجدول",()=>learningOpenSchedule(false)));
   }
   function learningField(parent,label,id,type,wide){
@@ -11632,6 +11634,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const contextLabel=learningSetText(fields,'task-field-wide planner-hint','');contextLabel.id='learningFormContext';const showContext=()=>{contextLabel.textContent='مكان الحفظ: '+(get('lfSubject').value?learningAcademicLabel(get('lfSubject').value):'تعلّم مستقل — بدون مقرر');};get('lfSubject').addEventListener('change',showContext);showContext();
     const formOwner=user?.uid||'guest',formValues=()=>JSON.stringify([...fields.querySelectorAll('input,textarea,select')].map(el=>[el.id,el.value,el.checked])),initialForm=formValues();let saved=false;
     sheet.over.beforeClose=()=>saved||formOwner!==(user?.uid||'guest')||accountChanging||formValues()===initialForm||confirm('لديك تعديلات غير محفوظة. تجاهلها وإغلاق النموذج؟');
+    if(kind==='schedule')for(const event of ['input','change'])fields.addEventListener(event,()=>{const consent=get('lfAllowConflict');if(consent)consent.checked=false;});
     get("learningFormSave").onclick=()=>{if(formOwner!==(user?.uid||'guest')||accountChanging){err.textContent='تغير الحساب؛ أعد فتح النموذج لحسابك الحالي.';return;}const now=Date.now(), item=Object.assign({},existing||{id:learningId(kind),createdAt:now}, {updatedAt:now,deletedAt:null});
       if(kind==="schedule"){Object.assign(item,{courseName:learningText(get("lfCourse").value,120),courseCode:learningText(get("lfCode").value,40),section:learningText(get("lfSection").value,60),day:+get("lfDay").value,startTime:get("lfStart").value,endTime:get("lfEnd").value,room:learningText(get("lfRoom").value,100),recurrence:get("lfRec").value,date:get("lfDate").value,notes:learningText(get("lfNotes").value,1000),prepId:item.prepId||""}); if(!item.courseName||!item.startTime||(item.recurrence==="once"&&!item.date)){err.textContent="أدخل اسم المقرر ووقت البداية، وحدد التاريخ للمحاضرة الواحدة.";return;}}
       else if(kind==="prep"){Object.assign(item,{title:learningText(get("lfTitle").value,140),course:learningText(get("lfCourse").value,120),lectureId:get("lfLecture").value,lectureDate:get("lfLectureDate").value,targetDate:get("lfDate").value,status:get("lfStatus").value,objectives:learningText(get("lfObjectives").value,1200),materials:learningText(get("lfMaterials").value,1000),activity:learningText(get("lfActivity").value,500),links:learningText(get("lfLinks").value,1000),notes:learningText(get("lfNotes").value,1500),reflection:learningText(get("lfReflection").value,1500)}); if(!item.title){err.textContent="اكتب عنوان التحضير.";return;}}
@@ -11670,12 +11673,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(kind==='schedule'&&existing&&item.futureChanges?.length){const groups=[['day','startTime','endTime','recurrence','date'],['courseName'],['room'],['url'],['notes'],['reminders']];const changed=groups.filter(g=>g.some(k=>JSON.stringify(item[k])!==JSON.stringify(existing[k]))).flat();if(changed.length)item.futureChanges=item.futureChanges.map(c=>({from:c.from,values:Object.fromEntries(Object.entries(c.values).filter(([k])=>!changed.includes(k)))}));}
       if(kind==="schedule"&&item.endTime&&item.endTime<=item.startTime){err.textContent="وقت النهاية يجب أن يكون بعد وقت البداية في اليوم نفسه.";err.setAttribute("role","alert");get("lfEnd").focus();return;}
       if(kind==='schedule'){
-        const start=item.recurrence==='once'?item.date:(item.termStart&&item.termStart>todayStr()?item.termStart:todayStr()),end=item.recurrence==='once'?start:(item.termEnd||PC.plus(start,365)),hits=[];
-        for(let day=start;day<=end&&day<=PC.plus(start,730);day=PC.plus(day,1))if(learningLectureOccurs(item,day)){
-          const task=GC.learningTask(item,{id:'check-'+item.id,kind:'schedule',date:day});
-          hits.push(...PC.conflicts(task,plannerRows(day,day).filter(r=>!(r.external&&r.learningKind==='schedule'&&r.external.id===item.id))));
-        }
-        if(hits.length&&!get('lfAllowConflict')?.checked){err.textContent='يتعارض مع '+[...new Set(hits.map(h=>h.row.task.text+' · '+h.row.date+' '+h.row.task.dueTime))].slice(0,5).join('، ');const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.id='lfAllowConflict';label.append(check,' حفظ رغم التعارض');err.appendChild(label);return;}
+        const start=item.recurrence==='once'?item.date:(item.termStart&&item.termStart>todayStr()?item.termStart:todayStr()),requestedEnd=item.recurrence==='once'?start:(item.termEnd||PC.plus(start,365)),end=requestedEnd>PC.plus(start,730)?PC.plus(start,730):requestedEnd,hits=learningScheduleConflicts(item,start,end);
+        const signature=learningConflictSignature(hits);if(hits.length&&(!get('lfAllowConflict')?.checked||get('lfAllowConflict').dataset.review!==signature)){learningConflictError(err,hits);const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.id='lfAllowConflict';check.dataset.review=signature;label.append(check,' حفظ رغم التعارض');err.appendChild(label);return;}
       }
       if(index>=0)list[index]=item; else list.push(item); learningSave(freshData); saved=true;plannerRefresh();sheet.close(); if(typeof afterSave==="function")afterSave(); else if(kind==="schedule")learningOpenSchedule(false); else learningOpenList(kind);
     };
@@ -11787,7 +11786,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=182;
+  const DATA_VERSION=1, APP_RELEASE=183;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -18085,11 +18084,66 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const GC=window.MufCalendar;
   const calendarSession={generation:0,token:'',uid:'',calendar:'',expires:0,busy:false,timer:null,errors:new Map(),checked:new Map(),message:''};
   function learningTimeConflicts(start,end){const rows=plannerRows(start,end),seen=new Set(),out=[];for(const row of rows.filter(r=>r.external&&PC.active(r.task)))for(const hit of PC.conflicts({...row.task,dueDate:row.date},rows)){const key=[row.key,hit.row.key].sort().join('|');if(!seen.has(key)){seen.add(key);out.push({row,other:hit.row,text:row.date+' '+row.task.text+' ↔ '+hit.row.task.text});}}return out;}
-  function learningShowTimeConflicts(){const rows=learningTimeConflicts(todayStr(),PC.plus(todayStr(),30)),sheet=taskSheet('تعارضات الوقت — ٣٠ يومًا','<div id="learningTimeIssues"></div>'),host=sheet.over.querySelector('#learningTimeIssues');if(!rows.length)learningSetText(host,'','لا توجد تعارضات وقت في هذه الفترة.');for(const hit of rows){const box=document.createElement('div');box.className='planner-notice';learningSetText(box,'',hit.text);box.appendChild(learningButton('تعديل محاضرة التعلّم',()=>{sheet.close();learningChooseEdit(hit.row);}));box.appendChild(learningButton('اقترح وقتًا لهذه المرة',()=>learningSuggestTime(hit.row)));host.appendChild(box);}}
+  function learningConflictCard(host,row){
+    const owner=user?.uid||'guest',card=document.createElement('section');card.className='learning-item learning-conflict-source';
+    learningSetText(card,'learning-item-title',row.task.text);
+    const time=learningSetText(card,'learning-item-meta',[row.date,row.task.dueTime,row.task.endTime?'— '+row.task.endTime:''].filter(Boolean).join(' · '));time.dir='ltr';
+    if(row.external){
+      learningSetText(card,'learning-item-meta','المصدر: التعلّم · '+({schedule:'محاضرة',prep:'تحضير',course:'دورة',read:'قراءة'}[row.learningKind]||''));
+      learningAcademicText(card,row.external.subjectId);
+      if(!learningViewMatches(row.external))learningSetText(card,'planner-hint','خارج الفصل المعروض');
+      if(row.external.archived)learningSetText(card,'planner-hint','مؤرشف — الأرشفة لا توقف التكرار');
+      if(row.sourceDate!==row.date)learningSetText(card,'planner-hint','منقول من '+row.sourceDate);
+    }else learningSetText(card,'learning-item-meta','المصدر: المهام والمواعيد');
+    learningSetText(card,'planner-hint',row.task.calendarBinding?'مرتبط بـ Google — راجع حالة المزامنة في التفاصيل':'غير مرتبط بـ Google');
+    const open=learningButton('فتح هذا الموعد',()=>{if(owner!==(user?.uid||'guest')||accountChanging){hifzShowToast('تغير الحساب؛ أعد فتح المراجعة.');return;}plannerSummary(row,open);});open.dataset.learningConflictOpen=row.key;card.appendChild(open);host.appendChild(card);return card;
+  }
+  function learningScheduleConflicts(item,start,end){
+    const data=learningLoad(),drafts=[],seen=new Set();
+    for(const record of data.calendarOccurrences.filter(r=>r.kind==='schedule'&&r.sourceId===item.id)){
+      seen.add(record.date);const row=learningCalendarRow(item,record);if(PC.active(row.task)&&(record.date>=start&&record.date<=end||row.date>=start&&row.date<=PC.plus(start,730)))drafts.push(row);
+    }
+    for(let date=start;date<=end;date=PC.plus(date,1))if(!seen.has(date)&&learningLectureOccurs(item,date)){
+      if(item.recurrence==='once'&&data.calendarOccurrences.some(r=>r.kind==='schedule'&&r.sourceId===item.id&&r.sourceRecurrence==='once'))continue;
+      const record={id:'learning|schedule|'+item.id+'|'+date,kind:'schedule',sourceId:item.id,date,sourceRecurrence:item.recurrence||'weekly'};
+      const row=learningCalendarRow(item,record);if(PC.active(row.task))drafts.push(row);
+    }
+    const rows=end>=start?plannerRows(start,end):[];for(const date of new Set(drafts.map(r=>r.date).filter(date=>date<start||date>end)))rows.push(...plannerRows(date,date));
+    const others=rows.filter(r=>!(r.external?.id===item.id&&r.learningKind==='schedule'));
+    return drafts.flatMap(row=>PC.conflicts(row.task,others.concat(drafts)).map(hit=>({...hit,candidate:row})));
+  }
+  function learningConflictSignature(hits){return JSON.stringify(hits.map(hit=>[hit.row.key,GC.snapshot(hit.row.task)]).sort((a,b)=>a[0].localeCompare(b[0])));}
+  function learningConflictError(host,hits){
+    host.replaceChildren();host.setAttribute('role','alert');learningSetText(host,'','تعارض وقت يحتاج مراجعة. الموعد المقابل قد يكون خارج الفصل المعروض أو مؤرشفًا.');
+    const unique=[...new Map(hits.map(hit=>[hit.row.key,hit.row])).values()];
+    for(const row of unique.slice(0,5))learningConflictCard(host,row);
+    if(unique.length>5)learningSetText(host,'planner-hint','توجد '+unique.length+' مواعيد متعارضة؛ عُرضت أول خمسة. راجع تعارضات الوقت للفترة كاملة.');
+  }
+  function learningShowTimeConflicts(){
+    const owner=user?.uid||'guest',selected=learningAcademicSelected(),term=learningLoad().terms.find(t=>!t.deletedAt&&t.id===selected.termId);
+    const sheet=plannerAccessibleSheet(taskSheet('مراجعة تعارضات الوقت','<p class="planner-hint">نفحص جميع الالتزامات المسجلة، بما فيها الفصول الأخرى والمؤرشف. تشابه الاسم وحده لا يثبت التكرار.</p><div id="learningConflictFields" class="task-fields"></div><button id="learningConflictRefresh">تحديث الفحص</button><p id="learningConflictSummary" role="status"></p><div id="learningTimeIssues"></div>'),document.activeElement),q=id=>sheet.over.querySelector('#'+id);
+    const options=[['month','٣٠ يومًا قادمة']];if(term&&PC.date(term.startDate)&&PC.date(term.endDate))options.push(['term','الفصل المحدد كاملًا']);
+    const range=learningSelect(q('learningConflictFields'),'فترة الفحص','learningConflictRange',options,true);let shown=20;
+    const render=()=>{
+      const host=q('learningTimeIssues');host.replaceChildren();if(owner!==(user?.uid||'guest')||accountChanging){q('learningConflictSummary').textContent='تغير الحساب؛ أعد فتح المراجعة.';return;}
+      const current=learningLoad().terms.find(t=>!t.deletedAt&&t.id===term?.id),full=range.value==='term';
+      if(full&&(!current||!PC.date(current.startDate)||!PC.date(current.endDate)||current.endDate<current.startDate)){q('learningConflictSummary').textContent='تغير الفصل أو تواريخه؛ أعد فتح المراجعة.';return;}
+      const start=full?current.startDate:todayStr(),requestedEnd=full?current.endDate:PC.plus(start,29),end=requestedEnd>PC.plus(start,730)?PC.plus(start,730):requestedEnd,rows=learningTimeConflicts(start,end);
+      q('learningConflictSummary').textContent=start+' — '+end+' · '+rows.length+' تعارضات بين المواعيد'+(end<requestedEnd?' · الفحص محدود بسنتين؛ لم يُفحص ما بعد ذلك.':'');
+      if(!rows.length)learningSetText(host,'learning-empty','لا توجد تعارضات وقت في هذه الفترة.');
+      for(const hit of rows.slice(0,shown)){
+        const box=document.createElement('section');box.className='learning-item learning-conflict-pair';learningSetText(box,'learning-item-title','تعارض يوم '+hit.row.date);
+        const pair=document.createElement('div');pair.className='learning-conflict-parts';learningConflictCard(pair,hit.row);learningConflictCard(pair,hit.other);box.appendChild(pair);
+        box.appendChild(learningButton('اقترح وقتًا لهذه المرة',()=>{if(owner===(user?.uid||'guest')&&!accountChanging)learningSuggestTime(hit.row);}));host.appendChild(box);
+      }
+      if(rows.length>shown)host.appendChild(learningButton('عرض المزيد من التعارضات',()=>{shown+=20;render();}));
+    };
+    range.onchange=()=>{shown=20;render();};q('learningConflictRefresh').onclick=render;render();
+  }
   function learningSuggestTime(row){const fresh=calendarFreshRow(row);if(!fresh)return;const slots=window.MufLearningCore.suggestOccurrenceSlots(fresh.task,plannerRows(fresh.date,fresh.date),plannerPrefs(),fresh.date,fresh.date===todayStr()?new Date().toTimeString().slice(0,5):'00:00'),sheet=taskSheet('أوقات بديلة لهذه المحاضرة','<p>ضمن تفرغك وبحسب جميع الالتزامات المسجلة، بما فيها الفصول الأخرى. اختيار وقت يفتح المعاينة قبل الحفظ.</p><div id="learningAlternativeSlots" class="planner-detail-actions"></div>'),host=sheet.over.querySelector('#learningAlternativeSlots');if(!slots.length)learningSetText(host,'planner-hint','لا توجد فترة مناسبة للمدة والتجهيز. اختر يومًا آخر أو عدّل الوقت يدويًا.');for(const slot of slots){const button=learningButton(slot.start+' — '+slot.end,()=>{sheet.close();learningOccurrenceEditor(fresh,false,slot);});button.dataset.learningSlot=slot.start;host.appendChild(button);}host.appendChild(learningButton('تعديل التاريخ والوقت',()=>{sheet.close();learningOccurrenceEditor(fresh,false);}));}
   function learningChooseEdit(row){
     if(row.learningKind!=='schedule'){learningOpenForm(row.learningKind,row.external.id,plannerRefresh);return;}
-    const sheet=plannerAccessibleSheet(taskSheet('نطاق تعديل المحاضرة','<p>'+expEsc(row.task.text)+' · '+expEsc(row.date)+'</p><div class="planner-detail-actions"><button id="learningScopeOne">هذه المحاضرة فقط</button><button id="learningScopeFuture">هذه وما بعدها</button><button id="learningScopeAll">الجدول كاملًا</button></div>'),document.activeElement);
+    const sheet=plannerAccessibleSheet(taskSheet('نطاق تعديل المحاضرة','<p>'+expEsc(row.task.text)+' · '+expEsc(row.date)+'</p><p class="planner-hint">هذه المحاضرة فقط: تعديل هذا الموعد. هذه وما بعدها: تعديل الحقول المختارة من هذا التاريخ. الجدول كاملًا: تعديل مصدر التكرار، وقد يؤثر على المواعيد السابقة والقادمة. تحديث Google يتم عند المزامنة.</p><div class="planner-detail-actions"><button id="learningScopeOne">هذه المحاضرة فقط</button><button id="learningScopeFuture">هذه وما بعدها</button><button id="learningScopeAll">الجدول كاملًا</button></div>'),document.activeElement);
     sheet.over.querySelector('#learningScopeOne').onclick=()=>{sheet.close();learningOccurrenceEditor(row,false);};
     sheet.over.querySelector('#learningScopeFuture').hidden=row.external.recurrence!=='weekly';
     sheet.over.querySelector('#learningScopeFuture').onclick=()=>{sheet.close();learningOccurrenceEditor(row,true);};
@@ -18101,14 +18155,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     for(const [id,label,type,value] of [['loName','العنوان','text',draftBase.text],['loDate',future?'تاريخ المرة الأولى / يوم الأسبوع الجديد':'التاريخ','date',draftBase.dueDate],['loStart','البداية','time',draftBase.dueTime],['loEnd','النهاية','time',draftBase.endTime],['loLocation','الموقع','text',draftBase.location],['loLink','الرابط','url',draftBase.link],['loNotes','الملاحظات','textarea',draftBase.notes]])learningField(fields,label,id,type,['loName','loNotes','loLink'].includes(id)).value=value||'';
     if(defaults.start)q('loStart').value=defaults.start;if(defaults.end)q('loEnd').value=defaults.end;
     const reminderSelect=learningSelect(fields,'التنبيه','loReminder',[['','بدون'],['0','عند الموعد'],['15','قبل ١٥ دقيقة'],['30','قبل نصف ساعة'],['60','قبل ساعة']]);learningReminderValue(reminderSelect,draftBase.reminders||[]);
+    for(const event of ['input','change'])fields.addEventListener(event,()=>{q('loAllow').checked=false;});
     q('learningOccurrenceSave').onclick=()=>{
       if(owner!==(user?.uid||'guest')||JSON.stringify(calendarFreshRow(row))!==original){q('learningOccurrenceError').textContent='تغيّرت البيانات؛ أغلق النافذة وافتح أحدث نسخة.';return;}
       const value=GC.snapshot({...draftBase,text:q('loName').value.trim(),dueDate:q('loDate').value,dueTime:q('loStart').value,endTime:q('loEnd').value,location:q('loLocation').value.trim(),link:q('loLink').value.trim(),notes:q('loNotes').value,reminders:learningReadReminder(q('loReminder'),draftBase.reminders||[])});
       try{if(future&&value.dueDate<row.sourceDate)throw Error('اختر تاريخًا لا يسبق المحاضرة المحددة.');if(!value.text)throw Error('اكتب العنوان.');GC.toEvent(value,'validate');if(value.link&&!learningUrl(value.link))throw Error('راجع الرابط.');
-        const data=learningLoad(),item=data.schedule.find(x=>x.id===row.external.id),checkDays=[];const candidate={...item};if(future){const changes={};for(const [field,key] of [['courseName','text'],['startTime','dueTime'],['endTime','endTime'],['room','location'],['url','link'],['notes','notes'],['reminders','reminders']])if(!GC.equal(value[key],draftBase[key]))changes[field]=value[key];if(value.dueDate!==draftBase.dueDate)changes.day=new Date(value.dueDate+'T12:00:00').getDay();const same=(item.futureChanges||[]).find(c=>c.from===value.dueDate);candidate.futureChanges=(item.futureChanges||[]).filter(c=>c.from!==value.dueDate).map(c=>c.from>value.dueDate?{...c,values:{...c.values,...changes}}:c).concat({from:value.dueDate,values:{...same?.values,...changes}});}
-        if(future){for(let day=value.dueDate;day<=PC.plus(value.dueDate,730);day=PC.plus(day,1))if(GC.learningOccurs(candidate,day))checkDays.push(day);}else checkDays.push(value.dueDate);
-        const hits=checkDays.flatMap(day=>PC.conflicts({...value,...(future?GC.learningSource('schedule',candidate,day,'weekly'):{}),dueDate:day,id:row.task.id},plannerRows(day,day).filter(r=>future?!(r.external?.id===item.id&&r.learningKind==='schedule'):r.key!==row.key)));
-        if(hits.length&&!q('loAllow').checked)throw Error('يتعارض مع '+[...new Set(hits.map(h=>h.row.task.text))].join('، '));
+        const data=learningLoad(),item=data.schedule.find(x=>x.id===row.external.id);const candidate={...item};if(future){const changes={};for(const [field,key] of [['courseName','text'],['startTime','dueTime'],['endTime','endTime'],['room','location'],['url','link'],['notes','notes'],['reminders','reminders']])if(!GC.equal(value[key],draftBase[key]))changes[field]=value[key];if(value.dueDate!==draftBase.dueDate)changes.day=new Date(value.dueDate+'T12:00:00').getDay();const same=(item.futureChanges||[]).find(c=>c.from===value.dueDate);candidate.futureChanges=(item.futureChanges||[]).filter(c=>c.from!==value.dueDate).map(c=>c.from>value.dueDate?{...c,values:{...c.values,...changes}}:c).concat({from:value.dueDate,values:{...same?.values,...changes}});}
+        const hits=future?learningScheduleConflicts(candidate,value.dueDate,PC.plus(value.dueDate,730)):PC.conflicts({...value,id:row.task.id},plannerRows(value.dueDate,value.dueDate).filter(r=>r.key!==row.key));
+        const signature=learningConflictSignature(hits);if(hits.length&&(!q('loAllow').checked||q('loAllow').dataset.review!==signature)){q('loAllow').checked=false;q('loAllow').dataset.review=signature;learningConflictError(q('learningOccurrenceError'),hits);return;}
         if(future){item.futureChanges=candidate.futureChanges;item.updatedAt=Date.now();learningSave(data);plannerRefresh();}
         else{const record=data.calendarOccurrences.find(r=>r.id===row.key)||learningCalendarRecord('schedule',item,row.sourceDate);record.sourceBase=GC.learningSource('schedule',item,record.date,record.sourceRecurrence);record.value=value;learningCalendarStore(data,record);}
         sheet.close();
@@ -18143,6 +18197,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function learningCalendarStore(data,record){record.updatedAt=Math.max(Date.now(),(record.updatedAt||0)+1);data.calendarOccurrences=data.calendarOccurrences.filter(r=>r.id!==record.id).concat(record);learningSave(data);plannerRefresh();}
   function learningOpenCoverage(scope){
     const owner=user?.uid||'guest',data=learningLoad(),term=scope.termId?data.terms.find(t=>t.id===scope.termId):window.MufLearningCore.subjectTerm(data,scope.subjectId),sheet=plannerAccessibleSheet(taskSheet('تغطية Google Calendar','<div class="task-fields" id="learningCoverageFields"></div><p id="learningCoverageSummary" role="status"></p><p id="learningCoverageMessage" role="alert"></p><button id="learningCoverageExtend">استكمال المواعيد غير المرتبطة</button><button id="learningCoverageConfirm" class="task-sheet-save" hidden>تأكيد ربط الفترة المعروضة</button><button id="learningCoverageSync">مزامنة المرتبط وتحديث التقرير</button><button id="learningCoverageManage">إدارة الاتصال والمشكلات</button><p class="planner-hint">التأكيد حسب آخر تحقق محفوظ، وليس متابعة في الخلفية. المزامنة أثناء فتح المفكرة واتصال Google فقط. الإلغاءات المرتبطة تُراجع منفصلة.</p><div id="learningCoverageExceptions"></div>'),document.activeElement),q=id=>sheet.over.querySelector('#'+id);let prepared=null;
+    learningSetText(q('learningCoverageFields'),'task-field-wide planner-hint','الفترة تبدأ من اليوم افتراضيًا؛ لعرض الفصل كاملًا اختر تاريخ بدايته ونهايته. الربط على دفعات تغطي حتى ٩٠ يومًا؛ كرّر الاستكمال حتى يصبح غير مرتبط صفرًا، ثم راجع ما ينتظر المزامنة أو يحتاج مراجعة.');
     const from=learningField(q('learningCoverageFields'),'من','learningCoverageFrom','date'),to=learningField(q('learningCoverageFields'),'إلى','learningCoverageTo','date');from.value=todayStr();to.value=term?.endDate>=from.value?term.endDate:PC.plus(from.value,89);
     const matches=row=>{const subjectId=row.external?.subjectId||row.task.learningRef?.subjectId;return scope.subjectId?subjectId===scope.subjectId:window.MufLearningCore.subjectTerm(learningLoad(),subjectId)?.id===scope.termId;};
     const read=()=>{if(owner!==(user?.uid||'guest'))throw Error('تغير الحساب؛ أعد فتح التقرير.');if(!PC.date(from.value)||!PC.date(to.value)||to.value<from.value||to.value>PC.plus(from.value,730))throw Error('حدد فترة صحيحة لا تتجاوز سنتين.');const rows=[...learningCalendarRows(from.value,to.value),...learningCalendarRecords(),...plannerRows(from.value,to.value,false).filter(r=>r.task.learningRef)].filter(matches),unique=[...new Map(rows.map(r=>[r.task.id,r])).values()].filter(r=>{const date=r.sourceDate||r.date;return date>=from.value&&date<=to.value;});return {rows:unique,coverage:window.MufLearningCore.calendarCoverage(unique,calendarRecords().filter(matches),{from:from.value,to:to.value,checkedById:calendarSession.checked,errorsById:calendarSession.errors,connected:calendarReady()})};};
