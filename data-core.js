@@ -59,7 +59,10 @@
     for(const p of parts){const size=p.to-p.from+1;if(offset>=size){offset-=size;continue;}const take=Math.min(count,size-offset);if(take>0)out.push({...p,from:p.from+offset,to:p.from+offset+take-1});count-=take;offset=0;if(!count)break;}
     return out;
   }
+  function qiyamPlanValid(w){return record(w)&&Array.isArray(w.parts)&&w.parts.length>0&&w.parts.length<=1000&&w.parts.every(p=>record(p)&&Number.isInteger(p.n)&&p.n>=1&&p.n<=114&&Number.isInteger(p.from)&&Number.isInteger(p.to)&&p.from>=1&&p.to>=p.from&&p.to<=286)&&Number.isInteger(w.readCount||0)&&(w.readCount||0)>=0;}
+  function qiyamDraftEqual(a,b){const clean=w=>{if(!w)return w;const out=copy(w);delete out.readPage;delete out.startedAt;return out;};return equal(clean(a),clean(b));}
   function qiyamRead(day,count,id,at){
+    if(!qiyamPlanValid(day.witr))throw Error('invalidReading');
     const w=day.witr,rows=qiyamRows(day.witrSessions),total=(w?.parts||[]).reduce((n,p)=>n+p.to-p.from+1,0),prior=+(w?.readCount||0);
     if(!w||!Number.isInteger(count)||count<1||count>total-prior||!id||rows.some(x=>x.id===id))throw Error('invalidReading');
     const next=prior+count,after=next===total?null:{...copy(w),readCount:next};
@@ -67,7 +70,7 @@
   }
   function qiyamUndo(day,id,at,retained){
     const rows=qiyamRows(day.witrSessions),active=rows.filter(x=>!x.deletedAt),last=active[active.length-1];
-    if(!last||last.id!==id||!record(last.before)||!equal(day.witr,last.after))throw Error('staleReading');
+    if(!last||last.id!==id||!qiyamPlanValid(last.before)||!qiyamDraftEqual(day.witr,last.after))throw Error('staleReading');
     return {...copy(day),witr:copy(last.before),witrSessions:rows.map(r=>r.id===id?{...r,deletedAt:at,updatedAt:at,retained:!!retained}:r)};
   }
   function qiyamPray(day,value,at){
