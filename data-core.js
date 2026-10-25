@@ -81,6 +81,11 @@
     const row={id:value.id,qiyam:!!value.qiyam,witr:!!value.witr,qiyamRakahs:value.qiyam?value.qiyamRakahs??null:null,witrRakahs:value.witr?value.witrRakahs??null:null,completedAt:at,updatedAt:at};
     return {...copy(day),qiyamPrayers:rows.concat(row)};
   }
+  function qiyamEditPrayer(day,id,value,at){
+    const rows=qiyamRows(day.qiyamPrayers),old=rows.find(r=>r.id===id&&!r.deletedAt);if(!old)throw Error('stalePrayer');
+    const edited=qiyamPray({...day,qiyamPrayers:rows.filter(r=>r.id!==id)},{...value,id},at).qiyamPrayers.at(-1);
+    return {...copy(day),qiyamPrayers:rows.map(r=>r.id===id?{...edited,completedAt:old.completedAt}:r)};
+  }
   function mergeChanges(base,local,remote){
     if(equal(base,local))return copy(remote);
     if(Array.isArray(base)&&Array.isArray(local)&&Array.isArray(remote)){
@@ -177,5 +182,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray};
+  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer};
 });
