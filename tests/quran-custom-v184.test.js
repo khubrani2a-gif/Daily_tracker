@@ -19,7 +19,7 @@ test('Quran rollback confirmation must not overwrite later edits or reading hist
  const result=await p.evaluate(original=>{
   audit.wCustomSave([original]);audit.qcRollbackComplete('a');
   audit.wCustomSave([{...original,label:'latest title',target:3,lastReadDate:audit.todayStr(),remoteNote:'keep'}]);
-  document.getElementById('hifzDialogOk').click();return audit.wCustom()[0];
+  document.getElementById('qsUndoSave').click();return audit.wCustom()[0];
  },item('a'));
  assert.equal(result.label,'latest title');assert.equal(result.target,3);assert.equal(result.remoteNote,'keep');
 }));
