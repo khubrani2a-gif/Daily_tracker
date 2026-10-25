@@ -37,6 +37,57 @@
   }
   function equal(a,b){return JSON.stringify(a)===JSON.stringify(b);}
   function record(v){return v&&typeof v==='object'&&!Array.isArray(v);}
+  // Reading and actual prayer are separate records. Tombstones are permanent.
+  function qiyamRows(rows){return (Array.isArray(rows)?rows:[]).filter(record).map(r=>({...copy(r),id:typeof r.id==='string'&&r.id?r.id:'legacy:'+JSON.stringify([r.completedAt,r.key,r.target,r.ayat,Array.isArray(r.parts)?r.parts.map(p=>[p?.n,p?.from,p?.to]):null])}));}
+  function qiyamActive(rows){return qiyamRows(rows).filter(r=>!r.deletedAt);}
+  function qiyamMerge(base,local,remote){
+    const b=qiyamRows(base),l=qiyamRows(local),r=qiyamRows(remote),out=new Map();
+    for(const row of r.concat(l)){
+      const prev=out.get(row.id);
+      if(!prev||(!prev.deletedAt&&row.deletedAt)||(!prev.deletedAt&&!row.deletedAt&&+(row.updatedAt||row.completedAt||0)>=+(prev.updatedAt||prev.completedAt||0)))out.set(row.id,row);
+    }
+    for(const row of b)if(!l.some(x=>x.id===row.id))out.set(row.id,{...row,deletedAt:Math.max(1,+(row.updatedAt||row.completedAt||0)+1)});
+    return [...out.values()].sort((a,b)=>(a.completedAt||0)-(b.completedAt||0)||a.id.localeCompare(b.id));
+  }
+  function qiyamNight(date,minutes,fajr){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(fajr||''))return null;
+    const [h,m]=fajr.split(':').map(Number);
+    return minutes<h*60+m?new Date(Date.parse(date+'T12:00:00Z')-86400000).toISOString().slice(0,10):date;
+  }
+  function qiyamSlice(parts,offset,count){
+    const out=[];
+    for(const p of parts){const size=p.to-p.from+1;if(offset>=size){offset-=size;continue;}const take=Math.min(count,size-offset);if(take>0)out.push({...p,from:p.from+offset,to:p.from+offset+take-1});count-=take;offset=0;if(!count)break;}
+    return out;
+  }
+  function qiyamPlanValid(w){return record(w)&&Array.isArray(w.parts)&&w.parts.length>0&&w.parts.length<=1000&&w.parts.every(p=>record(p)&&Number.isInteger(p.n)&&p.n>=1&&p.n<=114&&Number.isInteger(p.from)&&Number.isInteger(p.to)&&p.from>=1&&p.to>=p.from&&p.to<=286)&&Number.isInteger(w.readCount||0)&&(w.readCount||0)>=0;}
+  function qiyamStable(value){const normalize=v=>Array.isArray(v)?v.map(normalize):record(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,normalize(v[k])])):v;return JSON.stringify(normalize(value));}
+  function qiyamSignature(w){return qiyamStable(w&&[w.id,w.key,w.parts,w.target,w.readCount||0,w.distribution||null]);}
+  function qiyamDraftEqual(a,b){const clean=w=>{if(!w)return w;const out=copy(w);delete out.readPage;delete out.startedAt;return out;};return qiyamStable(clean(a))===qiyamStable(clean(b));}
+  function qiyamRead(day,count,id,at){
+    if(!qiyamPlanValid(day.witr))throw Error('invalidReading');
+    const w=day.witr,rows=qiyamRows(day.witrSessions),total=(w?.parts||[]).reduce((n,p)=>n+p.to-p.from+1,0),prior=+(w?.readCount||0);
+    if(!w||!Number.isInteger(count)||count<1||count>total-prior||!id||rows.some(x=>x.id===id))throw Error('invalidReading');
+    const next=prior+count,after=next===total?null:{...copy(w),readCount:next};
+    return {...copy(day),witr:after,witrSessions:rows.concat({id,kind:'reading',target:w.target,parts:qiyamSlice(w.parts,prior,count),key:w.key,ayat:count,completedAt:at,updatedAt:at,before:copy(w),after:copy(after)})};
+  }
+  function qiyamUndo(day,id,at,retained){
+    const rows=qiyamRows(day.witrSessions),active=rows.filter(x=>!x.deletedAt),last=active[active.length-1];
+    if(!last||last.id!==id||!qiyamPlanValid(last.before)||!qiyamDraftEqual(day.witr,last.after))throw Error('staleReading');
+    return {...copy(day),witr:copy(last.before),witrSessions:rows.map(r=>r.id===id?{...r,deletedAt:at,updatedAt:at,retained:!!retained}:r)};
+  }
+  function qiyamPray(day,value,at){
+    const rows=qiyamRows(day.qiyamPrayers),active=rows.filter(x=>!x.deletedAt);
+    if(!value.id||rows.some(x=>x.id===value.id)||(!value.qiyam&&!value.witr))throw Error('invalidPrayer');
+    if(value.witr&&active.some(x=>x.witr))throw Error('witrAlreadyRecorded');
+    for(const key of ['qiyamRakahs','witrRakahs'])if(value[key]!=null&&(!Number.isInteger(value[key])||value[key]<1||value[key]>100))throw Error('invalidRakahs');
+    const row={id:value.id,qiyam:!!value.qiyam,witr:!!value.witr,qiyamRakahs:value.qiyam?value.qiyamRakahs??null:null,witrRakahs:value.witr?value.witrRakahs??null:null,completedAt:at,updatedAt:at};
+    return {...copy(day),qiyamPrayers:rows.concat(row)};
+  }
+  function qiyamEditPrayer(day,id,value,at){
+    const rows=qiyamRows(day.qiyamPrayers),old=rows.find(r=>r.id===id&&!r.deletedAt);if(!old)throw Error('stalePrayer');
+    const edited=qiyamPray({...day,qiyamPrayers:rows.filter(r=>r.id!==id)},{...value,id},at).qiyamPrayers.at(-1);
+    return {...copy(day),qiyamPrayers:rows.map(r=>r.id===id?{...edited,completedAt:old.completedAt}:r)};
+  }
   function mergeChanges(base,local,remote){
     if(equal(base,local))return copy(remote);
     if(Array.isArray(base)&&Array.isArray(local)&&Array.isArray(remote)){
@@ -55,6 +106,7 @@
     if(record(local)&&(!base||record(base))&&(!remote||record(remote))){
       const out=copy(remote)||{};
       new Set(Object.keys(base||{}).concat(Object.keys(local))).forEach(key=>{
+        if((key==='witrSessions'||key==='qiyamPrayers')&&(Array.isArray(local[key])||Array.isArray(base?.[key]))){out[key]=qiyamMerge(base?.[key],local[key],remote?.[key]);return;}
         if(!Object.prototype.hasOwnProperty.call(local,key)){if(base&&Object.prototype.hasOwnProperty.call(base,key))delete out[key];return;}
         // A Friday reading session and its undo history form one state. Merging
         // their fields independently can combine completion with a partial range.
@@ -66,6 +118,7 @@
           }
           out[key]=friday;return;
         }
+        if(key==='witr'&&(local[key]===null||Array.isArray(local[key]?.parts))){if(!equal(base?.[key],local[key])){if(!qiyamDraftEqual(base?.[key],local[key]))out[key]=copy(local[key]);else if(qiyamDraftEqual(base?.[key],remote?.[key]))out[key]=copy(local[key]);}return;}
         if(key==='prayers'){
           const values=[(base||{})[key],local[key],(remote||{})[key]];
           if(values.every(v=>Array.isArray(v)&&[5,6].includes(v.length)&&v.every(x=>[true,false,'','ontime','late','missed'].includes(x)))){
@@ -131,5 +184,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {openAccountStorage,mergeChanges,reconcileLearning};
+  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
 });
