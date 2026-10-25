@@ -60,7 +60,9 @@
     return out;
   }
   function qiyamPlanValid(w){return record(w)&&Array.isArray(w.parts)&&w.parts.length>0&&w.parts.length<=1000&&w.parts.every(p=>record(p)&&Number.isInteger(p.n)&&p.n>=1&&p.n<=114&&Number.isInteger(p.from)&&Number.isInteger(p.to)&&p.from>=1&&p.to>=p.from&&p.to<=286)&&Number.isInteger(w.readCount||0)&&(w.readCount||0)>=0;}
-  function qiyamDraftEqual(a,b){const clean=w=>{if(!w)return w;const out=copy(w);delete out.readPage;delete out.startedAt;return out;};return equal(clean(a),clean(b));}
+  function qiyamStable(value){const normalize=v=>Array.isArray(v)?v.map(normalize):record(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,normalize(v[k])])):v;return JSON.stringify(normalize(value));}
+  function qiyamSignature(w){return qiyamStable(w&&[w.id,w.key,w.parts,w.target,w.readCount||0,w.distribution||null]);}
+  function qiyamDraftEqual(a,b){const clean=w=>{if(!w)return w;const out=copy(w);delete out.readPage;delete out.startedAt;return out;};return qiyamStable(clean(a))===qiyamStable(clean(b));}
   function qiyamRead(day,count,id,at){
     if(!qiyamPlanValid(day.witr))throw Error('invalidReading');
     const w=day.witr,rows=qiyamRows(day.witrSessions),total=(w?.parts||[]).reduce((n,p)=>n+p.to-p.from+1,0),prior=+(w?.readCount||0);
@@ -182,5 +184,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer};
+  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
 });
