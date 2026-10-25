@@ -5022,6 +5022,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function qMarkWerdDoneForToday(done=true,id="werd"){
     const today = todayStr();
     if(currentDate === today){
+      const persisted=dailyRead(today);
+      if(!!state.worship[id]===!!done&&!!persisted?.worship?.[id]===!!done)return;
       state.worship[id] = done;
       save(); renderWorship(false); renderProgress();
       return;
@@ -5029,6 +5031,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     let s;
     try{ s = JSON.parse(localStorage.getItem(storageKey(today))); }catch(e){ s = null; }
     s = Object.assign(blankState(), s || {});
+    if(!!s.worship[id]===!!done)return;
     s.worship[id] = done;
     s.updatedAt = Date.now();
     persistDay(today,s);

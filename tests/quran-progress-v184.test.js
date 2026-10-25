@@ -46,3 +46,19 @@ control.rejectWrite='/meta/quran';await p.evaluate(()=>{audit.login();audit.qSav
 assert.equal(await p.evaluate(()=>audit.qLoad().page),27);control.rejectWrite='';await p.evaluate(()=>audit.qPullRemote('online'));
 assert.equal(cloud['users/test/meta/quran'].page,27);assert.equal(cloud['users/test/meta/quran'].note,'preserve');
 }));
+
+test('Quran completion adopted at sign-in preserves concurrently hydrated prayer records',()=>withDevice(async({p,cloud})=>{
+const day=await p.evaluate(()=>audit.todayStr());
+cloud['users/test/days/'+day]={date:day,prayers:[true,false,false,false,false],worship:{},tasks:[],priorities:[],updatedAt:Date.now()+100000};
+cloud['users/test/meta/quran']={page:6,startPage:1,target:5,dayAnchor:day,updatedAt:Date.now()+100000};
+const result=await p.evaluate(async()=>{const query=window.serverQuery;window.serverQuery=async(...args)=>{await new Promise(resolve=>setTimeout(resolve,100));return query(...args);};audit.login();await audit.syncPullAllModules('quran-hydration-test');return {state:audit.get(),stored:JSON.parse(localStorage.getItem(audit.storageKey(audit.todayStr())))};});
+assert.ok([true,'ontime'].includes(result.state.prayers[0]));assert.ok([true,'ontime'].includes(result.stored.prayers[0]));assert.equal(result.stored.worship.werd,true);
+}));
+
+test('unchanged incomplete Quran status does not rewrite the hydrated daily record',()=>withDevice(async({p,cloud})=>{
+const day=await p.evaluate(()=>audit.todayStr());
+cloud['users/test/days/'+day]={date:day,prayers:[true,false,false,false,false],worship:{},tasks:[],priorities:[],updatedAt:Date.now()+100000};
+cloud['users/test/meta/quran']={page:1,startPage:1,target:5,dayAnchor:day,updatedAt:Date.now()+100000};
+const result=await p.evaluate(async()=>{const query=window.serverQuery;window.serverQuery=async(...args)=>{await new Promise(resolve=>setTimeout(resolve,100));return query(...args);};audit.login();await audit.syncPullAllModules('quran-noop-hydration');return JSON.parse(localStorage.getItem(audit.storageKey(audit.todayStr())));});
+assert.equal(result.prayers[0],true);assert.equal(Object.hasOwn(result.worship,'werd'),false);
+}));
