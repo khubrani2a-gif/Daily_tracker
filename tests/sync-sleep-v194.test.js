@@ -39,6 +39,10 @@ test('delayed daily upload keeps its journal then confirms once the original wri
  await p.waitForFunction(()=>!document.querySelector('#syncAllBtn').disabled);
  assert.ok(await p.evaluate(()=>Object.keys(audit.dailyPending()).length)>0);
  assert.equal(writes.filter(x=>x.includes('/days/')).length,0);
+ await p.evaluate(()=>{window.testRetry=audit.syncPullAllModules('retry');});
+ await p.waitForFunction(()=>!document.querySelector('#syncAllBtn').disabled);
+ assert.equal(writes.filter(x=>x.includes('/days/')).length,0,'retry must join the pending write');
+ assert.ok(await p.evaluate(()=>Object.keys(audit.dailyPending()).length)>0);
  control.holdWrites=false;for(const resolve of control.pendingWrites||[])resolve();
  await p.waitForFunction(()=>Object.keys(audit.dailyPending()).length===0);
  assert.equal(await p.evaluate(()=>audit.get().notes),'pending bedtime audit');
