@@ -3592,8 +3592,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <button class="witr-undo-btn" id="witrUndoBtn">↩ إلغاء آخر جلسة</button>
       </div>
 
-      <button type="button" class="witr-change-btn" id="witrCustomRange">📖 اختيار سورة ومن آية إلى آية</button>
-      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button><button type="button" class="adhkar-done-btn" id="witrResumeSaved" hidden>استكمال ورد الحفظ المحفوظ</button>
+      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrCustomRange">📖 اختيار سورة ومن آية إلى آية</button><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button><button type="button" class="adhkar-done-btn" id="witrResumeSaved" hidden>استكمال ورد الحفظ المحفوظ</button>
         <details id="witrPlanOptions" open><summary>اختيار الورد أو تعديل الخطة</summary><div class="witr-q" id="witrPickHeading">ما هدفك الليلة؟</div>
         <p class="witr-plan-hint">اختر وردك، ثم راجع الآيات قبل البدء.</p>
         <div class="witr-targets" id="witrTargets">
@@ -6445,7 +6444,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   /* عرض الآيات: نص أصلي عبر AlQuran.cloud بدل iframe — تحكم كامل بالخط والألوان وتخزين مؤقت للقراءة بلا إنترنت */
   let witrAyahChunks = null;
-  let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.25");
+  let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.65");
   function witrApplyFontSize(){
     document.documentElement.style.setProperty("--witr-font-size", witrFontSize+"rem");
   }
