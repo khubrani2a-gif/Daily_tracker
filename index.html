@@ -5860,8 +5860,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("witrTargets").hidden = false;
     /* رؤية المصادر/الحفظ تُدار حسب المسار في witrRenderPickView — الرجوع من تعديل المفضّلة دائمًا في مسار "goal" */
     witrMode = "goal";
-    if(witrPool === "fav" && witrDay().witr) witrPickTarget(witrDay().witr.target);
-    else witrRenderPickView();
+    witrRenderPickView();
   }
   function witrRenderFavChips(){
     const box = document.getElementById("witrFavChips");
@@ -6260,7 +6259,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     get('witrPreviewRanges').textContent=plan.parts.map(p=>p.name+' · '+p.from+'–'+p.to).join('، ');
     get('witrPreviewCount').textContent=plan.parts.reduce((n,p)=>n+p.to-p.from+1,0).toLocaleString('ar-EG')+' آية';
     get('witrPreviewNotice').textContent=witrDay().witr?'سيحل هذا الورد محل وردك الحالي؛ تبقى القراءات المسجّلة في السجل.':'اعتماد الورد يحفظ اختيارك فقط، ولا يسجّل قراءة أو صلاة.';
-    let accepted=false;get('witrPreviewCancel').onclick=()=>sheet.close();
+    let accepted=false;
+    sheet.over.beforeClose=()=>{if(!accepted){witrPool=witrDay().witr?.pool||witrPool;witrMode=witrDay().witr?.wird?'wird':'goal';witrRenderAll();}};
+    get('witrPreviewCancel').onclick=()=>sheet.close();
     get('witrPreviewApply').onclick=()=>{if(accepted)return;try{
       if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد أو الليلة؛ أعد فتح الاختيار.');
       const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr=JSON.parse(MufDataCore.qiyamStable(plan));
@@ -6950,6 +6951,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!witrValid())return;const source=last.before||last;
     const next=JSON.parse(JSON.stringify(witrDay()));next.witr={...JSON.parse(JSON.stringify(source)),id:newId(),pool:source.pool||'all',readCount:0,readPage:0,startedAt:null};
     delete next.witr.before;delete next.witr.after;delete next.witr.deletedAt;delete next.witr.retained;
+    if(witrDay().witr){witrProposePlan(next.witr);return;}
     try{qiyamCommit(witrContext?.date||currentDate,next);witrPool=next.witr.pool;witrMode=next.witr.wird?'wird':'goal';witrForceNew=false;witrRenderAll();}catch(e){hifzShowToast('تعذّر حفظ الخطة؛ حاول مرة أخرى.');}
   }
   function handleRepeatWird(){const last=witrSessions().at(-1);if(last)witrRepeatPlan(last);}
