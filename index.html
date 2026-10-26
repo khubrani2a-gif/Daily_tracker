@@ -6234,7 +6234,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const parts=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value),p=parts[0];
       if(witrDay().witr?.readCount&&!confirm('استبدال الخطة الحالية؟ يبقى ما سجّلته سابقًا محفوظًا في السجل.'))return;
       const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,readPage:0,readCount:0,startedAt:null};
-      qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrMode='goal';witrForceNew=false;document.getElementById('witrReader').hidden=true;witrRenderAll();
+      qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrPool='all';witrMode='goal';witrForceNew=false;document.getElementById('witrReader').hidden=true;witrRenderAll();
     }catch(e){get('witrCustomError').textContent=e.message;}};
   };
   function witrPickTarget(target){
