@@ -7027,7 +7027,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const current=make('witrCurrentOptions','خيارات وردي');get('witrStartBtn').after(current);for(const id of ['witrPreDistBtn','witrPreDistHint','witrPreDistStatus','witrChangeBtn'])current.append(get(id));
     get('witrStartBtn').before(get('witrRangePreview').parentElement);
     const reader=make('witrReaderMore','أدوات القراءة');document.querySelector('.witr-reader-tools').append(reader);reader.append(get('witrFocus'),document.querySelector('.witr-font-ctrl'),get('witrRakahToggle'));
-    get('witrReaderMore').addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('.witr-font-ctrl'))reader.open=false;});
+    get('witrReaderMore').addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('.witr-font-ctrl'))reader.open=false;},true);
     const retry=document.createElement('button');retry.id='witrRetry';retry.textContent='إعادة المحاولة';retry.type='button';retry.onclick=witrOpenReader;get('witrFallback').append(retry);const links=document.createElement('div');links.id='witrFallbackRanges';get('witrFallback').append(links);
     witrLabel('witrCustomRange','book','أختار السورة والآيات');witrLabel('witrPlanBack','book','وردي');witrLabel('witrFinishBtn','check','سجّل ما قرأت');witrLabel('witrActHistory','history','سجل القراءة');witrLabel('witrReadingUndo','undo','تراجع عن آخر تسجيل');witrLabel('witrUndoBtn','undo','تراجع');witrLabel('witrChangeBtn','edit','اقتراح بديل');witrLabel('witrPreDistBtn','rows','توزيع على الركعات · اختياري');
   }
