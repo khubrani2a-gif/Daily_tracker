@@ -16,6 +16,6 @@ await p.exposeBinding('serverSet',async(_,k,v)=>{if(control.rejectWrite&&k.inclu
 await p.exposeBinding('serverDelete',(_,k)=>{delete cloud[k];return true;});
 await p.exposeBinding('serverQuery',(_,k,o,filter)=>{reads.push(k);if(control.rejectRead&&k.includes(control.rejectRead))throw Error('injected read failure');return Object.entries(cloud).filter(([key])=>key.startsWith(k+'/')).map(([key,v])=>({...v,id:v.id||key.split('/').pop()}));});
 await p.addInitScript(fake);await p.addInitScript(seed=>{if(sessionStorage.getItem('seeded'))return;Object.entries(seed).forEach(([k,v])=>localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v)));sessionStorage.setItem('seeded','1');},seed);
-p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.dismiss());await p.goto('http://audit.local/index.html');await p.waitForTimeout(150);return {p,c,cloud,reads,writes,errors,control};}
+p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.dismiss());await p.goto('https://audit.local/index.html');await p.waitForTimeout(150);return {p,c,cloud,reads,writes,errors,control};}
 
 module.exports={device,chromium};

@@ -1921,6 +1921,7 @@
   #witrPlanOptions>summary{font-weight:700}#witrCustomRange{width:100%;min-height:50px;margin:14px 0;border:1px solid var(--line);border-radius:16px;background:var(--paper);color:var(--accent)}
   #witrSourceOptions{background:var(--bg)}#witrSourceOptions .witr-pool-chips{margin-top:10px}
   #witrReaderMore{margin:0;flex:1;max-width:320px}#witrReaderMore .witr-font-ctrl{flex-wrap:wrap}#witrReaderMore button{min-height:44px}
+  .witr-menu-group{border-top:1px solid var(--border);padding-top:.5rem;margin-top:.5rem}.witr-menu-group h3{font-size:.9rem;color:var(--muted);margin:.3rem 0}.witr-menu-group:not(:has(button:not([hidden]))){display:none}
   .witr-reader-tools{align-items:flex-start}.witr-reader-tools>#witrPlanBack{min-height:48px}
   #witrOverlay:has(#witrReader:not([hidden])) #witrMore,#witrOverlay:has(#witrReader:not([hidden])) #witrNightCaption{display:none}
   #witrRetry{display:block;min-height:44px;margin:16px auto;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--accent);padding:8px 16px;font:inherit}
@@ -5736,7 +5737,16 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   /* جلب نص الآيات (رسم عثماني) عبر AlQuran.cloud، مع تخزين مؤقت محلي للقراءة بلا إنترنت لاحقًا */
   const WITR_TEXT_CACHE_KEY = "h2do-witr-text-cache";
-  const WITR_TEXT_SCHEMA = 2;
+  const WITR_TEXT_SCHEMA = 3;
+  // Pinned AlQuran.cloud quran-uthmani snapshot; see docs/quran-text-integrity.md.
+  const WITR_TEXT_MANIFEST = {"1":{"count":7,"start":1,"sha256":"2907de5e050a03a0364cf7e0bedbc60114ee4e8d80d7065ab626d83a59468492"},"2":{"count":286,"start":8,"sha256":"c7d70fab4aa11b3055f16fceaedb56264cc5476d6f4990f41dbf19f638ef1657"},"3":{"count":200,"start":294,"sha256":"54ea2b42002f7b0098ba856f409300b3efc280e48a724364936ccfa3481911a6"},"4":{"count":176,"start":494,"sha256":"afb1a5515d8fc8a5fa2a0722c7581911bca73f396fc58999fd91fb9b17748eab"},"5":{"count":120,"start":670,"sha256":"454f155aeec4636360351ac7b9cba4807344ff46300b522b098180af52b76118"},"6":{"count":165,"start":790,"sha256":"03e79a1692c8850d4a30ba8b696a81b0011efe9a6b6bffa6fe48cab1db7ebc80"},"7":{"count":206,"start":955,"sha256":"e85e33b0882bf48311b813f61a1b6121afb2b8bfa57dbab2c982e5095782831b"},"8":{"count":75,"start":1161,"sha256":"23cdf84bbeb03c3227c8ba06f019339c372d688ca9556d7655c3dfb320c15af5"},"9":{"count":129,"start":1236,"sha256":"49f6152cc637758286f49584cadcc2e09fd92ebd863efb0762c5d17f87d7082a"},"10":{"count":109,"start":1365,"sha256":"637180a93f378df32605675cd1ffe1b5c1a9636fdfb1c7c753c1fec1f65d09cc"},"11":{"count":123,"start":1474,"sha256":"34657777e6995caa583dfe6ea1f66b849ba5d5e3461c3f2cd30936188bbcb5c1"},"12":{"count":111,"start":1597,"sha256":"e2aa47c556bd96602f3d1675a663d2c415857f5fc37d2d1629361a3b0323757b"},"13":{"count":43,"start":1708,"sha256":"81b76da9ccc1ea6fe54ba90e1cc2f470c7169a58b9708ba2f4db1abbbc33cb76"},"14":{"count":52,"start":1751,"sha256":"70eca94c309460aee9b65817475a67e87555ef9db974fdb052a8340e4404fc5c"},"15":{"count":99,"start":1803,"sha256":"9c4f07799ec3d4457303d02c64dc8a01ef1b45b580daf0f34eb25fc2bb6ceb2a"},"16":{"count":128,"start":1902,"sha256":"b06aee212d8f93c96d9f9d3bac2ed9fb86401c53fe2f9211ba166c9557eb7da6"},"17":{"count":111,"start":2030,"sha256":"58b11b62a5afd2953a5ea3a650f4f94f93fdc6d62133d71e8d64c1d3ad729775"},"18":{"count":110,"start":2141,"sha256":"48e2e5eb75cc53fd27d98c32281930f786333294148059113ed2d5bd8b1cd109"},"19":{"count":98,"start":2251,"sha256":"9198011552ff4e18a212b68e804ccbf5ea9022159de23b5daa3ac950b0831cf3"},"20":{"count":135,"start":2349,"sha256":"41ff0afaeda7ccf1c4b24c20d05ff4947fc3269655b0b45da72c7f05ddb168c4"},"21":{"count":112,"start":2484,"sha256":"15db04434d71c2af5d69906120c8d2ef357ff309f70d69773a587e7140292f6b"},"22":{"count":78,"start":2596,"sha256":"34eee35e2dcc072b18304c2c0cafae4e0b7d33468e56ed1a4373bb95decb5f52"},"23":{"count":118,"start":2674,"sha256":"76c79398e83d1886d0d7008cabb994e385b11e18ab15307ad61f306342655cd3"},"24":{"count":64,"start":2792,"sha256":"322e3a05b73cb04b2bb1afcb515eda1f36dd0e81e3581d8a0c786008868e1312"},"25":{"count":77,"start":2856,"sha256":"e04a08ae8c23ce019272b478e69491b5090af1fbb1678b0b4341dfb3d4fdd7d0"},"26":{"count":227,"start":2933,"sha256":"3a2c6d4657f7b161193707e6d1f54acad5699d6da131fb595aa00b11017aa814"},"27":{"count":93,"start":3160,"sha256":"a8666ba86d724ee26841e9b7f43b0914a1bb2e8075bc870a0b7b33c65dbf06da"},"28":{"count":88,"start":3253,"sha256":"2e9e198a0fc5a7f0826aa043a60de2cb0e1666b5c037a927d8dbe12c0b14f549"},"29":{"count":69,"start":3341,"sha256":"713d482e711da10a03bc5159c083b8181f753f95d3dedaad4f96c12182f41ef2"},"30":{"count":60,"start":3410,"sha256":"41daead67e8848e881ce9fac8c9bf566f44910b14e144386696f08907c49722f"},"31":{"count":34,"start":3470,"sha256":"c7064270b626db7424293ae00e195691bf5d6fe1e9c91b0b9b8822f04fe81f65"},"32":{"count":30,"start":3504,"sha256":"a7514a58f9a014eb57e9e6cd7e0daa305b1563c12215707e15bb2a870f3cd2d7"},"33":{"count":73,"start":3534,"sha256":"9fa482bf16f975a5f2c21673f2ab5c3840cf592d2c04caed9ee319ea6940a709"},"34":{"count":54,"start":3607,"sha256":"9adbc6522448fd9236a66b2f3d6e03c7e30db5bf90e1cfc95676cf97a8e16dd8"},"35":{"count":45,"start":3661,"sha256":"e1d15af9a4dc9238ba84f61e5c1fb83c3d3d792855e935d1fa7d28caf36055da"},"36":{"count":83,"start":3706,"sha256":"d99529ea623fbd14c0b64e0fd43a7b5f2247916de4cce5eee1a5501baabb5391"},"37":{"count":182,"start":3789,"sha256":"0ee8e41454d32b7ba170840e45956df8463155923f93a27145ddee9e344f5888"},"38":{"count":88,"start":3971,"sha256":"ec19a6faf4c35e780fddfeb7d391c0b70d4f7a02f4631b2b9a34287bbfacd268"},"39":{"count":75,"start":4059,"sha256":"2cf40255c46c710478dde52d110c2ca00aac871315b54652fe16ba65126a577b"},"40":{"count":85,"start":4134,"sha256":"9339c853401960e4eb779932e11acb5b28ac51e0537eef287891af6cee6f05c3"},"41":{"count":54,"start":4219,"sha256":"507e3e08fab96392b5bb1c46e8f9c3cc27d9c4cf8518daed39de05e881facd40"},"42":{"count":53,"start":4273,"sha256":"e763138e0fadad1f890a2310af0b5f20841a00a3e9f56840bc11744fe6428f53"},"43":{"count":89,"start":4326,"sha256":"6c6a63bc9762597c1d8bd033092393d23acb2e7e7360fa4bf97dd9aa7d5f12be"},"44":{"count":59,"start":4415,"sha256":"68c8137e334326feabad73efa7f0bb3afe7ab62512f29eb1fa0c1cfe50fe61bc"},"45":{"count":37,"start":4474,"sha256":"300c7070438cf6d0e0069a1cbafb481529e3b670b12fb7fa82a8cc38d650c720"},"46":{"count":35,"start":4511,"sha256":"3484f9ccf454e80d69fcb2a8a4d68d006b4c7dd7ad9007b0f22e921bbb52cfd6"},"47":{"count":38,"start":4546,"sha256":"1bffca242d580bb63fb1ac4a1a329deeaeeae5f12be0052b475f3d6e78b53720"},"48":{"count":29,"start":4584,"sha256":"dbd4b000a1f040a31971301bc1a4e712ca52523530d80382f40d339ccaafee1d"},"49":{"count":18,"start":4613,"sha256":"72009e053d2171297e442dc080c8a3118e11c3090790c76e3d854f2bd1909ee1"},"50":{"count":45,"start":4631,"sha256":"e28ae02b66a1f469fdb3e5e2014e1e60b7726fbb9bedeaf66828fa539f8780e6"},"51":{"count":60,"start":4676,"sha256":"0436e07d5b9a3e3a20b1250dfebed416b229d64a11f4aeea11e2f81b8f59efc3"},"52":{"count":49,"start":4736,"sha256":"8d1736dd834c9176da6b2cb5c3313863115dee88c40461e37c157657195cb631"},"53":{"count":62,"start":4785,"sha256":"3424f50fdd0383ad10e999376f71fda4b01074806a4697f10e086558ca85afab"},"54":{"count":55,"start":4847,"sha256":"b7e97508c753899943fa1e217ef9f0ac60da160bbfd58390a15c8e6f7d4b9d5c"},"55":{"count":78,"start":4902,"sha256":"2ec26f4cf946867d6392c92938270bac3d548f8934796ccdcfa449caab6e8e8c"},"56":{"count":96,"start":4980,"sha256":"293db12cac32fda5bca2b9665cdd13f17c8b562a3036273226f0057a6c750203"},"57":{"count":29,"start":5076,"sha256":"da4617f77c92f197d3ee95d03ddfc106e0a95eb213cc21abf2c86e2917f8fa62"},"58":{"count":22,"start":5105,"sha256":"1f4e117273553e319df89ec00b1c6a03c6affdd5e2194191f3bd6c619ec7df5e"},"59":{"count":24,"start":5127,"sha256":"28253093fa79a3da470f7962e3029ffa85b9b79775c9174a247d01faaa369443"},"60":{"count":13,"start":5151,"sha256":"935a0138293866848cfb47788cbf66f0513f77bca94a60c044f34b2c21e5b836"},"61":{"count":14,"start":5164,"sha256":"61ae6d847f61126960d608eeafaac235c9928febe5ea869f997c2d08d2954adf"},"62":{"count":11,"start":5178,"sha256":"dc026538083abc3c91572cd6bb658a0ed201e7680efbd3da23749cb2708ad85a"},"63":{"count":11,"start":5189,"sha256":"5b2e10f5ddb05869c8bebb0a90f10e64ad57a5779c1833594d5f6e332a6e7527"},"64":{"count":18,"start":5200,"sha256":"6bb1b4e8aa8e2f154f7ce5dbd23740b01218049f1a5008ac7f6e14d5cbc53985"},"65":{"count":12,"start":5218,"sha256":"6c2be70428b3117454ea1197981f6c6adc98d53d65583cd4656d36725ab68a77"},"66":{"count":12,"start":5230,"sha256":"a8ff3d916ab8f3033dfaf18927a61c79323d9c84e03c07e18327b0a110bf180e"},"67":{"count":30,"start":5242,"sha256":"7e58c3d7e424d9d0856bdf2fabc14df29eff58a8e0555da8bf3d26a696d04fc0"},"68":{"count":52,"start":5272,"sha256":"30eef8903da5f3422e78f58a7ecf48d00086a23d8ed0553a9b1a9dff5d10e28e"},"69":{"count":52,"start":5324,"sha256":"b850fbb8ce6c917c952af1932ab3748a194a0d70453f0ea628565d0ce9555dca"},"70":{"count":44,"start":5376,"sha256":"4c0f2fb49c9b911990574d3b7bdada42285773f3b479da41eae5189a1a3a435f"},"71":{"count":28,"start":5420,"sha256":"e9a6b28744aa94fd8e6d9ea4e2c544fa0137069d9d8c69e3a3101c1d87ad0540"},"72":{"count":28,"start":5448,"sha256":"e6772e4ee40efeca501a8923495028a6d9d47172f652c10d6ed5bbbc131be135"},"73":{"count":20,"start":5476,"sha256":"abfb25f46bf0fb63846d7ce539e5174515504bcc568897ab21cc290ba67a85b2"},"74":{"count":56,"start":5496,"sha256":"998dbcf803a42bcbf458eeb5b4ae19b49f0f7fbd5f0c738ee4315ab407c3c15a"},"75":{"count":40,"start":5552,"sha256":"735952fe27c740d4017a207e871e32df6ca193096070958e41a2a1aa8f66ca88"},"76":{"count":31,"start":5592,"sha256":"b474c526a3d95966a6268006b6151ed6ba29f477396ca72da3661516309b7e45"},"77":{"count":50,"start":5623,"sha256":"cf88dd9a047b7506a9d21dbb4a88b6d71bbecb3b58ba4f8fbc7bb2180a84b83b"},"78":{"count":40,"start":5673,"sha256":"d2c73bec3a3b30dfcd96b6685bcd4bb1ae4d5e5157e128f1b7f7a8f3981483a9"},"79":{"count":46,"start":5713,"sha256":"b286a7262d9c82a4cb907bbc6934233de468c612e9fcd9c2eb5fbee7cd3ddf8b"},"80":{"count":42,"start":5759,"sha256":"29b5b851c6f75d75ab6c821f17b95542a129dd3bf6a5283bc5114166c09a241d"},"81":{"count":29,"start":5801,"sha256":"73ca09630c634cd9ba11ea971e6ad373c42a391a4670a4c4e83d01c96e07cbe6"},"82":{"count":19,"start":5830,"sha256":"ca878b6d0b3af9769c347b00e7a351112edd2392ce9a43e34ac2105419cf52d2"},"83":{"count":36,"start":5849,"sha256":"598521d42f7f3b69dd7989176fd793d5736e34e91baed85e58848d3310231600"},"84":{"count":25,"start":5885,"sha256":"a2c49c70e56580d014ab623ed2eb42c396a6e5c5ac66cb8168aec8566a13b886"},"85":{"count":22,"start":5910,"sha256":"6e49d9935adb6b1ad26f3919aa3bd57f2370d4064142a44d80a6f1dc4f9af88d"},"86":{"count":17,"start":5932,"sha256":"1565da5e9b7999c822fb3ac049bd29fa46962b2736cf44aca1ee26f57214c471"},"87":{"count":19,"start":5949,"sha256":"cf2f7218847432b22b74046fe873b129fe865cb07a00d7f594f5fbec340f5231"},"88":{"count":26,"start":5968,"sha256":"d386361eb2b788445588d0cbb22af549c2751459aa23e237f77d472cc1b31133"},"89":{"count":30,"start":5994,"sha256":"3c60dcdaa6d710434a3de3083fe8b2a2b04ada6f9ec64787fd8b4d13298bea6a"},"90":{"count":20,"start":6024,"sha256":"c97efbc28bda62b3586a3b83c413d039d8b3c7bd98a2fdfc872fae155ac2cce9"},"91":{"count":15,"start":6044,"sha256":"7a49a22d720493418a0f27ac0bb5191d820003ebfe0ea7e04864f39cd7270ed6"},"92":{"count":21,"start":6059,"sha256":"401b0a1b4b72492026f77df3394a29deaf2d33857511b85f98933170cb031926"},"93":{"count":11,"start":6080,"sha256":"6ac1185d7e455bd2cb3171ac45b6982ff9311fac3b28190478e9e6cb4769cdae"},"94":{"count":8,"start":6091,"sha256":"386f3080378607bb86dce40eb86500eaf2bf463398c3b2b9f9bd6b9b2478e6dd"},"95":{"count":8,"start":6099,"sha256":"1d47d71fc7073308d7b093202fd0da9aee203edb142be58555827c6698e134de"},"96":{"count":19,"start":6107,"sha256":"45f14279bbb7c3309ed5f5449bd97986df8b6203f19c625f5e8460d5c0a36a3e"},"97":{"count":5,"start":6126,"sha256":"f09526d0a545d3755d73626788768036ce7c01e27b8edb93a8f150be28354570"},"98":{"count":8,"start":6131,"sha256":"f1d11b48f12636b5f32af2bda7bab4d68c8c55de570e9d96e597282691cee4b2"},"99":{"count":8,"start":6139,"sha256":"27ba296fcec5bd7f3a26aa11d2245d65a0d62326b4d0c8bf16971757bb8ee837"},"100":{"count":11,"start":6147,"sha256":"2886476addc2c0ce2e75577ed00417d6411abe5e999936fcb513f0e74920874c"},"101":{"count":11,"start":6158,"sha256":"bd2d96c6eeb6eb7418614b3ab2afb04fe83c3568882ff70fea85827407340674"},"102":{"count":8,"start":6169,"sha256":"a6fcea073a891bfdd647b7307722996e0b3eaf8daff46ff5eff2521c0e9f6a41"},"103":{"count":3,"start":6177,"sha256":"33b8a07799670ca491a6fcb6243ea2149170edf0aa0e957ab4cfc80d6f08a076"},"104":{"count":9,"start":6180,"sha256":"1f21a6f70c12a219569d0ac6efc347505e600e70ae69beba00219449daadf8f8"},"105":{"count":5,"start":6189,"sha256":"d773416b8764744d853c77877cafd7b70176b528952603d2b1d17e7961cf88cf"},"106":{"count":4,"start":6194,"sha256":"1649ca4cac04127117a08cb51844e7fc5e32c3e936ea084318a6eeb940102fca"},"107":{"count":7,"start":6198,"sha256":"a1097d8fe466387d81d4a25ef535d0b4b2a0a5b61855af502097a75b259d8660"},"108":{"count":3,"start":6205,"sha256":"c90a6eee50deaa8590ac42064b7f57f0c555ecd3ba76c4bd1fced4e642e07285"},"109":{"count":6,"start":6208,"sha256":"da54be3f08831b182f3ff1037600748d797cd5831cf3a29e5acf9f94d020e3a8"},"110":{"count":3,"start":6214,"sha256":"d10329f22ab69e7f4dea397fd514aeed703a7434d0c5eaea0aadcdb9acc633f4"},"111":{"count":5,"start":6217,"sha256":"2750930f48240ccdda4a55534dd278ed19dc5a69aa48a6d524a79316b96beef3"},"112":{"count":4,"start":6222,"sha256":"d7bed830758b9bce083b81469f2625b04d00fbb80064c8a0d520daaa7f5dea96"},"113":{"count":5,"start":6226,"sha256":"f8431657854becbbec207f9bed39cde7cd183c282410e4a58eaa03135c9892cd"},"114":{"count":6,"start":6231,"sha256":"03babea5d8b490f3debd39e9b5baea985acecc001a0758271fbb86d831131df8"}};
+  async function witrVerifyText(n,rows){
+    const ref=WITR_TEXT_MANIFEST[n];
+    if(!ref||!witrValidText(rows)||rows.length!==ref.count||rows.some((a,i)=>a.g!==ref.start+i))return false;
+    const bytes=new TextEncoder().encode(JSON.stringify(rows.map(a=>[a.n,a.g,a.text])));
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),x=>x.toString(16).padStart(2,"0")).join("");
+    return hash===ref.sha256;
+  }
   function witrValidText(rows){return Array.isArray(rows)&&rows.length>0&&rows.every((a,i)=>a.n===i+1&&Number.isInteger(a.g)&&a.g>0&&typeof a.text==="string"&&a.text.trim().length>0);}
   function witrCustomParts(n,from,to){const surah=WITR_SURAHS.find(s=>s.n===n);if(!surah||!Number.isInteger(from)||!Number.isInteger(to)||from<1||to<from||to>surah.ayat)throw Error("اختر نطاق آيات صحيحًا داخل السورة.");return [{n,name:surah.name,from,to}];}
   function witrTextCache(){
@@ -5746,18 +5756,19 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     try{ localStorage.setItem(WITR_TEXT_CACHE_KEY, JSON.stringify(cache)); }catch(e){}
   }
   async function witrFetchSurah(n){
-    const cache = witrTextCache();
-    /* نعيد الجلب إن كان المخزّن قديمًا بلا الرقم العام (g) اللازم لرابط صوت الآية */
-    if(cache[n]?.schema===WITR_TEXT_SCHEMA && witrValidText(cache[n].ayahs)) return cache[n].ayahs;
-    const res = await fetch("https://api.alquran.cloud/v1/surah/"+n+"/quran-uthmani");
-    if(!res.ok)throw Error("تعذّر تحميل النص القرآني.");
-    const json = await res.json();
-    if(!Array.isArray(json.data?.ayahs))throw Error("استجابة النص غير مكتملة.");
-    const ayahs = json.data.ayahs.map(a=>({n:a.numberInSurah, g:a.number, text:a.text}));
-    if(!witrValidText(ayahs))throw Error("نص الآيات غير مكتمل؛ أعد المحاولة.");
-    cache[n] = {schema:WITR_TEXT_SCHEMA,ayahs, ts:Date.now()};
-    witrTextCacheSave(cache);
-    return ayahs;
+    const cache=witrTextCache();
+    if(cache[n]?.schema===WITR_TEXT_SCHEMA&&await witrVerifyText(n,cache[n].ayahs))return cache[n].ayahs;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const res=await fetch("https://api.alquran.cloud/v1/surah/"+n+"/quran-uthmani",{signal:controller.signal});
+      if(!res.ok)throw Error("تعذّر تحميل النص القرآني.");
+      const json=await res.json(),data=json.data;
+      if(data?.number!==n||data?.edition?.identifier!=="quran-uthmani"||data?.edition?.language!=="ar"||data?.edition?.format!=="text"||data?.numberOfAyahs!==WITR_TEXT_MANIFEST[n]?.count||!Array.isArray(data?.ayahs))throw Error("تعذّر التحقق من مصدر السورة.");
+      const ayahs=data.ayahs.map(a=>({n:a.numberInSurah,g:a.number,text:a.text}));
+      if(!await witrVerifyText(n,ayahs))throw Error("النص لا يطابق النسخة المثبتة؛ لم يُعرض المقطع.");
+      cache[n]={schema:WITR_TEXT_SCHEMA,ayahs,ts:Date.now()};witrTextCacheSave(cache);return ayahs;
+    }catch(e){if(controller.signal.aborted)throw Error("انتهت مهلة تحميل الآيات؛ أعد المحاولة.");throw e;}
+    finally{clearTimeout(timer);}
   }
   async function witrBuildAyahList(parts){
     const out = [];
@@ -5783,6 +5794,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const chunks = [];
     for(let i=0;i<ayahList.length;i+=perRakah) chunks.push(ayahList.slice(i, i+perRakah));
     return chunks;
+  }
+
+  function witrDisplayChunks(w,ayahList){
+    if(w.displayPageSize===10){const chunks=[];for(let i=0;i<ayahList.length;i+=10)chunks.push(ayahList.slice(i,i+10));return chunks;}
+    return witrChunkByRakah(ayahList,w.wird?1:witrRakahCount(w.target));
   }
 
   const WITR_META_KEY = "h2do-witr-meta";
@@ -6040,8 +6056,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function witrRecordReading(){
     const day=witrDay(),w=day.witr;if(!w||!witrReaderValid())return;
     const date=witrContext?.date||currentDate,snapshot=MufDataCore.qiyamStable(w),owner=accountStorage.owner,id=newId(),remaining=w.parts.reduce((n,p)=>n+p.to-p.from+1,0)-(w.readCount||0);let committed=false;
-    const sheet=taskSheet('تسجيل القراءة','<p>المتبقي من هذا الورد: '+remaining.toLocaleString('ar-EG')+' آية. سجّل ما قرأته فعلًا؛ هذا لا يسجّل صلاة.</p><label>عدد الآيات التي قرأتها الآن<input id="witrReadCount" type="number" inputmode="numeric" min="1" max="'+remaining+'" value="'+remaining+'"></label><p id="witrReadPreview"></p><p id="witrReadError" role="alert"></p><button class="task-sheet-save" id="witrReadSave">حفظ القراءة</button>');
-    const get=id=>sheet.over.querySelector('#'+id);function preview(){const count=Number(get('witrReadCount').value),parts=MufDataCore.qiyamSlice(w.parts,w.readCount||0,count);get('witrReadPreview').textContent=parts.length&&Number.isInteger(count)&&count>0&&count<=remaining?parts.map(p=>p.name+' '+p.from+'–'+p.to).join('، '):'أدخل عددًا صحيحًا ضمن المتبقي.';}get('witrReadCount').oninput=preview;preview();
+    const sheet=taskSheet('تسجيل القراءة','<p>المتبقي من هذا الورد: '+remaining.toLocaleString('ar-EG')+' آية. سجّل ما قرأته فعلًا؛ هذا لا يسجّل صلاة.</p><button type="button" id="witrReadAll">أكملت المتبقي</button><button type="button" id="witrReadPartial">قرأت جزءًا</button><label>عدد الآيات التي قرأتها الآن<input id="witrReadCount" type="number" inputmode="numeric" min="1" max="'+remaining+'" value=""></label><p id="witrReadPreview"></p><p id="witrReadError" role="alert"></p><button class="task-sheet-save" id="witrReadSave">حفظ القراءة</button>');
+    const get=id=>sheet.over.querySelector('#'+id);function preview(){const count=Number(get('witrReadCount').value),parts=MufDataCore.qiyamSlice(w.parts,w.readCount||0,count);get('witrReadPreview').textContent=parts.length&&Number.isInteger(count)&&count>0&&count<=remaining?parts.map(p=>p.name+' '+p.from+'–'+p.to).join('، '):'أدخل عددًا صحيحًا ضمن المتبقي.';}get('witrReadCount').oninput=preview;get('witrReadAll').onclick=()=>{get('witrReadCount').value=remaining;preview();};get('witrReadPartial').onclick=()=>{get('witrReadCount').value='';preview();get('witrReadCount').focus();};preview();
     get('witrReadSave').onclick=()=>{if(committed)return;try{if(!witrValid()||owner!==accountStorage.owner||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد؛ أعد فتح التسجيل.');const next=MufDataCore.qiyamRead(witrDay(),Number(get('witrReadCount').value),id,Date.now());qiyamCommit(date,next);committed=true;sheet.close();if(!next.witr){try{witrPushToHistory(w.key);}catch(e){diagErr('witrHistory',e);}}witrSetFocus(false);witrResetRakahState();document.getElementById('witrReader').hidden=true;witrForceNew=false;witrRenderAll();renderWorship();renderProgress();}catch(e){get('witrReadError').textContent=e.message==='invalidReading'?'أدخل عددًا صحيحًا من ١ إلى '+remaining:e.message;}};
   }
   function witrUndoReading(){
@@ -6238,7 +6254,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!witrValid())return;
     const owner=accountStorage.owner,date=witrContext?.date||currentDate,snapshot=MufDataCore.qiyamStable(witrDay().witr);
     const old=witrDay().witr?.parts?.[0];
-    const sheet=taskSheet('اختيار آيات القيام أو الوتر', '<label>السورة<select id="witrCustomSurah"></select></label><div class="qc-edit-row"><label>من آية<input id="witrCustomFrom" type="number" min="1" step="1" inputmode="numeric"></label><label>إلى آية<input id="witrCustomTo" type="number" min="1" step="1" inputmode="numeric"></label></div><p id="witrCustomPreview" role="status"></p><p>هذا يغيّر خطة القراءة فقط. التسجيلات السابقة تبقى في السجل.</p><p id="witrCustomError" role="alert"></p><button id="witrCustomSave" class="task-sheet-save">حفظ المقطع</button>');
+    const sheet=taskSheet('اختيار آيات القيام أو الوتر', '<label>السورة<select id="witrCustomSurah"></select></label><div class="qc-edit-row"><label>من آية<input id="witrCustomFrom" type="number" min="1" step="1" inputmode="numeric"></label><label>إلى آية<input id="witrCustomTo" type="number" min="1" step="1" inputmode="numeric"></label></div><p id="witrCustomPreview" role="status"></p><p>هذا يغيّر خطة القراءة فقط. التسجيلات السابقة تبقى في السجل.</p><p id="witrCustomError" role="alert"></p><button id="witrCustomSave" class="task-sheet-save">ابدأ القراءة</button>');
     sheet.over.setAttribute('data-witr-plan-sheet','');
     const get=id=>sheet.over.querySelector('#'+id),select=get('witrCustomSurah');
     WITR_SURAHS.forEach(s=>{const o=document.createElement('option');o.value=s.n;o.textContent=s.name;select.append(o);});select.value=old?.n||1;
@@ -6249,27 +6265,27 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد؛ أعد فتح اختيار الآيات.');
       const parts=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value),p=parts[0];
       if(witrDay().witr?.readCount&&!confirm('استبدال الخطة الحالية؟ يبقى ما سجّلته سابقًا محفوظًا في السجل.'))return;
-      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,readPage:0,readCount:0,startedAt:null};
-      qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrPool='all';witrMode='goal';witrForceNew=false;document.getElementById('witrPlanOptions').open=false;document.getElementById('witrReader').hidden=true;witrRenderAll();
+      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,displayPageSize:10,readPage:0,readCount:0,startedAt:Date.now()};
+      qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrPool='all';witrMode='goal';witrForceNew=false;document.getElementById('witrPlanOptions').open=false;document.getElementById('witrReader').hidden=true;witrRenderAll();witrOpenReader();
     }catch(e){get('witrCustomError').textContent=e.message;}};
   };
   function witrProposePlan(plan,afterAccept){
     if(!witrValid())return;
     const snapshot=MufDataCore.qiyamStable(witrDay().witr),owner=accountStorage.owner,date=witrContext?.date||currentDate;
-    const sheet=taskSheet('معاينة وردك','<p id="witrPreviewRanges"></p><p id="witrPreviewCount"></p><p id="witrPreviewNotice"></p><p id="witrPreviewError" role="alert"></p><button type="button" class="task-sheet-save" id="witrPreviewApply">اعتماد الورد</button><button type="button" id="witrPreviewCancel">إلغاء · إبقاء وردي</button>');
+    const sheet=taskSheet('معاينة وردك','<p id="witrPreviewRanges"></p><p id="witrPreviewCount"></p><p id="witrPreviewNotice"></p><p id="witrPreviewError" role="alert"></p><button type="button" class="task-sheet-save" id="witrPreviewApply">ابدأ القراءة</button><button type="button" id="witrPreviewCancel">رجوع</button>');
     sheet.over.setAttribute('data-witr-plan-sheet','');
     const get=id=>sheet.over.querySelector('#'+id);
     get('witrPreviewRanges').textContent=plan.parts.map(p=>p.name+' · '+p.from+'–'+p.to).join('، ');
     get('witrPreviewCount').textContent=plan.parts.reduce((n,p)=>n+p.to-p.from+1,0).toLocaleString('ar-EG')+' آية';
-    get('witrPreviewNotice').textContent=witrDay().witr?'سيحل هذا الورد محل وردك الحالي؛ تبقى القراءات المسجّلة في السجل.':'اعتماد الورد يحفظ اختيارك فقط، ولا يسجّل قراءة أو صلاة.';
+    get('witrPreviewNotice').textContent=(witrDay().witr?.readCount||witrDay().witr?.startedAt||witrDay().witr?.readPage)?'سيحل هذا الورد محل وردك الحالي؛ تبقى القراءات المسجّلة في السجل.':'افتح الآيات الآن، وسجّل ما قرأت عند الانتهاء.';
     let accepted=false;
     sheet.over.beforeClose=()=>{if(!accepted){witrPool=witrDay().witr?.pool||witrPool;witrMode=witrDay().witr?.wird?'wird':'goal';witrRenderAll();}};
     get('witrPreviewCancel').onclick=()=>sheet.close();
     get('witrPreviewApply').onclick=()=>{if(accepted)return;try{
       if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد أو الليلة؛ أعد فتح الاختيار.');
-      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr=JSON.parse(MufDataCore.qiyamStable(plan));
+      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr=JSON.parse(MufDataCore.qiyamStable(plan));next.witr.startedAt=Date.now();next.witr.displayPageSize=10;
       qiyamCommit(date,next);accepted=true;sheet.close();witrResetRakahState();witrPool=plan.pool||'all';witrMode=plan.wird?'wird':'goal';witrForceNew=false;
-      document.getElementById('witrPlanOptions').open=false;witrRenderAll();if(afterAccept)afterAccept();
+      document.getElementById('witrPlanOptions').open=false;witrRenderAll();if(afterAccept)afterAccept();else witrOpenReader();
     }catch(e){get('witrPreviewError').textContent=e.message;}};
   }
   function witrPickTarget(target){
@@ -6497,9 +6513,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(!loadedFont.length)throw Error("تعذّر تحميل خط المصحف.");
       const ayahList = await witrBuildAyahList(w.parts);
       if(!active()) return;
-      /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
-      const rakahs = w.wird ? 1 : witrRakahCount(w.target);
-      witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
+      // Legacy plans keep their saved page indices; new plans use independent ten-verse pages.
+      witrAyahChunks = witrDisplayChunks(w,ayahList);
       if(!Number.isInteger(witrDay().witr.readPage)||witrDay().witr.readPage<0)witrDay().witr.readPage=0;
       if(witrDay().witr.readPage>=witrAyahChunks.length)witrDay().witr.readPage=witrAyahChunks.length-1;
       /* حالة تقسيم الركعات (مؤقتة، لا تُحفظ في Firebase): نبني القائمة الكاملة والوحدات غير القابلة للتقسيم */
@@ -6953,8 +6968,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!witrValid())return;const source=last.before||last;
     const next=JSON.parse(JSON.stringify(witrDay()));next.witr={...JSON.parse(JSON.stringify(source)),id:newId(),pool:source.pool||'all',readCount:0,readPage:0,startedAt:null};
     delete next.witr.before;delete next.witr.after;delete next.witr.deletedAt;delete next.witr.retained;
-    if(witrDay().witr){witrProposePlan(next.witr);return;}
-    try{qiyamCommit(witrContext?.date||currentDate,next);witrPool=next.witr.pool;witrMode=next.witr.wird?'wird':'goal';witrForceNew=false;witrRenderAll();}catch(e){hifzShowToast('تعذّر حفظ الخطة؛ حاول مرة أخرى.');}
+    witrProposePlan(next.witr);
   }
   function handleRepeatWird(){const last=witrSessions().at(-1);if(last)witrRepeatPlan(last);}
 
@@ -7021,7 +7035,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function witrArrangeUI(){
     const get=id=>document.getElementById(id),make=(id,title)=>{const d=document.createElement('details');d.id=id;d.className='witr-options';const t=document.createElement('summary');t.innerHTML=witrToolIcon('more')+'<span>'+title+'</span>';d.append(t);return d;};
     const more=make('witrMore','المزيد');get('witrNightCaption').after(more);
-    for(const id of ['witrChooseNight','witrPrayerDirect','witrUseLastPlan','witrActRepeat','witrActAnother','witrActHistory','witrHistoryView','witrReadingUndo'])more.append(get(id));
+    for(const [title,ids] of [['سجل القراءة',['witrActHistory','witrHistoryView','witrReadingUndo']],['اختيار ورد',['witrUseLastPlan','witrActRepeat','witrActAnother']],['الليلة والصلاة',['witrChooseNight','witrPrayerDirect']]]){const group=document.createElement('section');group.className='witr-menu-group';const heading=document.createElement('h3');heading.textContent=title;group.append(heading);for(const id of ids)group.append(get(id));more.append(group);}
     const sources=make('witrSourceOptions','خيارات الاقتراح');get('witrTargets').after(get('witrCustomRange'));get('witrCustomRange').after(get('hifzWird'));get('hifzWird').after(sources);
     for(const id of ['witrPoolChips','witrFavEdit','witrFavEditView'])sources.append(get(id));sources.append(document.querySelector('.witr-repeat-option'));sources.append(document.querySelector('#witrPlanOptions .witr-virtue'));
     const current=make('witrCurrentOptions','خيارات وردي');get('witrStartBtn').after(current);for(const id of ['witrPreDistBtn','witrPreDistHint','witrPreDistStatus','witrChangeBtn'])current.append(get(id));
@@ -12149,7 +12163,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=192;
+  const DATA_VERSION=1, APP_RELEASE=193;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;

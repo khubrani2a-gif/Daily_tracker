@@ -21,7 +21,7 @@ await p.reload();assert.equal(await p.locator('#notes').inputValue(),'ملاحظ
 }));
 test('desktop navigation persists, supports browser back/forward and direct card links',()=>scenario(async({p})=>{
 await p.setViewportSize({width:1366,height:900});await p.locator('a[data-app-view="learning"]').click();await p.locator('a[data-app-view="sport"]').click();await p.goBack();assert.equal(await p.locator('#sectionTitle').innerText(),'التعلّم');await p.goForward();assert.equal(await p.locator('#sectionTitle').innerText(),'الصحة');await p.reload();assert.equal(await p.locator('#sectionTitle').innerText(),'الصحة');
-await p.goto('http://audit.local/index.html#quranCard');assert.ok(await p.locator('#quranCard').isVisible());assert.equal(await p.locator('#todayOverview').isVisible(),false);assert.equal(await p.locator('a[data-app-view="iman"]').getAttribute('aria-current'),'page');
+await p.goto('https://audit.local/index.html#quranCard');assert.ok(await p.locator('#quranCard').isVisible());assert.equal(await p.locator('#todayOverview').isVisible(),false);assert.equal(await p.locator('a[data-app-view="iman"]').getAttribute('aria-current'),'page');
 }));
 test('custom card order and hidden sections remain accessible on iPad and laptop',()=>scenario(async({p})=>{
 for(const width of [820,1180,1366]){await p.setViewportSize({width,height:1000});await p.locator('a[data-app-view="more"]').click();const cards=await visible(p);assert.ok(cards.includes('learningCard'));assert.equal(await p.locator('a[data-app-view="learning"]').isVisible(),false);await p.locator('a[data-app-view="sport"]').click();assert.deepEqual(await visible(p),['waterCard','sportCard']);}
