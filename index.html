@@ -6050,7 +6050,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const sheet=taskSheet('التراجع عن آخر تسجيل قراءة','<p>سيُلغى تسجيل '+(Number.isSafeInteger(Number(last.ayat))&&Number(last.ayat)>0?Number(last.ayat).toLocaleString('ar-EG'):'عدد غير محدد من')+' آية، ويعود الورد وموضع المتابعة إلى حالتهما السابقة. لا يتغير تسجيل الصلاة.</p><label class="kahf-keep"><input type="checkbox" id="witrUndoKeep"> الاحتفاظ بالقراءة في السجل التاريخي فقط</label><p id="witrUndoError" role="alert"></p><button class="task-sheet-save" id="witrUndoSave">حفظ التراجع</button>');
     sheet.over.querySelector('#witrUndoSave').onclick=()=>{if(committed)return;try{if(!witrValid()||owner!==accountStorage.owner||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('staleReading');const next=MufDataCore.qiyamUndo(witrDay(),last.id,Date.now(),sheet.over.querySelector('#witrUndoKeep').checked);qiyamCommit(witrContext?.date||currentDate,next);committed=true;sheet.close();witrForceNew=false;witrRenderAll();}catch(e){sheet.over.querySelector('#witrUndoError').textContent=e.message==='staleReading'?'تغيّر الورد أو بدأت قراءة أخرى؛ لا يمكن إرجاع موضع قديم فوقها.':e.message;}};
   }
-  function witrSetFocus(on){const overlay=document.getElementById('witrOverlay');overlay.classList.toggle('witr-focus',!!on);document.getElementById('witrFocus').textContent=on?'إنهاء التركيز':'وضع التركيز';document.getElementById('witrFocus').setAttribute('aria-pressed',String(!!on));}
+  function witrSetFocus(on){const overlay=document.getElementById('witrOverlay');overlay.classList.toggle('witr-focus',!!on);witrLabel('witrFocus','focus',on?'إنهاء التركيز':'وضع التركيز');document.getElementById('witrFocus').setAttribute('aria-pressed',String(!!on));}
   document.getElementById('qiyamRecord').onclick=qiyamOpenRecord;
   document.getElementById('qiyamPlan').onclick=()=>openWitr();
   document.getElementById('qiyamLog').onclick=qiyamOpenLog;
@@ -6085,6 +6085,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     try{ history.pushState({witr:true}, ""); }catch(e){}
   }
   function closeWitrUI(){
+    document.querySelectorAll('[data-witr-plan-sheet]').forEach(el=>el.querySelector('.task-sheet-close')?.click());
     witrOverlay.hidden = true;
     witrSetFocus(false);
     document.body.style.overflow = "";
@@ -6207,6 +6208,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       startBtn.textContent = (w.readPage > 0 || w.readCount > 0 || w.startedAt)
         ? "متابعة وردي"
         : "ابدأ القراءة";
+      witrLabel('witrStartBtn','play',startBtn.textContent);
       /* النص المساعد وصفٌ دائم للزر (لم يعد تلميح اكتشاف يختفي)؛ والمؤشّر يعكس حالة الإعداد */
       witrRenderPreDistStatus();
     }else{
@@ -6238,6 +6240,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const owner=accountStorage.owner,date=witrContext?.date||currentDate,snapshot=MufDataCore.qiyamStable(witrDay().witr);
     const old=witrDay().witr?.parts?.[0];
     const sheet=taskSheet('اختيار آيات القيام أو الوتر', '<label>السورة<select id="witrCustomSurah"></select></label><div class="qc-edit-row"><label>من آية<input id="witrCustomFrom" type="number" min="1" step="1" inputmode="numeric"></label><label>إلى آية<input id="witrCustomTo" type="number" min="1" step="1" inputmode="numeric"></label></div><p id="witrCustomPreview" role="status"></p><p>هذا يغيّر خطة القراءة فقط. التسجيلات السابقة تبقى في السجل.</p><p id="witrCustomError" role="alert"></p><button id="witrCustomSave" class="task-sheet-save">حفظ المقطع</button>');
+    sheet.over.setAttribute('data-witr-plan-sheet','');
     const get=id=>sheet.over.querySelector('#'+id),select=get('witrCustomSurah');
     WITR_SURAHS.forEach(s=>{const o=document.createElement('option');o.value=s.n;o.textContent=s.name;select.append(o);});select.value=old?.n||1;
     function preview(){try{const [p]=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value);get('witrCustomPreview').textContent=p.name+' · '+p.from+'–'+p.to+' · '+(p.to-p.from+1)+' آية';get('witrCustomError').textContent='';}catch(e){get('witrCustomPreview').textContent='';}}
@@ -6255,6 +6258,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!witrValid())return;
     const snapshot=MufDataCore.qiyamStable(witrDay().witr),owner=accountStorage.owner,date=witrContext?.date||currentDate;
     const sheet=taskSheet('معاينة وردك','<p id="witrPreviewRanges"></p><p id="witrPreviewCount"></p><p id="witrPreviewNotice"></p><p id="witrPreviewError" role="alert"></p><button type="button" class="task-sheet-save" id="witrPreviewApply">اعتماد الورد</button><button type="button" id="witrPreviewCancel">إلغاء · إبقاء وردي</button>');
+    sheet.over.setAttribute('data-witr-plan-sheet','');
     const get=id=>sheet.over.querySelector('#'+id);
     get('witrPreviewRanges').textContent=plan.parts.map(p=>p.name+' · '+p.from+'–'+p.to).join('، ');
     get('witrPreviewCount').textContent=plan.parts.reduce((n,p)=>n+p.to-p.from+1,0).toLocaleString('ar-EG')+' آية';
