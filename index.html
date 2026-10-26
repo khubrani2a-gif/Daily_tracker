@@ -1877,6 +1877,7 @@
   #witrOverlay .adhkar-top{background:var(--bg)}
   #witrOverlay .adhkar-sheet{max-width:720px;margin-inline:auto}
   .witr-plan-hint{text-align:center;color:var(--muted);font-size:.82rem;margin:-.3rem 0 1rem}
+  #witrOverlay [hidden]{display:none!important}
   #witrTargets{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   #witrTargets button{position:relative;min-height:148px;padding:18px 10px;border-radius:22px;background:var(--paper);box-shadow:0 4px 16px #00000008;touch-action:manipulation}
   #witrTargets .witr-goal-icon{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 10px;border-radius:16px;background:var(--accent-soft);font-size:1.65rem}
@@ -3609,7 +3610,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <button class="witr-undo-btn" id="witrUndoBtn">↩ إلغاء آخر جلسة</button>
       </div>
 
-      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrCustomRange">📖 اختيار سورة ومن آية إلى آية</button><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button><button type="button" class="adhkar-done-btn" id="witrResumeSaved" hidden>استكمال ورد الحفظ المحفوظ</button>
+      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrCustomRange">📖 اختيار سورة ومن آية إلى آية</button><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button>
         <details id="witrPlanOptions" open><summary>اختيار ورد جديد</summary><div class="witr-q" id="witrPickHeading">ما هدفك الليلة؟</div>
         <p class="witr-plan-hint">اختر وردك، ثم راجع الآيات قبل البدء.</p>
         <div class="witr-targets" id="witrTargets">
@@ -6057,7 +6058,6 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   document.getElementById('witrChooseNight').onclick=()=>{const owner=accountStorage.owner,view=currentDate,sheet=taskSheet('اختيار ليلة القراءة','<label>تاريخ مساء الليلة<input type="date" id="witrNightDate" value="'+(witrContext?.date||currentDate)+'" max="'+qiyamNightInfo().clock.date+'"></label><p>تشمل هذه الليلة القراءة بعد العشاء وحتى فجر اليوم التالي.</p><button class="task-sheet-save" id="witrNightSave">فتح الليلة</button>');sheet.over.querySelector('#witrNightSave').onclick=()=>{const date=sheet.over.querySelector('#witrNightDate').value;if(owner!==accountStorage.owner||view!==currentDate||accountChanging||!date||date>qiyamNightInfo().clock.date)return;sheet.close();openWitr(date);};};
   document.getElementById('witrPrayerDirect').onclick=qiyamOpenRecord;
   document.getElementById('witrReadingUndo').onclick=witrUndoReading;
-  document.getElementById('witrResumeSaved').onclick=witrOpenReader;
   document.getElementById('witrUseLastPlan').onclick=()=>{const last=witrAllSessions().find(r=>r.before?.parts?.length||r.parts?.length);if(last)witrRepeatPlan(last);};
   document.getElementById('witrFocus').onclick=()=>witrSetFocus(!witrOverlay.classList.contains('witr-focus'));
   document.getElementById('witrPlanBack').onclick=()=>{witrSetFocus(false);witrResetRakahState();document.getElementById('witrReader').hidden=true;witrRenderAll();};
@@ -6150,7 +6150,6 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function witrRenderPickView(){
     const w = witrDay().witr;
     document.getElementById('witrReadingUndo').hidden=!witrSessions().length;
-    document.getElementById('witrResumeSaved').hidden=true;
     document.getElementById('witrUseLastPlan').hidden=!!w||!witrAllSessions().some(r=>r.before?.parts?.length||r.parts?.length);
     const arn = n=>n.toLocaleString("ar-EG");
     const hasHifz = hifzActiveData().segments.length > 0;
@@ -6843,7 +6842,6 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function witrRenderReaderPage(){
     const w = witrDay().witr;
     document.getElementById('witrReadingUndo').hidden=!witrSessions().length;
-    document.getElementById('witrResumeSaved').hidden=true;
     document.getElementById('witrUseLastPlan').hidden=!!w||!witrAllSessions().some(r=>r.before?.parts?.length||r.parts?.length);
     const arn = n=>n.toLocaleString("ar-EG");
     const chunk = witrAyahChunks[w.readPage];
