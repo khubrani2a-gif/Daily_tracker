@@ -19,9 +19,12 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Qiyam reading and prayer regression
-        run: node --test --test-concurrency=1 tests/quran-text-v191.test.js tests/quran-range-v191.test.js tests/qiyam-core-v190.test.js tests/qiyam-night-v190.test.js tests/qiyam-plan-v189.test.js tests/quran-focus-v187.test.js
+        run: node --test --test-concurrency=1 tests/qiyam-preview-v192.test.js tests/qiyam-simple-v192.test.js tests/quran-text-v191.test.js tests/quran-range-v191.test.js tests/qiyam-core-v190.test.js tests/qiyam-night-v190.test.js tests/qiyam-plan-v189.test.js tests/quran-focus-v187.test.js
         env:
           QIYAM_SCREENSHOTS_DIR: artifacts/qiyam
+      - name: Qiyam visual evidence
+        if: always()
+        run: node -e "const f=require('fs');for(const n of ['simple-dark','simple-light','simple-reader']){const p='artifacts/qiyam/'+n+'.png';if(f.existsSync(p))console.log('QIYAM_IMAGE '+n+' '+f.readFileSync(p).toString('base64'));}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
