@@ -10,6 +10,9 @@ test('qiyam goal cards preserve drafts, support keyboard sources and both themes
   assert.match(await p.locator('#witrTargets').innerText(),/لم يُكتب من الغافلين/);
   assert.doesNotMatch(await p.locator('#witrTargets').innerText(),/الذاكرين/);
   await p.locator('#witrTargets [data-t="100"]').click();
+  await p.locator('#witrPreviewApply').click();
+  await p.locator('#witrPlanOptions > summary').click();
+  await p.locator('#witrSourceOptions > summary').click();
   await p.evaluate(()=>{audit.get().witr.readPage=2;audit.save();});
   const before=await p.evaluate(()=>JSON.stringify(audit.get().witr));
   await p.locator('#witrTargets [data-t="100"]').click();
@@ -18,6 +21,8 @@ test('qiyam goal cards preserve drafts, support keyboard sources and both themes
   assert.equal(await p.locator('#witrTargets [data-t="100"]').getAttribute('aria-pressed'),'true');
   await p.locator('#witrPoolChips [data-p="juzamma"]').focus();
   await p.keyboard.press('Enter');
+  await p.locator('#witrPreviewApply').click();
+  await p.locator('#witrPlanOptions > summary').click();
   assert.equal(await p.evaluate(()=>audit.get().witr.pool),'juzamma');
   assert.equal(await p.locator('#witrPoolChips [data-p="juzamma"]').getAttribute('aria-pressed'),'true');
   assert.equal(await p.evaluate(()=>audit.get().witrSessions.length),0);
