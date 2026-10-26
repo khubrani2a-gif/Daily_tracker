@@ -4779,6 +4779,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
     if(financePending)syncLast.textContent="آخر تأكيد سحابي لا يشمل التغييرات المالية المنتظرة";
     else if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
+    else if(Object.values(SYNC_STATE).some(s=>s.waitTimedOut)) syncLast.textContent="تأخر تأكيد المزامنة؛ لا تغلق الحساب. ستتحدث الحالة عند وصول الرد.";
     else if(!online) syncLast.textContent="تغييراتك محفوظة وستُزامن عند عودة الإنترنت";
     else if(user&&globalSyncTime()) syncLast.textContent="آخر مزامنة سحابية: "+formatGlobalSyncTime(globalSyncTime());
     else if(user) syncLast.textContent="لم تكتمل مزامنة سحابية بعد";
@@ -4876,26 +4877,46 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* قراءة تُفضّل الخادم أولًا ثم ترجع للمخزّن المحلي عند تعذّر الشبكة — تُنهي مشكلة الكاش القديم عند العودة للمقدّمة */
   /* خادم أولًا ثم كاش صراحةً (compat 10.14.1): يعلّم المصدر على اللقطة كي نميّز نجاح الخادم عن رجوع الكاش بدقّة */
   function _tagSource(snap, src, serverErr){ try{ if(snap){ snap._srcServer = (src==="server"); snap._srcCache = (src==="cache"); if(serverErr) snap._serverErr = (serverErr&&serverErr.message)||String(serverErr); } }catch(e){} return snap; }
+  function syncReadDeadline(read,ms){
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("sync read timeout")),ms);
+      Promise.resolve().then(read).then(value=>{clearTimeout(timer);resolve(value);},error=>{clearTimeout(timer);reject(error);});
+    });
+  }
   function getDocServerFirst(ref){
-    try{ return ref.get({source:"server"}).then(s=> {if(accountChanging)throw new Error("account changed");return _tagSource(s,"server");}).catch(serverErr=> ref.get({source:"cache"}).then(s=> {if(accountChanging)throw new Error("account changed");return _tagSource(s,"cache",serverErr);})); }
-    catch(e){ return Promise.reject(e); }
+    return syncReadDeadline(()=>ref.get({source:"server"}),15000)
+      .then(s=>{if(accountChanging)throw new Error("account changed");return _tagSource(s,"server");})
+      .catch(serverErr=>{if(accountChanging)throw serverErr;return syncReadDeadline(()=>ref.get({source:"cache"}),5000).then(s=>{if(accountChanging)throw new Error("account changed");return _tagSource(s,"cache",serverErr);});});
   }
   function getQueryServerFirst(q){
-    try{ return q.get({source:"server"}).then(s=> {if(accountChanging)throw new Error("account changed");return _tagSource(s,"server");}).catch(serverErr=> q.get({source:"cache"}).then(s=> {if(accountChanging)throw new Error("account changed");return _tagSource(s,"cache",serverErr);})); }
-    catch(e){ return Promise.reject(e); }
+    return syncReadDeadline(()=>q.get({source:"server"}),15000)
+      .then(s=>{if(accountChanging)throw new Error("account changed");return _tagSource(s,"server");})
+      .catch(serverErr=>{if(accountChanging)throw serverErr;return syncReadDeadline(()=>q.get({source:"cache"}),5000).then(s=>{if(accountChanging)throw new Error("account changed");return _tagSource(s,"cache",serverErr);});});
   }
   /* مصدر الكاش: العلامة الصريحة أولًا، ثم metadata.fromCache احتياطًا */
   function _fromCache(snap){ return !!(snap && (snap._srcCache || (snap.metadata && snap.metadata.fromCache))); }
   /* حالة مزامنة مستقلّة لكل قسم — لا يطمس قسمٌ حالة قسم آخر */
   const SYNC_STATE = {};
+  const syncWaitTimers = {};
   function syncModule(name){ return SYNC_STATE[name] || (SYNC_STATE[name] = {inFlight:false, lastAttemptAt:0, lastServerSuccessAt:0, lastCacheFallbackAt:0, lastError:null, lastSource:null, trigger:null}); }
-  function syncBegin(name, trigger){ const s=syncModule(name); s.inFlight=true; s.lastAttemptAt=Date.now(); s.trigger=trigger||null; return s; }
+  function syncBegin(name, trigger){
+    const s=syncModule(name);s.inFlight=true;s.waitTimedOut=false;s.lastAttemptAt=Date.now();s.trigger=trigger||null;
+    clearTimeout(syncWaitTimers[name]);
+    // Only stop the waiting UI. Pending writes and their JOIN locks remain owned by the original operation.
+    syncWaitTimers[name]=setTimeout(()=>{
+      delete syncWaitTimers[name];
+      if(!s.inFlight||accountChanging)return;
+      s.waitTimedOut=true;safeRun("syncWaitTimeout",expRefreshSyncUI);
+    },30000);
+    return s;
+  }
   /* إنهاء القسم: النجاح وحده يُقدّم آخر نجاح خادم/كاش ويمسح الخطأ؛ الفشل (بما فيه فشل كتابة المصالحة) لا يُقدّم أيّ ختم نجاح،
      ويحفظ مصدر القراءة (خادم/كاش) منفصلًا للتشخيص */
-  function syncEnd(name, ok, snap, err){ const s=syncModule(name); s.inFlight=false;
+  function syncEnd(name, ok, snap, err){ const s=syncModule(name),wasTimedOut=s.waitTimedOut; clearTimeout(syncWaitTimers[name]);delete syncWaitTimers[name];s.inFlight=false;s.waitTimedOut=false;
     if(snap) s.lastSource = _fromCache(snap) ? "cache" : "server";
     if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; }
     else { s.lastError=(err&&err.message)||String(err||"error"); }   /* لا نلمس lastServerSuccessAt/lastCacheFallbackAt عند الفشل */
+    if(wasTimedOut)safeRun("syncWaitRecovered",expRefreshSyncUI);
   }
   /* أقفال ذات انضمام (JOIN): أوّل نداء يملك السحب الحقيقي، والنداءات المتزامنة تنضمّ لنفس الوعد فتحصل على نتيجته
      (قراءة فيزيائية واحدة، ونتيجة خادم صالحة تصل الجميع) بدل ردّ throttled فوري يُهدر عمل التشغيل المالك */
@@ -4968,7 +4989,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const names=SYNC_MODULES;
     let flight=false, attempted=false, allServer=true, anyFail=false, anyCache=false, anyServer=false, anyPending=false;
     names.forEach(n=>{ const s=SYNC_STATE[n]; if(!s){ allServer=false; return; } attempted=true;
-      if(s.inFlight) flight=true;
+      if(s.inFlight&&!s.waitTimedOut) flight=true;
+      if(s.waitTimedOut){anyFail=true;allServer=false;}
       if(s.pendingWrites){anyPending=true;allServer=false;}
       if(s.lastError){ anyFail=true; allServer=false; }
       const serverOk = s.lastServerSuccessAt>0 && s.lastServerSuccessAt>=s.lastCacheFallbackAt && !s.lastError;
@@ -12163,7 +12185,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=193;
+  const DATA_VERSION=1, APP_RELEASE=194;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
