@@ -24,7 +24,7 @@ jobs:
           QIYAM_SCREENSHOTS_DIR: artifacts/qiyam
       - name: Qiyam visual evidence
         if: always()
-        run: node -e "const f=require('fs');for(const n of ['simple-dark','simple-light','simple-reader']){const p='artifacts/qiyam/'+n+'.png';if(f.existsSync(p))console.log('QIYAM_IMAGE '+n+' '+f.readFileSync(p).toString('base64'));}"
+        run: node -e "const f=require('fs');for(const n of ['simple-dark','simple-light','simple-reader']){const p='artifacts/qiyam/'+n+'.png';if(f.existsSync(p)){const b=f.readFileSync(p).toString('base64');for(let i=0;i<b.length;i+=4096)console.log('QIYAM_IMAGE '+n+' '+i+' '+b.slice(i,i+4096));}}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
