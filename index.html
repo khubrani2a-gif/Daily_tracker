@@ -6260,7 +6260,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد؛ أعد فتح اختيار الآيات.');
       const parts=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value),p=parts[0];
       if(witrDay().witr?.readCount&&!confirm('استبدال الخطة الحالية؟ يبقى ما سجّلته سابقًا محفوظًا في السجل.'))return;
-      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,readPage:0,readCount:0,startedAt:Date.now()};
+      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,displayPageSize:10,readPage:0,readCount:0,startedAt:Date.now()};
       qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrPool='all';witrMode='goal';witrForceNew=false;document.getElementById('witrPlanOptions').open=false;document.getElementById('witrReader').hidden=true;witrRenderAll();witrOpenReader();
     }catch(e){get('witrCustomError').textContent=e.message;}};
   };
@@ -6278,7 +6278,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     get('witrPreviewCancel').onclick=()=>sheet.close();
     get('witrPreviewApply').onclick=()=>{if(accepted)return;try{
       if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد أو الليلة؛ أعد فتح الاختيار.');
-      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr=JSON.parse(MufDataCore.qiyamStable(plan));next.witr.startedAt=Date.now();
+      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr=JSON.parse(MufDataCore.qiyamStable(plan));next.witr.startedAt=Date.now();next.witr.displayPageSize=10;
       qiyamCommit(date,next);accepted=true;sheet.close();witrResetRakahState();witrPool=plan.pool||'all';witrMode=plan.wird?'wird':'goal';witrForceNew=false;
       document.getElementById('witrPlanOptions').open=false;witrRenderAll();if(afterAccept)afterAccept();else witrOpenReader();
     }catch(e){get('witrPreviewError').textContent=e.message;}};
@@ -6509,7 +6509,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const ayahList = await witrBuildAyahList(w.parts);
       if(!active()) return;
       /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
-      const rakahs = w.wird ? 1 : Math.max(1,Math.ceil(ayahList.length/10));
+      // Preserve old page indices for pre-v193 plans; only new plans use independent display pages.
+      const rakahs = w.wird ? 1 : w.displayPageSize===10 ? Math.max(1,Math.ceil(ayahList.length/10)) : witrRakahCount(w.target);
       witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
       if(!Number.isInteger(witrDay().witr.readPage)||witrDay().witr.readPage<0)witrDay().witr.readPage=0;
       if(witrDay().witr.readPage>=witrAyahChunks.length)witrDay().witr.readPage=witrAyahChunks.length-1;
