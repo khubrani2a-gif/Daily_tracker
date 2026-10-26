@@ -1,0 +1,8 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+function env(response,cache={}){let calls=0;const c=vm.createContext({WITR_SURAHS:[{n:1,name:'الفاتحة',ayat:7},{n:2,name:'البقرة',ayat:286}],localStorage:{getItem:()=>JSON.stringify(cache),setItem:()=>{}},fetch:async()=>{calls++;return {ok:true,json:async()=>response}}});vm.runInContext(source.slice(source.indexOf('  const WITR_TEXT_CACHE_KEY'),source.indexOf('  /* رابط صوت آية واحدة')),c);return {c,calls:()=>calls};}
+test('old unverified cache is not reused',async()=>{const {c,calls}=env({data:{ayahs:[{numberInSurah:1,number:1,text:'بِسْمِ ٱللَّهِ'}]}},{1:{ayahs:[{n:1,g:1,text:'old'}]}});const rows=await c.witrFetchSurah(1);assert.equal(calls(),1);assert.equal(rows[0].text,'بِسْمِ ٱللَّهِ');});
+test('missing requested verse fails instead of displaying a silently shortened range',async()=>{const {c}=env({data:{ayahs:[{numberInSurah:1,number:1,text:'نص'}]}});await assert.rejects(()=>c.witrBuildAyahList([{n:1,name:'الفاتحة',from:1,to:2}]));});
+test('malformed verse and duplicate number are rejected',async()=>{for(const rows of [[{numberInSurah:1,number:1,text:''}],[{numberInSurah:1,number:1,text:'نص'},{numberInSurah:1,number:2,text:'نص'}]]){const {c}=env({data:{ayahs:rows}});await assert.rejects(()=>c.witrFetchSurah(1));}});
+test('range validation rejects reversed, fractional and out of surah bounds',()=>{const {c}=env({});for(const [a,b] of [[0,2],[3,2],[1,8],[1.5,2]])assert.throws(()=>c.witrCustomParts(1,a,b));assert.equal(JSON.stringify(c.witrCustomParts(1,2,4)),JSON.stringify([{n:1,name:'الفاتحة',from:2,to:4}]));});

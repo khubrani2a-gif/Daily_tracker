@@ -1855,8 +1855,10 @@
   .witr-text-box{min-height:160px}
   .witr-loading, .witr-fallback{text-align:center;color:var(--muted);padding:2.2rem 0;font-size:.85rem}
   .witr-fallback a{color:var(--accent)}
+  @font-face{font-family:"Amiri Quran";src:url("fonts/AmiriQuran-Regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:block}
+  .witr-basmala{display:block;text-align:center;margin:.7rem 0}
   .witr-ayat-wrap{
-    font-family:"Thmanyah Sans", serif;
+    font-family:"Amiri Quran", serif;font-weight:400;font-synthesis:none;letter-spacing:normal;
     font-size:var(--witr-font-size, 1.25rem);
     line-height:2.3;color:var(--ink);text-align:right;padding-bottom:.5rem;
   }
@@ -1902,7 +1904,7 @@
   .witr-reader-dock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(720px,100%);box-sizing:border-box;background:var(--paper);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));z-index:3;text-align:center}
   .witr-reader-dock .q-nav{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px;margin:0 0 8px}.witr-reader-dock .q-nav span{font-size:.8rem;align-self:center}.witr-reader-dock .q-nav button{min-height:44px;touch-action:manipulation}.witr-reader-dock .adhkar-done-btn{margin:0;padding:10px}.witr-reader-dock small{font-size:.75rem;color:var(--muted)}
   body:has(#witrOverlay:not([hidden])) .quick-nav{visibility:hidden}
-  #witrTextBox{scroll-margin-top:100px}.witr-focus #witrNightCaption,.witr-focus #witrPrayerDirect,.witr-focus #witrRakahToggle,.witr-focus #witrReadingUndo{display:none!important}
+  #witrTextBox{scroll-margin-top:100px}.witr-focus #witrCustomRange,.witr-focus #witrNightCaption,.witr-focus #witrPrayerDirect,.witr-focus #witrRakahToggle,.witr-focus #witrReadingUndo{display:none!important}
   .witr-focus .adhkar-head h2{font-size:1rem}.witr-focus .adhkar-sheet{max-width:900px}.witr-focus .witr-reader-dock{width:min(900px,100%)}
   #witrPlanOptions>summary{min-height:44px;cursor:pointer;color:var(--accent);padding:8px 0}#witrPlanOptions{margin-bottom:14px}
   @media(max-width:360px){.qiyam-card{padding:12px}.qiyam-card-actions button{padding:8px}.witr-reader-dock{padding-inline:8px}}
@@ -3590,7 +3592,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <button class="witr-undo-btn" id="witrUndoBtn">↩ إلغاء آخر جلسة</button>
       </div>
 
-      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button><button type="button" class="adhkar-done-btn" id="witrResumeSaved" hidden>استكمال ورد الحفظ المحفوظ</button>
+      <div id="witrPickView"><button type="button" class="witr-change-btn" id="witrCustomRange">📖 اختيار سورة ومن آية إلى آية</button><button type="button" class="witr-change-btn" id="witrUseLastPlan" hidden>تكرار آخر خطة قراءة</button><button type="button" class="adhkar-done-btn" id="witrResumeSaved" hidden>استكمال ورد الحفظ المحفوظ</button>
         <details id="witrPlanOptions" open><summary>اختيار الورد أو تعديل الخطة</summary><div class="witr-q" id="witrPickHeading">ما هدفك الليلة؟</div>
         <p class="witr-plan-hint">اختر وردك، ثم راجع الآيات قبل البدء.</p>
         <div class="witr-targets" id="witrTargets">
@@ -5719,6 +5721,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   /* جلب نص الآيات (رسم عثماني) عبر AlQuran.cloud، مع تخزين مؤقت محلي للقراءة بلا إنترنت لاحقًا */
   const WITR_TEXT_CACHE_KEY = "h2do-witr-text-cache";
+  const WITR_TEXT_SCHEMA = 2;
+  function witrValidText(rows){return Array.isArray(rows)&&rows.length>0&&rows.every((a,i)=>a.n===i+1&&Number.isInteger(a.g)&&a.g>0&&typeof a.text==="string"&&a.text.trim().length>0);}
+  function witrCustomParts(n,from,to){const surah=WITR_SURAHS.find(s=>s.n===n);if(!surah||!Number.isInteger(from)||!Number.isInteger(to)||from<1||to<from||to>surah.ayat)throw Error("اختر نطاق آيات صحيحًا داخل السورة.");return [{n,name:surah.name,from,to}];}
   function witrTextCache(){
     try{ return JSON.parse(localStorage.getItem(WITR_TEXT_CACHE_KEY)) || {}; }catch(e){ return {}; }
   }
@@ -5728,11 +5733,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   async function witrFetchSurah(n){
     const cache = witrTextCache();
     /* نعيد الجلب إن كان المخزّن قديمًا بلا الرقم العام (g) اللازم لرابط صوت الآية */
-    if(cache[n] && Array.isArray(cache[n].ayahs) && cache[n].ayahs[0] && typeof cache[n].ayahs[0].g === "number") return cache[n].ayahs;
+    if(cache[n]?.schema===WITR_TEXT_SCHEMA && witrValidText(cache[n].ayahs)) return cache[n].ayahs;
     const res = await fetch("https://api.alquran.cloud/v1/surah/"+n+"/quran-uthmani");
+    if(!res.ok)throw Error("تعذّر تحميل النص القرآني.");
     const json = await res.json();
+    if(!Array.isArray(json.data?.ayahs))throw Error("استجابة النص غير مكتملة.");
     const ayahs = json.data.ayahs.map(a=>({n:a.numberInSurah, g:a.number, text:a.text}));
-    cache[n] = {ayahs, ts:Date.now()};
+    if(!witrValidText(ayahs))throw Error("نص الآيات غير مكتمل؛ أعد المحاولة.");
+    cache[n] = {schema:WITR_TEXT_SCHEMA,ayahs, ts:Date.now()};
     witrTextCacheSave(cache);
     return ayahs;
   }
@@ -5742,7 +5750,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const ayahs = await witrFetchSurah(p.n);
       for(let i=p.from;i<=p.to;i++){
         const a = ayahs.find(x=>x.n===i);
-        if(a) out.push({surahName:p.name, n:i, g:a.g, text:a.text});
+        if(!a)throw Error("تعذّر تحميل جميع آيات المقطع.");
+        out.push({surah:p.n,surahName:p.name, n:i, g:a.g, text:a.text});
       }
     }
     return out;
@@ -6210,6 +6219,24 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("hifzWirdRecentLabel").textContent = "🌱 المحفوظات الجديدة ("+arn(c.fresh)+")";
     document.getElementById("hifzWirdManualLabel").textContent = "تحديد مخصص ("+arn(c.surahs)+")";
   }
+  document.getElementById('witrCustomRange').onclick=()=>{
+    if(!witrValid())return;
+    const owner=accountStorage.owner,date=witrContext?.date||currentDate,snapshot=MufDataCore.qiyamStable(witrDay().witr);
+    const old=witrDay().witr?.parts?.[0];
+    const sheet=taskSheet('اختيار آيات القيام أو الوتر', '<label>السورة<select id="witrCustomSurah"></select></label><div class="qc-edit-row"><label>من آية<input id="witrCustomFrom" type="number" min="1" step="1" inputmode="numeric"></label><label>إلى آية<input id="witrCustomTo" type="number" min="1" step="1" inputmode="numeric"></label></div><p id="witrCustomPreview" role="status"></p><p>هذا يغيّر خطة القراءة فقط. التسجيلات السابقة تبقى في السجل.</p><p id="witrCustomError" role="alert"></p><button id="witrCustomSave" class="task-sheet-save">حفظ المقطع</button>');
+    const get=id=>sheet.over.querySelector('#'+id),select=get('witrCustomSurah');
+    WITR_SURAHS.forEach(s=>{const o=document.createElement('option');o.value=s.n;o.textContent=s.name;select.append(o);});select.value=old?.n||1;
+    function preview(){try{const [p]=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value);get('witrCustomPreview').textContent=p.name+' · '+p.from+'–'+p.to+' · '+(p.to-p.from+1)+' آية';get('witrCustomError').textContent='';}catch(e){get('witrCustomPreview').textContent='';}}
+    function bounds(){const n=WITR_SURAHS[+select.value-1].ayat;for(const id of ['witrCustomFrom','witrCustomTo'])get(id).max=n;get('witrCustomFrom').value=1;get('witrCustomTo').value=n;preview();}
+    select.onchange=bounds;bounds();if(old){get('witrCustomFrom').value=old.from;get('witrCustomTo').value=old.to;preview();}get('witrCustomFrom').oninput=preview;get('witrCustomTo').oninput=preview;
+    let saved=false;get('witrCustomSave').onclick=()=>{if(saved)return;try{
+      if(!witrValid()||owner!==accountStorage.owner||date!==(witrContext?.date||currentDate)||MufDataCore.qiyamStable(witrDay().witr)!==snapshot)throw Error('تغيّر الورد؛ أعد فتح اختيار الآيات.');
+      const parts=witrCustomParts(+select.value,+get('witrCustomFrom').value,+get('witrCustomTo').value),p=parts[0];
+      if(witrDay().witr?.readCount&&!confirm('استبدال الخطة الحالية؟ يبقى ما سجّلته سابقًا محفوظًا في السجل.'))return;
+      const next=JSON.parse(MufDataCore.qiyamStable(witrDay()));next.witr={id:newId(),target:p.to-p.from+1,pool:'all',parts,key:'custom:'+p.n+':'+p.from+'-'+p.to,custom:true,readPage:0,readCount:0,startedAt:null};
+      qiyamCommit(date,next);saved=true;sheet.close();witrResetRakahState();witrPool='all';witrMode='goal';witrForceNew=false;document.getElementById('witrReader').hidden=true;witrRenderAll();
+    }catch(e){get('witrCustomError').textContent=e.message;}};
+  };
   function witrPickTarget(target){
     if(!witrValid()){hifzShowToast('تغيّر السجل؛ أعد فتح خطة القراءة.');return;}
     const sugg = witrGenerate(target, witrPool);
@@ -6417,7 +6444,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 
   /* عرض الآيات: نص أصلي عبر AlQuran.cloud بدل iframe — تحكم كامل بالخط والألوان وتخزين مؤقت للقراءة بلا إنترنت */
   let witrAyahChunks = null;
-  let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.25");
+  let witrFontSize = parseFloat(localStorage.getItem("h2do-witr-font") || "1.65");
   function witrApplyFontSize(){
     document.documentElement.style.setProperty("--witr-font-size", witrFontSize+"rem");
   }
@@ -6451,6 +6478,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("witrReaderTitle").textContent = witrPartsText(w.parts).surah;
 
     try{
+      const loadedFont=await document.fonts.load('24px "Amiri Quran"');
+      if(!loadedFont.length)throw Error("تعذّر تحميل خط المصحف.");
       const ayahList = await witrBuildAyahList(w.parts);
       if(!active()) return;
       /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
@@ -6565,6 +6594,15 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("witrRakahPrev").parentElement.style.display = witrRakahDist ? "none" : "";
     witrUpdateRakahBadge(); /* إظهار/إخفاء شارة تقدّم الركعة */
   }
+  function witrAppendVerse(box,a,arn){
+    let text=a.text;
+    const prefix='بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ';
+    if(a.n===1&&a.surah!==1&&a.surah!==9&&text.startsWith(prefix)){
+      const b=document.createElement('span');b.className='witr-basmala';b.textContent=text.slice(0,prefix.length);box.append(b);text=text.slice(prefix.length);
+    }
+    const span=document.createElement('span');span.className='witr-verse';span.textContent=text+' ';
+    const num=document.createElement('span');num.className='witr-ayah-num';num.textContent=arn(a.n);span.append(num);box.append(span,document.createTextNode(' '));
+  }
   function witrRenderContinuous(dist){
     const arn = n=>n.toLocaleString("ar-EG");
     const box = document.getElementById("witrAyatBox");
@@ -6580,13 +6618,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         box.appendChild(h);
         lastSurah = a.surahName;
       }
-      const span = document.createElement("span");
-      span.textContent = a.text + " ";
-      const num = document.createElement("span");
-      num.className = "witr-ayah-num";
-      num.textContent = arn(a.n);
-      span.appendChild(num);
-      box.appendChild(span);
+      witrAppendVerse(box,a,arn);
       /* فاصل: لا قبل الأولى، لا بعد الأخيرة، لا داخل وحدة (المفاتيح على الحدود فقط) */
       if(i < last && breakSet.has(witrVerseKey(a))){
         rakahNo++;
@@ -6808,13 +6840,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         box.appendChild(h);
         lastSurah = a.surahName;
       }
-      const span = document.createElement("span");
-      span.textContent = a.text + " ";
-      const num = document.createElement("span");
-      num.className = "witr-ayah-num";
-      num.textContent = arn(a.n);
-      span.appendChild(num);
-      box.appendChild(span);
+      witrAppendVerse(box,a,arn);
     });
     document.getElementById("witrRakahLabel").textContent = w.wird
       ? "📚 ورد الحفظ · "+arn(chunk.length)+" آية"
@@ -12087,7 +12113,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=190;
+  const DATA_VERSION=1, APP_RELEASE=191;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;

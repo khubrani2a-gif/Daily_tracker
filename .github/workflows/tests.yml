@@ -19,7 +19,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Qiyam reading and prayer regression
-        run: node --test --test-concurrency=1 tests/qiyam-core-v190.test.js tests/qiyam-night-v190.test.js tests/qiyam-plan-v189.test.js tests/quran-focus-v187.test.js
+        run: node --test --test-concurrency=1 tests/quran-text-v191.test.js tests/quran-range-v191.test.js tests/qiyam-core-v190.test.js tests/qiyam-night-v190.test.js tests/qiyam-plan-v189.test.js tests/quran-focus-v187.test.js
         env:
           QIYAM_SCREENSHOTS_DIR: artifacts/qiyam
       - uses: actions/upload-artifact@v4
