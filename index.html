@@ -5796,6 +5796,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     return chunks;
   }
 
+  function witrDisplayChunks(w,ayahList){
+    if(w.displayPageSize===10){const chunks=[];for(let i=0;i<ayahList.length;i+=10)chunks.push(ayahList.slice(i,i+10));return chunks;}
+    return witrChunkByRakah(ayahList,w.wird?1:witrRakahCount(w.target));
+  }
+
   const WITR_META_KEY = "h2do-witr-meta";
   function witrMeta(){
     try{ return Object.assign({favorites:[], history:[], updatedAt:0}, JSON.parse(localStorage.getItem(WITR_META_KEY)) || {}); }
@@ -6508,10 +6513,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(!loadedFont.length)throw Error("تعذّر تحميل خط المصحف.");
       const ayahList = await witrBuildAyahList(w.parts);
       if(!active()) return;
-      /* ورد الحفظ: صفحة واحدة متّصلة للتمرير (بلا تقسيم ركعات) */
-      // Preserve old page indices for pre-v193 plans; only new plans use independent display pages.
-      const rakahs = w.wird ? 1 : w.displayPageSize===10 ? Math.max(1,Math.ceil(ayahList.length/10)) : witrRakahCount(w.target);
-      witrAyahChunks = witrChunkByRakah(ayahList, rakahs);
+      // Legacy plans keep their saved page indices; new plans use independent ten-verse pages.
+      witrAyahChunks = witrDisplayChunks(w,ayahList);
       if(!Number.isInteger(witrDay().witr.readPage)||witrDay().witr.readPage<0)witrDay().witr.readPage=0;
       if(witrDay().witr.readPage>=witrAyahChunks.length)witrDay().witr.readPage=witrAyahChunks.length-1;
       /* حالة تقسيم الركعات (مؤقتة، لا تُحفظ في Firebase): نبني القائمة الكاملة والوحدات غير القابلة للتقسيم */
