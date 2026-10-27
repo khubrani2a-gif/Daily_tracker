@@ -2,7 +2,7 @@
   'use strict';
   const ACTIVE='mfkr-active-account-v1', PREFIX='mfkr-account-v1:';
   const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
-  function openAccountStorage(raw){
+  function openAccountStorage(raw,options={}){
     let owner=raw.getItem(ACTIVE)||'guest';
     const prefix=id=>PREFIX+encodeURIComponent(id)+':';
     const owned=key=>typeof key==='string'&&key.startsWith('h2do-');
@@ -14,8 +14,22 @@
     raw.setItem(ACTIVE,owner);
     const keyFor=key=>owned(String(key))?prefix(owner)+String(key):String(key);
     const visibleKeys=()=>nativeKeys().flatMap(key=>key.startsWith(prefix(owner))?[key.slice(prefix(owner).length)]:key.startsWith(PREFIX)||key===ACTIVE?[]:[key]);
+    // Reclaim only explicitly designated, rebuildable cache values for this owner.
+    // Personal records, pending journals and backups are never candidates.
+    const disposable=new Set((options.disposableKeys||[]).filter(owned));
+    function write(key,value){
+      key=String(key);value=String(value);
+      try{return raw.setItem(keyFor(key),value);}catch(error){
+        const quota=error&&(error.name==='QuotaExceededError'||error.name==='NS_ERROR_DOM_QUOTA_REACHED'||error.code===22||error.code===1014);
+        if(!quota||disposable.has(key))throw error;
+        let reclaimed=false;
+        for(const cache of disposable){const physical=keyFor(cache);if(raw.getItem(physical)!==null){raw.removeItem(physical);reclaimed=true;}}
+        if(!reclaimed)throw error;
+        return raw.setItem(keyFor(key),value); // One retry; the storage API remains atomic.
+      }
+    }
     const storage={get length(){return visibleKeys().length;},key:i=>visibleKeys()[i]??null,
-      getItem:key=>raw.getItem(keyFor(key)),setItem:(key,value)=>raw.setItem(keyFor(key),String(value)),removeItem:key=>raw.removeItem(keyFor(key)),clear:()=>visibleKeys().forEach(key=>raw.removeItem(keyFor(key)))};
+      getItem:key=>raw.getItem(keyFor(key)),setItem:write,removeItem:key=>raw.removeItem(keyFor(key)),clear:()=>visibleKeys().forEach(key=>raw.removeItem(keyFor(key)))};
     function activate(uid){
       const target=uid?String(uid):'guest';
       if(target===owner)return {reload:false};
