@@ -43,3 +43,9 @@ test('new backups include personal records but never duplicate disposable text o
  assert.equal(snapshot.entries['h2do-witr-text-cache'],undefined);assert.equal(snapshot.entries['h2do-reading-stats-cache'],undefined);assert.equal(snapshot.entries['h2do-private-sentinel'],'keep');
  assert.ok(Object.entries(snapshot.entries).some(([key,value])=>key.startsWith('h2do-tracker:')&&JSON.parse(value).notes==='personal note'));
 }));
+test('cloud reconciliation recovers cache space without losing local notes or remote prayer data',()=>run(async({p,cloud})=>{
+ const {date,remote}=await p.evaluate(()=>{audit.get().notes='local note';audit.save();audit.login();const remote=audit.blankState();remote.prayers[0]='late';remote.updatedAt=Date.now()+1000;return {date:audit.todayStr(),remote};});cloud['users/test/days/'+date]=remote;
+ await pressure(p);await p.evaluate(()=>audit.syncPullAllModules('manual'));
+ const state=await p.evaluate(()=>({day:audit.get(),pending:audit.dailyPending(),summary:audit.syncSummary()}));
+ assert.equal(state.day.notes,'local note');assert.equal(state.day.prayers[0],'late');assert.deepEqual(state.pending,{});assert.equal(state.summary.state,'ok');assert.equal(cloud['users/test/days/'+date].notes,'local note');assert.equal(cloud['users/test/days/'+date].prayers[0],'late');
+}));
