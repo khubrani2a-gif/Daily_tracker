@@ -28,7 +28,7 @@
         return raw.setItem(keyFor(key),value); // One retry; the storage API remains atomic.
       }
     }
-    const storage={get length(){return visibleKeys().length;},key:i=>visibleKeys()[i]??null,
+    const storage={keys:visibleKeys,get length(){return visibleKeys().length;},key:i=>visibleKeys()[i]??null,
       getItem:key=>raw.getItem(keyFor(key)),setItem:write,removeItem:key=>raw.removeItem(keyFor(key)),clear:()=>visibleKeys().forEach(key=>raw.removeItem(keyFor(key)))};
     function activate(uid){
       const target=uid?String(uid):'guest';
@@ -49,6 +49,36 @@
     }
     return {storage,activate,get owner(){return owner;}};
   }
+  function openBackupVault(factory){
+    function operation(owner,id,mode,value){
+      return new Promise((resolve,reject)=>{
+        let db,tx,settled=false,result;
+        const finish=(error)=>{if(settled)return;settled=true;clearTimeout(timer);if(db)db.close();error?reject(error):resolve(result);};
+        const timer=setTimeout(()=>{if(tx)try{tx.abort();}catch(e){}finish(new Error('backup archive timeout'));},10000);
+        try{
+          const request=factory.open('mufakkirati-backup-vault-v1',1);
+          request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('snapshots'))request.result.createObjectStore('snapshots');};
+          request.onerror=()=>finish(request.error||new Error('archive unavailable'));
+          request.onblocked=()=>finish(new Error('backup archive blocked'));
+          request.onsuccess=()=>{
+            db=request.result;if(settled){db.close();return;}
+            try{
+              tx=db.transaction('snapshots',mode==='get'?'readonly':'readwrite');
+              const store=tx.objectStore('snapshots'),key=[String(owner),String(id)];
+              const req=mode==='put'?store.put(value,key):mode==='remove'?store.delete(key):store.get(key);
+              req.onsuccess=()=>{result=req.result;};
+              tx.oncomplete=()=>finish();tx.onabort=()=>finish(tx.error||new Error('archive transaction aborted'));tx.onerror=()=>{};
+            }catch(error){finish(error);}
+          };
+        }catch(error){finish(error);}
+      });
+    }
+    return {put:(owner,id,value)=>operation(owner,id,'put',value),get:(owner,id)=>operation(owner,id,'get'),remove:(owner,id)=>operation(owner,id,'remove')};
+  }
+  function storageKeys(storage){
+    if(typeof storage.keys==='function')return storage.keys();
+    return Array.from({length:storage.length},(_,i)=>storage.key(i)).filter(Boolean);
+  }
   // Only exact rebuildable keys may be removed; unknown backup metadata is retained.
   function cacheFreeBackup(raw,keys){
     let rows;try{rows=JSON.parse(raw);}catch(e){return raw;}
@@ -65,8 +95,8 @@
   }
   function storageReport(storage,keys,backupKey){
     const report={records:0,backups:0,caches:0,embeddedCaches:0,total:0};
-    for(let i=0;i<storage.length;i++){
-      const key=storage.key(i);if(!key||!key.startsWith('h2do-'))continue;
+    for(const key of storageKeys(storage)){
+      if(!key||!key.startsWith('h2do-'))continue;
       const raw=storage.getItem(key);if(raw===null)continue;
       const bytes=2*(key.length+raw.length),kind=key===backupKey?'backups':keys.includes(key)?'caches':'records';
       report[kind]+=bytes;report.total+=bytes;
@@ -229,5 +259,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {storageReport,cleanStorageCaches,openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
+  return {openBackupVault,storageKeys,storageReport,cleanStorageCaches,openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
 });
