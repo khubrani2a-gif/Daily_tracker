@@ -4042,14 +4042,15 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=167"></script>
+<script src="data-core.js?v=196"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=167"></script>
 <script src="learning-core.js?v=167"></script>
 <script>
 (function(){
   "use strict";
-  const accountStorage = MufDataCore.openAccountStorage(window.localStorage);
+  const DISPOSABLE_CACHE_KEYS=["h2do-witr-text-cache","h2do-reading-stats-cache"];
+  const accountStorage = MufDataCore.openAccountStorage(window.localStorage,{disposableKeys:DISPOSABLE_CACHE_KEYS});
   const localStorage = accountStorage.storage;
   Object.defineProperty(window,"localStorage",{configurable:true,get:()=>localStorage});
   let accountChanging = false;
@@ -5823,7 +5824,13 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     try{ return JSON.parse(localStorage.getItem(WITR_TEXT_CACHE_KEY)) || {}; }catch(e){ return {}; }
   }
   function witrTextCacheSave(cache){
-    try{ localStorage.setItem(WITR_TEXT_CACHE_KEY, JSON.stringify(cache)); }catch(e){}
+    try{
+      const kept={};
+      // A maximum of ~1 MiB of UTF-16 text; reading progress lives in separate records.
+      const entries=Object.entries(cache).filter(([n,row])=>/^\d+$/.test(n)&&+n>=1&&+n<=114&&row?.schema===WITR_TEXT_SCHEMA&&Array.isArray(row.ayahs)).sort((a,b)=>(+b[1].ts||0)-(+a[1].ts||0));
+      for(const [n,row] of entries){kept[n]=row;if(JSON.stringify(kept).length>512*1024)delete kept[n];}
+      localStorage.setItem(WITR_TEXT_CACHE_KEY,JSON.stringify(kept));
+    }catch(e){}
   }
   async function witrFetchSurah(n){
     const cache=witrTextCache();
@@ -12239,7 +12246,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=195;
+  const DATA_VERSION=1, APP_RELEASE=196;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -12255,7 +12262,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const entries={};
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
-      if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY) entries[key]=localStorage.getItem(key);
+      if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!DISPOSABLE_CACHE_KEYS.includes(key)) entries[key]=localStorage.getItem(key);
     }
     return {schema:DATA_VERSION,appVersion:APP_RELEASE,createdAt:Date.now(),reason:reason||"يدوية",entries};
   }
@@ -14617,7 +14624,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
           if(owner!==(user?.uid||'guest')||!current||expStableRecord(current)!==snapshot||expActiveTx().some(t=>t.relatedTransactionId===id)){hifzShowToast('تغير المصروف أو ارتبط بحركة أخرى؛ راجعه من السجل.');return;}
           try{expAtomicFinance(()=>expDeleteTransaction(id));}catch(error){hifzShowToast('تعذر التراجع عن المبلغ؛ حاول تصحيحه من السجل.');}
         });document.getElementById('expUndoBtn').textContent='تراجع عن تسجيل المصروف';
-      }catch(error){q('fqSave').disabled=false;q('fqErr').textContent='تعذّر الحفظ. احتفظنا بالمسودة ولم نسجل المصروف؛ حاول مجددًا.';}
+      }catch(error){q('fqSave').disabled=false;q('fqErr').textContent='تعذّر الحفظ. احتفظنا بالمسودة ولم نسجل المصروف. '+syncFailureReason(error.cause||error);}
 
     };
   }
