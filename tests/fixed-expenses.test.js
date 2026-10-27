@@ -146,6 +146,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("G. Salary cycle card keeps obligations scoped to the actual 27-26 date range");
   p=await page(b);
+  await p.clock.setFixedTime(new Date("2026-10-26T12:00:00Z"));
   await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now(), month=tk.slice(0,7);
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
       categories:[],
@@ -154,7 +155,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
         {id:"T30",categoryId:null,name:"التزام يوم ٣٠",defaultAmountMinor:30000,amountType:"fixed",dueDay:30,recurrence:"monthly",startMonth:month,endMonth:null,note:null,isActive:true,sortOrder:1,overrides:{},createdAt:now,updatedAt:now,archivedAt:null}
       ],
       instances:[],transactions:[],trips:[]};
-    localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, today());
+    localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, "2026-10-26");
   await p.goto(fileUrl); await p.waitForTimeout(700);
   await openFinance(p);
   const cycleCard=await p.$eval("#expFixedCard",e=>e.textContent);
@@ -162,6 +163,11 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   ok("cycle card excludes day-30 obligation when it falls after the cycle end", !cycleCard.includes("التزام يوم ٣٠"));
   s=await rd(p);
   ok("out-of-cycle instances remain generated without deleting existing data", s.instances.filter(i=>["T27","T30"].includes(i.templateId)).length===2);
+  await p.clock.setFixedTime(new Date("2026-10-27T12:00:00Z"));
+  await p.reload();await openFinance(p);
+  const nextCycleCard=await p.$eval("#expFixedCard",e=>e.textContent);
+  ok("new cycle on day 27 includes its day-27 obligation",nextCycleCard.includes("التزام يوم ٢٧"));
+  ok("new cycle on day 27 includes its day-30 obligation",nextCycleCard.includes("التزام يوم ٣٠"));
   await p.close();
 
   console.log("\nRESULT: "+PASS+" passed, "+FAIL+" failed");

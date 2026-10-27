@@ -1586,6 +1586,9 @@
   .ad-btn:hover{background:var(--accent-soft);color:var(--accent)}
   .adhkar-progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
   .adhkar-progress div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .3s}
+  #adhkarSaveStatus,#prayerSaveStatus{border:1px solid var(--accent);border-radius:12px;padding:.8rem;color:var(--ink);background:var(--paper);line-height:1.7}
+  #syncFailureDetails{flex-basis:100%;font-size:.8rem;line-height:1.6;text-align:start}
+  #syncFailureDetails p{margin:.4rem 0}
   .adhkar-count{font-size:.78rem;color:var(--muted);text-align:center;margin:.4rem 0 .9rem}
   .dhikr{
     background:var(--paper);border:1.5px solid var(--line);border-radius:16px;
@@ -2706,6 +2709,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
             <span class="sync-mode" id="syncMode">📱 محلي على هذا الجهاز</span>
             <span class="sync-last" id="syncLast">بياناتك محفوظة تلقائيًا</span>
             <button type="button" class="sync-retry" id="syncRetry" hidden>إعادة المحاولة</button>
+            <div id="syncFailureDetails" role="status" hidden></div>
           </div>
         </div>
       </details>
@@ -2897,7 +2901,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
         <p id="prayerSummary" class="pstate-legend"></p>
-        <div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
+        <p id="prayerSaveStatus" role="alert" hidden></p><div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
         <section id="qiyamCard" class="qiyam-card" aria-label="قيام الليل والوتر"><div class="qiyam-card-head"><strong>🌙 قيام الليل والوتر</strong><small>نافلة</small></div><p id="qiyamNightLabel"></p><p id="qiyamSummary" role="status"></p><div class="qiyam-card-actions"><button type="button" id="qiyamRecord">سجّل صلاتك</button><button type="button" id="qiyamPlan">خطة القراءة</button></div><div class="qiyam-card-footer"><small id="qiyamTiming"></small><button type="button" id="qiyamLog">سجل الصلاة</button></div></section>
         <p id="prayerFeedback" role="status" hidden><span id="prayerFeedbackText"></span> <button type="button" id="prayerUndo">تراجع</button></p>
         <div class="pstate-legend">اضغط «صليت» للتسجيل · ⋯ لتصحيح الحالة</div>
@@ -3426,7 +3430,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <div class="adhkar-progress"><div id="adhkarFill"></div></div>
         <div class="adhkar-count" id="adhkarCount"></div>
       </div>
-      <div class="adhkar-tools"><label>العرض<select id="adhkarViewMode"><option value="list">قائمة</option><option value="single">ذكر واحد</option></select></label><label>حجم الخط<input id="adhkarFont" type="range" min="100" max="180" step="10" value="100"></label><label id="adhkarPrayerLabel" hidden>الصلاة<select id="adhkarPrayer"><option value="legacy">جلسة عامة / سابقة</option><option value="Fajr">الفجر</option><option value="Dhuhr">الظهر</option><option value="Asr">العصر</option><option value="Maghrib">المغرب</option><option value="Isha">العشاء</option></select></label></div><p id="adhkarSessionDate" class="adhkar-count"></p>
+      <div class="adhkar-tools"><label>العرض<select id="adhkarViewMode"><option value="list">قائمة</option><option value="single">ذكر واحد</option></select></label><label>حجم الخط<input id="adhkarFont" type="range" min="100" max="180" step="10" value="100"></label><label id="adhkarPrayerLabel" hidden>الصلاة<select id="adhkarPrayer"><option value="legacy">جلسة عامة / سابقة</option><option value="Fajr">الفجر</option><option value="Dhuhr">الظهر</option><option value="Asr">العصر</option><option value="Maghrib">المغرب</option><option value="Isha">العشاء</option></select></label></div><p id="adhkarSessionDate" class="adhkar-count"></p><p id="adhkarSaveStatus" role="alert" hidden></p>
       <div class="adhkar-list" id="adhkarList"></div><div class="adhkar-tools" id="adhkarNavigation" hidden><button id="adhkarPrevious" type="button">السابق</button><span id="adhkarPosition"></span><button id="adhkarNext" type="button">التالي</button></div>
       <button class="adhkar-done-btn" id="adhkarDone">حفظ والعودة</button>
     </div>
@@ -4404,13 +4408,31 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(touched)day.worship[ADHKAR_WKEY[mode]]=!!day.adhkarManual?.[ADHKAR_WKEY[mode]]||Object.entries(day.adhkarCompleted).some(([k,v])=>k.startsWith(mode+':')&&v);
     }
   }
+  let dailyStorageIssue=null;
+  function dailyChange(change){
+    if(accountChanging)return {ok:false,message:'يتغيّر الحساب؛ انتظر اكتمال فتحه.'};
+    const before=JSON.parse(JSON.stringify(state));
+    try{change();save();dailyStorageIssue=null;renderSyncFailureDetails();return {ok:true,message:''};}
+    catch(error){
+      // The durable journal remains authoritative if only the day mirror failed.
+      const queued=dailyPending()[currentDate],durable=!!queued&&JSON.stringify(queued.value)===JSON.stringify(state);
+      if(!durable)state=before;else invalidateAllDaysCache();
+      dailyStorageIssue=error;safeRun('dailyStorageStatus',expRefreshSyncUI);
+      return {ok:durable,message:(durable?'التغيير محفوظ على الجهاز، لكن تعذّر تحديث نسخة اليوم.':'لم يُحفظ التغيير؛ بقي التسجيل السابق. أعد المحاولة بعد معالجة مشكلة الحفظ.')+' '+syncFailureReason(error)};
+    }
+  }
+  function adhkarChange(change){
+    if(!adhkarValid())return false;
+    const result=dailyChange(()=>{change();adhkarCommit();}),status=document.getElementById('adhkarSaveStatus');
+    status.textContent=result.message;status.hidden=!result.message;adhkarProgressUpdate();return result.ok;
+  }
   function adhkarCommit(){
     const counts=adhkarCounts(),key=ADHKAR_WKEY[adhkarMode];state.adhkar=state.adhkar||{};
     if(adhkarMode!=='salah'||adhkarPrayer==='legacy')state.adhkar[adhkarMode]=counts;
     state.adhkarManual=state.adhkarManual||{};state.adhkarCompleted=state.adhkarCompleted||{};
     state.adhkarCompleted[adhkarMode+':'+(adhkarMode==='salah'?adhkarPrayer:'daily')]=adhkarData().every((d,i)=>counts[i]>=d.n);
     state.worship[key]=!!state.adhkarManual[key]||Object.entries(state.adhkarCompleted).some(([k,v])=>k.startsWith(adhkarMode+':')&&v);
-    save();adhkarProgressUpdate();
+
   }
   function openAdhkar(mode){
     document.querySelector('#adhkarPrayer option[value="Dhuhr"]').textContent=prayerDisplayName(2);adhkarOpener=document.activeElement;adhkarMode=mode;adhkarDate=currentDate;adhkarPrayer='legacy';adhkarRestorePosition();const prefs=adhkarPrefs();document.getElementById('adhkarViewMode').value=prefs.view==='single'?'single':'list';document.getElementById('adhkarFont').value=Math.max(100,Math.min(180,+prefs.font||100));document.getElementById('adhkarList').style.setProperty('--adhkar-font',+document.getElementById('adhkarFont').value/100);
@@ -4426,7 +4448,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function closeAdhkar(){if(history.state&&history.state.adhkar)history.back();else closeAdhkarUI();}
   window.addEventListener('popstate',()=>{if(!document.getElementById('adhkarOverlay').hidden)closeAdhkarUI();});
   document.getElementById('adhkarClose').onclick=closeAdhkar;document.getElementById('adhkarDone').onclick=closeAdhkar;
-  document.getElementById('adhkarReset').onclick=()=>{if(!adhkarValid()||!confirm('تصفير جلسة الأذكار المعروضة؟ تبقى الجلسات الأخرى محفوظة.'))return;adhkarData().forEach((d,i)=>dhikrDelta(adhkarRecord(i),-dhikrTotal(adhkarRecord(i))));state.adhkarManual=state.adhkarManual||{};state.adhkarManual[ADHKAR_WKEY[adhkarMode]]=false;adhkarCommit();};
+  document.getElementById('adhkarReset').onclick=()=>{if(!adhkarValid()||!confirm('تصفير جلسة الأذكار المعروضة؟ تبقى الجلسات الأخرى محفوظة.'))return;adhkarChange(()=>{adhkarData().forEach((d,i)=>dhikrDelta(adhkarRecord(i),-dhikrTotal(adhkarRecord(i))));state.adhkarManual=state.adhkarManual||{};state.adhkarManual[ADHKAR_WKEY[adhkarMode]]=false;});};
   function adhkarProgressUpdate(){
     const data=adhkarData(),counts=adhkarCounts(),done=data.filter((d,i)=>counts[i]>=d.n).length,arn=n=>n.toLocaleString('ar-EG');
     document.getElementById('adhkarFill').style.width=Math.round(done/data.length*100)+'%';document.getElementById('adhkarCount').textContent=done===data.length?'اكتملت هذه الجلسة — تقبّل الله منك':arn(done)+' من '+arn(data.length)+' أذكار مكتملة';
@@ -4436,7 +4458,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function adhkarAdjust(i){
     const date=adhkarDate,mode=adhkarMode,prayer=adhkarPrayer,d=adhkarData()[i];
     const sheet=taskSheet('ضبط عدد الذكر','<label class="task-field-wide">العدد المسجل<input id="adhkarAdjustedCount" type="text" inputmode="numeric" value="'+Math.min(d.n,dhikrTotal(adhkarRecord(i)))+'"></label><p>العدد المستهدف: '+d.n.toLocaleString('ar-EG')+'</p><div class="exp-err" id="adhkarAdjustError" role="alert"></div><button type="button" class="task-sheet-save" id="adhkarAdjustSave">حفظ العدد</button>');
-    sheet.over.querySelector('#adhkarAdjustSave').onclick=()=>{const err=sheet.over.querySelector('#adhkarAdjustError');if(!adhkarValid()||date!==adhkarDate||mode!==adhkarMode||prayer!==adhkarPrayer){err.textContent='تغيّرت الجلسة؛ أعد فتح ضبط العدد.';return;}const raw=sheet.over.querySelector('#adhkarAdjustedCount').value.trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x));const n=Number(raw);if(!/^\d+$/.test(raw)||!Number.isInteger(n)||n<0||n>d.n){err.textContent='اكتب عددًا من ٠ إلى '+d.n.toLocaleString('ar-EG');return;}const r=adhkarRecord(i);dhikrDelta(r,n-dhikrTotal(r));adhkarCommit();sheet.close();document.querySelector('[data-adhkar-count="'+i+'"]')?.focus();};
+    sheet.over.querySelector('#adhkarAdjustSave').onclick=()=>{const err=sheet.over.querySelector('#adhkarAdjustError');if(!adhkarValid()||date!==adhkarDate||mode!==adhkarMode||prayer!==adhkarPrayer){err.textContent='تغيّرت الجلسة؛ أعد فتح ضبط العدد.';return;}const raw=sheet.over.querySelector('#adhkarAdjustedCount').value.trim().replace(/[٠-٩]/g,x=>'٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[۰-۹]/g,x=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(x));const n=Number(raw);if(!/^\d+$/.test(raw)||!Number.isInteger(n)||n<0||n>d.n){err.textContent='اكتب عددًا من ٠ إلى '+d.n.toLocaleString('ar-EG');return;}if(!adhkarChange(()=>{const r=adhkarRecord(i);dhikrDelta(r,n-dhikrTotal(r));})){err.textContent=document.getElementById('adhkarSaveStatus').textContent;return;}sheet.close();document.querySelector('[data-adhkar-count="'+i+'"]')?.focus();};
   }
   function renderAdhkarList(){
     const list=document.getElementById('adhkarList'),ov=document.getElementById('adhkarOverlay'),top=ov.scrollTop,focus=document.activeElement?.dataset?.adhkarCount;
@@ -4447,8 +4469,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const body=document.createElement('div');body.className='dtext';body.textContent=d.t;
       const source=document.createElement('div');source.className='dsrc';source.textContent=d.s;if(d.sourceUrl){const link=document.createElement('a');link.href=d.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent=' فتح المصدر';source.append(link);}
       const btn=document.createElement('button');btn.type='button';btn.className='dhikr-count-btn';btn.dataset.adhkarCount=i;btn.setAttribute('aria-label','عدّ الذكر '+(i+1));
-      btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;dhikrDelta(r,1);adhkarCommit();dhikrFeedbackPulse(8);};
-      const tools=document.createElement('div');tools.className='dhikr-menu-panel';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>0)dhikrDelta(r,-1);adhkarCommit();};
+      btn.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);if(dhikrTotal(r)>=d.n)return;if(adhkarChange(()=>dhikrDelta(r,1)))dhikrFeedbackPulse(8);};
+      const tools=document.createElement('div');tools.className='dhikr-menu-panel';const undo=document.createElement('button');undo.type='button';undo.textContent='تراجع';undo.dataset.adhkarUndo=i;undo.onclick=()=>{if(!adhkarValid())return;const r=adhkarRecord(i);adhkarChange(()=>{if(dhikrTotal(r)>0)dhikrDelta(r,-1);});};
       const copy=document.createElement('button');copy.type='button';copy.textContent='نسخ';copy.onclick=async()=>{try{await navigator.clipboard.writeText(d.t);hifzShowToast('نُسخ الذكر');}catch(e){hifzShowToast('تعذّر النسخ؛ يمكنك تحديد النص ونسخه.');}};const adjust=document.createElement('button');adjust.type='button';adjust.textContent='ضبط العدد';adjust.dataset.adhkarAdjust=i;adjust.onclick=()=>adhkarAdjust(i);tools.append(undo,copy,adjust);const menu=document.createElement('details');menu.className='dhikr-menu';const more=document.createElement('summary');more.textContent='⋯ المزيد';more.dataset.adhkarMore=i;more.setAttribute('aria-label','خيارات الذكر '+(i+1));menu.append(more,tools);const head=document.createElement('div');head.className='dhikr-reader-head';head.append(menu);tools.addEventListener('click',e=>{if(e.target.closest('button')){menu.open=false;more.focus({preventScroll:true});}});card.append(head,body,source,btn);list.appendChild(card);
     });
     document.getElementById('adhkarNavigation').hidden=!single;document.getElementById('adhkarPosition').textContent='الذكر '+(adhkarIndex+1).toLocaleString('ar-EG')+' من '+data.length.toLocaleString('ar-EG');document.getElementById('adhkarPrevious').disabled=adhkarIndex===0;document.getElementById('adhkarNext').disabled=adhkarIndex>=data.length-1;adhkarProgressUpdate();ov.scrollTop=top;if(focus!==undefined)list.querySelector('[data-adhkar-count="'+focus+'"]')?.focus({preventScroll:true});
@@ -4767,9 +4789,28 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const sameDay=d.toDateString()===now.toDateString();
     return d.toLocaleString("ar-SA",sameDay?{hour:"numeric",minute:"2-digit"}:{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
   }
+  function syncFailureReason(error){
+    const raw=[error?.name,error?.code,error?.message,typeof error==='string'?error:''].join(' ').toLowerCase();
+    if(/quota|ns_error_dom_quota/.test(raw))return 'مساحة تخزين المتصفح غير كافية. احتفظ بنسخة احتياطية خارج الجهاز قبل أي تنظيف.';
+    if(/securityerror|access is denied|storage.*disabled/.test(raw))return 'المتصفح منع الحفظ المحلي؛ راجع إعدادات بيانات المواقع.';
+    if(/permission.denied|insufficient permissions/.test(raw))return 'رفضت السحابة صلاحيات الوصول؛ يلزم التحقق من صلاحيات الحساب.';
+    if(/unauthenticated|auth\/|token.expired/.test(raw))return 'تعذّر تأكيد جلسة الحساب. احتفظ بتغييراتك المحلية قبل إعادة تسجيل الدخول.';
+    if(/deadline|timeout|timed.out/.test(raw))return 'انتهت مهلة الاتصال دون تأكيد؛ أعد المحاولة عند استقرار الاتصال.';
+    if(/unavailable|network|offline|failed to fetch/.test(raw))return 'تعذّر الوصول إلى السحابة؛ تحقّق من الاتصال ثم أعد المحاولة.';
+    if(/reconwritefailed|pending days failed/.test(raw))return 'لم تتأكد كتابة البيانات إلى السحابة؛ لا يُعدّ هذا نجاحًا للمزامنة.';
+    return 'لم يكتمل الحفظ أو الاتصال. السبب التفصيلي غير متاح؛ أعد المحاولة.';
+  }
+  function renderSyncFailureDetails(){
+    const box=document.getElementById('syncFailureDetails');if(!box)return;
+    const labels={daily:'اليوم والأذكار',quran:'القرآن',customWorship:'العبادات',witr:'قيام الليل',hifz:'الحفظ',expenses:'المالية',weeklyGoals:'الأهداف',reading:'القراءة',learning:'التعلّم'};
+    const lines=[];
+    if(dailyStorageIssue)lines.push('الحفظ على الجهاز: '+syncFailureReason(dailyStorageIssue));
+    if(user)for(const name of SYNC_MODULES){const row=SYNC_STATE[name];if(row?.lastError)lines.push(labels[name]+': '+(row.lastErrorReason||syncFailureReason(row.lastError)));else if(row?.waitTimedOut)lines.push(labels[name]+': تأخر تأكيد السحابة.');}
+    box.replaceChildren();for(const line of lines){const p=document.createElement('p');p.textContent=line;box.append(p);}box.hidden=!lines.length;
+  }
   function renderSyncDetails(summary,running){
     if(!syncMeta) return;
-    syncMeta.hidden=false;
+    syncMeta.hidden=false;renderSyncFailureDetails();
     const online=navigator.onLine!==false;
     const compactStatus=document.getElementById("syncSummaryLabel");
     const financePending=!!SYNC_STATE.expenses?.pendingWrites;
@@ -4905,8 +4946,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
      ويحفظ مصدر القراءة (خادم/كاش) منفصلًا للتشخيص */
   function syncEnd(name, ok, snap, err){ const s=syncModule(name);s.inFlight=false;
     if(snap) s.lastSource = _fromCache(snap) ? "cache" : "server";
-    if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null; }
-    else { s.lastError=(err&&err.message)||String(err||"error"); }   /* لا نلمس lastServerSuccessAt/lastCacheFallbackAt عند الفشل */
+    if(ok){ if(_fromCache(snap)) s.lastCacheFallbackAt=Date.now(); else s.lastServerSuccessAt=Date.now(); s.lastError=null;s.lastErrorReason=null; }
+    else { s.lastError=(err&&err.message)||String(err||"error");s.lastErrorReason=syncFailureReason(err); }   /* لا نلمس lastServerSuccessAt/lastCacheFallbackAt عند الفشل */
     safeRun("syncModuleSettled",expRefreshSyncUI);
   }
   /* أقفال ذات انضمام (JOIN): أوّل نداء يملك السحب الحقيقي، والنداءات المتزامنة تنضمّ لنفس الوعد فتحصل على نتيجته
@@ -8705,28 +8746,34 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function prayerFardCount(values){return FARD_IDX.filter(i=>isPrayed(prayerVal(values,i))).length;}
   let prayerUndoTicket=null;
   function prayerFeedback(){const host=document.getElementById('prayerFeedback');host.hidden=!prayerUndoTicket||prayerUndoTicket.date!==currentDate;if(!host.hidden)document.getElementById('prayerFeedbackText').textContent=prayerUndoTicket.text;}
+  function prayerChange(change){
+    const result=dailyChange(change),status=document.getElementById('prayerSaveStatus');
+    status.textContent=result.message;status.hidden=!result.message;return result.ok;
+  }
   function prayerRefreshViews(){renderPrayers();renderProgress();}
-  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after||(t.friday&&state.friday?.mode!==t.afterMode)){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;if(t.friday){if(t.beforeMode)fridayDay().mode=t.beforeMode;else delete fridayDay().mode;}prayerUndoTicket=null;save();prayerRefreshViews();};
+  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after||(t.friday&&state.friday?.mode!==t.afterMode)){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}if(!prayerChange(()=>{state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;if(t.friday){if(t.beforeMode)fridayDay().mode=t.beforeMode;else delete fridayDay().mode;}}))return;prayerUndoTicket=null;prayerRefreshViews();};
   function openPrayerStatus(index){
     const date=currentDate,old=prayerVal(state.prayers,index),oldMode=state.friday?.mode,friday=index===2&&isFriday(date),labels={'ontime':'في وقتها','late':'متأخرة','missed':index===1?'لم أؤدّها':'فاتت','':'إلغاء التسجيل'};
     const future=date>todayStr(),body=(friday?'<div class="friday-form"><label for="fridayPrayerMode">الصلاة المسجّلة</label><select id="fridayPrayerMode"><option value="jumuah">صلاة الجمعة</option><option value="dhuhr">صلاة الظهر</option></select></div>':'')+'<p>تاريخ التسجيل: '+expEsc(date)+(index===1?' · الضحى نافلة':'')+'</p><p>اختر الحالة بنفسك؛ لا يستنتج التطبيق الأداء من الساعة.</p>'+Object.entries(labels).map(([key,label])=>'<button type="button" class="task-sheet-save" data-prayer-status="'+key+'" aria-pressed="'+String(old===key)+'"'+(future&&key!==''?' disabled':'')+'>'+label+(old===key?' ✓':'')+'</button>').join('')+'<p id="prayerEditError" role="alert">'+(future?'لا يمكن تسجيل أداء صلاة في تاريخ مستقبلي.':'')+'</p>'+(index!==1?'<button type="button" id="prayerAdhkar" class="task-sheet-save">أذكار بعد صلاة '+prayerDisplayName(index)+'</button>':'');
     const sheet=taskSheet('تسجيل '+prayerDisplayName(index),body);if(friday)sheet.over.querySelector('#fridayPrayerMode').value=oldMode==='dhuhr'?'dhuhr':'jumuah';
     sheet.over.querySelectorAll('[data-prayer-status]').forEach(button=>button.onclick=()=>{
       if(future&&button.dataset.prayerStatus!=='')return;if(date!==currentDate||prayerVal(state.prayers,index)!==old||(friday&&state.friday?.mode!==oldMode)){sheet.over.querySelector('#prayerEditError').textContent='تغيّر التاريخ أو السجل؛ أعد فتح الصلاة لمراجعته.';return;}
-      const next=button.dataset.prayerStatus;state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;if(friday){if(next)fridayDay().mode=sheet.over.querySelector('#fridayPrayerMode').value;else delete fridayDay().mode;}
-      if(isPrayed(next)&&fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
+      const next=button.dataset.prayerStatus;let celebrateAfterSave=false;
+      if(!prayerChange(()=>{state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;if(friday){if(next)fridayDay().mode=sheet.over.querySelector('#fridayPrayerMode').value;else delete fridayDay().mode;}if(isPrayed(next)&&fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrateAfterSave=true;}})){sheet.over.querySelector('#prayerEditError').textContent=document.getElementById('prayerSaveStatus').textContent;return;}
+      if(celebrateAfterSave)celebrate();
       if(next!==old||(friday&&oldMode!==state.friday?.mode)){prayerUndoTicket={date,index,friday,beforeMode:oldMode,afterMode:state.friday?.mode,before:old,after:next,text:'حُفظ تسجيل '+prayerDisplayName(index)};document.getElementById('prayerUndo').hidden=false;}
-      save();sheet.close();prayerRefreshViews();document.querySelector('[data-prayer-index="'+index+'"]')?.focus({preventScroll:true});
+      sheet.close();prayerRefreshViews();document.querySelector('[data-prayer-index="'+index+'"]')?.focus({preventScroll:true});
     });
     const adhkar=sheet.over.querySelector('#prayerAdhkar');if(adhkar)adhkar.onclick=()=>{if(currentDate!==date){sheet.close();return;}sheet.close();openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));};
   }
   function prayerOpenAdhkar(index){if(index===1)return;openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));}
   function prayerQuickRecord(index,date){
     if(date!==currentDate||date>todayStr()||prayerVal(state.prayers,index))return;
-    const friday=index===2&&isFriday(date),beforeMode=state.friday?.mode;if(friday&&!beforeMode)fridayDay().mode='jumuah';state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';
-    if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
+    const friday=index===2&&isFriday(date),beforeMode=state.friday?.mode;let celebrateAfterSave=false;
+    if(!prayerChange(()=>{if(friday&&!beforeMode)fridayDay().mode='jumuah';state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrateAfterSave=true;}}))return;
+    if(celebrateAfterSave)celebrate();
     prayerUndoTicket={date,index,friday,beforeMode,afterMode:state.friday?.mode,before:'',after:'ontime',text:'سُجّلت '+prayerDisplayName(index)+' في وقتها'};document.getElementById('prayerUndo').hidden=false;
-    save();prayerRefreshViews();
+    prayerRefreshViews();
   }
   function renderPrayers(){
     const box=document.getElementById('prayers'),focused=box.contains(document.activeElement)?document.activeElement.dataset.prayerIndex:null;box.innerHTML='';
@@ -12192,7 +12239,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=194;
+  const DATA_VERSION=1, APP_RELEASE=195;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
