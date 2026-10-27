@@ -1586,7 +1586,7 @@
   .ad-btn:hover{background:var(--accent-soft);color:var(--accent)}
   .adhkar-progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
   .adhkar-progress div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:99px;transition:width .3s}
-  #adhkarSaveStatus{border:1px solid var(--accent);border-radius:12px;padding:.8rem;color:var(--ink);background:var(--paper);line-height:1.7}
+  #adhkarSaveStatus,#prayerSaveStatus{border:1px solid var(--accent);border-radius:12px;padding:.8rem;color:var(--ink);background:var(--paper);line-height:1.7}
   #syncFailureDetails{flex-basis:100%;font-size:.8rem;line-height:1.6;text-align:start}
   #syncFailureDetails p{margin:.4rem 0}
   .adhkar-count{font-size:.78rem;color:var(--muted);text-align:center;margin:.4rem 0 .9rem}
@@ -2901,7 +2901,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <h2><span class="ico">🕌</span> الصلاة</h2>
         <div class="next-strip" id="nextStrip" hidden></div>
         <p id="prayerSummary" class="pstate-legend"></p>
-        <div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
+        <p id="prayerSaveStatus" role="alert" hidden></p><div class="prayers" id="prayers"></div><div id="fridayPanel" hidden><strong>يوم الجمعة</strong><div class="friday-actions"><button type="button" id="fridayPrepare">التحضير</button><button type="button" id="fridayKahf">سورة الكهف</button><button type="button" id="fridaySalawat">الصلاة على النبي ﷺ</button></div></div>
         <section id="qiyamCard" class="qiyam-card" aria-label="قيام الليل والوتر"><div class="qiyam-card-head"><strong>🌙 قيام الليل والوتر</strong><small>نافلة</small></div><p id="qiyamNightLabel"></p><p id="qiyamSummary" role="status"></p><div class="qiyam-card-actions"><button type="button" id="qiyamRecord">سجّل صلاتك</button><button type="button" id="qiyamPlan">خطة القراءة</button></div><div class="qiyam-card-footer"><small id="qiyamTiming"></small><button type="button" id="qiyamLog">سجل الصلاة</button></div></section>
         <p id="prayerFeedback" role="status" hidden><span id="prayerFeedbackText"></span> <button type="button" id="prayerUndo">تراجع</button></p>
         <div class="pstate-legend">اضغط «صليت» للتسجيل · ⋯ لتصحيح الحالة</div>
@@ -4408,24 +4408,23 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(touched)day.worship[ADHKAR_WKEY[mode]]=!!day.adhkarManual?.[ADHKAR_WKEY[mode]]||Object.entries(day.adhkarCompleted).some(([k,v])=>k.startsWith(mode+':')&&v);
     }
   }
-  let adhkarStorageIssue=null;
+  let dailyStorageIssue=null;
+  function dailyChange(change){
+    if(accountChanging)return {ok:false,message:'يتغيّر الحساب؛ انتظر اكتمال فتحه.'};
+    const before=JSON.parse(JSON.stringify(state));
+    try{change();save();dailyStorageIssue=null;renderSyncFailureDetails();return {ok:true,message:''};}
+    catch(error){
+      // The durable journal remains authoritative if only the day mirror failed.
+      const queued=dailyPending()[currentDate],durable=!!queued&&JSON.stringify(queued.value)===JSON.stringify(state);
+      if(!durable)state=before;else invalidateAllDaysCache();
+      dailyStorageIssue=error;safeRun('dailyStorageStatus',expRefreshSyncUI);
+      return {ok:durable,message:(durable?'التغيير محفوظ على الجهاز، لكن تعذّر تحديث نسخة اليوم.':'لم يُحفظ التغيير؛ بقي التسجيل السابق. أعد المحاولة بعد معالجة مشكلة الحفظ.')+' '+syncFailureReason(error)};
+    }
+  }
   function adhkarChange(change){
     if(!adhkarValid())return false;
-    const before=JSON.parse(JSON.stringify(state)),status=document.getElementById('adhkarSaveStatus');
-    try{
-      change();adhkarCommit();adhkarStorageIssue=null;status.textContent='';status.hidden=true;renderSyncFailureDetails();
-      return true;
-    }catch(error){
-      // A journal write can succeed even when the secondary day copy fails.
-      const queued=dailyPending()[adhkarDate];
-      const durable=!!queued&&JSON.stringify(queued.value)===JSON.stringify(state);
-      if(!durable)state=before;
-      adhkarStorageIssue=error;
-      status.textContent=(durable?'العدد محفوظ على الجهاز، لكن تعذّر تحديث نسخة اليوم.':'لم يُحفظ التغيير؛ بقي العدد السابق. أعد المحاولة بعد معالجة مشكلة الحفظ.')+' '+syncFailureReason(error);
-      status.hidden=false;adhkarProgressUpdate();
-      safeRun('adhkarStorageStatus',expRefreshSyncUI);
-      return durable;
-    }
+    const result=dailyChange(()=>{change();adhkarCommit();}),status=document.getElementById('adhkarSaveStatus');
+    status.textContent=result.message;status.hidden=!result.message;adhkarProgressUpdate();return result.ok;
   }
   function adhkarCommit(){
     const counts=adhkarCounts(),key=ADHKAR_WKEY[adhkarMode];state.adhkar=state.adhkar||{};
@@ -4433,7 +4432,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     state.adhkarManual=state.adhkarManual||{};state.adhkarCompleted=state.adhkarCompleted||{};
     state.adhkarCompleted[adhkarMode+':'+(adhkarMode==='salah'?adhkarPrayer:'daily')]=adhkarData().every((d,i)=>counts[i]>=d.n);
     state.worship[key]=!!state.adhkarManual[key]||Object.entries(state.adhkarCompleted).some(([k,v])=>k.startsWith(adhkarMode+':')&&v);
-    save();adhkarProgressUpdate();
+
   }
   function openAdhkar(mode){
     document.querySelector('#adhkarPrayer option[value="Dhuhr"]').textContent=prayerDisplayName(2);adhkarOpener=document.activeElement;adhkarMode=mode;adhkarDate=currentDate;adhkarPrayer='legacy';adhkarRestorePosition();const prefs=adhkarPrefs();document.getElementById('adhkarViewMode').value=prefs.view==='single'?'single':'list';document.getElementById('adhkarFont').value=Math.max(100,Math.min(180,+prefs.font||100));document.getElementById('adhkarList').style.setProperty('--adhkar-font',+document.getElementById('adhkarFont').value/100);
@@ -4805,7 +4804,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const box=document.getElementById('syncFailureDetails');if(!box)return;
     const labels={daily:'اليوم والأذكار',quran:'القرآن',customWorship:'العبادات',witr:'قيام الليل',hifz:'الحفظ',expenses:'المالية',weeklyGoals:'الأهداف',reading:'القراءة',learning:'التعلّم'};
     const lines=[];
-    if(adhkarStorageIssue)lines.push('الحفظ على الجهاز: '+syncFailureReason(adhkarStorageIssue));
+    if(dailyStorageIssue)lines.push('الحفظ على الجهاز: '+syncFailureReason(dailyStorageIssue));
     if(user)for(const name of SYNC_MODULES){const row=SYNC_STATE[name];if(row?.lastError)lines.push(labels[name]+': '+(row.lastErrorReason||syncFailureReason(row.lastError)));else if(row?.waitTimedOut)lines.push(labels[name]+': تأخر تأكيد السحابة.');}
     box.replaceChildren();for(const line of lines){const p=document.createElement('p');p.textContent=line;box.append(p);}box.hidden=!lines.length;
   }
@@ -8747,28 +8746,34 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function prayerFardCount(values){return FARD_IDX.filter(i=>isPrayed(prayerVal(values,i))).length;}
   let prayerUndoTicket=null;
   function prayerFeedback(){const host=document.getElementById('prayerFeedback');host.hidden=!prayerUndoTicket||prayerUndoTicket.date!==currentDate;if(!host.hidden)document.getElementById('prayerFeedbackText').textContent=prayerUndoTicket.text;}
+  function prayerChange(change){
+    const result=dailyChange(change),status=document.getElementById('prayerSaveStatus');
+    status.textContent=result.message;status.hidden=!result.message;return result.ok;
+  }
   function prayerRefreshViews(){renderPrayers();renderProgress();}
-  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after||(t.friday&&state.friday?.mode!==t.afterMode)){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;if(t.friday){if(t.beforeMode)fridayDay().mode=t.beforeMode;else delete fridayDay().mode;}prayerUndoTicket=null;save();prayerRefreshViews();};
+  document.getElementById('prayerUndo').onclick=()=>{const t=prayerUndoTicket;if(!t||t.date!==currentDate)return;if(prayerVal(state.prayers,t.index)!==t.after||(t.friday&&state.friday?.mode!==t.afterMode)){document.getElementById('prayerFeedbackText').textContent='تغيّر السجل بعد العملية؛ افتح الصلاة لمراجعته.';prayerUndoTicket=null;document.getElementById('prayerUndo').hidden=true;return;}if(!prayerChange(()=>{state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[t.index]=t.before||false;if(t.friday){if(t.beforeMode)fridayDay().mode=t.beforeMode;else delete fridayDay().mode;}}))return;prayerUndoTicket=null;prayerRefreshViews();};
   function openPrayerStatus(index){
     const date=currentDate,old=prayerVal(state.prayers,index),oldMode=state.friday?.mode,friday=index===2&&isFriday(date),labels={'ontime':'في وقتها','late':'متأخرة','missed':index===1?'لم أؤدّها':'فاتت','':'إلغاء التسجيل'};
     const future=date>todayStr(),body=(friday?'<div class="friday-form"><label for="fridayPrayerMode">الصلاة المسجّلة</label><select id="fridayPrayerMode"><option value="jumuah">صلاة الجمعة</option><option value="dhuhr">صلاة الظهر</option></select></div>':'')+'<p>تاريخ التسجيل: '+expEsc(date)+(index===1?' · الضحى نافلة':'')+'</p><p>اختر الحالة بنفسك؛ لا يستنتج التطبيق الأداء من الساعة.</p>'+Object.entries(labels).map(([key,label])=>'<button type="button" class="task-sheet-save" data-prayer-status="'+key+'" aria-pressed="'+String(old===key)+'"'+(future&&key!==''?' disabled':'')+'>'+label+(old===key?' ✓':'')+'</button>').join('')+'<p id="prayerEditError" role="alert">'+(future?'لا يمكن تسجيل أداء صلاة في تاريخ مستقبلي.':'')+'</p>'+(index!==1?'<button type="button" id="prayerAdhkar" class="task-sheet-save">أذكار بعد صلاة '+prayerDisplayName(index)+'</button>':'');
     const sheet=taskSheet('تسجيل '+prayerDisplayName(index),body);if(friday)sheet.over.querySelector('#fridayPrayerMode').value=oldMode==='dhuhr'?'dhuhr':'jumuah';
     sheet.over.querySelectorAll('[data-prayer-status]').forEach(button=>button.onclick=()=>{
       if(future&&button.dataset.prayerStatus!=='')return;if(date!==currentDate||prayerVal(state.prayers,index)!==old||(friday&&state.friday?.mode!==oldMode)){sheet.over.querySelector('#prayerEditError').textContent='تغيّر التاريخ أو السجل؛ أعد فتح الصلاة لمراجعته.';return;}
-      const next=button.dataset.prayerStatus;state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;if(friday){if(next)fridayDay().mode=sheet.over.querySelector('#fridayPrayerMode').value;else delete fridayDay().mode;}
-      if(isPrayed(next)&&fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
+      const next=button.dataset.prayerStatus;let celebrateAfterSave=false;
+      if(!prayerChange(()=>{state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]=next||false;if(friday){if(next)fridayDay().mode=sheet.over.querySelector('#fridayPrayerMode').value;else delete fridayDay().mode;}if(isPrayed(next)&&fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrateAfterSave=true;}})){sheet.over.querySelector('#prayerEditError').textContent=document.getElementById('prayerSaveStatus').textContent;return;}
+      if(celebrateAfterSave)celebrate();
       if(next!==old||(friday&&oldMode!==state.friday?.mode)){prayerUndoTicket={date,index,friday,beforeMode:oldMode,afterMode:state.friday?.mode,before:old,after:next,text:'حُفظ تسجيل '+prayerDisplayName(index)};document.getElementById('prayerUndo').hidden=false;}
-      save();sheet.close();prayerRefreshViews();document.querySelector('[data-prayer-index="'+index+'"]')?.focus({preventScroll:true});
+      sheet.close();prayerRefreshViews();document.querySelector('[data-prayer-index="'+index+'"]')?.focus({preventScroll:true});
     });
     const adhkar=sheet.over.querySelector('#prayerAdhkar');if(adhkar)adhkar.onclick=()=>{if(currentDate!==date){sheet.close();return;}sheet.close();openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));};
   }
   function prayerOpenAdhkar(index){if(index===1)return;openAdhkar('salah');const select=document.getElementById('adhkarPrayer');select.value=PRAYER_KEYS[index];select.dispatchEvent(new Event('change'));}
   function prayerQuickRecord(index,date){
     if(date!==currentDate||date>todayStr()||prayerVal(state.prayers,index))return;
-    const friday=index===2&&isFriday(date),beforeMode=state.friday?.mode;if(friday&&!beforeMode)fridayDay().mode='jumuah';state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';
-    if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrate();}
+    const friday=index===2&&isFriday(date),beforeMode=state.friday?.mode;let celebrateAfterSave=false;
+    if(!prayerChange(()=>{if(friday&&!beforeMode)fridayDay().mode='jumuah';state.prayers=PRAYERS.map((_,i)=>prayerVal(state.prayers,i)||false);state.prayers[index]='ontime';if(fardComplete(state.prayers)&&!state.celebrated){state.celebrated=true;celebrateAfterSave=true;}}))return;
+    if(celebrateAfterSave)celebrate();
     prayerUndoTicket={date,index,friday,beforeMode,afterMode:state.friday?.mode,before:'',after:'ontime',text:'سُجّلت '+prayerDisplayName(index)+' في وقتها'};document.getElementById('prayerUndo').hidden=false;
-    save();prayerRefreshViews();
+    prayerRefreshViews();
   }
   function renderPrayers(){
     const box=document.getElementById('prayers'),focused=box.contains(document.activeElement)?document.activeElement.dataset.prayerIndex:null;box.innerHTML='';
