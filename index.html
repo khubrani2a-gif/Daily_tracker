@@ -3399,10 +3399,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         <div class="data-section" aria-labelledby="dataStorageTitle">
           <h3 id="dataStorageTitle">مساحة بيانات هذا الحساب</h3>
           <p id="dataStorageSummary"></p>
-          <p class="data-note">أحجام تقديرية للتخزين المحلي، وليست المساحة المتبقية للمتصفح. لا تشمل حساباتك الأخرى أو ملفات التطبيق.</p>
+          <p class="data-note">أحجام تقديرية للتخزين المحلي، وليست المساحة المتبقية للمتصفح. لا تشمل حساباتك الأخرى أو ملفات التطبيق أو النسخ المؤرشفة. النسخ المؤرشفة محلية أيضًا وليست نسخة خارج الجهاز.</p>
           <button type="button" class="data-action" id="dataCleanCaches">تنظيف الملفات المؤقتة فقط</button>
           <p class="data-note">يشمل المؤقت داخل النسخ القديمة. تبقى النسخ والسجلات؛ وقد تحتاج نصوص القراءة إلى تنزيل مجددًا.</p>
           <p id="dataStorageResult" role="status" aria-live="polite"></p>
+          <p id="dataBackupStatus" role="status" aria-live="polite"></p>
         </div>
         <div class="data-actions">
           <button type="button" class="data-action primary" id="dataCreateBackup">＋ إنشاء نسخة الآن</button>
@@ -3414,7 +3415,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         </div>
         <div class="data-section">
           <button type="button" class="data-action" id="dataHealthCheck">🩺 فحص سلامة البيانات</button>
-          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٧ نسخ على هذا الجهاز</span></div>
+          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٧ نسخ عادية؛ المؤرشفة تبقى حتى تحذفها</span></div>
           <div class="data-list" id="dataBackupList"></div>
         </div>
         <div class="data-section">
@@ -4050,7 +4051,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=197"></script>
+<script src="data-core.js?v=198"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=167"></script>
 <script src="learning-core.js?v=167"></script>
@@ -4674,7 +4675,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         const snap=await getQueryServerFirst(db.collection("users").doc(user.uid).collection("days"));
         const remote=new Map();snap.forEach(doc=>remote.set(doc.id,doc.data()));
         const dates=new Set([currentDate,...Object.keys(dailyPending()),...remote.keys()]);
-        for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&/^h2do-tracker:\d{4}-\d{2}-\d{2}$/.test(key))dates.add(key.slice(PREFIX.length));}
+        for(const key of MufDataCore.storageKeys(localStorage)){if(key&&/^h2do-tracker:\d{4}-\d{2}-\d{2}$/.test(key))dates.add(key.slice(PREFIX.length));}
         const list=[...dates],results=[];
         for(let i=0;i<list.length;i+=20){results.push(...await Promise.all(list.slice(i,i+20).map(date=>{
           const value=remote.get(date),daySnap=_tagSource({exists:remote.has(date),data:()=>value,metadata:{fromCache:_fromCache(snap)}},_fromCache(snap)?"cache":"server");
@@ -7082,8 +7083,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   /* سجل جلسات الوتر وقيام الليل عبر كل الأيام المحفوظة محليًا */
   function witrAllSessions(){
     const out = [];
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
+    for(const k of MufDataCore.storageKeys(localStorage)){
       if(!k || !k.startsWith(PREFIX)) continue;
       const date = k.slice(PREFIX.length);
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
@@ -9871,8 +9871,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function taskHistoryOpen(){
     const sheet=taskSheet("البحث في المهام السابقة",'<input class="task-history-search" id="taskHistorySearch" type="search" placeholder="اكتب اسم المهمة أو التصنيف…"><div class="task-history-list" id="taskHistoryList"></div>');
     const rows=[];
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i)||""; if(!key.startsWith("h2do-tracker:")) continue;
+    for(const key of MufDataCore.storageKeys(localStorage)){ if(!key.startsWith("h2do-tracker:")) continue;
       try{ const day=JSON.parse(localStorage.getItem(key)); (day.tasks||[]).filter(itemFilled).forEach(t=>rows.push({date:key.slice("h2do-tracker:".length),text:t.text||"",category:t.category||"",status:taskStatus(t),done:itemDone(t)})); }catch(e){}
     }
     rows.sort((a,b)=>a.date<b.date?1:-1);
@@ -11003,8 +11002,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function allDays(){
     if(allDaysCache === null){
       allDaysCache = {};
-      for(let i=0;i<localStorage.length;i++){
-        const k = localStorage.key(i);
+      for(const k of MufDataCore.storageKeys(localStorage)){
         if(k && k.startsWith(PREFIX)){
           const date = k.slice(PREFIX.length);
           if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
@@ -12254,11 +12252,13 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=197;
+  const DATA_VERSION=1, APP_RELEASE=198;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
-  const DATA_MAX_IMPORT_ENTRIES=1000;
+  const DATA_MAX_IMPORT_ENTRIES=10000;
   const DATA_MAX_BACKUPS=7;
+  const DATA_MAX_BACKUP_BYTES=2*1024*1024;
+  let dataBackupIssue="";
   function dataOwnedKey(key){ return !!key&&key.startsWith("h2do-"); }
   function dataLoadJson(key,fallback){ try{ return JSON.parse(localStorage.getItem(key)||"")||fallback; }catch(e){ return fallback; } }
   function dataSnapshotStats(snapshot){
@@ -12268,9 +12268,8 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function dataBuildSnapshot(reason){
     const entries={};
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&!DISPOSABLE_CACHE_KEYS.includes(key)) entries[key]=localStorage.getItem(key);
+    for(const key of MufDataCore.storageKeys(localStorage)){
+      if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1"&&!DISPOSABLE_CACHE_KEYS.includes(key)) entries[key]=localStorage.getItem(key);
     }
     return {schema:DATA_VERSION,appVersion:APP_RELEASE,createdAt:Date.now(),reason:reason||"يدوية",entries};
   }
@@ -12278,13 +12277,18 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const list=dataLoadJson(DATA_BACKUP_KEY,[]);
     return Array.isArray(list)?list.filter(item=>item&&item.id&&item.snapshot&&item.snapshot.entries):[];
   }
-  function dataStoreBackups(list){
-    let next=(list||[]).slice(0,DATA_MAX_BACKUPS);
-    while(next.length){
-      try{ localStorage.setItem(DATA_BACKUP_KEY,JSON.stringify(next)); return true; }
-      catch(e){ if(next.length===1) return false; next.pop(); }
-    }
-    try{ localStorage.setItem(DATA_BACKUP_KEY,"[]"); return true; }catch(e){ return false; }
+  function dataStoreBackups(list,automatic=false){
+    try{
+      let ordinary=0;const retained=(list||[]).filter(row=>row.archiveId||ordinary++<DATA_MAX_BACKUPS);
+      const next=JSON.stringify(retained),previous=localStorage.getItem(DATA_BACKUP_KEY)||"";
+      // Do not let new backup copies consume the space needed for everyday records.
+      // Shrinking an existing oversized library remains possible; it is never deleted automatically.
+      if(automatic&&next.length*2>DATA_MAX_BACKUP_BYTES&&next.length>=previous.length){
+        dataBackupIssue="لم تُحفظ نسخة تلقائية جديدة لتجنّب تضخّم التخزين. النسخ السابقة محفوظة؛ نزّل نسخة JSON خارج المتصفح.";
+        return false;
+      }
+      localStorage.setItem(DATA_BACKUP_KEY,next);dataBackupIssue="";return true;
+    }catch(e){dataBackupIssue="تعذّر حفظ النسخة المحلية؛ النسخ السابقة محفوظة. نزّل نسخة JSON خارج المتصفح. "+syncFailureReason(e);return false;}
   }
   function dataSaveBackup(reason,silent){
     const list=dataLoadBackups(), now=Date.now();
@@ -12292,7 +12296,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const snapshot=dataBuildSnapshot(reason), stats=dataSnapshotStats(snapshot);
     const record={id:"bak_"+now.toString(36)+"_"+Math.random().toString(36).slice(2,6),createdAt:now,reason:reason||"نسخة يدوية",stats,snapshot};
     list.unshift(record);
-    if(!dataStoreBackups(list)){ if(!silent) alert("تعذّر حفظ نسخة محلية بسبب امتلاء مساحة المتصفح. نزّل نسخة JSON ثم احذف نسخة قديمة."); return null; }
+    if(!dataStoreBackups(list,reason==="نسخة تلقائية يومية")){ dataRenderStorage();if(!silent) alert(dataBackupIssue); return null; }
     if(typeof dataRenderCenter==="function") dataRenderCenter();
     if(!silent) alert("تم إنشاء نسخة احتياطية محلية بنجاح.");
     return record;
@@ -12303,11 +12307,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(!alreadySaved) dataSaveBackup("نسخة تلقائية يومية",true);
   }
   function dataNormalizeImported(raw,name){
+    if(new Blob([JSON.stringify(raw)]).size>DATA_MAX_IMPORT_BYTES)throw new Error("backup too large");
     if(raw&&raw.schema&&raw.entries&&typeof raw.entries==="object"){
       if(+raw.schema>DATA_VERSION) throw new Error("newer backup");
       const keys=Object.keys(raw.entries);
       if(keys.length>DATA_MAX_IMPORT_ENTRIES) throw new Error("too many entries");
-      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY||DISPOSABLE_CACHE_KEYS.includes(key)) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
+      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY||key==="h2do-backup-vault-namespace-v1"||DISPOSABLE_CACHE_KEYS.includes(key)) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
       if(!Object.keys(entries).length) throw new Error("empty backup");
       return {schema:DATA_VERSION,appVersion:+raw.appVersion||0,createdAt:+raw.createdAt||Date.now(),reason:"مستوردة: "+(name||"ملف"),entries};
     }
@@ -12318,10 +12323,41 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     }
     throw new Error("invalid backup");
   }
-  function dataAddBackupSnapshot(snapshot){
-    const list=dataLoadBackups(), createdAt=Date.now(), stats=dataSnapshotStats(snapshot);
+  const dataBackupVault=MufDataCore.openBackupVault(window.indexedDB);
+  let dataImportBusy=false;
+  function dataVaultNamespace(create=false){
+    const key="h2do-backup-vault-namespace-v1";let value=localStorage.getItem(key);
+    if(!value&&create){value=crypto.randomUUID();localStorage.setItem(key,value);}
+    if(!value)throw new Error('backup namespace missing');return value;
+  }
+  async function dataBackupSnapshot(record){
+    if(!record.archiveId)return record.snapshot;
+    const owner=accountStorage.owner,snapshot=await dataBackupVault.get(record.archiveNamespace||dataVaultNamespace(),record.archiveId);
+    if(owner!==accountStorage.owner||accountChanging)throw new Error('account changed');
+    if(!snapshot||!snapshot.entries||Object.keys(snapshot.entries).length===0)throw new Error('backup archive missing');
+    return snapshot;
+  }
+  async function dataAddBackupSnapshot(snapshot){
+    const owner=accountStorage.owner,createdAt=Date.now(),stats=dataSnapshotStats(snapshot);
     const record={id:"bak_"+createdAt.toString(36)+"_"+Math.random().toString(36).slice(2,6),createdAt,reason:snapshot.reason||"نسخة مستوردة",stats,snapshot};
-    list.unshift(record); if(!dataStoreBackups(list)) throw new Error("quota"); dataRenderCenter(); return record;
+    let archived=false,indexed=false,namespace;
+    try{
+    if(stats.size>512*1024){
+      namespace=dataVaultNamespace(true);
+      await dataBackupVault.put(namespace,record.id,snapshot);archived=true;
+      const verified=await dataBackupVault.get(namespace,record.id);
+      if(JSON.stringify(verified)!==JSON.stringify(snapshot))throw new Error('backup verification failed');
+      record.archiveId=record.id;record.archiveNamespace=namespace;record.snapshot={...snapshot,entries:{}};
+    }
+    if(owner!==accountStorage.owner||accountChanging)throw new Error('account changed');
+    const list=dataLoadBackups();list.unshift(record);
+    if(!dataStoreBackups(list))throw new Error('backup index not saved');
+    indexed=true;dataRenderCenter();return record;
+    }catch(error){if(archived&&!indexed)try{await dataBackupVault.remove(namespace,record.id);}catch(e){}throw error;}
+  }
+  async function dataExportBackup(record){
+    try{dataExportJson(await dataBackupSnapshot(record));}
+    catch(e){alert("تعذّر فتح النسخة المحلية المؤرشفة. لم يتم تنزيل ملف ناقص؛ استخدم نسختك الخارجية إن استمر الخطأ.");}
   }
   function dataDownload(content,type,filename){
     const blob=new Blob([content],{type}), link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=filename; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),500);
@@ -12332,8 +12368,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function dataHealthCheck(){
     let daily=0, invalidDaily=0, invalidExpenses=0;
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
+    for(const key of MufDataCore.storageKeys(localStorage)){
       if(key&&key.startsWith(PREFIX)){
         daily++;
         try{ const parsed=JSON.parse(localStorage.getItem(key)); if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)) invalidDaily++; }catch(e){ invalidDaily++; }
@@ -12355,7 +12390,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       Object.entries(pending||{}).forEach(([date,entry])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&entry&&entry.value)entries[storageKey(date)]=JSON.stringify(entry.value);});
     }
     Object.keys(entries).forEach(key=>{
-      if(!dataOwnedKey(key)||[...DISPOSABLE_CACHE_KEYS,DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY,"h2do-learning-sync-v1"].includes(key))return;
+      if(!dataOwnedKey(key)||[...DISPOSABLE_CACHE_KEYS,"h2do-backup-vault-namespace-v1",DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY,"h2do-learning-sync-v1"].includes(key))return;
       const raw=String(entries[key]);
       if(key.startsWith(PREFIX)||["h2do-expenses","h2do-hifz","h2do-quran","h2do-learning-v1","h2do-weekly-goals-v1","h2do-witr-meta","h2do-reading-settings"].includes(key)){
         const value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid record: "+key);
@@ -12370,7 +12405,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function dataApplySnapshot(snapshot){
     const entries=dataValidatedEntries(snapshot),before={};
-    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY)before[key]=localStorage.getItem(key);}
+    for(const key of MufDataCore.storageKeys(localStorage)){if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1")before[key]=localStorage.getItem(key);}
     const dailyOnly=snapshot&&snapshot.scope==="daily";
     try{
       Object.keys(before).forEach(key=>{if((!dailyOnly||key.startsWith(PREFIX))&&!Object.prototype.hasOwnProperty.call(entries,key))localStorage.removeItem(key);});
@@ -12379,7 +12414,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       localStorage.setItem(RESTORE_PENDING_KEY,JSON.stringify({id:"restore_"+Date.now(),scope:dailyOnly?"daily":"all",createdAt:Date.now()}));
     }catch(error){
       // Roll back after quota/storage failure instead of leaving a half-restored application.
-      const keys=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY)keys.push(key);}
+      const keys=[];for(const key of MufDataCore.storageKeys(localStorage)){if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1")keys.push(key);}
       keys.forEach(key=>localStorage.removeItem(key));Object.keys(before).forEach(key=>localStorage.setItem(key,before[key]));throw error;
     }
   }
@@ -12405,7 +12440,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       const touch=value=>{if(!value||typeof value!=="object")return value;const out=clone(value);const walk=v=>{if(!v||typeof v!=="object")return;if(Object.prototype.hasOwnProperty.call(v,"updatedAt"))v.updatedAt=stamp;if(v.deletedAt)v.deletedAt=stamp;Object.values(v).forEach(walk);};walk(out);return out;};
       const writes=[],localWrites={};
       const enqueue=(collection,id,value)=>{writes.push(()=>{if(!active())throw new Error("account changed");return ref.collection(collection).doc(id).set(value);});};
-      const localDays={};for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith(PREFIX)){const date=key.slice(PREFIX.length);if(/^\d{4}-\d{2}-\d{2}$/.test(date))localDays[date]=readLocal(key,blankState());}}
+      const localDays={};for(const key of MufDataCore.storageKeys(localStorage)){if(key&&key.startsWith(PREFIX)){const date=key.slice(PREFIX.length);if(/^\d{4}-\d{2}-\d{2}$/.test(date))localDays[date]=readLocal(key,blankState());}}
       const dates=new Set(Object.keys(localDays).concat((remote.days||[]).map(row=>row.id)));
       dates.forEach(date=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const value=touch(localDays[date]||blankState());value.updatedAt=stamp;enqueue("days",date,value);localWrites[storageKey(date)]=value;});
       if(all){
@@ -12430,16 +12465,19 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     restorePromise=Promise.race([work,new Promise((_,reject)=>{timeout=setTimeout(()=>{stopped=true;reject(new Error("restore timeout"));},15000);})]).catch(error=>{stopped=true;diagErr("restore",error);SYNC_MODULES.forEach(name=>syncEnd(name,false,null,error));renderGlobalSyncStatus({status:"failed"},false);syncStatus.textContent="تعذّرت مزامنة الاستعادة؛ نسختك المحلية محفوظة. أعد المحاولة عند الاتصال.";return false;}).finally(()=>{clearTimeout(timeout);restorePromise=null;document.body.inert=false;});
     return restorePromise;
   }
-  function dataRestoreBackup(id){
+  async function dataRestoreBackup(id){
     const record=dataLoadBackups().find(item=>item.id===id); if(!record) return;
     if(!confirm("استعادة «"+record.reason+"»؟ ستُستبدل بيانات التطبيق الحالية، وستُنشأ نسخة أمان منها أولًا.")) return;
+    let snapshot;try{snapshot=await dataBackupSnapshot(record);}catch(e){alert("تعذّر فتح النسخة المؤرشفة؛ أُلغيت الاستعادة ولم تتغير سجلاتك.");return;}
     const safety=dataSaveBackup("قبل استعادة "+record.reason,true);
     if(!safety){ alert("تعذّر إنشاء نسخة الأمان، لذلك أُلغيت الاستعادة حفاظًا على بياناتك."); return; }
-    try{ dataApplySnapshot(record.snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
+    try{ dataApplySnapshot(snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
   }
-  function dataDeleteBackup(id){
+  async function dataDeleteBackup(id){
     const record=dataLoadBackups().find(item=>item.id===id); if(!record||!confirm("حذف النسخة «"+record.reason+"» من هذا الجهاز؟")) return;
-    dataStoreBackups(dataLoadBackups().filter(item=>item.id!==id)); dataRenderCenter();
+    let namespace;try{if(record.archiveId)namespace=record.archiveNamespace||dataVaultNamespace();}catch(e){alert("تعذّر فتح الأرشيف المحلي؛ لم تُحذف النسخة.");return;}
+    if(!dataStoreBackups(dataLoadBackups().filter(item=>item.id!==id))){dataRenderCenter();return;}
+    dataRenderCenter();if(record.archiveId)try{await dataBackupVault.remove(namespace,record.archiveId);}catch(e){alert("أُزيلت النسخة من القائمة، وتعذّر تحرير ملف الأرشيف المحلي.");}
   }
   function dataXml(value){ return String(value==null?"":value).replace(/[<>&'"]/g,char=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[char])); }
   function dataExcelCell(value,type){ return '<Cell><Data ss:Type="'+(type||"String")+'">'+dataXml(value)+'</Data></Cell>'; }
@@ -12499,6 +12537,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const host=document.getElementById("dataStorageSummary");
     try{
       const r=MufDataCore.storageReport(localStorage,DISPOSABLE_CACHE_KEYS,DATA_BACKUP_KEY);
+      document.getElementById("dataBackupStatus").textContent=dataBackupIssue||(r.backups>DATA_MAX_BACKUP_BYTES?"مكتبة النسخ المحلية كبيرة؛ نزّل نسخة JSON خارج المتصفح وراجع النسخ القديمة. لم نحذف أي نسخة.":"حدّ نمو مكتبة النسخ التلقائية ٢ م.ب تقريبًا لتقليل ضغط التخزين؛ ليس ضمانًا لمساحة متبقية. احتفظ بنسخة خارجية.");
       host.textContent="السجلات: "+dataFormatBytes(r.records)+" · النسخ المحلية: "+dataFormatBytes(r.backups)+" · المؤقت: "+dataFormatBytes(r.caches)+" · الإجمالي التقريبي: "+dataFormatBytes(r.total)+(r.embeddedCaches?" · مؤقت داخل النسخ القديمة قابل للتنظيف: "+dataFormatBytes(r.embeddedCaches):"");
     }catch(e){host.textContent="تعذّر فحص المساحة. "+syncFailureReason(e);}
   }
@@ -12515,9 +12554,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     document.getElementById("dataDaysCount").textContent=days.toLocaleString("ar-EG"); document.getElementById("dataBackupsCount").textContent=backups.length.toLocaleString("ar-EG"); document.getElementById("dataConflictsCount").textContent=unresolved.length.toLocaleString("ar-EG");
     const backupHost=document.getElementById("dataBackupList"); backupHost.innerHTML="";
     if(!backups.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد نسخ محلية بعد. أنشئ أول نسخة قبل أي تغيير كبير."; backupHost.appendChild(empty); }
-    backups.forEach(record=>{ const row=document.createElement("div"); row.className="data-row"; const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=record.reason; const small=document.createElement("small"); const stats=record.stats||dataSnapshotStats(record.snapshot); small.textContent=new Date(record.createdAt).toLocaleString("ar-SA")+" · "+stats.days.toLocaleString("ar-EG")+" يوم · "+stats.expenses.toLocaleString("ar-EG")+" معاملة · "+dataFormatBytes(stats.size||0); copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions";
+    backups.forEach(record=>{ const row=document.createElement("div"); row.className="data-row"; const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=record.reason; const small=document.createElement("small"); const stats=record.stats||dataSnapshotStats(record.snapshot); small.textContent=new Date(record.createdAt).toLocaleString("ar-SA")+" · "+stats.days.toLocaleString("ar-EG")+" يوم · "+stats.expenses.toLocaleString("ar-EG")+" معاملة · "+dataFormatBytes(stats.size||0)+(record.archiveId?" · مؤرشفة على هذا الجهاز":""); copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions";
       const restore=document.createElement("button"); restore.type="button"; restore.className="restore"; restore.textContent="استعادة"; restore.onclick=()=>dataRestoreBackup(record.id);
-      const download=document.createElement("button"); download.type="button"; download.textContent="تنزيل"; download.onclick=()=>dataExportJson(record.snapshot);
+      const download=document.createElement("button"); download.type="button"; download.textContent="تنزيل"; download.onclick=()=>dataExportBackup(record);
       const del=document.createElement("button"); del.type="button"; del.className="danger"; del.textContent="حذف"; del.onclick=()=>dataDeleteBackup(record.id); actions.append(restore,download,del); row.append(copy,actions); backupHost.appendChild(row); });
     const conflictHost=document.getElementById("dataConflictList"); conflictHost.innerHTML="";
     if(!conflicts.length){ const empty=document.createElement("div"); empty.className="data-empty"; empty.textContent="لا توجد تعارضات مسجّلة. عند تعديل البيانات نفسها على جهازين دون مزامنة، سيظهر التنبيه هنا قبل الدمج."; conflictHost.appendChild(empty); }
@@ -12529,11 +12568,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const importFile = document.getElementById("importFile");
   function dataImportSelected(){
     const f = importFile.files[0];
-    if(!f) return;
+    if(!f||dataImportBusy)return;
     if(f.size>DATA_MAX_IMPORT_BYTES){ alert("حجم النسخة أكبر من ٥ م.ب. اختر نسخة JSON أصغر لحماية مساحة التطبيق."); importFile.value=""; return; }
-    f.text().then(txt=>{
-      const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
-    }).catch(error=> alert(error&&error.message==="newer backup"?"هذه النسخة من إصدار أحدث من التطبيق، حدّث التطبيق أولًا ثم أعد المحاولة.":"الملف غير صالح أو لا توجد مساحة كافية — اختر نسخة احتياطية صحيحة."));
+    dataImportBusy=true;document.getElementById("importBtn").disabled=true;
+    const importOwner=accountStorage.owner;
+    f.text().then(async txt=>{
+      if(importOwner!==accountStorage.owner||accountChanging)throw new Error("account changed");
+      const snapshot=dataNormalizeImported(JSON.parse(txt),f.name); await dataAddBackupSnapshot(snapshot); alert("تمت إضافة الملف إلى النسخ المحلية. راجعه ثم اضغط «استعادة» عند رغبتك.");
+    }).catch(error=>{dataBackupIssue="تعذّر استيراد النسخة؛ لم تتغير سجلاتك. "+syncFailureReason(error);dataRenderStorage();alert(error&&error.message==="newer backup"?"هذه النسخة من إصدار أحدث من التطبيق، حدّث التطبيق أولًا ثم أعد المحاولة.":dataBackupIssue);}).finally(()=>{dataImportBusy=false;document.getElementById("importBtn").disabled=false;});
     importFile.value = "";
   }
   function dataInit(){
@@ -17108,7 +17150,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     onboardClose(); personalizeApply(); renderWater(); renderSport(); renderProgress();
   }
   function onboardHasExistingData(){
-    for(let i=0;i<localStorage.length;i++){ const key=localStorage.key(i)||""; if(key.startsWith("h2do-tracker:")||[QURAN_KEY,"h2do-expenses","h2do-hifz"].includes(key)) return true; }
+    for(const key of MufDataCore.storageKeys(localStorage)){ if(key.startsWith("h2do-tracker:")||[QURAN_KEY,"h2do-expenses","h2do-hifz"].includes(key)) return true; }
     return false;
   }
   function onboardInit(){
