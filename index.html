@@ -3396,6 +3396,14 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
           <div class="data-status-card"><small>النسخ المحلية</small><b id="dataBackupsCount">٠</b></div>
           <div class="data-status-card"><small>تعارضات تحتاج مراجعة</small><b id="dataConflictsCount">٠</b></div>
         </div>
+        <div class="data-section" aria-labelledby="dataStorageTitle">
+          <h3 id="dataStorageTitle">مساحة بيانات هذا الحساب</h3>
+          <p id="dataStorageSummary"></p>
+          <p class="data-note">أحجام تقديرية للتخزين المحلي، وليست المساحة المتبقية للمتصفح. لا تشمل حساباتك الأخرى أو ملفات التطبيق.</p>
+          <button type="button" class="data-action" id="dataCleanCaches">تنظيف الملفات المؤقتة فقط</button>
+          <p class="data-note">يشمل المؤقت داخل النسخ القديمة. تبقى النسخ والسجلات؛ وقد تحتاج نصوص القراءة إلى تنزيل مجددًا.</p>
+          <p id="dataStorageResult" role="status" aria-live="polite"></p>
+        </div>
         <div class="data-actions">
           <button type="button" class="data-action primary" id="dataCreateBackup">＋ إنشاء نسخة الآن</button>
           <button type="button" class="data-action" id="exportBtn">⬇️ JSON</button>
@@ -3406,7 +3414,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
         </div>
         <div class="data-section">
           <button type="button" class="data-action" id="dataHealthCheck">🩺 فحص سلامة البيانات</button>
-          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٥ نسخ على هذا الجهاز</span></div>
+          <div class="data-section-head"><h3>النسخ الاحتياطية المحلية</h3><span>حتى ٧ نسخ على هذا الجهاز</span></div>
           <div class="data-list" id="dataBackupList"></div>
         </div>
         <div class="data-section">
@@ -4042,7 +4050,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=196"></script>
+<script src="data-core.js?v=197"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=167"></script>
 <script src="learning-core.js?v=167"></script>
@@ -12246,7 +12254,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=196;
+  const DATA_VERSION=1, APP_RELEASE=197;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=1000;
@@ -12299,7 +12307,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       if(+raw.schema>DATA_VERSION) throw new Error("newer backup");
       const keys=Object.keys(raw.entries);
       if(keys.length>DATA_MAX_IMPORT_ENTRIES) throw new Error("too many entries");
-      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
+      const entries={}; keys.forEach(key=>{ if(!dataOwnedKey(key)||key===DATA_BACKUP_KEY||DISPOSABLE_CACHE_KEYS.includes(key)) return; const value=raw.entries[key]; const normalized=typeof value==="string"?value:JSON.stringify(value); if(normalized.length>DATA_MAX_IMPORT_BYTES) throw new Error("entry too large"); entries[key]=normalized; });
       if(!Object.keys(entries).length) throw new Error("empty backup");
       return {schema:DATA_VERSION,appVersion:+raw.appVersion||0,createdAt:+raw.createdAt||Date.now(),reason:"مستوردة: "+(name||"ملف"),entries};
     }
@@ -12347,7 +12355,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       Object.entries(pending||{}).forEach(([date,entry])=>{if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&entry&&entry.value)entries[storageKey(date)]=JSON.stringify(entry.value);});
     }
     Object.keys(entries).forEach(key=>{
-      if(!dataOwnedKey(key)||[DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY,"h2do-learning-sync-v1"].includes(key))return;
+      if(!dataOwnedKey(key)||[...DISPOSABLE_CACHE_KEYS,DATA_BACKUP_KEY,DAILY_PENDING_KEY,RESTORE_PENDING_KEY,DATA_BASELINE_KEY,DATA_CONFLICT_KEY,"h2do-learning-sync-v1"].includes(key))return;
       const raw=String(entries[key]);
       if(key.startsWith(PREFIX)||["h2do-expenses","h2do-hifz","h2do-quran","h2do-learning-v1","h2do-weekly-goals-v1","h2do-witr-meta","h2do-reading-settings"].includes(key)){
         const value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid record: "+key);
@@ -12487,7 +12495,22 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function dataClearReviewed(){ const list=dataConflictLoad(), reviewed=list.filter(item=>item.reviewed).length; if(!reviewed){ alert("لا توجد تعارضات مراجَعة لمسحها."); return; } localStorage.setItem(DATA_CONFLICT_KEY,JSON.stringify(list.filter(item=>!item.reviewed))); dataRenderCenter(); }
   const DATA_MODULE_LABELS={daily:"اليوميات",quran:"القرآن",customWorship:"العادات المخصصة",witr:"الوتر",hifz:"الحفظ",expenses:"المصاريف",weeklyGoals:"الأهداف الأسبوعية",learning:"التعلّم"};
   function dataFormatBytes(bytes){ if(bytes<1024) return bytes+" ب"; if(bytes<1048576) return (bytes/1024).toFixed(1)+" ك.ب"; return (bytes/1048576).toFixed(1)+" م.ب"; }
+  function dataRenderStorage(){
+    const host=document.getElementById("dataStorageSummary");
+    try{
+      const r=MufDataCore.storageReport(localStorage,DISPOSABLE_CACHE_KEYS,DATA_BACKUP_KEY);
+      host.textContent="السجلات: "+dataFormatBytes(r.records)+" · النسخ المحلية: "+dataFormatBytes(r.backups)+" · المؤقت: "+dataFormatBytes(r.caches)+" · الإجمالي التقريبي: "+dataFormatBytes(r.total)+(r.embeddedCaches?" · مؤقت داخل النسخ القديمة قابل للتنظيف: "+dataFormatBytes(r.embeddedCaches):"");
+    }catch(e){host.textContent="تعذّر فحص المساحة. "+syncFailureReason(e);}
+  }
+  function dataCleanCaches(){
+    const status=document.getElementById("dataStorageResult");
+    try{
+      MufDataCore.cleanStorageCaches(localStorage,DISPOSABLE_CACHE_KEYS,DATA_BACKUP_KEY);
+      dataRenderCenter();status.textContent="تم تنظيف الملفات المؤقتة مع الاحتفاظ بالسجلات والنسخ الاحتياطية. إذا استمر الامتلاء، نزّل نسخة خارجية وراجع النسخ القديمة قبل حذف أي منها.";
+    }catch(e){dataRenderStorage();status.textContent="تعذّر إكمال التنظيف. "+syncFailureReason(e);}
+  }
   function dataRenderCenter(){
+    dataRenderStorage();
     const backups=dataLoadBackups(), conflicts=dataConflictLoad(), unresolved=conflicts.filter(item=>!item.reviewed), days=Object.keys(allDays()).length;
     document.getElementById("dataDaysCount").textContent=days.toLocaleString("ar-EG"); document.getElementById("dataBackupsCount").textContent=backups.length.toLocaleString("ar-EG"); document.getElementById("dataConflictsCount").textContent=unresolved.length.toLocaleString("ar-EG");
     const backupHost=document.getElementById("dataBackupList"); backupHost.innerHTML="";
@@ -12501,7 +12524,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     conflicts.forEach(item=>{ const row=document.createElement("div"); row.className="data-row data-conflict-row"+(item.reviewed?" reviewed":""); const copy=document.createElement("div"); copy.className="data-row-copy"; const title=document.createElement("b"); title.textContent=(DATA_MODULE_LABELS[item.module]||item.module)+(item.key?" — "+item.key:""); if(!item.reviewed){ const badge=document.createElement("span"); badge.className="data-conflict-badge"; badge.textContent="يحتاج مراجعة"; title.appendChild(badge); } const small=document.createElement("small"); small.textContent=new Date(item.createdAt).toLocaleString("ar-SA")+" · "+(item.fields||[]).join("، ")+" · "+item.resolution; copy.append(title,small); const actions=document.createElement("div"); actions.className="data-row-actions"; if(!item.reviewed){ const review=document.createElement("button"); review.type="button"; review.className="restore"; review.textContent="تمت المراجعة"; review.onclick=()=>dataReviewConflict(item.id); actions.appendChild(review); } row.append(copy,actions); conflictHost.appendChild(row); });
   }
   let dataReturnFocus=null,dataPreviousOverflow="";
-  function dataOpen(){ dataReturnFocus=document.activeElement;dataPreviousOverflow=document.body.style.overflow;dataRenderCenter(); document.getElementById("dataOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("dataClose").focus(); }
+  function dataOpen(){ document.getElementById("dataStorageResult").textContent="";dataReturnFocus=document.activeElement;dataPreviousOverflow=document.body.style.overflow;dataRenderCenter(); document.getElementById("dataOverlay").hidden=false; document.body.style.overflow="hidden"; document.getElementById("dataClose").focus(); }
   function dataClose(){ document.getElementById("dataOverlay").hidden=true; document.body.style.overflow=dataPreviousOverflow; const target=dataReturnFocus?.isConnected?dataReturnFocus:document.getElementById("dataManageBtn");target?.focus({preventScroll:true}); }
   const importFile = document.getElementById("importFile");
   function dataImportSelected(){
@@ -12515,6 +12538,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function dataInit(){
     const overlay=document.getElementById("dataOverlay");
+    document.getElementById("dataCleanCaches").onclick=dataCleanCaches;
     document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackup("نسخة يدوية",false);
     document.getElementById("exportBtn").onclick=()=>dataExportJson(); document.getElementById("importBtn").onclick=()=>importFile.click(); importFile.onchange=dataImportSelected;
     document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataHealthCheck").onclick=dataHealthCheck; document.getElementById("dataClearReviewed").onclick=dataClearReviewed; dataAutoBackup();
