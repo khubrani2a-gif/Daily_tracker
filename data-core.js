@@ -49,6 +49,37 @@
     }
     return {storage,activate,get owner(){return owner;}};
   }
+  // Only exact rebuildable keys may be removed; unknown backup metadata is retained.
+  function cacheFreeBackup(raw,keys){
+    let rows;try{rows=JSON.parse(raw);}catch(e){return raw;}
+    if(!Array.isArray(rows))return raw;
+    let changed=false;
+    for(const row of rows){
+      const entries=row?.snapshot?.entries;
+      if(!entries||typeof entries!=='object'||Array.isArray(entries))continue;
+      let touched=false;
+      for(const key of keys)if(Object.prototype.hasOwnProperty.call(entries,key)){delete entries[key];changed=true;touched=true;}
+      if(touched&&row.stats&&typeof row.stats==='object'&&!Array.isArray(row.stats))row.stats.size=new TextEncoder().encode(JSON.stringify(row.snapshot)).length;
+    }
+    return changed?JSON.stringify(rows):raw;
+  }
+  function storageReport(storage,keys,backupKey){
+    const report={records:0,backups:0,caches:0,embeddedCaches:0,total:0};
+    for(let i=0;i<storage.length;i++){
+      const key=storage.key(i);if(!key||!key.startsWith('h2do-'))continue;
+      const raw=storage.getItem(key);if(raw===null)continue;
+      const bytes=2*(key.length+raw.length),kind=key===backupKey?'backups':keys.includes(key)?'caches':'records';
+      report[kind]+=bytes;report.total+=bytes;
+      if(key===backupKey)report.embeddedCaches=Math.max(0,2*(raw.length-cacheFreeBackup(raw,keys).length));
+    }
+    return report;
+  }
+  function cleanStorageCaches(storage,keys,backupKey){
+    const raw=storage.getItem(backupKey);
+    if(raw!==null){const next=cacheFreeBackup(raw,keys);if(next!==raw&&next.length<raw.length)storage.setItem(backupKey,next);}
+    for(const key of keys)storage.removeItem(key);
+    return storageReport(storage,keys,backupKey);
+  }
   function equal(a,b){return JSON.stringify(a)===JSON.stringify(b);}
   function record(v){return v&&typeof v==='object'&&!Array.isArray(v);}
   // Reading and actual prayer are separate records. Tombstones are permanent.
@@ -198,5 +229,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
+  return {storageReport,cleanStorageCaches,openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
 });

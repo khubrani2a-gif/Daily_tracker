@@ -18,6 +18,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Storage quota and backup preservation regression
+        run: node --test --test-concurrency=1 tests/storage-recovery-v196.test.js tests/storage-ui-v196.test.js tests/storage-prevention-v197.test.js tests/storage-prevention-ui-v197.test.js
       - name: Sync timeout and bedtime regression
         run: node --test --test-concurrency=1 tests/sync-deadline-v194.test.js tests/sync-sleep-v194.test.js tests/adhkar-integrity.test.js
       - name: Qiyam reading and prayer regression
