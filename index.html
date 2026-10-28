@@ -7143,12 +7143,13 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const HIFZ_TOTAL_PAGES = 604;
 
   /* تعريف موحّد لـ"اليوم" في وحدة الحفظ (إصلاح حدّ منتصف الليل):
-     نطرح ٤ ساعات من اللحظة الحالية قبل حساب التاريخ، فتُحسب مراجعةٌ في الساعة ٢ فجرًا
+     نستخدم الساعة المحلية وحدّ الرابعة صباحًا، فتُحسب مراجعةٌ في الساعة ٢ فجرًا
      منطقيًا على أنها من اليوم السابق. هذا يمنع أن تصبح مراجعات آخر الليل مستحقّة فورًا عند ١٢:٠١.
      التطبيع إلى بداية اليوم (0,0,0,0) مضمون لأن fmtDate يُرجع Y-M-D فقط. */
   const HIFZ_DAY_OFFSET_HOURS = 4;
   function hifzToday(){
-    const d = new Date(Date.now() - HIFZ_DAY_OFFSET_HOURS*3600*1000);
+    const d = new Date();
+    if(d.getHours() < HIFZ_DAY_OFFSET_HOURS)d.setDate(d.getDate()-1);
     d.setHours(0,0,0,0);
     return fmtDate(d);
   }
@@ -7512,7 +7513,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(banner){
       if(stats.dueToday){
         banner.hidden = false;
-        banner.textContent = "🔁 ابدأ مراجعة اليوم · "+arn(stats.dueToday)+" مقاطع";
+        banner.textContent = "🔁 ابدأ مراجعة اليوم · المقاطع: "+arn(stats.dueToday);
         banner.classList.add("hifz-alert-clickable");
         banner.onclick = hifzStartDailyReview;
       }else{ banner.hidden = true; banner.onclick = null; }
@@ -8149,7 +8150,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   document.getElementById("hifzRevealBtn").onclick=()=>hifzRevealAll();
   function hifzRevealAll(){ hifzRevealUpTo(hifzReviewAyat.length - 1); }
-  /* الضغط على آية: يكشفها (يزيل التمويه) ويشغّلها إن توفّر الصوت */
+  /* الضغط على آية يكشفها؛ الاستماع مستقل بزر المشغّل. */
   function hifzOnVerseTap(idx){
     hifzRevealUpTo(idx);
     if(navigator.vibrate) navigator.vibrate(6);
