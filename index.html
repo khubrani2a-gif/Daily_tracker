@@ -2067,7 +2067,7 @@
   .hifz-recall:focus{outline:none;border-color:var(--accent-2)}
   .hifz-recall-loading, .hifz-recall-fallback{color:var(--muted);font-size:.9rem}
   .hifz-recall-text{
-    font-family:"Thmanyah Sans", serif;
+    font-family:"Amiri Quran", serif;font-weight:400;font-synthesis:none;letter-spacing:normal;
     font-size:1.5rem;line-height:2.6;color:var(--ink);text-align:center;
   }
   .hifz-recall-hint{
@@ -8102,7 +8102,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const active = ()=>generation === hifzReviewGeneration && hifzReviewingId === segmentId && !hifzOverlay.hidden && owner === accountStorage.owner && !accountChanging;
 
     try{
-      const ayahList = await witrBuildAyahList([{n:seg.surahN, name:s.name, from:seg.from, to:seg.to}]);
+      const [loadedFont, ayahList] = await Promise.all([
+        document.fonts.load('24px "Amiri Quran"'),
+        witrBuildAyahList([{n:seg.surahN, name:s.name, from:seg.from, to:seg.to}])
+      ]);
+      if(!loadedFont.length) throw Error("تعذّر تحميل خط المصحف.");
       if(!active()) return; /* تجاهل نتائج جلسة أُغلقت أو استُبدلت */
       hifzReviewAyat = ayahList;
       ayahList.forEach((a,idx)=>{
