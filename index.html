@@ -4807,6 +4807,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function syncFailureReason(error){
     const raw=[error?.name,error?.code,error?.message,typeof error==='string'?error:''].join(' ').toLowerCase();
+    if(/تعارض تعلّم يحتاج مراجعة/.test(raw))return 'توجد تعديلات مختلفة تحتاج اختيارك. افتح قسم التعلّم ثم «مراجعة تعارضات التعلّم»؛ إعادة المحاولة وحدها لا تحل التعارض.';
     if(/quota|ns_error_dom_quota/.test(raw))return 'مساحة تخزين المتصفح غير كافية. احتفظ بنسخة احتياطية خارج الجهاز قبل أي تنظيف.';
     if(/securityerror|access is denied|storage.*disabled/.test(raw))return 'المتصفح منع الحفظ المحلي؛ راجع إعدادات بيانات المواقع.';
     if(/permission.denied|insufficient permissions/.test(raw))return 'رفضت السحابة صلاحيات الوصول؛ يلزم التحقق من صلاحيات الحساب.';
