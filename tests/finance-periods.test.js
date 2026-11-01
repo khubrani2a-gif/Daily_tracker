@@ -10,7 +10,9 @@ test('salary and weekly periods preserve transactions, boundaries and obligation
 });
 
 test('period boundaries, overdue debt, hidden budgets and historical plans',async()=>{
- const b=await chromium.launch();try{const{p}=await device(b);const r=await p.evaluate(()=>{
+ const b=await chromium.launch();try{const{p}=await device(b);
+ // This scenario edits October's plan with 'from next month', so November is the literal expected target.
+ await p.clock.setFixedTime(new Date('2026-10-22T09:00:00Z'));const r=await p.evaluate(()=>{
  const a=audit,e=a.expState();e.settings.weekStartDay=6;e.settings.salaryCycleStartDay=27;e.settings.salaryAmountMinor=800000;e.transactions=[];e.instances=[];e.fixedTemplates=[];
  e.categories=[{id:'c',section:'variable',isActive:true,showInWeeklyBudget:false,budgets:[{from:'2026-01-01',amountMinor:70000}]}];
  const cases=['2026-06-27','2026-11-27','2027-01-01','2028-02-29'].map(d=>a.expFinancePeriods(d));
