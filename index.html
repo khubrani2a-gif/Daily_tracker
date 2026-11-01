@@ -2067,7 +2067,7 @@
   .hifz-recall:focus{outline:none;border-color:var(--accent-2)}
   .hifz-recall-loading, .hifz-recall-fallback{color:var(--muted);font-size:.9rem}
   .hifz-recall-text{
-    font-family:"Thmanyah Sans", serif;
+    font-family:"Amiri Quran", serif;font-weight:400;font-synthesis:none;letter-spacing:normal;
     font-size:1.5rem;line-height:2.6;color:var(--ink);text-align:center;
   }
   .hifz-recall-hint{
@@ -4057,7 +4057,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=199"></script>
+<script src="data-core.js?v=200"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=167"></script>
 <script src="learning-core.js?v=167"></script>
@@ -4807,6 +4807,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   }
   function syncFailureReason(error){
     const raw=[error?.name,error?.code,error?.message,typeof error==='string'?error:''].join(' ').toLowerCase();
+    if(/تعارض تعلّم يحتاج مراجعة/.test(raw))return 'توجد تعديلات مختلفة تحتاج اختيارك. افتح قسم التعلّم ثم «مراجعة تعارضات التعلّم»؛ إعادة المحاولة وحدها لا تحل التعارض.';
     if(/quota|ns_error_dom_quota/.test(raw))return 'مساحة تخزين المتصفح غير كافية. احتفظ بنسخة احتياطية خارج الجهاز قبل أي تنظيف.';
     if(/securityerror|access is denied|storage.*disabled/.test(raw))return 'المتصفح منع الحفظ المحلي؛ راجع إعدادات بيانات المواقع.';
     if(/permission.denied|insufficient permissions/.test(raw))return 'رفضت السحابة صلاحيات الوصول؛ يلزم التحقق من صلاحيات الحساب.';
@@ -8102,7 +8103,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const active = ()=>generation === hifzReviewGeneration && hifzReviewingId === segmentId && !hifzOverlay.hidden && owner === accountStorage.owner && !accountChanging;
 
     try{
-      const ayahList = await witrBuildAyahList([{n:seg.surahN, name:s.name, from:seg.from, to:seg.to}]);
+      const [loadedFont, ayahList] = await Promise.all([
+        document.fonts.load('24px "Amiri Quran"'),
+        witrBuildAyahList([{n:seg.surahN, name:s.name, from:seg.from, to:seg.to}])
+      ]);
+      if(!loadedFont.length) throw Error("تعذّر تحميل خط المصحف.");
       if(!active()) return; /* تجاهل نتائج جلسة أُغلقت أو استُبدلت */
       hifzReviewAyat = ayahList;
       ayahList.forEach((a,idx)=>{
@@ -12339,7 +12344,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=199;
+  const DATA_VERSION=1, APP_RELEASE=200;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=10000;
