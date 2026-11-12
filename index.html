@@ -4057,15 +4057,26 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="sync-core.js"></script>
-<script src="data-core.js?v=200"></script>
+<script src="data-core.js?v=201"></script>
 <script src="planner-core.js"></script>
 <script src="calendar-core.js?v=167"></script>
 <script src="learning-core.js?v=167"></script>
 <script>
-(function(){
+(async function(){
   "use strict";
+  const storageBoot=document.createElement('div');storageBoot.id='storageBootstrap';storageBoot.setAttribute('role','status');
+  storageBoot.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#181b1a;color:#fff;display:grid;place-items:center;font:18px sans-serif';
+  storageBoot.textContent='جارٍ فتح بياناتك المحفوظة…';document.body.append(storageBoot);
+  let checkpointIssue=null;
+  const durableStorage = await MufDataCore.openDurableStorage(window.localStorage,window.indexedDB,{
+    onError:error=>{checkpointIssue=error;if(window.__appReady)renderSyncFailureDetails();},
+    onSuccess:()=>{if(checkpointIssue){checkpointIssue=null;if(window.__appReady)renderSyncFailureDetails();}}
+  });
+  window.addEventListener('focus',()=>durableStorage.flush().catch(()=>{}));
+  window.addEventListener('online',()=>durableStorage.flush().catch(()=>{}));
+  window.addEventListener('storage',event=>{if(event.key==='mfkr-bulk-revision-v1'||event.key==='mfkr-active-account-v1')location.reload();});
   const DISPOSABLE_CACHE_KEYS=["h2do-witr-text-cache","h2do-reading-stats-cache"];
-  const accountStorage = MufDataCore.openAccountStorage(window.localStorage,{disposableKeys:DISPOSABLE_CACHE_KEYS});
+  const accountStorage = await MufDataCore.openAccountStorageAsync(durableStorage,{disposableKeys:DISPOSABLE_CACHE_KEYS});
   const localStorage = accountStorage.storage;
   Object.defineProperty(window,"localStorage",{configurable:true,get:()=>localStorage});
   let accountChanging = false;
@@ -4822,6 +4833,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const labels={daily:'اليوم والأذكار',quran:'القرآن',customWorship:'العبادات',witr:'قيام الليل',hifz:'الحفظ',expenses:'المالية',weeklyGoals:'الأهداف',reading:'القراءة',learning:'التعلّم'};
     const lines=[];
     if(dailyStorageIssue)lines.push('الحفظ على الجهاز: '+syncFailureReason(dailyStorageIssue));
+    if(checkpointIssue)lines.push('تعذّر نقل سجل الحفظ إلى التخزين الدائم. التغييرات المقبولة باقية في سجل الحفظ المحلي. '+syncFailureReason(checkpointIssue));
     if(user)for(const name of SYNC_MODULES){const row=SYNC_STATE[name];if(row?.lastError)lines.push(labels[name]+': '+(row.lastErrorReason||syncFailureReason(row.lastError)));else if(row?.waitTimedOut)lines.push(labels[name]+': تأخر تأكيد السحابة.');}
     box.replaceChildren();for(const line of lines){const p=document.createElement('p');p.textContent=line;box.append(p);}box.hidden=!lines.length;
   }
@@ -4832,10 +4844,11 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const compactStatus=document.getElementById("syncSummaryLabel");
     const financePending=!!SYNC_STATE.expenses?.pendingWrites;
     if(compactStatus){
-      compactStatus.textContent=!user?"📱 الحفظ محلي · تسجيل الدخول":financePending?"محفوظ على الجهاز · بانتظار مزامنة المالية":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
+      compactStatus.textContent=dailyStorageIssue?"⚠️ تعذّر الحفظ على الجهاز":!user?"📱 الحفظ محلي · تسجيل الدخول":financePending?"محفوظ على الجهاز · بانتظار مزامنة المالية":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
     }
     syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
-    if(financePending)syncLast.textContent="آخر تأكيد سحابي لا يشمل التغييرات المالية المنتظرة";
+    if(dailyStorageIssue)syncLast.textContent="لم يكتمل الحفظ على الجهاز؛ راجع تفاصيل المشكلة أدناه.";
+    else if(financePending)syncLast.textContent="آخر تأكيد سحابي لا يشمل التغييرات المالية المنتظرة";
     else if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";
     else if(Object.values(SYNC_STATE).some(s=>s.waitTimedOut)) syncLast.textContent="تأخر تأكيد المزامنة؛ لا تغلق الحساب. ستتحدث الحالة عند وصول الرد.";
     else if(!online) syncLast.textContent="تغييراتك محفوظة وستُزامن عند عودة الإنترنت";
@@ -4849,8 +4862,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function renderGlobalSyncStatus(summary, running){
     if(!syncStatus) return;
     const financePending=!!SYNC_STATE.expenses?.pendingWrites;
-    if(!financePending&&summary&&summary.status==="success"&&navigator.onLine!==false) localStorage.setItem(GLOBAL_SYNC_AT_KEY,String(Date.now()));
+    if(!dailyStorageIssue&&!financePending&&summary&&summary.status==="success"&&navigator.onLine!==false)try{localStorage.setItem(GLOBAL_SYNC_AT_KEY,String(Date.now()));}catch(error){dailyStorageIssue=error;}
     renderSyncDetails(summary,running);
+    if(dailyStorageIssue){syncStatus.textContent="⚠️ تعذّر الحفظ على الجهاز؛ لم يُؤكّد حفظ جميع التغييرات";return;}
     if(!user){ syncStatus.textContent="الحفظ المحلي مفعّل — سجّل الدخول للمزامنة بين أجهزتك"; return; }
     if(financePending){syncStatus.textContent='محفوظ على الجهاز · بانتظار مزامنة المالية';return;}
     if(running){ syncStatus.textContent="🔄 جارٍ مزامنة جميع البيانات"; return; }
@@ -4898,8 +4912,12 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     };
     syncAllBtn.onclick = ()=> syncPullAllModules("manual",{forceServer:true,bypassThrottle:true});
     syncRetry.onclick = ()=> syncPullAllModules("retry",{forceServer:true,bypassThrottle:true});
-    firebase.auth().onAuthStateChanged(u=>{
-      const transition=accountStorage.activate(u&&u.uid);
+    firebase.auth().onAuthStateChanged(async u=>{
+      let transition;
+      accountChanging=true;document.body.inert=true;
+      try{transition=await accountStorage.activateAsync(u&&u.uid);}
+      catch(error){dailyStorageIssue=error;renderGlobalSyncStatus({status:'failed'},false);return;}
+      finally{accountChanging=false;document.body.inert=false;}
       if(transition.reload){accountChanging=true;clearTimeout(saveTimer);user=null;location.reload();return;}
       if(calendarSession.uid&&calendarSession.uid!==u?.uid)calendarDisconnect();
       user = u;
@@ -12344,7 +12362,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   const DATA_BACKUP_KEY="h2do-backup-library-v1";
   const DATA_CONFLICT_KEY="h2do-sync-conflicts-v1";
   const DATA_BASELINE_KEY="h2do-sync-baselines-v1";
-  const DATA_VERSION=1, APP_RELEASE=200;
+  const DATA_VERSION=1, APP_RELEASE=201;
   document.querySelector(".app-version").textContent="النسخة "+APP_RELEASE.toLocaleString("ar-EG");
   const DATA_MAX_IMPORT_BYTES=5*1024*1024;
   const DATA_MAX_IMPORT_ENTRIES=10000;
@@ -12392,6 +12410,16 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(typeof dataRenderCenter==="function") dataRenderCenter();
     if(!silent) alert("تم إنشاء نسخة احتياطية محلية بنجاح.");
     return record;
+  }
+  async function dataSaveBackupDurable(reason,silent){
+    try{
+      const previous=dataLoadBackups()[0];
+      if(silent&&previous?.reason===reason&&Date.now()-previous.createdAt<10*60000)return previous;
+      const record=await dataAddBackupSnapshot(dataBuildSnapshot(reason));
+      await durableStorage.flush();
+      if(!silent)alert("تم إنشاء نسخة احتياطية محلية بنجاح.");
+      return record;
+    }catch(error){dataBackupIssue="تعذّر إنشاء النسخة الاحتياطية. "+syncFailureReason(error);dataRenderStorage();if(!silent)alert(dataBackupIssue);return null;}
   }
   function dataAutoBackup(){
     const today=todayStr();
@@ -12495,20 +12523,17 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       out[key]=raw;
     });return out;
   }
-  function dataApplySnapshot(snapshot){
-    const entries=dataValidatedEntries(snapshot),before={};
-    for(const key of MufDataCore.storageKeys(localStorage)){if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1")before[key]=localStorage.getItem(key);}
+  async function dataApplySnapshot(snapshot){
+    const entries=dataValidatedEntries(snapshot),writes={};
     const dailyOnly=snapshot&&snapshot.scope==="daily";
-    try{
-      Object.keys(before).forEach(key=>{if((!dailyOnly||key.startsWith(PREFIX))&&!Object.prototype.hasOwnProperty.call(entries,key))localStorage.removeItem(key);});
-      Object.keys(entries).forEach(key=>localStorage.setItem(key,entries[key]));
-      localStorage.removeItem(DAILY_PENDING_KEY);localStorage.removeItem(DATA_BASELINE_KEY);localStorage.removeItem("h2do-learning-sync-v1");localStorage.removeItem("h2do-reading-stats-cache");
-      localStorage.setItem(RESTORE_PENDING_KEY,JSON.stringify({id:"restore_"+Date.now(),scope:dailyOnly?"daily":"all",createdAt:Date.now()}));
-    }catch(error){
-      // Roll back after quota/storage failure instead of leaving a half-restored application.
-      const keys=[];for(const key of MufDataCore.storageKeys(localStorage)){if(dataOwnedKey(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1")keys.push(key);}
-      keys.forEach(key=>localStorage.removeItem(key));Object.keys(before).forEach(key=>localStorage.setItem(key,before[key]));throw error;
+    for(const key of MufDataCore.storageKeys(localStorage)){
+      if(dataOwnedKey(key)&&!DISPOSABLE_CACHE_KEYS.includes(key)&&key!==DATA_BACKUP_KEY&&key!=="h2do-backup-vault-namespace-v1"&&(!dailyOnly||key.startsWith(PREFIX))&&!Object.prototype.hasOwnProperty.call(entries,key))writes[key]=null;
     }
+    Object.assign(writes,entries);
+    writes[DAILY_PENDING_KEY]=null;writes[DATA_BASELINE_KEY]=null;writes["h2do-learning-sync-v1"]=null;
+    writes[RESTORE_PENDING_KEY]=JSON.stringify({id:"restore_"+Date.now(),scope:dailyOnly?"daily":"all",createdAt:Date.now()});
+    await localStorage.writeBatch(writes);
+    for(const key of DISPOSABLE_CACHE_KEYS)try{localStorage.removeItem(key);}catch{}
   }
   function restoreToCloud(){
     if(restorePromise)return restorePromise;
@@ -12549,8 +12574,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
       }
       for(let i=0;i<writes.length;i+=20){const settled=await Promise.allSettled(writes.slice(i,i+20).map(write=>write()));if(settled.some(result=>result.status==="rejected"))throw new Error("restore write failed");}
       if(!active())return false;
-      Object.entries(localWrites).forEach(([key,value])=>localStorage.setItem(key,JSON.stringify(value)));
-      localStorage.removeItem(RESTORE_PENDING_KEY);localStorage.removeItem(DAILY_PENDING_KEY);localStorage.removeItem(DATA_BASELINE_KEY);
+      await localStorage.writeBatch({...Object.fromEntries(Object.entries(localWrites).map(([key,value])=>[key,JSON.stringify(value)])),[RESTORE_PENDING_KEY]:null,[DAILY_PENDING_KEY]:null,[DATA_BASELINE_KEY]:null});
       load(currentDate);expState=expData();expCaptureLegacyBudgetStates();rdInitLocal();_rdStatsCache=null;localStorage.removeItem(RD_STATS_CACHE_KEY);safeRun("restore:render",renderAll);
       return true;
     })();
@@ -12561,9 +12585,9 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     const record=dataLoadBackups().find(item=>item.id===id); if(!record) return;
     if(!confirm("استعادة «"+record.reason+"»؟ ستُستبدل بيانات التطبيق الحالية، وستُنشأ نسخة أمان منها أولًا.")) return;
     let snapshot;try{snapshot=await dataBackupSnapshot(record);}catch(e){alert("تعذّر فتح النسخة المؤرشفة؛ أُلغيت الاستعادة ولم تتغير سجلاتك.");return;}
-    const safety=dataSaveBackup("قبل استعادة "+record.reason,true);
+    const safety=await dataSaveBackupDurable("قبل استعادة "+record.reason,true);
     if(!safety){ alert("تعذّر إنشاء نسخة الأمان، لذلك أُلغيت الاستعادة حفاظًا على بياناتك."); return; }
-    try{ dataApplySnapshot(snapshot); location.reload(); }catch(e){ alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
+    try{ document.body.inert=true;await dataApplySnapshot(snapshot); location.reload(); }catch(e){ document.body.inert=false;alert("تعذّرت الاستعادة، ولم تُحذف نسخة الأمان."); }
   }
   async function dataDeleteBackup(id){
     const record=dataLoadBackups().find(item=>item.id===id); if(!record||!confirm("حذف النسخة «"+record.reason+"» من هذا الجهاز؟")) return;
@@ -12673,7 +12697,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   function dataInit(){
     const overlay=document.getElementById("dataOverlay");
     document.getElementById("dataCleanCaches").onclick=dataCleanCaches;
-    document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackup("نسخة يدوية",false);
+    document.getElementById("dataManageBtn").onclick=dataOpen; document.getElementById("dataClose").onclick=dataClose; document.getElementById("dataCreateBackup").onclick=()=>dataSaveBackupDurable("نسخة يدوية",false);
     document.getElementById("exportBtn").onclick=()=>dataExportJson(); document.getElementById("importBtn").onclick=()=>importFile.click(); importFile.onchange=dataImportSelected;
     document.getElementById("dataExportExcel").onclick=dataExportExcel; document.getElementById("dataExportPdf").onclick=dataExportPdf; document.getElementById("dataHealthCheck").onclick=dataHealthCheck; document.getElementById("dataClearReviewed").onclick=dataClearReviewed; dataAutoBackup();
     overlay.onclick=event=>{ if(event.target===overlay) dataClose(); }; document.addEventListener("keydown",event=>{ if(event.key==="Escape"&&!overlay.hidden) dataClose(); });
@@ -19042,8 +19066,18 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
   safeRun("learningInit", learningInit);
   safeRun("plannerInit", plannerInit);
   safeRun("renderReadingCard:init", renderReadingCard);
+  storageBoot.remove();window.__appReady=true;
   safeRun("initLifecycleSync", initLifecycleSync);   /* مشغّلات مقدّمة/شبكة عامّة لكل الأقسام */
-})();
+})().catch(error=>{
+  document.getElementById('storageBootstrap')?.remove();
+  console.error('storage bootstrap failed',error);
+  document.body.inert=false;
+  const panel=document.createElement('div');panel.dir='rtl';panel.setAttribute('role','alert');
+  panel.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#181b1a;color:#fff;padding:32px;display:grid;align-content:center;gap:20px;font:18px/1.8 sans-serif';
+  const message=document.createElement('p');message.textContent='تعذّر فتح التخزين المحلي بأمان. لم نحذف سجلاتك ولم نفتح بيانات فارغة. أغلق تبويبات التطبيق الأخرى ثم أعد المحاولة. لا تمسح بيانات المتصفح.';
+  const retry=document.createElement('button');retry.textContent='إعادة المحاولة';retry.onclick=()=>location.reload();
+  panel.append(message,retry);document.body.append(panel);
+});
 </script>
 </body>
 </html>

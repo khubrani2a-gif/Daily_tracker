@@ -9,7 +9,8 @@ const root=path.join(__dirname,"..");
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
 const script=(html.match(/<script>\n([\s\S]*)<\/script>/)||[])[1]||"";
 function sourceFunction(name){
-  const start=script.indexOf("function "+name+"(");
+  let start=script.indexOf("function "+name+"(");
+  if(script.slice(start-6,start)==="async ")start-=6;
   assert.ok(start>=0,"missing function "+name);
   const bodyStart=script.indexOf("{",start);
   let depth=0;
@@ -80,14 +81,15 @@ test("inline application JavaScript still parses after adding learning",()=>{
   assert.doesNotThrow(()=>new Function(script));
 });
 
-test("backup export and import restore learning data without duplicates",()=>{
+test("backup export and import restore learning data without duplicates",async()=>{
   const storage=new Map();
   const localStorage={
     get length(){return storage.size;},
     key(i){return Array.from(storage.keys())[i]||null;},
     getItem(k){return storage.has(k)?storage.get(k):null;},
     setItem(k,v){storage.set(k,String(v));},
-    removeItem(k){storage.delete(k);}
+    removeItem(k){storage.delete(k);},
+    async writeBatch(entries){for(const [key,value] of Object.entries(entries))value===null?storage.delete(key):storage.set(key,value);}
   };
   const storageKey=date=>"h2do-tracker:"+date;
   const DATA_BACKUP_KEY="h2do-backup-library-v1", DATA_VERSION=1, DATA_MAX_IMPORT_BYTES=5*1024*1024, DATA_MAX_IMPORT_ENTRIES=1000;
@@ -104,8 +106,8 @@ test("backup export and import restore learning data without duplicates",()=>{
   const snapshot=dataBuildSnapshot("اختبار");
   assert.ok(snapshot.entries["h2do-learning-v1"]);
   const imported=dataNormalizeImported(snapshot,"learning.json");
-  dataApplySnapshot(imported);
-  dataApplySnapshot(imported);
+  await dataApplySnapshot(imported);
+  await dataApplySnapshot(imported);
   const restored=JSON.parse(localStorage.getItem("h2do-learning-v1"));
   assert.equal(restored.schedule.length,1);
   assert.equal(restored.preparations.length,1);

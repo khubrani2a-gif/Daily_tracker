@@ -1,12 +1,128 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.MufDataCore=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const ACTIVE='mfkr-active-account-v1', PREFIX='mfkr-account-v1:';
+  const accountLock=fn=>globalThis.navigator?.locks?globalThis.navigator.locks.request('mfkr-account-operation-v1',fn):fn();
   const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+  // IndexedDB checkpoint + immutable, synchronous write-ahead journal.
+  // A successful setItem is durable even if the page closes before checkpointing.
+  async function openDurableStorage(raw,factory,options={}){
+    const JOURNAL='mfkr-write-v1:',DB='mufakkirati-records-v1',STORE='records';
+    const caches=['h2do-witr-text-cache','h2do-reading-stats-cache'];
+    const managed=k=>(k.startsWith('h2do-')||k.startsWith(PREFIX))&&!caches.some(c=>k===c||k.endsWith(':'+c));
+    const nativeKeys=()=>Array.from({length:raw.length},(_,i)=>raw.key(i)).filter(Boolean);
+    const records=new Map();let clock=0,db,timer,flushing,revision=raw.getItem('mfkr-bulk-revision-v1');
+    const newer=(a,b)=>!b||a.clock>b.clock||a.clock===b.clock&&a.id>b.id;
+    const valid=r=>r&&typeof r.key==='string'&&managed(r.key)&&Number.isSafeInteger(r.clock)&&typeof r.id==='string'&&(r.value===null||typeof r.value==='string');
+    const apply=r=>{if(!valid(r))throw Error('invalid durable journal');clock=Math.max(clock,r.clock);if(newer(r,records.get(r.key)))records.set(r.key,r);};
+    const operation=(key,value)=>({key,value,clock:clock=Math.max(Date.now(),clock+1),id:crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('')});
+    const journals=()=>nativeKeys().filter(k=>k.startsWith(JOURNAL)).map(key=>{const text=raw.getItem(key),record=JSON.parse(text);if(!valid(record))throw Error('invalid durable journal');return {key,text,record};});
+    const lock=fn=>globalThis.navigator?.locks?globalThis.navigator.locks.request('mfkr-records-maintenance-v1',fn):fn();
+    const transaction=(mode,work)=>new Promise((resolve,reject)=>{
+      let tx,result,settled=false;
+      const finish=err=>{if(settled)return;settled=true;clearTimeout(deadline);err?reject(err):resolve(result);};
+      const deadline=setTimeout(()=>{try{tx?.abort();}catch{}finish(Error('durable storage timeout'));},15000);
+      try{tx=db.transaction(STORE,mode);tx.oncomplete=()=>finish();tx.onabort=()=>finish(tx.error||Error('durable storage aborted'));tx.onerror=()=>{};work(tx.objectStore(STORE),v=>result=v,finish);}catch(e){try{tx?.abort();}catch{}finish(e);}
+    });
+    async function commit(rows){
+      const latest=new Map();for(const row of rows)if(newer(row,latest.get(row.key)))latest.set(row.key,row);rows=[...latest.values()];
+      await transaction('readwrite',(store,set,fail)=>{for(const row of rows){const req=store.get(row.key);req.onsuccess=()=>{try{if(newer(row,req.result))store.put(row,row.key);}catch(e){fail(e);store.transaction.abort();}};}});
+      const checked=await transaction('readonly',(store,set)=>{const result=[];set(result);for(const row of rows){const req=store.get(row.key);req.onsuccess=()=>result.push(req.result);}});
+      const byKey=new Map(checked.filter(Boolean).map(r=>[r.key,r]));
+      for(const row of rows){const saved=byKey.get(row.key);if(!saved||newer(row,saved)||saved.id===row.id&&saved.value!==row.value)throw Error('durable verification failed');apply(saved);}
+    }
+    async function checkpoint(){
+      const batch=journals();if(!batch.length)return;
+      for(const row of batch)apply(row.record);
+      await commit(batch.map(r=>r.record));
+      for(const row of batch)if(raw.getItem(row.key)===row.text)raw.removeItem(row.key);
+    }
+    function schedule(){if(timer)return;timer=setTimeout(()=>{timer=null;flush().catch(e=>options.onError?.(e));},25);}
+    function flush(){
+      if(flushing)return flushing.then(()=>journals().length?flush():undefined);
+      flushing=lock(checkpoint).then(()=>options.onSuccess?.()).finally(()=>{flushing=null;});
+      return flushing;
+    }
+    const onStorage=e=>{if(e.key?.startsWith(JOURNAL)&&e.newValue){try{const row=JSON.parse(e.newValue);apply(row);globalThis.dispatchEvent?.(new StorageEvent("storage",{key:row.key,newValue:row.value}));schedule();}catch(error){options.onError?.(error);}}};
+    globalThis.addEventListener?.('storage',onStorage);
+    try{
+      db=await new Promise((resolve,reject)=>{
+        let settled=false;const finish=(err,value)=>{if(settled){value?.close();return;}settled=true;clearTimeout(deadline);err?reject(err):resolve(value);};
+        const deadline=setTimeout(()=>finish(Error('durable storage open timeout')),15000);
+        try{const req=factory.open(DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE);};req.onsuccess=()=>finish(null,req.result);req.onerror=()=>finish(req.error||Error('durable storage unavailable'));req.onblocked=()=>finish(Error('durable storage blocked'));}catch(error){finish(error);}
+      });
+      db.onversionchange=()=>{db.close();options.onError?.(Error('durable storage version changed'));};
+      await accountLock(()=>lock(async()=>{
+        revision=raw.getItem("mfkr-bulk-revision-v1");
+        const saved=await transaction('readonly',(store,set)=>{const req=store.getAll();req.onsuccess=()=>set(req.result);});saved.forEach(apply);
+        const legacy=nativeKeys().filter(managed).map(key=>({key,value:raw.getItem(key)}));
+        if(legacy.length){
+          for(const r of legacy){const prior=records.get(r.key);if(prior&&prior.value!==r.value)throw Error('legacy storage conflict: '+r.key);}
+          const rows=legacy.map(r=>({key:r.key,value:r.value,clock:0,id:'legacy:'+r.key}));await commit(rows);
+          // A legacy tab that changed a value during migration keeps its newer value.
+          for(const r of legacy)if(raw.getItem(r.key)===r.value)raw.removeItem(r.key);
+        }
+        await checkpoint();
+      }));
+    }catch(error){globalThis.removeEventListener?.('storage',onStorage);db?.close();throw error;}
+    const keys=()=>[...new Set([...nativeKeys().filter(k=>!k.startsWith(JOURNAL)),...Array.from(records.values()).filter(r=>r.value!==null).map(r=>r.key)])];
+    function write(key,value,migration=false){
+      key=String(key);
+      if(!migration&&raw.getItem('mfkr-bulk-revision-v1')!==revision)throw Error('storage changed in another tab; reload required');
+      if(managed(key)&&!migration&&(raw.getItem('mfkr-adoption-v1')||raw.getItem('mfkr-bulk-v1')))throw Error('storage migration in progress');
+      if(!managed(key)){value===null?raw.removeItem(key):raw.setItem(key,String(value));return;}
+      const row=operation(key,value===null?null:String(value));
+      // Immutable keys prevent one tab's checkpoint from removing another tab's edit.
+      try{raw.setItem(JOURNAL+row.id+':'+key,JSON.stringify(row));}catch(error){schedule();throw error;}
+      apply(row);schedule();
+    }
+    async function writeBatch(entries,expectedOwner){
+      return accountLock(async()=>{
+        if(raw.getItem('mfkr-bulk-revision-v1')!==revision)throw Error('storage changed in another tab; reload required');
+        if(expectedOwner!==undefined&&raw.getItem(ACTIVE)!==expectedOwner)throw Error('account changed; reload required');
+        if(raw.getItem('mfkr-adoption-v1'))throw Error('account migration pending');
+        const pairs=Object.entries(entries);if(pairs.some(([k,v])=>!managed(k)||(v!==null&&typeof v!=='string')))throw Error('invalid durable batch');
+        raw.setItem('mfkr-bulk-v1','pending');
+        try{raw.setItem('mfkr-bulk-revision-v1',String(Date.now())+Math.random());revision=raw.getItem('mfkr-bulk-revision-v1');
+          await flush();await lock(()=>commit(pairs.map(([k,v])=>operation(k,v))));
+        }finally{raw.removeItem('mfkr-bulk-v1');}
+      });
+    }
+    return {keys,writeBatch,migrationWrite:(key,value)=>write(key,value,true),get length(){return keys().length;},key:i=>keys()[i]??null,
+      getItem:key=>{key=String(key);const legacy=raw.getItem(key);return legacy!==null?legacy:records.get(key)?.value??null;},
+      setItem:(key,value)=>write(key,String(value)),removeItem:key=>write(key,null),
+      clear:()=>keys().forEach(k=>write(k,null)),flush};
+  }
+
+  const ADOPTION='mfkr-adoption-v1';
+  async function resumeAdoption(raw,move){
+    const prefix=id=>PREFIX+encodeURIComponent(id)+':';
+    if(!move||move.source!=='guest'||typeof move.target!=='string'||!move.target||move.target==='guest')throw Error('invalid account migration');
+    const source=prefix(move.source),target=prefix(move.target);
+    await raw.flush();
+    if(move.phase!=='cleanup'){
+      for(const key of raw.keys().filter(k=>k.startsWith(source))){raw.migrationWrite(target+key.slice(source.length),raw.getItem(key));await raw.flush();}
+      raw.setItem(ADOPTION,JSON.stringify({...move,phase:'cleanup'}));
+    }
+    raw.setItem(ACTIVE,move.target);
+    for(const key of raw.keys().filter(k=>k.startsWith(source))){raw.migrationWrite(target+key.slice(source.length),raw.getItem(key));await raw.flush();raw.migrationWrite(key,null);await raw.flush();}
+    raw.removeItem(ADOPTION);
+  }
+  async function openAccountStorageAsync(raw,options={}){return accountLock(async()=>{
+    raw.removeItem('mfkr-bulk-v1');
+    const owner=raw.getItem(ACTIVE)||'guest',prefix=PREFIX+encodeURIComponent(owner)+':';
+    for(const key of raw.keys().filter(k=>k.startsWith('h2do-'))){
+      if(raw.getItem(prefix+key)===null){raw.setItem(prefix+key,raw.getItem(key));await raw.flush();}
+      raw.removeItem(key);await raw.flush();
+    }
+    const pending=raw.getItem(ADOPTION);if(pending)await resumeAdoption(raw,JSON.parse(pending));
+    return openAccountStorage(raw,options);
+  });}
+
   function openAccountStorage(raw,options={}){
     let owner=raw.getItem(ACTIVE)||'guest';
     const prefix=id=>PREFIX+encodeURIComponent(id)+':';
     const owned=key=>typeof key==='string'&&key.startsWith('h2do-');
-    const nativeKeys=()=>Array.from({length:raw.length},(_,i)=>raw.key(i)).filter(Boolean);
+    const nativeKeys=()=>typeof raw.keys==='function'?raw.keys():Array.from({length:raw.length},(_,i)=>raw.key(i)).filter(Boolean);
     // Upgrade the pre-account store once. Never replace an existing account value.
     const legacy=nativeKeys().filter(owned);
     legacy.forEach(key=>{if(raw.getItem(prefix(owner)+key)===null)raw.setItem(prefix(owner)+key,raw.getItem(key));});
@@ -28,7 +144,7 @@
         return raw.setItem(keyFor(key),value); // One retry; the storage API remains atomic.
       }
     }
-    const storage={keys:visibleKeys,get length(){return visibleKeys().length;},key:i=>visibleKeys()[i]??null,
+    const storage={writeBatch:entries=>raw.writeBatch(Object.fromEntries(Object.entries(entries).map(([k,v])=>[keyFor(k),v])),owner),keys:visibleKeys,get length(){return visibleKeys().length;},key:i=>visibleKeys()[i]??null,
       getItem:key=>raw.getItem(keyFor(key)),setItem:write,removeItem:key=>raw.removeItem(keyFor(key)),clear:()=>visibleKeys().forEach(key=>raw.removeItem(keyFor(key)))};
     function activate(uid){
       const target=uid?String(uid):'guest';
@@ -47,7 +163,18 @@
       // The old facade deliberately remains bound to its old owner until the document reloads.
       return {reload:true};
     }
-    return {storage,activate,get owner(){return owner;}};
+    async function activateAsync(uid){return accountLock(async()=>{
+      const target=uid?String(uid):'guest';
+      if(target===owner)return {reload:false};
+      await raw.flush();
+      const pending=raw.getItem(ADOPTION);if(pending){const move=JSON.parse(pending);if(move.target!==target)throw Error('account migration pending');await resumeAdoption(raw,move);owner=target;return {reload:false,adoptedGuest:true};}
+      if(owner==='guest'&&target!=='guest'&&!nativeKeys().some(key=>key.startsWith(prefix(target)))){
+        const move={source:owner,target,phase:'copy'};raw.setItem(ADOPTION,JSON.stringify(move));
+        await resumeAdoption(raw,move);owner=target;return {reload:false,adoptedGuest:true};
+      }
+      raw.setItem(ACTIVE,target);return {reload:true};
+    });}
+    return {storage,activate,activateAsync,get owner(){return owner;}};
   }
   function openBackupVault(factory){
     function operation(owner,id,mode,value){
@@ -259,5 +386,5 @@
     merged.updatedAt=Math.max(local?.updatedAt||0,remote?.updatedAt||0);
     return {merged,conflicts};
   }
-  return {openBackupVault,storageKeys,storageReport,cleanStorageCaches,openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
+  return {openDurableStorage,openAccountStorageAsync,openBackupVault,storageKeys,storageReport,cleanStorageCaches,openAccountStorage,mergeChanges,reconcileLearning,qiyamRows,qiyamActive,qiyamMerge,qiyamNight,qiyamSlice,qiyamRead,qiyamUndo,qiyamPray,qiyamEditPrayer,qiyamStable,qiyamSignature};
 });
