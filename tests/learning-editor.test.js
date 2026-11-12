@@ -29,9 +29,13 @@ test('lecture rejects backwards/equal intervals and treats concurrent time edits
 test('learning editor fits small phone, keyboard-height viewport, iPad and laptop',()=>run(async p=>{
  await course(p);for(const [width,height] of [[320,480],[390,300],[820,1180],[1180,820],[1366,768]]){await p.setViewportSize({width,height});await p.locator('#lfNotes').focus();await p.locator('#learningFormSave').scrollIntoViewIfNeeded();assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.ok(await p.locator('#learningFormSave').isVisible());assert.equal(await p.locator('.task-sheet').last().evaluate(el=>el.scrollWidth>el.clientWidth+1),false,'dialog overflow '+width);}
 }));
-test('learning edit survives network failure, reload and reconnect without duplicates',()=>run(async(p,d)=>{
+for(const authDelay of [0,500])test('learning edit survives network failure, reload and reconnect without duplicates (auth delay '+authDelay+'ms)',()=>run(async(p,d)=>{
  await p.evaluate(()=>{audit.login();sessionStorage.setItem('testUser',JSON.stringify({uid:'test'}));});await course(p);await p.evaluate(()=>audit.learningPullRemote('seed'));
  d.control.rejectRead='meta/learning';d.control.rejectWrite='meta/learning';await d.c.setOffline(true);await p.locator('#lfName').fill('تعديل دون اتصال');await p.locator('#learningFormSave').click();await p.evaluate(()=>audit.learningPullRemote('offline'));
  assert.equal(await p.evaluate(()=>audit.learningLoad().courses[0].name),'تعديل دون اتصال');assert.equal(d.cloud['users/test/meta/learning'].courses[0].name,'دورة');
- await d.c.setOffline(false);d.control.rejectRead='';d.control.rejectWrite='';await p.reload();await p.evaluate(()=>audit.learningPullRemote('reconnect'));assert.equal(d.cloud['users/test/meta/learning'].courses.length,1);assert.equal(d.cloud['users/test/meta/learning'].courses[0].name,'تعديل دون اتصال');
+ await d.c.setOffline(false);d.control.rejectRead='';d.control.rejectWrite='';await p.evaluate(delay=>sessionStorage.setItem('testAuthDelay',String(delay)),authDelay);await p.reload();
+ // App/storage readiness precedes asynchronous authentication. Wait for the same
+ // signed-in state that enables user synchronization, including delayed auth.
+ await p.waitForFunction(()=>document.getElementById('syncBtn').textContent==='تسجيل الخروج'&&!document.body.inert);
+ const result=await p.evaluate(()=>audit.learningPullRemote('reconnect'));assert.equal(result.status,'success');assert.equal(d.cloud['users/test/meta/learning'].courses.length,1);assert.equal(d.cloud['users/test/meta/learning'].courses[0].name,'تعديل دون اتصال');
 }));
