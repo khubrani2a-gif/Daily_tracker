@@ -1,11 +1,11 @@
 /* عامل الخدمة — يخزّن ملفات التطبيق ليعمل بدون إنترنت.
    عند أي تحديث جوهري للتطبيق نرفع رقم النسخة أدناه. */
-const CACHE = "mufakkirati-v201";
+const CACHE = "mufakkirati-v202";
 const ASSETS = [
   "./",
   "./index.html",
   "./sync-core.js",
-  "./data-core.js?v=201",
+  "./data-core.js?v=202",
   "./planner-core.js", "./calendar-core.js?v=167", "./learning-core.js?v=167",
   "./manifest.webmanifest",
   "./fonts/AmiriQuran-Regular.woff2",
@@ -21,7 +21,7 @@ const ASSETS = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) => c.addAll(ASSETS.map(asset => new Request(asset, {cache:"reload"})))).then(() => self.skipWaiting())
   );
 });
 
@@ -53,36 +53,36 @@ self.addEventListener("notificationclick", (e) => {
   );
 });
 
-/* إستراتيجية: نقدّم النسخة المخزنة فورًا (سرعة + عمل دون اتصال)
-   ونحدّثها في الخلفية من الشبكة لزيارتك القادمة.
-   طلبات Firebase وغيرها من النطاقات الخارجية لا نتدخل فيها. */
+/* Each release owns its offline files. A retired worker/cache must not supply HTML
+   to a newer storage implementation. Finish navigation writes before returning. */
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  /* التنقّل والصفحة الرئيسية: الشبكة أولًا كي لا يبقى الجوال على إصدار قديم بعد النشر. */
+  const cached = async request => (await caches.open(CACHE)).match(request);
   if (e.request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request)
-        .then((res) => {
-          if (res && res.ok) caches.open(CACHE).then((c) => c.put("./index.html", res.clone()));
-          return res;
-        })
-        .catch(() => caches.match("./index.html").then((cached) => cached || caches.match("./")))
-    );
-    return;
-  }
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const fresh = fetch(e.request)
-        .then((res) => {
+      fetch(e.request, {cache:"no-store"})
+        .then(async res => {
           if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, clone));
+            const copy = res.clone();
+            try { await (await caches.open(CACHE)).put("./index.html", copy); }
+            catch (_) { /* A cache failure must not discard an available online page. */ }
           }
           return res;
         })
-        .catch(() => cached);
-      return cached || fresh;
+        .catch(async () => (await cached("./index.html")) || (await cached("./")) || Response.error())
+    );
+    return;
+  }
+  const fresh = fetch(e.request, {cache:"no-cache"})
+    .then(async res => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        try { await (await caches.open(CACHE)).put(e.request, copy); } catch (_) {}
+      }
+      return res;
     })
-  );
+    .catch(() => undefined);
+  e.waitUntil(fresh.then(() => {}));
+  e.respondWith(cached(e.request).then(async value => value || (await fresh) || Response.error()));
 });
