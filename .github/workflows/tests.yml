@@ -17,7 +17,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Durable storage and quota recovery on WebKit
+        run: node --test --test-concurrency=1 tests/durable-storage-v201.test.js tests/storage-durable-ui-v201.test.js
+        env:
+          STORAGE_TEST_BROWSER: webkit
       - name: Memorization safety and review regression
         run: node --test --test-concurrency=1 tests/hifz-safety-v199.test.js tests/hifz-review-v199.test.js tests/quran-hifz-v184.test.js
       - name: Storage quota and backup preservation regression
