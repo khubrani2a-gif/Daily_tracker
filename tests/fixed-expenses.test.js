@@ -21,7 +21,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("A. Record fixed payment: NOT under a variable category, marked fixed");
   let p=await page(b);
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now();
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now();
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
       categories:[{id:"CA",name:"الأكل",section:"variable",parentCategoryId:null,budgets:[{from:"1970-01-01",amountMinor:60000}],icon:null,isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null}],
       fixedTemplates:[{id:"TPL",categoryId:null,name:"تسريع القرض",defaultAmountMinor:200000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:tk.slice(0,7),endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},createdAt:now,updatedAt:now,archivedAt:null}],
@@ -53,7 +53,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("C. Pause obligation -> stays as متوقف in fixed card");
   p=await page(b);
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now();
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now();
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
       categories:[],fixedTemplates:[{id:"TPL",categoryId:null,name:"تسريع القرض",defaultAmountMinor:200000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:tk.slice(0,7),endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},createdAt:now,updatedAt:now,archivedAt:null}],instances:[],transactions:[],trips:[]};
     localStorage.setItem("h2do-expenses",JSON.stringify(data)); }, today());
@@ -75,7 +75,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("D. Undo payment: partial + last-payment -> unpaid; distinct from refund");
   p=await page(b);
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now();
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now();
     const inst={id:"INST",templateId:"TPL",year:+tk.slice(0,4),month:+tk.slice(5,7),plannedAmountMinor:200000,paidAmountMinor:0,status:"unpaid",dueDate:tk,paidAt:null,createdAt:now,updatedAt:now};
     const mk=(id,amt)=>({id,amountMinor:amt,transactionDate:tk,categoryId:null,sourceType:"fixed",fixedTemplateId:"TPL",fixedExpenseInstanceId:"INST",countAgainstWeeklyBudget:false,transactionType:"expense",relatedTransactionId:null,needsReview:false,description:"دفعة: تسريع القرض",createdAt:now,updatedAt:now,deletedAt:null,tripId:null,paymentMethod:"مدى",subcategory:null,purchaseMethod:null,context:null,beneficiary:null,originalAmountMinor:null,originalCurrency:null,exchangeRate:null,exchangeRateSource:null,merchantCountry:null});
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
@@ -110,7 +110,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("E. One-time repair: 'دفعة: تسريع القرض' under الأكل -> relinked (exact match only)");
   p=await page(b);
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now();
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now();
     const mk=(id,cat,desc)=>({id,amountMinor:200000,transactionDate:tk,categoryId:cat,transactionType:"expense",relatedTransactionId:null,fixedExpenseInstanceId:null,description:desc,createdAt:now,updatedAt:now,deletedAt:null,tripId:null,countAgainstWeeklyBudget:true,paymentMethod:"مدى",subcategory:null,purchaseMethod:null,context:null,beneficiary:null,originalAmountMinor:null,originalCurrency:null,exchangeRate:null,exchangeRateSource:null,merchantCountry:null});
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
       categories:[{id:"CA",name:"الأكل",section:"variable",parentCategoryId:null,budgets:[{from:"1970-01-01",amountMinor:60000}],icon:null,isActive:true,sortOrder:0,createdAt:now,updatedAt:now,archivedAt:null}],
@@ -129,7 +129,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
 
   console.log("F. Ambiguous match -> needsReview, NOT auto-repaired");
   p=await page(b);
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now();
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now();
     const mk=(id,cat,desc)=>({id,amountMinor:200000,transactionDate:tk,categoryId:cat,transactionType:"expense",relatedTransactionId:null,fixedExpenseInstanceId:null,description:desc,createdAt:now,updatedAt:now,deletedAt:null,tripId:null,countAgainstWeeklyBudget:true,paymentMethod:null,subcategory:null,purchaseMethod:null,context:null,beneficiary:null,originalAmountMinor:null,originalCurrency:null,exchangeRate:null,exchangeRateSource:null,merchantCountry:null});
     const tp=(id)=>({id,categoryId:null,name:"القرض",defaultAmountMinor:100000,amountType:"fixed",dueDay:1,recurrence:"monthly",startMonth:tk.slice(0,7),endMonth:null,note:null,isActive:true,sortOrder:0,overrides:{},createdAt:now,updatedAt:now,archivedAt:null});
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
@@ -147,7 +147,7 @@ async function page(b){ const ctx=await b.newContext({viewport:{width:1000,heigh
   console.log("G. Salary cycle card keeps obligations scoped to the actual 27-26 date range");
   p=await page(b);
   await p.clock.setFixedTime(new Date("2026-10-26T12:00:00Z"));
-  await p.addInitScript((tk)=>{ localStorage.clear(); const now=Date.now(), month=tk.slice(0,7);
+  await p.addInitScript((tk)=>{ if(sessionStorage.getItem("fixed-seeded"))return;sessionStorage.setItem("fixed-seeded","1");localStorage.clear(); const now=Date.now(), month=tk.slice(0,7);
     const data={version:2,settings:{currency:"SAR",weekStartDay:6,salaryCycleStartDay:27,numberFormat:"ar-EG",defaultPaymentMethod:null,currentBudgetVersion:1,migratedLegacy:true,createdAt:now,updatedAt:now},
       categories:[],
       fixedTemplates:[
