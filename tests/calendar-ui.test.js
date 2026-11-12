@@ -3,7 +3,7 @@ const {revealPlannerControl}=require('./planner-test-actions.cjs');
 const test=require('node:test'),assert=require('node:assert/strict');
 const {device,chromium}=require('./audit-browser-helper.cjs');let browser;
 test.before(async()=>{browser=await chromium.launch({headless:true,args:['--no-sandbox']});});test.after(async()=>{await browser?.close();});
-async function run(fn){const d=await device(browser);try{await d.p.goto('https://audit.local/index.html');await d.p.waitForTimeout(150);
+async function run(fn){const d=await device(browser);try{await d.p.goto('https://audit.local/index.html');await d.p.waitForFunction(()=>window.__appReady===true);await d.p.waitForTimeout(150);
  const api={events:new Map(),requests:[],version:0,fail:0,conflict:false,hold:null};
  await d.p.route('https://www.googleapis.com/calendar/v3/**',async route=>{
   const req=route.request(),u=new URL(req.url()),method=req.method(),body=req.postDataJSON(),path=u.pathname.replace('/calendar/v3/','');api.requests.push({path,method,body,headers:req.headers()});
