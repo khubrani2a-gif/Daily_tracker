@@ -4846,7 +4846,7 @@ body:has(#expOverlay:not([hidden])) .quick-nav{visibility:hidden}
     if(compactStatus){
       compactStatus.textContent=dailyStorageIssue?"⚠️ تعذّر الحفظ على الجهاز":!user?"📱 الحفظ محلي · تسجيل الدخول":financePending?"محفوظ على الجهاز · بانتظار مزامنة المالية":running?"🔄 جارٍ المزامنة…":!online?"📴 محفوظ محليًا · بانتظار الاتصال":summary&&summary.status==="success"?"☁️ تمت المزامنة":summary&&["partial","cacheFallback"].includes(summary.status)?"⚠️ المزامنة غير مكتملة":summary&&summary.status==="failed"?"⚠️ تعذّرت المزامنة · إعادة المحاولة":"☁️ الحساب والمزامنة";
     }
-    syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محفوظ محليًا"):"📱 محلي على هذا الجهاز";
+    syncMode.textContent=user?(online?"☁️ محلي + سحابي":"📱 محلي على الجهاز"):"📱 محلي على هذا الجهاز";
     if(dailyStorageIssue)syncLast.textContent="لم يكتمل الحفظ على الجهاز؛ راجع تفاصيل المشكلة أدناه.";
     else if(financePending)syncLast.textContent="آخر تأكيد سحابي لا يشمل التغييرات المالية المنتظرة";
     else if(running) syncLast.textContent="جارٍ التحقق من أحدث البيانات…";

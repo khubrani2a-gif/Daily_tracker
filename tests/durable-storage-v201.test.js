@@ -17,7 +17,7 @@ test('records exceeding the old aggregate quota survive checkpoint and reload',(
  await p.reload();assert.equal(await p.evaluate(async()=>{const s=await MufDataCore.openDurableStorage(localStorage,indexedDB);return Array.from({length:24},(_,i)=>s.getItem('h2do-day-'+i)).every((s,i)=>s===String(i)+'x'.repeat(300000))}),true);
 }));
 test('failed migration leaves every legacy value unchanged',()=>setup(async p=>{
- const result=await p.evaluate(async()=>{localStorage.setItem('h2do-private','old');IDBObjectStore.prototype.put=function(){throw Error('blocked write')};try{await MufDataCore.openDurableStorage(localStorage,indexedDB)}catch{}return localStorage.getItem('h2do-private');});assert.equal(result,'old');
+ const result=await p.evaluate(async()=>{localStorage.setItem('h2do-private','old');IDBObjectStore.prototype.put=function(){throw Error('blocked write')};let error;try{await MufDataCore.openDurableStorage(localStorage,indexedDB)}catch(e){error=e.message}return [error,localStorage.getItem('h2do-private')];});assert.deepEqual(result,['blocked write','old']);
 }));
 test('two tabs observe writes and deletion; late checkpoint cannot resurrect a record',()=>setup(async(p,c)=>{
  await p.evaluate(async()=>window.s=await MufDataCore.openDurableStorage(localStorage,indexedDB));const q=await c.newPage();await q.goto('https://durable.local/');await q.evaluate(async()=>window.s=await MufDataCore.openDurableStorage(localStorage,indexedDB));
