@@ -7,10 +7,13 @@ const root=path.resolve(__dirname,'../..');
 // Emulator-only tokens bypass Google login without exposing production credentials.
 const sdkRoot=path.dirname(require.resolve('firebase-app-sdk/package.json'));
 const expose=`window.integration={expState:()=>expState,expSave,expPushRemote,expPullRemote,blankState,persistDay,pullRemote,syncPendingDays,syncPullAllModules,dailyPending,learningLoad,learningSave,learningPullRemote,ready:()=>!!user&&!accountChanging};`;
-const html=fs.readFileSync(path.join(root,'index.html'),'utf8')
+const source=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const authHook='firebase.auth().onAuthStateChanged(async u=>{';
+assert.ok(source.includes(authHook),'Emulator authentication hook must match the production async handler');
+const html=source
  .replace('firebase.initializeApp(FIREBASE_CONFIG);','firebase.initializeApp({projectId:"demo-daily-tracker",apiKey:"demo-only",appId:"demo-only"});')
  .replace('db = firebase.firestore();','db = firebase.firestore(); db.useEmulator("127.0.0.1",8080,{mockUserToken:{sub:"browser-owner"}});')
- .replace('firebase.auth().onAuthStateChanged(u=>{','(cb=>cb({uid:"browser-owner"}))(u=>{')
+ .replace(authHook,'(cb=>cb({uid:"browser-owner"}))(async u=>{')
  .replace('const snap=await transaction.get(ref);','const snap=await transaction.get(ref);if(window.holdLearningRead)await window.txnBarrier();')
  .replace('const remote=await transaction.get(targetRef);','const remote=await transaction.get(targetRef);if(window.holdFinanceRead)await window.financeBarrier();')
  .replace('function storageKey(date){',expose+'\nfunction storageKey(date){');
